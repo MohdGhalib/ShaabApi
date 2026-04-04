@@ -23,9 +23,9 @@ var mysqlHost = Environment.GetEnvironmentVariable("MYSQL_HOST")
 var connectionString = mysqlHost != null
     ? $"Server={mysqlHost};" +
       $"Port={Environment.GetEnvironmentVariable("MYSQL_PORT") ?? Environment.GetEnvironmentVariable("MYSQLPORT") ?? "3306"};" +
-      $"Database={Environment.GetEnvironmentVariable("MYSQLDATABASE")};" +
-      $"User={Environment.GetEnvironmentVariable("MYSQLUSER")};" +
-      $"Password={Environment.GetEnvironmentVariable("MYSQLPASSWORD")};" +
+      $"Database={Environment.GetEnvironmentVariable("MYSQLDATABASE") ?? Environment.GetEnvironmentVariable("MYSQL_DATABASE") ?? "railway"};" +
+      $"User={Environment.GetEnvironmentVariable("MYSQLUSER") ?? Environment.GetEnvironmentVariable("MYSQL_USER")};" +
+      $"Password={Environment.GetEnvironmentVariable("MYSQLPASSWORD") ?? Environment.GetEnvironmentVariable("MYSQL_PASSWORD")};" +
       "CharSet=utf8mb4;"
     : builder.Configuration.GetConnectionString("DefaultConnection");
 builder.Services.AddDbContext<AppDbContext>(options =>
