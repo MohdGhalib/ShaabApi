@@ -155,7 +155,7 @@ async function login() {
             const res = await fetch('/api/auth/login', {
                 method:  'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body:    JSON.stringify({ empId, password: pass })
+                body:    JSON.stringify({ password: pass })
             });
             if (res.status === 429) {
                 const d = await res.json();
