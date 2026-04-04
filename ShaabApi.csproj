@@ -1,0 +1,30 @@
+<Project Sdk="Microsoft.NET.Sdk.Web">
+
+  <PropertyGroup>
+    <TargetFramework>net8.0</TargetFramework>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <RootNamespace>ShaabApi</RootNamespace>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Microsoft.AspNetCore.Authentication.JwtBearer" Version="8.0.8" />
+    <PackageReference Include="Microsoft.EntityFrameworkCore" Version="8.0.8" />
+    <PackageReference Include="Pomelo.EntityFrameworkCore.MySql" Version="8.0.2" />
+  </ItemGroup>
+
+  <!-- تضمين ملفات الموقع الثابتة في النشر -->
+  <ItemGroup>
+    <Content Include="index.html" CopyToPublishDirectory="PreserveNewest" />
+    <Content Include="css\**\*" CopyToPublishDirectory="PreserveNewest" />
+    <Content Include="js\**\*" CopyToPublishDirectory="PreserveNewest" />
+    <Content Include="img\**\*" CopyToPublishDirectory="PreserveNewest" />
+    <Content Include="pages\**\*" CopyToPublishDirectory="PreserveNewest" />
+  </ItemGroup>
+
+  <!-- استبعاد ملفات PHP القديمة من النشر -->
+  <ItemGroup>
+    <Content Remove="api\*.php" />
+  </ItemGroup>
+
+</Project>
