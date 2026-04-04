@@ -177,7 +177,7 @@ async function login() {
             return;
         }
         // تحميل البيانات بعد الحصول على الـ token
-        await loadAllData();
+        try { await loadAllData(); } catch(e) { /* نكمل الدخول حتى لو فشل التحميل */ }
     }
 
     document.getElementById("loginPage").style.display = "none";
