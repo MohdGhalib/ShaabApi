@@ -4,3 +4,5 @@ obj/
 .vs/
 appsettings.Development.json
 *.log
+whatsapp-service/wa-session/
+.claude/
