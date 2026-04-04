@@ -11,16 +11,18 @@ var builder = WebApplication.CreateBuilder(args);
 var port = Environment.GetEnvironmentVariable("PORT") ?? "8080";
 builder.WebHost.UseUrls($"http://0.0.0.0:{port}");
 
+
 // حد حجم الطلبات على مستوى السيرفر (10 MB)
 builder.WebHost.ConfigureKestrel(o =>
     o.Limits.MaxRequestBodySize = 10 * 1024 * 1024);
 
 // قاعدة البيانات MySQL
-// دعم متغيرات Railway (MYSQLHOST, MYSQLPORT, MYSQLUSER, MYSQLPASSWORD, MYSQLDATABASE)
-var mysqlHost = Environment.GetEnvironmentVariable("MYSQLHOST");
+// دعم متغيرات Railway
+var mysqlHost = Environment.GetEnvironmentVariable("MYSQL_HOST")
+             ?? Environment.GetEnvironmentVariable("MYSQLHOST");
 var connectionString = mysqlHost != null
     ? $"Server={mysqlHost};" +
-      $"Port={Environment.GetEnvironmentVariable("MYSQLPORT") ?? "3306"};" +
+      $"Port={Environment.GetEnvironmentVariable("MYSQL_PORT") ?? Environment.GetEnvironmentVariable("MYSQLPORT") ?? "3306"};" +
       $"Database={Environment.GetEnvironmentVariable("MYSQLDATABASE")};" +
       $"User={Environment.GetEnvironmentVariable("MYSQLUSER")};" +
       $"Password={Environment.GetEnvironmentVariable("MYSQLPASSWORD")};" +
