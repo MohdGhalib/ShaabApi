@@ -110,6 +110,19 @@ public class AuthController : ControllerBase
         return Ok(new { token, name, title, empId, role, isAdmin });
     }
 
+    [HttpGet("me")]
+    [Microsoft.AspNetCore.Authorization.Authorize]
+    public IActionResult Me()
+    {
+        return Ok(new {
+            name    = User.FindFirst("name")?.Value,
+            title   = User.FindFirst("title")?.Value,
+            empId   = User.FindFirst("empId")?.Value,
+            role    = User.FindFirst("role")?.Value,
+            isAdmin = User.FindFirst("isAdmin")?.Value == "true"
+        });
+    }
+
     [HttpPost("change-password")]
     [Microsoft.AspNetCore.Authorization.Authorize]
     public async Task<IActionResult> ChangePassword([FromBody] ChangePasswordRequest body)

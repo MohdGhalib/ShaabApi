@@ -79,6 +79,7 @@ function recordLogout() {
 function doLogout() {
     if (typeof stopClock === 'function') stopClock();
     recordLogout();
+    setToken(null);
     location.reload();
 }
 

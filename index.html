@@ -349,8 +349,33 @@
         if (e.target === document.getElementById("profileModal")) closeProfile();
     });
 
-    /* ── تهيئة التطبيق: جلب البيانات ثم إظهار صفحة الدخول ── */
+    /* ── تهيئة التطبيق: استعادة الجلسة أو إظهار صفحة الدخول ── */
     document.addEventListener('DOMContentLoaded', async function() {
+        const savedToken = IS_LOCAL ? null : getSavedToken();
+        if (savedToken) {
+            // التحقق من صلاحية الـ token عبر طلب للسيرفر
+            try {
+                const res = await fetch('/api/auth/me', {
+                    headers: { 'Authorization': `Bearer ${savedToken}` }
+                });
+                if (res.ok) {
+                    const d = await res.json();
+                    setToken(savedToken);
+                    currentUser = { name: d.name, title: d.title, empId: d.empId, isAdmin: d.isAdmin, role: d.role };
+                    try { await loadAllData(); } catch(e) {}
+                    document.getElementById('loadingScreen').style.display = 'none';
+                    document.getElementById('mainApp').style.display       = 'flex';
+                    setProfileUI();
+                    init();
+                    if (typeof initSessionWatcher === 'function') initSessionWatcher();
+                    if (typeof _scheduleSync === 'function') _scheduleSync();
+                    applyThemeIcon();
+                    return;
+                }
+            } catch(e) {}
+            // الـ token منتهي أو خاطئ
+            setToken(null);
+        }
         try {
             await loadAllData();
             document.getElementById('loadingScreen').style.display = 'none';

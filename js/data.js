@@ -285,7 +285,12 @@ let _token     = null;
 let _isLoading = false;
 let _isSaving  = false;          // يمنع SSE من تحميل بيانات قديمة أثناء الحفظ
 let _savingTimer = null;
-function setToken(t) { _token = t; }
+function setToken(t) {
+    _token = t;
+    if (t) localStorage.setItem('_shaab_token', t);
+    else   localStorage.removeItem('_shaab_token');
+}
+function getSavedToken() { return localStorage.getItem('_shaab_token'); }
 
 /* ── جلب كل البيانات ── */
 async function loadAllData() {
