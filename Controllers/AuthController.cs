@@ -19,7 +19,10 @@ public class AuthController : ControllerBase
     private readonly IConfiguration _config;
 
     // Rate limiting: ip → (failCount, lockUntil)
-    private static readonly ConcurrentDictionary<string, RateEntry> _rates = new();
+    private static readonly ConcurrentDictionary<string, RateEntry> _rates       = new();
+    private static readonly ConcurrentDictionary<string, RateEntry> _changeRates = new();
+
+    private const int PbkdfIterations = 100_000;
 
     public AuthController(AppDbContext db, IConfiguration config)
     {
@@ -61,9 +64,8 @@ public class AuthController : ControllerBase
                 var cand = emps.FirstOrDefault(e => e.EmpId == pass);
                 if (cand != null && !string.IsNullOrEmpty(cand.PasswordHash))
                 {
-                    var salt     = cand.Salt ?? "";
-                    var expected = Sha256(salt + pass);
-                    if (expected == cand.PasswordHash)
+                    var salt = cand.Salt ?? "";
+                    if (VerifyPassword(pass, salt, cand.PasswordHash))
                     {
                         name    = cand.Name;
                         title   = cand.Title;
@@ -71,11 +73,11 @@ public class AuthController : ControllerBase
                         isAdmin = false;
                         role    = TitleToRole(cand.Title);
 
-                        // ترحيل: إذا لم يكن هناك salt نضيف واحداً
-                        if (string.IsNullOrEmpty(cand.Salt))
+                        // ترقية تلقائية: SHA-256 → PBKDF2
+                        if (!cand.PasswordHash.StartsWith("pbkdf2:"))
                         {
-                            cand.Salt         = GenerateSalt();
-                            cand.PasswordHash = Sha256(cand.Salt + pass);
+                            if (string.IsNullOrEmpty(cand.Salt)) cand.Salt = GenerateSalt();
+                            cand.PasswordHash = HashPbkdf2(pass, cand.Salt);
                             row.StoreValue    = JsonSerializer.Serialize(emps);
                             row.UpdatedAt     = DateTime.UtcNow;
                             await _db.SaveChangesAsync();
@@ -127,6 +129,13 @@ public class AuthController : ControllerBase
     [Microsoft.AspNetCore.Authorization.Authorize]
     public async Task<IActionResult> ChangePassword([FromBody] ChangePasswordRequest body)
     {
+        var ip = HttpContext.Connection.RemoteIpAddress?.ToString() ?? "unknown";
+        if (_changeRates.TryGetValue(ip, out var cr) && DateTime.UtcNow < cr.LockUntil)
+        {
+            var secs = (int)(cr.LockUntil - DateTime.UtcNow).TotalSeconds + 1;
+            return StatusCode(429, new { error = $"محاولات كثيرة — انتظر {secs} ثانية" });
+        }
+
         var empId = User.FindFirst("empId")?.Value ?? "";
         if (string.IsNullOrEmpty(empId) || empId == "admin")
             return BadRequest(new { error = "غير مسموح" });
@@ -138,26 +147,29 @@ public class AuthController : ControllerBase
             return BadRequest(new { error = "كلمة المرور يجب أن تكون 4 أحرف على الأقل" });
 
         var row = await _db.Storage.FindAsync("Shaab_Employees_DB");
-        if (row == null)
-            return BadRequest(new { error = "لم يُعثر على قاعدة بيانات الموظفين" });
+        if (row == null) return BadRequest(new { error = "لم يُعثر على قاعدة بيانات الموظفين" });
 
         var emps = JsonSerializer.Deserialize<List<EmpRecord>>(row.StoreValue) ?? [];
         var emp  = emps.FirstOrDefault(e => e.EmpId == empId);
-        if (emp == null)
-            return NotFound(new { error = "لم يُعثر على الموظف" });
+        if (emp == null) return NotFound(new { error = "لم يُعثر على الموظف" });
 
-        // التحقق من كلمة المرور الحالية
-        var salt     = emp.Salt ?? "";
-        var expected = Sha256(salt + body.OldPassword);
-        if (expected != emp.PasswordHash)
+        if (!VerifyPassword(body.OldPassword, emp.Salt ?? "", emp.PasswordHash ?? ""))
+        {
+            _changeRates.AddOrUpdate(ip,
+                _ => new RateEntry(1, DateTime.MinValue),
+                (_, old) => old.Count + 1 >= 5
+                    ? new RateEntry(0, DateTime.UtcNow.AddSeconds(60))
+                    : new RateEntry(old.Count + 1, DateTime.MinValue));
             return BadRequest(new { error = "كلمة المرور الحالية غير صحيحة" });
+        }
 
-        // تحديث كلمة المرور
+        _changeRates.TryRemove(ip, out _);
+
+        // تحديث بـ PBKDF2
         emp.Salt         = GenerateSalt();
-        emp.PasswordHash = Sha256(emp.Salt + body.NewPassword);
-
-        row.StoreValue = JsonSerializer.Serialize(emps);
-        row.UpdatedAt  = DateTime.UtcNow;
+        emp.PasswordHash = HashPbkdf2(body.NewPassword, emp.Salt);
+        row.StoreValue   = JsonSerializer.Serialize(emps);
+        row.UpdatedAt    = DateTime.UtcNow;
         await _db.SaveChangesAsync();
 
         return Ok(new { ok = true });
@@ -195,6 +207,24 @@ public class AuthController : ControllerBase
     {
         var bytes = SHA256.HashData(Encoding.UTF8.GetBytes(input));
         return Convert.ToHexString(bytes).ToLower();
+    }
+
+    // PBKDF2 — تشفير أقوى لكلمات المرور
+    private static string HashPbkdf2(string password, string salt)
+    {
+        using var kdf = new Rfc2898DeriveBytes(
+            Encoding.UTF8.GetBytes(password),
+            Encoding.UTF8.GetBytes(salt),
+            PbkdfIterations,
+            HashAlgorithmName.SHA256);
+        return "pbkdf2:" + Convert.ToHexString(kdf.GetBytes(32)).ToLower();
+    }
+
+    private static bool VerifyPassword(string password, string salt, string storedHash)
+    {
+        if (storedHash.StartsWith("pbkdf2:"))
+            return HashPbkdf2(password, salt) == storedHash;
+        return Sha256(salt + password) == storedHash; // SHA-256 القديم
     }
 
     private static string GenerateSalt()

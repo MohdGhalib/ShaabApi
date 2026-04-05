@@ -478,10 +478,8 @@ let _sseActive = false;
 
 function _initSSE() {
     if (IS_LOCAL || !_token) return;
-    const sseToken = _config_SseToken || '';
-    if (!sseToken) return;
 
-    const es = new EventSource(`/api/sse?t=${encodeURIComponent(sseToken)}`);
+    const es = new EventSource(`/api/sse?token=${encodeURIComponent(_token)}`);
     es.addEventListener('connected', () => {
         _sseActive = true;
         _syncDelay = 120_000; // SSE يتولى التحديث — نبطئ الـ polling
@@ -503,8 +501,6 @@ function _initSSE() {
     };
 }
 
-// يُعيَّن من appsettings عبر متغير مُضمَّن في الصفحة (أو يُترك فارغاً في IS_LOCAL)
-let _config_SseToken = '';
 
 /* ── مزامنة دورية ذكية: visibilitychange + exponential backoff ── */
 let _syncDelay = 20_000;

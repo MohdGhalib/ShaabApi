@@ -1,5 +1,7 @@
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.IdentityModel.Tokens;
 using System.Collections.Concurrent;
+using System.IdentityModel.Tokens.Jwt;
 using System.Text;
 
 namespace ShaabApi.Controllers;
@@ -16,13 +18,12 @@ public class SseController : ControllerBase
         _config = config;
     }
 
-    // GET /api/sse?t=TOKEN
+    // GET /api/sse?token=JWT
     [HttpGet]
-    public async Task Connect([FromQuery] string t)
+    public async Task Connect([FromQuery] string token)
     {
-        // التحقق من التوكن عبر query string
-        var expectedToken = _config["SseToken"] ?? "";
-        if (string.IsNullOrEmpty(t) || t != expectedToken)
+        // التحقق من JWT بدل التوكن المخصص
+        if (!ValidateJwt(token))
         {
             Response.StatusCode = 401;
             return;
@@ -30,21 +31,19 @@ public class SseController : ControllerBase
 
         var clientId = Guid.NewGuid().ToString("N");
 
-        Response.Headers["Content-Type"]  = "text/event-stream";
-        Response.Headers["Cache-Control"] = "no-cache";
-        Response.Headers["Connection"]    = "keep-alive";
+        Response.Headers["Content-Type"]      = "text/event-stream";
+        Response.Headers["Cache-Control"]     = "no-cache";
+        Response.Headers["Connection"]        = "keep-alive";
         Response.Headers["X-Accel-Buffering"] = "no";
 
-        var cts = new CancellationTokenSource();
+        var cts    = new CancellationTokenSource();
         var client = new SseClient(Response.Body, cts);
         _clients.TryAdd(clientId, client);
 
         try
         {
-            // إرسال حدث اتصال أولي
             await WriteEventAsync(Response.Body, "connected", "1", cts.Token);
 
-            // heartbeat كل 25 ثانية لمنع انقطاع الاتصال
             using var timer = new PeriodicTimer(TimeSpan.FromSeconds(25));
             while (!HttpContext.RequestAborted.IsCancellationRequested && !cts.Token.IsCancellationRequested)
             {
@@ -53,16 +52,10 @@ public class SseController : ControllerBase
                     await timer.WaitForNextTickAsync(HttpContext.RequestAborted);
                     await WriteEventAsync(Response.Body, "heartbeat", "ping", HttpContext.RequestAborted);
                 }
-                catch (OperationCanceledException)
-                {
-                    break;
-                }
+                catch (OperationCanceledException) { break; }
             }
         }
-        catch (Exception)
-        {
-            // الاتصال انقطع — تجاهل الخطأ
-        }
+        catch { }
         finally
         {
             _clients.TryRemove(clientId, out _);
@@ -70,35 +63,48 @@ public class SseController : ControllerBase
         }
     }
 
-    // إرسال حدث لجميع العملاء المتصلين
+    private bool ValidateJwt(string? token)
+    {
+        if (string.IsNullOrEmpty(token)) return false;
+        var key = _config["Jwt:Key"];
+        if (string.IsNullOrEmpty(key)) return false;
+
+        try
+        {
+            var handler = new JwtSecurityTokenHandler();
+            handler.ValidateToken(token, new TokenValidationParameters
+            {
+                ValidateIssuerSigningKey = true,
+                IssuerSigningKey         = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(key)),
+                ValidateIssuer           = true,
+                ValidIssuer              = _config["Jwt:Issuer"],
+                ValidateAudience         = true,
+                ValidAudience            = _config["Jwt:Issuer"],
+                ValidateLifetime         = true,
+                ClockSkew                = TimeSpan.Zero
+            }, out _);
+            return true;
+        }
+        catch { return false; }
+    }
+
     public static async Task Broadcast(string eventName, string data)
     {
         var deadClients = new List<string>();
 
         foreach (var (id, client) in _clients)
         {
-            try
-            {
-                await WriteEventAsync(client.Stream, eventName, data, client.Cts.Token);
-            }
-            catch
-            {
-                deadClients.Add(id);
-            }
+            try { await WriteEventAsync(client.Stream, eventName, data, client.Cts.Token); }
+            catch { deadClients.Add(id); }
         }
 
-        // تنظيف العملاء المنقطعين
         foreach (var id in deadClients)
-        {
-            if (_clients.TryRemove(id, out var dead))
-                dead.Cts.Cancel();
-        }
+            if (_clients.TryRemove(id, out var dead)) dead.Cts.Cancel();
     }
 
     private static async Task WriteEventAsync(Stream stream, string eventName, string data, CancellationToken ct)
     {
-        var msg = $"event: {eventName}\ndata: {data}\n\n";
-        var bytes = Encoding.UTF8.GetBytes(msg);
+        var bytes = Encoding.UTF8.GetBytes($"event: {eventName}\ndata: {data}\n\n");
         await stream.WriteAsync(bytes, ct);
         await stream.FlushAsync(ct);
     }
