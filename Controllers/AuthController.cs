@@ -125,6 +125,42 @@ public class AuthController : ControllerBase
         });
     }
 
+    // POST /api/auth/admin-fix-employees  — يُصلح بيانات الموظفين التالفة
+    [HttpPost("admin-fix-employees")]
+    [Microsoft.AspNetCore.Authorization.Authorize]
+    public async Task<IActionResult> AdminFixEmployees()
+    {
+        if (User.FindFirst("isAdmin")?.Value != "true")
+            return Forbid();
+
+        var row = await _db.Storage.FindAsync("Shaab_Employees_DB");
+        if (row == null) return NotFound(new { error = "لم يُعثر على الصف" });
+
+        // إعادة بناء بيانات الموظفين بشكل صحيح
+        var salt0799 = GenerateSalt();
+        var emps = new List<EmpRecord>
+        {
+            new() { EmpId = "9999", Name = "احمد النجار",   Title = "موظف ميديا",
+                    Salt = "7f7c276b408d096fa5ec9aa00d3b6b0f",
+                    PasswordHash = "7cc7d52363370fd361fa4dc85f2ace9d1836f15debac19175ac0530cea3916e7" },
+            new() { EmpId = "1111", Name = "محمد غالب",     Title = "مدير قسم السيطرة",
+                    Salt = "c1bb0da1d7e1fa1a5ff49c403c745833",
+                    PasswordHash = "pbkdf2:fd24c2b4032b150d543178593768749131286e32d6eba101a9298f1f2ce9145d" },
+            new() { EmpId = "0000", Name = "مسؤول",          Title = "موظف كول سنتر",
+                    Salt = "b3bda546ad9d50f8882b47b6c1dae23a",
+                    PasswordHash = "e468b63814f55f34c958dd7b3450ca64f472247abc53514b5e4580ff7bef1912" },
+            new() { EmpId = "0799", Name = "مدير الكول سنتر", Title = "مدير الكول سنتر",
+                    Salt = salt0799,
+                    PasswordHash = HashPbkdf2("0799", salt0799) },
+        };
+
+        row.StoreValue = JsonSerializer.Serialize(emps);
+        row.UpdatedAt  = DateTime.UtcNow;
+        await _db.SaveChangesAsync();
+
+        return Ok(new { ok = true });
+    }
+
     // POST /api/auth/admin-reset-password  — للمدير فقط
     [HttpPost("admin-reset-password")]
     [Microsoft.AspNetCore.Authorization.Authorize]
