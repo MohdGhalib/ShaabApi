@@ -36,22 +36,20 @@
     <canvas id="analogClock" width="84" height="84" style="width:42px;height:42px;display:block;"></canvas>
 </div>
 <!-- ── الساعة الرقمية (مخفية افتراضياً) ── -->
-<div id="digitalClockWrapper" class="hidden"
-     style="position:fixed;top:16px;left:66px;z-index:9999;cursor:pointer;
-            display:none;align-items:center;justify-content:center;
+<div id="digitalClockWrapper"
+     style="display:none;position:fixed;top:16px;left:66px;z-index:9999;cursor:pointer;
+            align-items:center;justify-content:center;
             background:var(--bg-card);border:1px solid var(--border);
             border-radius:14px;padding:5px 14px;
             box-shadow:0 4px 18px rgba(0,0,0,0.28);
-            font-family:'Cairo',monospace;
-            transition:all 0.35s cubic-bezier(.4,0,.2,1);"
+            font-family:'Cairo',monospace;"
      onclick="toggleClockMode()">
     <div style="text-align:center;line-height:1.1;">
-        <div id="digitalTime"  style="font-size:17px;font-weight:700;letter-spacing:2px;color:var(--accent-red);"></div>
-        <div id="digitalDate"  style="font-size:9px;color:var(--text-dim);letter-spacing:0.5px;margin-top:1px;"></div>
+        <div id="digitalTime" style="font-size:17px;font-weight:700;letter-spacing:2px;color:var(--accent-red);"></div>
+        <div id="digitalDate" style="font-size:9px;color:var(--text-dim);letter-spacing:0.5px;margin-top:1px;"></div>
     </div>
 </div>
 <style>
-#digitalClockWrapper.dc-visible { display:flex !important; }
 @keyframes clockFadeIn { from{opacity:0;transform:scale(0.85)} to{opacity:1;transform:scale(1)} }
 .clock-pop { animation: clockFadeIn 0.3s cubic-bezier(.4,0,.2,1) both; }
 </style>

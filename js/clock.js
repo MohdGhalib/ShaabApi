@@ -19,14 +19,14 @@ function _applyClockMode() {
     if (!analog || !digital) return;
 
     if (_clockMode === 'digital') {
-        analog.classList.add('hidden');
-        digital.classList.remove('hidden');
-        digital.classList.add('dc-visible', 'clock-pop');
+        analog.style.display  = 'none';
+        digital.style.display = 'flex';
+        digital.classList.add('clock-pop');
         _startDigitalClock();
         if (_clockRaf) { cancelAnimationFrame(_clockRaf); _clockRaf = null; }
     } else {
-        digital.classList.remove('dc-visible');
-        digital.classList.add('hidden');
+        digital.style.display = 'none';
+        analog.style.display  = '';
         analog.classList.remove('hidden');
         analog.classList.add('clock-pop');
         _stopDigitalClock();
@@ -76,8 +76,8 @@ function stopClock() {
     _stopDigitalClock();
     const analog  = document.getElementById('analogClockWrapper');
     const digital = document.getElementById('digitalClockWrapper');
-    if (analog)  analog.classList.add('hidden');
-    if (digital) { digital.classList.remove('dc-visible'); digital.classList.add('hidden'); }
+    if (analog)  analog.style.display  = 'none';
+    if (digital) digital.style.display = 'none';
 }
 
 function _tickClock() {
