@@ -79,14 +79,23 @@ function renderDashboard() {
             <div style="${dCell}"><small>${sanitize(x.addedBy||'—')}</small></div>`)
     );
 
+    const btnStyle = `cursor:pointer;background:rgba(211,47,47,0.12);border:1px solid rgba(211,47,47,0.35);
+        color:#ef5350;border-radius:8px;padding:4px 14px;font-family:'Cairo';font-size:12px;font-weight:700;`;
+
     container.innerHTML = cards + `
     <div style="display:grid;grid-template-columns:1fr 1fr;gap:20px;">
         <div class="card" style="padding:20px;">
-            <h4 style="margin:0 0 16px;color:var(--accent-red);">📋 آخر المنتسيات</h4>
+            <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px;">
+                <h4 style="margin:0;color:var(--accent-red);">📋 آخر المنتسيات</h4>
+                <button style="${btnStyle}" onclick="switchTab('m')">عرض الكل ←</button>
+            </div>
             ${recentMGrid}
         </div>
         <div class="card" style="padding:20px;">
-            <h4 style="margin:0 0 16px;color:var(--accent-red);">🚨 آخر الشكاوي</h4>
+            <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px;">
+                <h4 style="margin:0;color:var(--accent-red);">🚨 آخر الشكاوي</h4>
+                <button style="${btnStyle}" onclick="switchTab('c')">عرض الكل ←</button>
+            </div>
             ${recentCGrid}
         </div>
     </div>`;
