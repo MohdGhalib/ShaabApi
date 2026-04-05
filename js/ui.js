@@ -79,20 +79,28 @@ function _paginationBar(table, total, currentPage) {
 }
 
 /* ── شارات الأرقام على التبويبات ── */
+// يحفظ آخر عدد شاهده المستخدم عند زيارة كل تبويب
+const _seenCounts = { m: -1, c: -1, i: -1 };
+let   _activeTab  = null;
+
 function _updateBadges() {
     const pendingM = (db.montasiat  || []).filter(x => !x.deleted && x.status === 'قيد الانتظار').length;
     const noAuditC = (db.complaints || []).filter(x => !x.deleted && x.status === 'تمت الموافقة' && !x.audit).length;
     const todayI   = (db.inquiries  || []).filter(x => !x.deleted && x.iso && x.iso.startsWith(iso())).length;
 
-    const set = (id, count) => {
+    const set = (id, tab, count) => {
         const el = document.getElementById(id);
         if (!el) return;
-        el.textContent = count > 0 ? count : '';
-        el.style.display = count > 0 ? '' : 'none';
+        // إذا التبويب مفتوح حالياً أو العدد لم يتغير عن آخر زيارة → أخفِ الشارة
+        if (_activeTab === tab || count <= _seenCounts[tab]) {
+            el.textContent = ''; el.style.display = 'none';
+        } else {
+            el.textContent = count; el.style.display = '';
+        }
     };
-    set('badge-m', pendingM);
-    set('badge-c', noAuditC);
-    set('badge-i', todayI);
+    set('badge-m', 'm', pendingM);
+    set('badge-c', 'c', noAuditC);
+    set('badge-i', 'i', todayI);
 }
 
 function _syncEmpGroup() {
@@ -152,7 +160,14 @@ function switchTab(t) {
     const tabEGroup = document.getElementById('tab-emp-group');
     if (tabEGroup) tabEGroup.classList.toggle('group-active', ['b','e','s'].includes(t));
 
-    // إخفاء شارة الإشعار عند فتح التبويب
+    // إخفاء شارة الإشعار عند فتح التبويب وحفظ العدد المُشاهَد
+    _activeTab = t;
+    if (t in _seenCounts) {
+        const counts = { m: (db.montasiat||[]).filter(x=>!x.deleted&&x.status==='قيد الانتظار').length,
+                         c: (db.complaints||[]).filter(x=>!x.deleted&&x.status==='تمت الموافقة'&&!x.audit).length,
+                         i: (db.inquiries||[]).filter(x=>!x.deleted&&x.iso&&x.iso.startsWith(iso())).length };
+        _seenCounts[t] = counts[t] ?? 0;
+    }
     const badge = document.getElementById(`badge-${t}`);
     if (badge) { badge.textContent = ''; badge.style.display = 'none'; }
 
