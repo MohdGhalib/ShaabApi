@@ -125,6 +125,33 @@ public class AuthController : ControllerBase
         });
     }
 
+    // POST /api/auth/admin-reset-password  — للمدير فقط
+    [HttpPost("admin-reset-password")]
+    [Microsoft.AspNetCore.Authorization.Authorize]
+    public async Task<IActionResult> AdminResetPassword([FromBody] AdminResetRequest body)
+    {
+        if (User.FindFirst("isAdmin")?.Value != "true")
+            return Forbid();
+
+        if (string.IsNullOrEmpty(body.EmpId) || string.IsNullOrEmpty(body.NewPassword))
+            return BadRequest(new { error = "يرجى تعبئة جميع الحقول" });
+
+        var row = await _db.Storage.FindAsync("Shaab_Employees_DB");
+        if (row == null) return BadRequest(new { error = "لم يُعثر على قاعدة بيانات الموظفين" });
+
+        var emps = JsonSerializer.Deserialize<List<EmpRecord>>(row.StoreValue) ?? [];
+        var emp  = emps.FirstOrDefault(e => e.EmpId == body.EmpId);
+        if (emp == null) return NotFound(new { error = "لم يُعثر على الموظف" });
+
+        emp.Salt         = GenerateSalt();
+        emp.PasswordHash = HashPbkdf2(body.NewPassword, emp.Salt);
+        row.StoreValue   = JsonSerializer.Serialize(emps);
+        row.UpdatedAt    = DateTime.UtcNow;
+        await _db.SaveChangesAsync();
+
+        return Ok(new { ok = true });
+    }
+
     [HttpPost("change-password")]
     [Microsoft.AspNetCore.Authorization.Authorize]
     public async Task<IActionResult> ChangePassword([FromBody] ChangePasswordRequest body)
@@ -246,6 +273,7 @@ public class AuthController : ControllerBase
 
 public record LoginRequest(string? Password);
 public record ChangePasswordRequest(string? OldPassword, string? NewPassword);
+public record AdminResetRequest(string? EmpId, string? NewPassword);
 public record RateEntry(int Count, DateTime LockUntil);
 
 public class EmpRecord
