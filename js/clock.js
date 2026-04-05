@@ -68,6 +68,16 @@ function initClock() {
         _clockLogo.src = 'img/logo.png';
         _clockLoaded   = true;
     }
+
+    // إضافة حدث النقر على الساعتين
+    ['analogClockWrapper','analogClock','digitalClockWrapper'].forEach(id => {
+        const el = document.getElementById(id);
+        if (el && !el._clockListened) {
+            el.addEventListener('click', toggleClockMode);
+            el._clockListened = true;
+        }
+    });
+
     _applyClockMode();
 }
 
