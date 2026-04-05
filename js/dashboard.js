@@ -1,6 +1,22 @@
 /* ══════════════════════════════════════════════════════
    DASHBOARD — Overview cards and recent items
 ══════════════════════════════════════════════════════ */
+let _highlightId = null;
+
+function viewDashboardItem(tab, id) {
+    _highlightId = id;
+    switchTab(tab);
+    // بعد رسم الجدول نبحث عن الصف ونُبرزه
+    requestAnimationFrame(() => {
+        const row = document.querySelector(`tr[data-id="${id}"]`);
+        if (!row) return;
+        row.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        row.style.transition = 'background 0.3s';
+        row.style.background = 'rgba(211,47,47,0.18)';
+        setTimeout(() => { row.style.background = ''; }, 2500);
+        _highlightId = null;
+    });
+}
 function renderDashboard() {
     const container = document.getElementById('dashboardContainer');
     if (!container) return;
@@ -59,24 +75,32 @@ function renderDashboard() {
 
     const dCell = 'padding:10px 12px;font-size:13px;border-bottom:1px solid var(--border);word-break:break-word;';
 
+    const viewBtn = (tab, id) =>
+        `<button onclick="viewDashboardItem('${tab}',${id})"
+            style="cursor:pointer;background:rgba(211,47,47,0.12);border:1px solid rgba(211,47,47,0.35);
+                   color:#ef5350;border-radius:7px;padding:3px 11px;font-family:'Cairo';font-size:11px;
+                   font-weight:700;white-space:nowrap;">عرض ←</button>`;
+
     const recentMGrid = _gridTable(
-        ['22%','43%','20%','15%'],
-        ['الفرع','التفاصيل','الحالة','أضافه'],
+        ['22%','38%','18%','12%','10%'],
+        ['الفرع','التفاصيل','الحالة','أضافه',''],
         recentM.map(x => `
             <div style="${dCell}"><b>${sanitize(x.branch)}</b><br><small style="color:var(--text-dim)">${sanitize(x.city)}</small></div>
-            <div style="${dCell}"><span class="text-box-cell" style="font-size:12px;">${sanitize((x.notes||'').substring(0,60))}${(x.notes||'').length>60?'…':''}</span></div>
+            <div style="${dCell}"><span class="text-box-cell" style="font-size:12px;">${sanitize((x.notes||'').substring(0,50))}${(x.notes||'').length>50?'…':''}</span></div>
             <div style="${dCell}"><span class="status-badge ${x.status==='تم التسليم'?'done':x.status==='مرفوضة'?'rejected':'pending'}">${sanitize(x.status)}</span></div>
-            <div style="${dCell}"><small>${sanitize(x.addedBy||'—')}</small></div>`)
+            <div style="${dCell}"><small>${sanitize(x.addedBy||'—')}</small></div>
+            <div style="${dCell};text-align:center;">${viewBtn('m', x.id)}</div>`)
     );
 
     const recentCGrid = _gridTable(
-        ['22%','43%','20%','15%'],
-        ['الفرع','الشكوى','الرد','أضافه'],
+        ['22%','38%','18%','12%','10%'],
+        ['الفرع','الشكوى','الرد','أضافه',''],
         recentC.map(x => `
             <div style="${dCell}"><b>${sanitize(x.branch)}</b><br><small style="color:var(--text-dim)">${sanitize(x.city)}</small></div>
-            <div style="${dCell}"><span class="text-box-cell" style="font-size:12px;">${sanitize((x.notes||'').substring(0,60))}${(x.notes||'').length>60?'…':''}</span></div>
+            <div style="${dCell}"><span class="text-box-cell" style="font-size:12px;">${sanitize((x.notes||'').substring(0,50))}${(x.notes||'').length>50?'…':''}</span></div>
             <div style="${dCell}"><span class="status-badge ${x.audit?'done':'pending'}">${x.audit?'تم الرد':'بانتظار الرد'}</span></div>
-            <div style="${dCell}"><small>${sanitize(x.addedBy||'—')}</small></div>`)
+            <div style="${dCell}"><small>${sanitize(x.addedBy||'—')}</small></div>
+            <div style="${dCell};text-align:center;">${viewBtn('c', x.id)}</div>`)
     );
 
     const btnStyle = `cursor:pointer;background:rgba(211,47,47,0.12);border:1px solid rgba(211,47,47,0.35);

@@ -253,7 +253,7 @@ function _renderTableM(get, isAdmin) {
             : x.type==='أخرى'
             ? `<span style="padding:2px 8px;border-radius:6px;font-size:12px;font-weight:700;background:rgba(100,181,246,0.15);color:#90caf9;">أخرى</span>`
             : `<span style="color:var(--text-dim);font-size:12px;">—</span>`;
-        return `<tr>
+        return `<tr data-id="${x.id}">
             <td><b>${x.branch}</b><br><small>${x.city}</small></td>
             <td style="text-align:center;">${typeLabel}</td>
             <td><span class="text-box-cell">${sanitize(x.notes)}</span>${editBox}</td>
@@ -500,7 +500,7 @@ function _renderTableC(get, isAdmin) {
                 <button class="btn-main btn" style="width:100%;padding:8px;font-size:12px;" onclick="saveEditControl(${x.id})">حفظ التعديل</button>
             </div>` : '';
 
-        return `<tr>
+        return `<tr data-id="${x.id}">
             <td><b>${x.branch}</b><br><small>${x.city}</small><br>${cStatusBadge}</td>
             <td>
                 <span class="text-box-cell">${sanitize(x.notes)}</span>
