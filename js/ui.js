@@ -122,6 +122,8 @@ function toggleTabM() {
         if (tabM) { tabM.classList.remove('group-active'); tabM.classList.add('active'); }
     } else {
         // القائمة مغلقة → افتح وانتقل للتبويب
+        const bm = document.getElementById('badge-m');
+        if (bm) { bm.textContent = ''; bm.style.display = 'none'; }
         switchTab('m');
     }
 }
@@ -149,6 +151,10 @@ function switchTab(t) {
     if (grpE) grpE.classList.toggle('open', ['b','e','s'].includes(t));
     const tabEGroup = document.getElementById('tab-emp-group');
     if (tabEGroup) tabEGroup.classList.toggle('group-active', ['b','e','s'].includes(t));
+
+    // إخفاء شارة الإشعار عند فتح التبويب
+    const badge = document.getElementById(`badge-${t}`);
+    if (badge) { badge.textContent = ''; badge.style.display = 'none'; }
 
     document.getElementById('page-container').innerHTML = PAGES[t] || '';
 
