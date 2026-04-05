@@ -91,12 +91,9 @@ function _updateBadges() {
     const set = (id, tab, count) => {
         const el = document.getElementById(id);
         if (!el) return;
-        // إذا التبويب مفتوح حالياً أو العدد لم يتغير عن آخر زيارة → أخفِ الشارة
-        if (_activeTab === tab || count <= _seenCounts[tab]) {
-            el.textContent = ''; el.style.display = 'none';
-        } else {
-            el.textContent = count; el.style.display = '';
-        }
+        const hide = count === 0 || _activeTab === tab || count <= _seenCounts[tab];
+        el.textContent  = hide ? '' : count;
+        el.style.display = hide ? 'none' : '';
     };
     set('badge-m', 'm', pendingM);
     set('badge-c', 'c', noAuditC);
