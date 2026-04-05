@@ -1,31 +1,83 @@
 /* ══════════════════════════════════════════════════════
-   ANALOG CLOCK — Canvas clock with logo background
+   CLOCK — Analog + Digital with toggle
 ══════════════════════════════════════════════════════ */
 let _clockRaf    = null;
 let _clockLogo   = null;
 let _clockLoaded = false;
+let _clockMode   = localStorage.getItem('_clockMode') || 'analog'; // 'analog' | 'digital'
+let _digitalRaf  = null;
+
+function toggleClockMode() {
+    _clockMode = _clockMode === 'analog' ? 'digital' : 'analog';
+    localStorage.setItem('_clockMode', _clockMode);
+    _applyClockMode();
+}
+
+function _applyClockMode() {
+    const analog  = document.getElementById('analogClockWrapper');
+    const digital = document.getElementById('digitalClockWrapper');
+    if (!analog || !digital) return;
+
+    if (_clockMode === 'digital') {
+        analog.classList.add('hidden');
+        digital.classList.remove('hidden');
+        digital.classList.add('dc-visible', 'clock-pop');
+        _startDigitalClock();
+        if (_clockRaf) { cancelAnimationFrame(_clockRaf); _clockRaf = null; }
+    } else {
+        digital.classList.remove('dc-visible');
+        digital.classList.add('hidden');
+        analog.classList.remove('hidden');
+        analog.classList.add('clock-pop');
+        _stopDigitalClock();
+        if (_clockRaf) cancelAnimationFrame(_clockRaf);
+        _tickClock();
+    }
+}
+
+function _startDigitalClock() {
+    _stopDigitalClock();
+    _tickDigital();
+}
+
+function _stopDigitalClock() {
+    if (_digitalRaf) { cancelAnimationFrame(_digitalRaf); _digitalRaf = null; }
+}
+
+function _tickDigital() {
+    const now  = new Date();
+    const h    = String(now.getHours()).padStart(2, '0');
+    const m    = String(now.getMinutes()).padStart(2, '0');
+    const s    = String(now.getSeconds()).padStart(2, '0');
+    const days = ['الأحد','الإثنين','الثلاثاء','الأربعاء','الخميس','الجمعة','السبت'];
+    const day  = days[now.getDay()];
+    const dateStr = `${day} ${now.getDate()}/${now.getMonth()+1}`;
+
+    const tEl = document.getElementById('digitalTime');
+    const dEl = document.getElementById('digitalDate');
+    if (tEl) tEl.textContent = `${h}:${m}:${s}`;
+    if (dEl) dEl.textContent = dateStr;
+
+    _digitalRaf = requestAnimationFrame(_tickDigital);
+}
 
 function initClock() {
-    const wrapper = document.getElementById('analogClockWrapper');
-    if (wrapper) wrapper.classList.remove('hidden');
-
     // تحميل اللوجو مرة واحدة
     if (!_clockLoaded) {
-        _clockLogo        = new Image();
-        _clockLogo.src    = 'img/logo.png';
-        _clockLoaded      = true;
+        _clockLogo     = new Image();
+        _clockLogo.src = 'img/logo.png';
+        _clockLoaded   = true;
     }
-
-    // بدء الرسم
-    if (_clockRaf) cancelAnimationFrame(_clockRaf);
-    _tickClock();
+    _applyClockMode();
 }
 
 function stopClock() {
-    if (_clockRaf) cancelAnimationFrame(_clockRaf);
-    _clockRaf = null;
-    const wrapper = document.getElementById('analogClockWrapper');
-    if (wrapper) wrapper.classList.add('hidden');
+    if (_clockRaf) { cancelAnimationFrame(_clockRaf); _clockRaf = null; }
+    _stopDigitalClock();
+    const analog  = document.getElementById('analogClockWrapper');
+    const digital = document.getElementById('digitalClockWrapper');
+    if (analog)  analog.classList.add('hidden');
+    if (digital) { digital.classList.remove('dc-visible'); digital.classList.add('hidden'); }
 }
 
 function _tickClock() {
