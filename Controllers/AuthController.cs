@@ -60,7 +60,9 @@ public class AuthController : ControllerBase
             var row = await _db.Storage.FindAsync("Shaab_Employees_DB");
             if (row != null)
             {
-                var emps = JsonSerializer.Deserialize<List<EmpRecord>>(row.StoreValue) ?? [];
+                List<EmpRecord> emps;
+                try { emps = JsonSerializer.Deserialize<List<EmpRecord>>(row.StoreValue) ?? []; }
+                catch { emps = []; }
                 var cand = emps.FirstOrDefault(e => e.EmpId == pass);
                 if (cand != null && !string.IsNullOrEmpty(cand.PasswordHash))
                 {
