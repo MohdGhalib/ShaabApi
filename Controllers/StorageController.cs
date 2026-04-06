@@ -83,12 +83,12 @@ public class StorageController : ControllerBase
             }
         }
 
-        // حماية مفاتيح المدراء — يمنع الكتابة من غير المدراء
+        // حماية مفاتيح المدراء — يمنع الكتابة من غير المخوّلين
         if (_adminOnlyKeys.Contains(body.Key))
         {
             var isAdmin = User.FindFirst("isAdmin")?.Value == "true";
             var role    = User.FindFirst("role")?.Value ?? "";
-            if (!isAdmin && role != "cc_manager")
+            if (!isAdmin && role != "cc_manager" && role != "control_employee")
                 return Forbid();
         }
 
