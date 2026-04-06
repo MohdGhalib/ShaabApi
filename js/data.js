@@ -491,9 +491,12 @@ function _initSSE() {
         }
         try { await loadAllData(); renderAll(); } catch(e) { /* صامت */ }
     });
-    es.addEventListener('new-complaint', () => {
+    es.addEventListener('new-complaint', (e) => {
         if (currentUser?.role === 'cc_manager' || currentUser?.isAdmin) {
+            let info = {};
+            try { info = JSON.parse(e.data); } catch {}
             _playComplaintAlert();
+            _showComplaintPopup(info);
         }
     });
     es.addEventListener('heartbeat', () => { /* keep-alive */ });
@@ -556,6 +559,140 @@ function _playComplaintAlert() {
     } catch(e) { /* المتصفح لا يدعم Web Audio */ }
 }
 
+
+/* ── popup تنبيه الشكوى الجديدة ── */
+(function _injectPopupStyles() {
+    const s = document.createElement('style');
+    s.textContent = `
+    #_cPopupOverlay {
+        position:fixed;inset:0;z-index:999998;
+        background:rgba(0,0,0,0.55);backdrop-filter:blur(3px);
+        display:flex;align-items:flex-start;justify-content:center;
+        padding-top:60px;
+        animation:_cFadeIn .25s ease;
+    }
+    @keyframes _cFadeIn { from{opacity:0} to{opacity:1} }
+    @keyframes _cSlideIn { from{opacity:0;transform:translateY(-28px) scale(.96)} to{opacity:1;transform:translateY(0) scale(1)} }
+    @keyframes _cPulse { 0%,100%{transform:scale(1)} 50%{transform:scale(1.18)} }
+    #_cPopupBox {
+        background:#1a1a2e;border:1px solid rgba(198,40,40,.45);
+        border-radius:20px;padding:28px 28px 22px;max-width:420px;width:92%;
+        box-shadow:0 8px 40px rgba(198,40,40,.35),0 2px 12px rgba(0,0,0,.6);
+        animation:_cSlideIn .3s cubic-bezier(.22,1,.36,1);
+        font-family:'Cairo',sans-serif;direction:rtl;
+    }
+    #_cPopupBox ._cIcon {
+        display:inline-block;font-size:36px;margin-bottom:6px;
+        animation:_cPulse 1s ease-in-out infinite;
+    }
+    #_cPopupBox ._cTitle {
+        font-size:18px;font-weight:800;color:#ef5350;margin-bottom:4px;
+    }
+    #_cPopupBox ._cSub {
+        font-size:13px;color:#aaa;margin-bottom:16px;
+    }
+    #_cPopupBox ._cCard {
+        background:rgba(198,40,40,.1);border:1px solid rgba(198,40,40,.25);
+        border-radius:12px;padding:14px 16px;margin-bottom:20px;
+    }
+    #_cPopupBox ._cCard ._cBranch {
+        font-size:15px;font-weight:700;color:#ef9a9a;margin-bottom:6px;
+    }
+    #_cPopupBox ._cCard ._cNotes {
+        font-size:13px;color:#ccc;line-height:1.7;
+    }
+    #_cPopupBox ._cBtns {
+        display:flex;gap:10px;
+    }
+    #_cPopupBox ._cBtnView {
+        flex:1;padding:11px;border:none;border-radius:12px;cursor:pointer;
+        background:linear-gradient(135deg,#c62828,#e53935);
+        color:#fff;font-family:'Cairo',sans-serif;font-size:15px;font-weight:700;
+        transition:opacity .2s;
+    }
+    #_cPopupBox ._cBtnView:hover { opacity:.85; }
+    #_cPopupBox ._cBtnIgnore {
+        flex:1;padding:11px;border:1px solid rgba(255,255,255,.15);border-radius:12px;cursor:pointer;
+        background:rgba(255,255,255,.07);
+        color:#aaa;font-family:'Cairo',sans-serif;font-size:15px;font-weight:700;
+        transition:background .2s;
+    }
+    #_cPopupBox ._cBtnIgnore:hover { background:rgba(255,255,255,.13); }
+    `;
+    document.head.appendChild(s);
+})();
+
+let _pendingComplaintId = null;
+
+function _showComplaintPopup(info) {
+    // إزالة أي popup سابق
+    const old = document.getElementById('_cPopupOverlay');
+    if (old) old.remove();
+
+    _pendingComplaintId = info.id || null;
+
+    // طلب إذن browser notification إن لم يُمنح بعد
+    if (typeof Notification !== 'undefined' && Notification.permission === 'default') {
+        Notification.requestPermission();
+    }
+
+    // browser notification — لجلب تركيز التبويب من موقع آخر
+    if (typeof Notification !== 'undefined' && Notification.permission === 'granted') {
+        const n = new Notification('🚨 شكوى جديدة — متابعة السيطرة', {
+            body: `${info.branch || ''}${info.city ? ' — ' + info.city : ''}\n${(info.notes || '').substring(0, 80)}`,
+            icon: '/img/logo.png',
+            requireInteraction: true,
+            tag: 'new-complaint'
+        });
+        n.onclick = () => { window.focus(); n.close(); };
+    }
+
+    const branch = sanitize(info.branch || '');
+    const city   = sanitize(info.city   || '');
+    const notes  = sanitize((info.notes  || '').substring(0, 120));
+
+    const overlay = document.createElement('div');
+    overlay.id = '_cPopupOverlay';
+    overlay.innerHTML = `
+        <div id="_cPopupBox">
+            <div style="text-align:center;margin-bottom:12px;">
+                <div class="_cIcon">🚨</div>
+                <div class="_cTitle">شكوى جديدة في متابعة السيطرة</div>
+                <div class="_cSub">وردت للتو — تتطلب مراجعتك</div>
+            </div>
+            <div class="_cCard">
+                <div class="_cBranch">📍 ${branch}${city ? ' — ' + city : ''}</div>
+                ${notes ? `<div class="_cNotes">${notes}${(info.notes||'').length > 120 ? '…' : ''}</div>` : ''}
+            </div>
+            <div class="_cBtns">
+                <button class="_cBtnView"  onclick="_complaintPopupView()">👁 عرض الشكوى</button>
+                <button class="_cBtnIgnore" onclick="_complaintPopupDismiss()">تجاهل</button>
+            </div>
+        </div>
+    `;
+
+    // إغلاق عند النقر على الخلفية
+    overlay.addEventListener('click', (e) => { if (e.target === overlay) _complaintPopupDismiss(); });
+    document.body.appendChild(overlay);
+}
+
+function _complaintPopupDismiss() {
+    const el = document.getElementById('_cPopupOverlay');
+    if (el) el.remove();
+}
+
+function _complaintPopupView() {
+    _complaintPopupDismiss();
+    if (typeof switchTab === 'function') {
+        if (typeof _pg !== 'undefined') _pg.C = 1;
+        switchTab('c');
+        // التمرير لأعلى الجدول بعد العرض
+        setTimeout(() => {
+            const tbl = document.querySelector('#tableC');
+            if (tbl) tbl.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        }, 300);
+    }
+}
 
 /* ── مزامنة دورية ذكية: visibilitychange + exponential backoff ── */
 let _syncDelay = 20_000;

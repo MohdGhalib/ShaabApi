@@ -25,7 +25,13 @@ function addControl() {
         if (!IS_LOCAL && (currentUser?.role === 'cc_employee' || currentUser?.role === 'media')) {
             fetch('/api/sse/complaint-notify', {
                 method: 'POST',
-                headers: { 'Authorization': `Bearer ${_token}` }
+                headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${_token}` },
+                body: JSON.stringify({
+                    id:     String(base.id),
+                    branch: base.branch || '',
+                    city:   base.city   || '',
+                    notes:  (base.notes || '').substring(0, 120)
+                })
             }).catch(() => {});
         }
     };

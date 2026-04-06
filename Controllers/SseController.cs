@@ -91,14 +91,20 @@ public class SseController : ControllerBase
     // POST /api/sse/complaint-notify — يُطلق حدث تنبيه شكوى لجميع المتصلين
     [HttpPost("complaint-notify")]
     [Microsoft.AspNetCore.Authorization.Authorize]
-    public async Task<IActionResult> ComplaintNotify()
+    public async Task<IActionResult> ComplaintNotify([FromBody] ComplaintNotifyRequest? body)
     {
         var role    = User.FindFirst("role")?.Value    ?? "";
         var isAdmin = User.FindFirst("isAdmin")?.Value == "true";
         if (!isAdmin && role != "cc_employee" && role != "media")
             return Forbid();
 
-        await Broadcast("new-complaint", "1");
+        var payload = System.Text.Json.JsonSerializer.Serialize(new {
+            id     = body?.Id     ?? "",
+            branch = body?.Branch ?? "",
+            city   = body?.City   ?? "",
+            notes  = body?.Notes  ?? ""
+        });
+        await Broadcast("new-complaint", payload);
         return Ok(new { ok = true });
     }
 
@@ -125,3 +131,4 @@ public class SseController : ControllerBase
 }
 
 public record SseClient(Stream Stream, CancellationTokenSource Cts);
+public record ComplaintNotifyRequest(string? Id, string? Branch, string? City, string? Notes);
