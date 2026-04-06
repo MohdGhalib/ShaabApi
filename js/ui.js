@@ -282,17 +282,23 @@ function populateLinkedInquirySelect() {
     const reservedSeqs = new Set(
         db.complaints.filter(c => !c.deleted && c.linkedInqSeq).map(c => String(c.linkedInqSeq))
     );
+    const canClaim = currentUser?.role === 'cc_employee' || currentUser?.role === 'cc_manager' || currentUser?.isAdmin;
     const complaints = db.inquiries.filter(x => !x.deleted && x.type === 'شكوى');
     complaints.forEach(x => {
-        const seqStr = String(x.seq);
+        const seqStr    = String(x.seq);
         const isReserved = reservedSeqs.has(seqStr);
-        const preview = x.notes ? x.notes.substring(0, 25) : '...';
-        const label = isReserved
-            ? `🔒 محجوزة — #${x.seq} — ${x.branch} — ${sanitize(x.phone)}`
-            : `#${x.seq} — ${x.branch} — ${sanitize(x.phone)} — ${sanitize(preview)}`;
-        sel.innerHTML += `<option value="${x.seq}" ${isReserved ? 'disabled style="color:#666"' : ''}>${label}</option>`;
+        const preview   = x.notes ? x.notes.substring(0, 25) : '...';
+        // الموظفون المخوَّلون يمكنهم حجز أي شكوى حتى لو محجوزة مسبقاً
+        if (isReserved && !canClaim) {
+            sel.innerHTML += `<option value="${x.seq}" disabled style="color:#666">🔒 محجوزة — #${x.seq} — ${x.branch} — ${sanitize(x.phone)}</option>`;
+        } else {
+            const label = isReserved
+                ? `🔄 محجوزة (إعادة حجز) — #${x.seq} — ${x.branch} — ${sanitize(x.phone)}`
+                : `#${x.seq} — ${x.branch} — ${sanitize(x.phone)} — ${sanitize(preview)}`;
+            sel.innerHTML += `<option value="${x.seq}">${label}</option>`;
+        }
     });
-    if (cur && !reservedSeqs.has(String(cur))) sel.value = cur;
+    if (cur) sel.value = cur;
 }
 
 function onLinkedInquiryChange() {
