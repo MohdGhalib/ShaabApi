@@ -32,8 +32,8 @@ async function addEmployee() {
     renderEmployees();
 }
 
-function deleteEmployee(id) {
-    const emp = employees.find(e => e.id === id);
+function deleteEmployee(empId) {
+    const emp = employees.find(e => e.empId === empId);
     if (!emp) return;
     if (currentUser?.role === 'control_employee' && emp.addedBy !== currentUser.empId) return alert("لا تملك صلاحية حذف هذا الموظف");
     if (currentUser?.role === 'control'          && emp.addedBy !== currentUser.empId) return alert("لا تملك صلاحية حذف هذا الموظف");
@@ -41,7 +41,7 @@ function deleteEmployee(id) {
         `<div style="font-weight:700;color:var(--text-main);margin-bottom:4px;">${sanitize(emp.name)}</div>
          <div style="color:var(--text-dim);">${sanitize(emp.title)}</div>
          <div style="margin-top:8px;font-size:12px;color:var(--text-dim);">الرقم الوظيفي: ${sanitize(emp.empId)}</div>`,
-        () => { employees = employees.filter(e => e.id !== id); saveEmployees(); populateEmployeeDropdowns(); renderEmployees(); }
+        () => { employees = employees.filter(e => e.empId !== empId); saveEmployees(); populateEmployeeDropdowns(); renderEmployees(); }
     );
 }
 
@@ -55,10 +55,10 @@ function _canChangeEmpPassword(emp) {
 
 let _setEmpPwTargetId = null;
 
-function openSetEmpPassword(id) {
-    const emp = employees.find(e => e.id === id);
+function openSetEmpPassword(empId) {
+    const emp = employees.find(e => e.empId === empId);
     if (!emp) return;
-    _setEmpPwTargetId = id;
+    _setEmpPwTargetId = empId;
     document.getElementById('setEmpPwName').textContent = `${emp.name} — ${emp.title}`;
     document.getElementById('setEmpPwNew').value  = '';
     document.getElementById('setEmpPwNew2').value = '';
@@ -79,7 +79,7 @@ async function confirmSetEmpPassword() {
     if (!pw1)             { msg.textContent = 'يرجى إدخال كلمة المرور';       msg.style.color = '#ef5350'; return; }
     if (pw1.length < 4)   { msg.textContent = 'كلمة المرور 4 أحرف على الأقل'; msg.style.color = '#ef5350'; return; }
     if (pw1 !== pw2)      { msg.textContent = 'كلمة المرور غير متطابقة';       msg.style.color = '#ef5350'; return; }
-    const emp = employees.find(e => e.id === _setEmpPwTargetId);
+    const emp = employees.find(e => e.empId === _setEmpPwTargetId);
     if (!emp) { closeSetEmpPassword(); return; }
     emp.salt         = generateSalt();
     emp.passwordHash = await hashPassword(emp.salt + pw1);
@@ -111,8 +111,8 @@ function renderEmployees() {
         <td><span class="emp-badge">${sanitize(e.title)}</span></td>
         <td><span class="emp-id-display">${sanitize(e.empId)}</span></td>
         <td style="display:flex;gap:6px;flex-wrap:wrap;">
-            ${_canChangeEmpPassword(e) ? `<button class="btn-delete-sm" style="background:rgba(33,150,243,0.15);color:#64b5f6;border-color:rgba(33,150,243,0.3);" onclick="openSetEmpPassword(${e.id})">🔑 كلمة المرور</button>` : ''}
-            <button class="btn-delete-sm" onclick="deleteEmployee(${e.id})">🗑 حذف</button>
+            ${_canChangeEmpPassword(e) ? `<button class="btn-delete-sm" style="background:rgba(33,150,243,0.15);color:#64b5f6;border-color:rgba(33,150,243,0.3);" onclick="openSetEmpPassword('${e.empId}')">🔑 كلمة المرور</button>` : ''}
+            <button class="btn-delete-sm" onclick="deleteEmployee('${e.empId}')">🗑 حذف</button>
         </td>
     </tr>`).join('');
 }
