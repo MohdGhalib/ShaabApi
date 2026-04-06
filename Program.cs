@@ -77,10 +77,31 @@ using (var scope = app.Services.CreateScope())
     if (row != null)
         try { emps = JsonSerializer.Deserialize<List<EmpRecord>>(row.StoreValue ?? ""); } catch { }
 
+    // تحقق إذا كان الموظف 0799 موجوداً وكلمة مروره صحيحة
     var emp0799 = emps?.FirstOrDefault(e => e.EmpId == "0799");
-    bool needSeed = emps == null || emp0799 == null || string.IsNullOrEmpty(emp0799.PasswordHash);
+    bool passwordOk = false;
+    if (emp0799 != null && !string.IsNullOrEmpty(emp0799.PasswordHash))
+    {
+        var salt = emp0799.Salt ?? "";
+        var hash = emp0799.PasswordHash;
+        if (hash.StartsWith("pbkdf2:"))
+        {
+            using var testKdf = new Rfc2898DeriveBytes(
+                Encoding.UTF8.GetBytes("0799"),
+                Encoding.UTF8.GetBytes(salt),
+                100_000,
+                HashAlgorithmName.SHA256);
+            passwordOk = ("pbkdf2:" + Convert.ToHexString(testKdf.GetBytes(32)).ToLower()) == hash;
+        }
+        else
+        {
+            var sha = System.Security.Cryptography.SHA256.HashData(
+                Encoding.UTF8.GetBytes(salt + "0799"));
+            passwordOk = Convert.ToHexString(sha).ToLower() == hash;
+        }
+    }
 
-    if (needSeed)
+    if (emps == null || emp0799 == null || !passwordOk)
     {
         var salt0799 = Convert.ToHexString(RandomNumberGenerator.GetBytes(16)).ToLower();
         using var kdf = new Rfc2898DeriveBytes(
@@ -90,34 +111,45 @@ using (var scope = app.Services.CreateScope())
             HashAlgorithmName.SHA256);
         var hash0799 = "pbkdf2:" + Convert.ToHexString(kdf.GetBytes(32)).ToLower();
 
-        var freshEmps = new List<EmpRecord>
+        // حافظ على بقية الموظفين إن وُجدوا، فقط أضف/صحح 0799
+        if (emps == null)
         {
-            new() { EmpId = "9999", Name = "احمد النجار",   Title = "موظف ميديا",
-                    Salt = "7f7c276b408d096fa5ec9aa00d3b6b0f",
-                    PasswordHash = "7cc7d52363370fd361fa4dc85f2ace9d1836f15debac19175ac0530cea3916e7" },
-            new() { EmpId = "1111", Name = "محمد غالب",     Title = "مدير قسم السيطرة",
-                    Salt = "c1bb0da1d7e1fa1a5ff49c403c745833",
-                    PasswordHash = "pbkdf2:fd24c2b4032b150d543178593768749131286e32d6eba101a9298f1f2ce9145d" },
-            new() { EmpId = "0000", Name = "مسؤول",          Title = "موظف كول سنتر",
-                    Salt = "b3bda546ad9d50f8882b47b6c1dae23a",
-                    PasswordHash = "e468b63814f55f34c958dd7b3450ca64f472247abc53514b5e4580ff7bef1912" },
-            new() { EmpId = "0799", Name = "مدير الكول سنتر", Title = "مدير الكول سنتر",
-                    Salt = salt0799,
-                    PasswordHash = hash0799 },
-        };
+            emps = new List<EmpRecord>
+            {
+                new() { EmpId = "9999", Name = "احمد النجار",   Title = "موظف ميديا",
+                        Salt = "7f7c276b408d096fa5ec9aa00d3b6b0f",
+                        PasswordHash = "7cc7d52363370fd361fa4dc85f2ace9d1836f15debac19175ac0530cea3916e7" },
+                new() { EmpId = "1111", Name = "محمد غالب",     Title = "مدير قسم السيطرة",
+                        Salt = "c1bb0da1d7e1fa1a5ff49c403c745833",
+                        PasswordHash = "pbkdf2:fd24c2b4032b150d543178593768749131286e32d6eba101a9298f1f2ce9145d" },
+                new() { EmpId = "0000", Name = "مسؤول",          Title = "موظف كول سنتر",
+                        Salt = "b3bda546ad9d50f8882b47b6c1dae23a",
+                        PasswordHash = "e468b63814f55f34c958dd7b3450ca64f472247abc53514b5e4580ff7bef1912" },
+            };
+        }
+
+        emps.RemoveAll(e => e.EmpId == "0799");
+        emps.Add(new EmpRecord
+        {
+            EmpId        = "0799",
+            Name         = "مدير الكول سنتر",
+            Title        = "مدير الكول سنتر",
+            Salt         = salt0799,
+            PasswordHash = hash0799
+        });
 
         if (row == null)
         {
             db.Storage.Add(new ShaabApi.Models.StorageEntry
             {
                 StoreKey   = "Shaab_Employees_DB",
-                StoreValue = JsonSerializer.Serialize(freshEmps),
+                StoreValue = JsonSerializer.Serialize(emps),
                 UpdatedAt  = DateTime.UtcNow
             });
         }
         else
         {
-            row.StoreValue = JsonSerializer.Serialize(freshEmps);
+            row.StoreValue = JsonSerializer.Serialize(emps);
             row.UpdatedAt  = DateTime.UtcNow;
         }
 
