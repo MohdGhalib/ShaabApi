@@ -21,17 +21,28 @@ function addControl() {
         addedBy:currentUser.name, status, customer, linkedInqSeq: linkedSeq||null,
         callTime, noteDate, moveNumber, invoiceValue };
 
+    const _notifyComplaint = () => {
+        if (!IS_LOCAL && (currentUser?.role === 'cc_employee' || currentUser?.role === 'media')) {
+            fetch('/api/sse/complaint-notify', {
+                method: 'POST',
+                headers: { 'Authorization': `Bearer ${_token}` }
+            }).catch(() => {});
+        }
+    };
+
     if (fileInput.files && fileInput.files[0]) {
         const reader = new FileReader();
         reader.onload = e => {
             db.complaints.unshift({ ...base, file:e.target.result });
             save();
+            _notifyComplaint();
             resetControlForm();
         };
         reader.readAsDataURL(fileInput.files[0]);
     } else {
         db.complaints.unshift({ ...base, file:null });
         save();
+        _notifyComplaint();
         resetControlForm();
     }
 }

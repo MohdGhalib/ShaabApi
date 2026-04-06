@@ -491,6 +491,11 @@ function _initSSE() {
         }
         try { await loadAllData(); renderAll(); } catch(e) { /* صامت */ }
     });
+    es.addEventListener('new-complaint', () => {
+        if (currentUser?.role === 'cc_manager' || currentUser?.isAdmin) {
+            _playComplaintAlert();
+        }
+    });
     es.addEventListener('heartbeat', () => { /* keep-alive */ });
     es.onerror = () => {
         _sseActive = false;
@@ -499,6 +504,38 @@ function _initSSE() {
         // إعادة الاتصال بعد 10 ثوانٍ
         setTimeout(_initSSE, 10_000);
     };
+}
+
+/* ── صوت تنبيه الشكوى الجديدة لمدير الكول سنتر ── */
+function _playComplaintAlert() {
+    try {
+        const ctx = new (window.AudioContext || window.webkitAudioContext)();
+        const master = ctx.createGain();
+        master.gain.value = 0.55;
+        master.connect(ctx.destination);
+
+        const tones = [
+            { freq: 880,  start: 0.00, dur: 0.18 },
+            { freq: 1100, start: 0.22, dur: 0.18 },
+            { freq: 1320, start: 0.44, dur: 0.22 },
+            { freq: 1100, start: 0.70, dur: 0.14 },
+            { freq: 1320, start: 0.88, dur: 0.30 },
+        ];
+
+        tones.forEach(({ freq, start, dur }) => {
+            const osc  = ctx.createOscillator();
+            const gain = ctx.createGain();
+            osc.connect(gain);
+            gain.connect(master);
+            osc.type = 'sine';
+            osc.frequency.value = freq;
+            gain.gain.setValueAtTime(0.001, ctx.currentTime + start);
+            gain.gain.linearRampToValueAtTime(1, ctx.currentTime + start + 0.03);
+            gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + start + dur);
+            osc.start(ctx.currentTime + start);
+            osc.stop(ctx.currentTime + start + dur + 0.05);
+        });
+    } catch(e) { /* المتصفح لا يدعم Web Audio */ }
 }
 
 

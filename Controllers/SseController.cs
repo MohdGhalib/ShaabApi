@@ -88,6 +88,20 @@ public class SseController : ControllerBase
         catch { return false; }
     }
 
+    // POST /api/sse/complaint-notify — يُطلق حدث تنبيه شكوى لجميع المتصلين
+    [HttpPost("complaint-notify")]
+    [Microsoft.AspNetCore.Authorization.Authorize]
+    public async Task<IActionResult> ComplaintNotify()
+    {
+        var role    = User.FindFirst("role")?.Value    ?? "";
+        var isAdmin = User.FindFirst("isAdmin")?.Value == "true";
+        if (!isAdmin && role != "cc_employee" && role != "media")
+            return Forbid();
+
+        await Broadcast("new-complaint", "1");
+        return Ok(new { ok = true });
+    }
+
     public static async Task Broadcast(string eventName, string data)
     {
         var deadClients = new List<string>();
