@@ -397,27 +397,31 @@ function _push(key, value) {
             method:  'POST',
             headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${_token}` },
             body:    JSON.stringify({ key, value })
-        }).then(r => {
+        }).then(async r => {
             _isSaving = false;
             clearTimeout(_savingTimer);
-            if (!r.ok) _showSaveError();
-        }).catch(() => {
+            if (!r.ok) {
+                let msg = '';
+                try { const d = await r.json(); msg = d.error || ''; } catch {}
+                _showSaveError(`خطأ ${r.status}${msg ? ' — ' + msg : ''}`);
+            }
+        }).catch(err => {
             _isSaving = false;
             clearTimeout(_savingTimer);
-            _showSaveError();
+            _showSaveError('خطأ في الاتصال');
         });
     }
 }
 
-function _showSaveError() {
+function _showSaveError(detail) {
     let el = document.getElementById('_saveErrToast');
     if (!el) {
         el = document.createElement('div');
         el.id = '_saveErrToast';
         el.style.cssText = 'position:fixed;bottom:20px;left:50%;transform:translateX(-50%);background:#c62828;color:#fff;padding:10px 22px;border-radius:10px;font-family:Cairo;font-size:14px;z-index:9999;box-shadow:0 4px 16px rgba(0,0,0,0.3);';
-        el.textContent   = '⚠️ فشل الحفظ — تحقق من الاتصال';
         document.body.appendChild(el);
     }
+    el.textContent   = '⚠️ فشل الحفظ — ' + (detail || 'تحقق من الاتصال');
     el.style.display = 'block';
     clearTimeout(el._t);
     el._t = setTimeout(() => { el.style.display = 'none'; }, 4000);
