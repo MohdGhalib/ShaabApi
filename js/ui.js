@@ -79,25 +79,45 @@ function _paginationBar(table, total, currentPage) {
 }
 
 /* ── شارات الأرقام على التبويبات ── */
-// يحفظ آخر عدد شاهده المستخدم عند زيارة كل تبويب
-const _seenCounts = { m: -1, c: -1, i: -1 };
-let   _activeTab  = null;
+// آخر وقت زار فيه المستخدم كل تبويب (timestamp)
+// يُحفظ في localStorage حتى يبقى بين الجلسات
+const _sessionStart = Date.now();
+let   _lastSeenAt   = {};
+let   _activeTab    = null;
+
+function _loadLastSeen() {
+    try { _lastSeenAt = JSON.parse(localStorage.getItem('_shaabLastSeen') || '{}'); } catch { _lastSeenAt = {}; }
+}
+function _markTabSeen(tab) {
+    _lastSeenAt[tab] = Date.now();
+    try { localStorage.setItem('_shaabLastSeen', JSON.stringify(_lastSeenAt)); } catch {}
+}
+function _getLastSeen(tab) {
+    // إذا لم تُزر من قبل: نعدّ الجديد منذ بدء الجلسة الحالية فقط
+    return _lastSeenAt[tab] ?? _sessionStart;
+}
+_loadLastSeen();
 
 function _updateBadges() {
-    const pendingM = (db.montasiat  || []).filter(x => !x.deleted && x.status === 'قيد الانتظار').length;
-    const noAuditC = (db.complaints || []).filter(x => !x.deleted && x.status === 'تمت الموافقة' && !x.audit).length;
-    const todayI   = (db.inquiries  || []).filter(x => !x.deleted && x.iso && x.iso.startsWith(iso())).length;
+    const lastM = _getLastSeen('m');
+    const lastC = _getLastSeen('c');
+    const lastI = _getLastSeen('i');
+
+    // عدد الإضافات الجديدة التي لم يُشاهَد التبويب بعدها
+    const newM = (db.montasiat  || []).filter(x => !x.deleted && x.status === 'قيد الانتظار' && x.id > lastM).length;
+    const newC = (db.complaints || []).filter(x => !x.deleted && x.id > lastC).length;
+    const newI = (db.inquiries  || []).filter(x => !x.deleted && x.id > lastI).length;
 
     const set = (id, tab, count) => {
         const el = document.getElementById(id);
         if (!el) return;
-        const hide = count === 0 || _activeTab === tab || count <= _seenCounts[tab];
+        const hide = count === 0 || _activeTab === tab;
         el.textContent  = hide ? '' : count;
         el.style.display = hide ? 'none' : '';
     };
-    set('badge-m', 'm', pendingM);
-    set('badge-c', 'c', noAuditC);
-    set('badge-i', 'i', todayI);
+    set('badge-m', 'm', newM);
+    set('badge-c', 'c', newC);
+    set('badge-i', 'i', newI);
 }
 
 function _syncEmpGroup() {
@@ -127,8 +147,6 @@ function toggleTabM() {
         if (tabM) { tabM.classList.remove('group-active'); tabM.classList.add('active'); }
     } else {
         // القائمة مغلقة → افتح وانتقل للتبويب
-        const bm = document.getElementById('badge-m');
-        if (bm) { bm.textContent = ''; bm.style.display = 'none'; }
         switchTab('m');
     }
 }
@@ -157,13 +175,11 @@ function switchTab(t) {
     const tabEGroup = document.getElementById('tab-emp-group');
     if (tabEGroup) tabEGroup.classList.toggle('group-active', ['b','e','s'].includes(t));
 
-    // إخفاء شارة الإشعار عند فتح التبويب وحفظ العدد المُشاهَد
+    // تسجيل وقت المشاهدة وإخفاء الشارة عند فتح التبويب
     _activeTab = t;
-    if (t in _seenCounts) {
-        const counts = { m: (db.montasiat||[]).filter(x=>!x.deleted&&x.status==='قيد الانتظار').length,
-                         c: (db.complaints||[]).filter(x=>!x.deleted&&x.status==='تمت الموافقة'&&!x.audit).length,
-                         i: (db.inquiries||[]).filter(x=>!x.deleted&&x.iso&&x.iso.startsWith(iso())).length };
-        _seenCounts[t] = counts[t] ?? 0;
+    if (['m','o','c','i'].includes(t)) {
+        // 'o' (انتظار المنتسيات) يُعدّ مشاهدةً لتبويب 'm'
+        _markTabSeen(t === 'o' ? 'm' : t);
     }
     const badge = document.getElementById(`badge-${t}`);
     if (badge) { badge.textContent = ''; badge.style.display = 'none'; }

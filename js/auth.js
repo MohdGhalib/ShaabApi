@@ -80,6 +80,8 @@ function doLogout() {
     if (typeof stopClock === 'function') stopClock();
     recordLogout();
     setToken(null);
+    // مسح توقيتات المشاهدة عند تسجيل الخروج
+    try { localStorage.removeItem('_shaabLastSeen'); } catch {}
     location.reload();
 }
 
