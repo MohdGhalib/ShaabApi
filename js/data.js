@@ -507,12 +507,30 @@ function _initSSE() {
 }
 
 /* ── صوت تنبيه الشكوى الجديدة لمدير الكول سنتر ── */
+let _audioCtx = null;
+
+// نُنشئ AudioContext عند أول تفاعل للمستخدم لتفادي قيود autoplay
+document.addEventListener('click',   _unlockAudio, { once: false, capture: true });
+document.addEventListener('keydown', _unlockAudio, { once: false, capture: true });
+
+function _unlockAudio() {
+    if (_audioCtx) {
+        if (_audioCtx.state === 'suspended') _audioCtx.resume();
+        return;
+    }
+    try {
+        _audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+    } catch(e) {}
+}
+
 function _playComplaintAlert() {
     try {
-        const ctx = new (window.AudioContext || window.webkitAudioContext)();
-        const master = ctx.createGain();
+        if (!_audioCtx) _audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+        if (_audioCtx.state === 'suspended') _audioCtx.resume();
+
+        const master = _audioCtx.createGain();
         master.gain.value = 0.55;
-        master.connect(ctx.destination);
+        master.connect(_audioCtx.destination);
 
         const tones = [
             { freq: 880,  start: 0.00, dur: 0.18 },
@@ -523,17 +541,17 @@ function _playComplaintAlert() {
         ];
 
         tones.forEach(({ freq, start, dur }) => {
-            const osc  = ctx.createOscillator();
-            const gain = ctx.createGain();
+            const osc  = _audioCtx.createOscillator();
+            const gain = _audioCtx.createGain();
             osc.connect(gain);
             gain.connect(master);
             osc.type = 'sine';
             osc.frequency.value = freq;
-            gain.gain.setValueAtTime(0.001, ctx.currentTime + start);
-            gain.gain.linearRampToValueAtTime(1, ctx.currentTime + start + 0.03);
-            gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + start + dur);
-            osc.start(ctx.currentTime + start);
-            osc.stop(ctx.currentTime + start + dur + 0.05);
+            gain.gain.setValueAtTime(0.001, _audioCtx.currentTime + start);
+            gain.gain.linearRampToValueAtTime(1, _audioCtx.currentTime + start + 0.03);
+            gain.gain.exponentialRampToValueAtTime(0.001, _audioCtx.currentTime + start + dur);
+            osc.start(_audioCtx.currentTime + start);
+            osc.stop(_audioCtx.currentTime + start + dur + 0.05);
         });
     } catch(e) { /* المتصفح لا يدعم Web Audio */ }
 }
