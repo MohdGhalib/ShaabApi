@@ -65,11 +65,16 @@ function perm(p) {
 
 function recordLogin() {
     if (!currentUser || currentUser.isAdmin) return;
+    // إغلاق أي جلسات مفتوحة سابقاً لنفس الموظف (أُغلق المتصفح دون خروج)
+    const _now = new Date().toISOString();
+    sessions.forEach(s => {
+        if (s.empId === currentUser.empId && !s.logoutIso) s.logoutIso = _now;
+    });
     sessions.push({
         id: Date.now(),
         empId: currentUser.empId,
         empName: currentUser.name,
-        loginIso: new Date().toISOString(),
+        loginIso: _now,
         logoutIso: null,
         date: iso()
     });

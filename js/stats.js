@@ -25,14 +25,19 @@ function renderStats() {
     if (empSess.length) {
         html += `<div style="background:rgba(255,255,255,0.03);border-radius:14px;padding:18px;margin-bottom:16px;">
             <div style="font-weight:700;font-size:14px;margin-bottom:12px;color:var(--text-dim);">🕐 سجل الدخول والخروج</div>`;
+        const _MAX_SESSION_MS = 10 * 60 * 60 * 1000; // 10 ساعات حد أقصى معقول للجلسة
         empSess.forEach(s => {
-            const loginTime  = _fmtTime(s.loginIso);
-            const logoutTime = s.logoutIso ? _fmtTime(s.logoutIso) : null;
+            const loginTime   = _fmtTime(s.loginIso);
+            const logoutTime  = s.logoutIso ? _fmtTime(s.logoutIso) : null;
+            const sessionAge  = Date.now() - new Date(s.loginIso).getTime();
+            const isStillOpen = !s.logoutIso && sessionAge < _MAX_SESSION_MS;
             html += `<div class="stat-row">
                 <span><span class="session-online">دخول ${loginTime}</span></span>
                 <span>${logoutTime
                     ? `<span class="session-offline">خروج ${logoutTime}</span>`
-                    : `<span class="session-online">🟢 ما زال فاتح الموقع</span>`
+                    : isStillOpen
+                        ? `<span class="session-online">🟢 ما زال فاتح الموقع</span>`
+                        : `<span class="session-offline">لم يُسجَّل خروج</span>`
                 }</span>
             </div>`;
         });
