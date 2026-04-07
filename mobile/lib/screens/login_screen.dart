@@ -14,10 +14,11 @@ class LoginScreen extends StatefulWidget {
 class _LoginScreenState extends State<LoginScreen>
     with SingleTickerProviderStateMixin {
   final _empIdCtrl = TextEditingController();
-  bool  _loading   = false;
+  bool    _loading            = false;
   String? _errorMsg;
-  bool  _biometricAvailable = false;
-  bool  _hasSavedEmpId      = false;
+  bool    _biometricAvailable = false;
+  bool    _hasSavedEmpId      = false;
+  bool    _enableBiometric    = false; // حالة مربع الاختيار
 
   late AnimationController _shakeCtrl;
   late Animation<double>   _shakeAnim;
@@ -39,10 +40,12 @@ class _LoginScreenState extends State<LoginScreen>
       final isSupported = await _auth.isDeviceSupported();
       final prefs       = await SharedPreferences.getInstance();
       final savedId     = prefs.getString('_shaab_empId');
+      final bioEnabled  = prefs.getBool('_shaab_biometric_enabled') ?? false;
       if (mounted) {
         setState(() {
           _biometricAvailable = canCheck && isSupported;
           _hasSavedEmpId      = savedId != null && savedId.isNotEmpty;
+          _enableBiometric    = bioEnabled;
         });
       }
     } catch (_) {}
@@ -62,17 +65,17 @@ class _LoginScreenState extends State<LoginScreen>
       final prefs   = await SharedPreferences.getInstance();
       final savedId = prefs.getString('_shaab_empId') ?? '';
       if (savedId.isEmpty) {
-        _shake('لم يتم حفظ الرقم الوظيفي، سجّل دخول بالرقم أولاً');
+        _shake('فعّل البصمة أولاً من خيار "تفعيل الدخول بالبصمة"');
         return;
       }
       _empIdCtrl.text = savedId;
-      await _login();
+      await _login(fromBiometric: true);
     } catch (_) {
       if (mounted) _shake('البصمة غير متاحة');
     }
   }
 
-  Future<void> _login() async {
+  Future<void> _login({bool fromBiometric = false}) async {
     if (_loading) return;
     final empId = _empIdCtrl.text.trim();
     if (empId.isEmpty) { _shake('أدخل الرقم الوظيفي'); return; }
@@ -87,7 +90,16 @@ class _LoginScreenState extends State<LoginScreen>
       await prefs.setString('_shaab_name',  result.name);
       await prefs.setString('_shaab_title', result.title);
       await prefs.setString('_shaab_role',  result.role);
-      await prefs.setString('_shaab_empId', empId);
+
+      // حفظ أو حذف البصمة بحسب الاختيار
+      final shouldEnable = fromBiometric ? true : _enableBiometric;
+      if (shouldEnable) {
+        await prefs.setString('_shaab_empId', empId);
+        await prefs.setBool('_shaab_biometric_enabled', true);
+      } else {
+        await prefs.remove('_shaab_empId');
+        await prefs.setBool('_shaab_biometric_enabled', false);
+      }
 
       if (!mounted) return;
       Navigator.of(context).pushReplacement(
@@ -168,6 +180,7 @@ class _LoginScreenState extends State<LoginScreen>
                                 fontWeight: FontWeight.bold)),
                         const SizedBox(height: 24),
 
+                        // ── حقل الرقم الوظيفي ──────────────────────
                         TextFormField(
                           controller:    _empIdCtrl,
                           keyboardType:  TextInputType.number,
@@ -181,8 +194,8 @@ class _LoginScreenState extends State<LoginScreen>
                             labelStyle: const TextStyle(color: Colors.white54),
                             prefixIcon: const Icon(Icons.badge_outlined,
                                 color: Color(0xFFE53935)),
-                            filled:     true,
-                            fillColor:  const Color(0xFF252525),
+                            filled:    true,
+                            fillColor: const Color(0xFF252525),
                             border: OutlineInputBorder(
                                 borderRadius: BorderRadius.circular(12),
                                 borderSide: BorderSide.none),
@@ -194,15 +207,17 @@ class _LoginScreenState extends State<LoginScreen>
                           onFieldSubmitted: (_) => _login(),
                         ),
 
+                        // ── رسالة الخطأ ────────────────────────────
                         if (_errorMsg != null) ...[
                           const SizedBox(height: 12),
                           Container(
                             padding: const EdgeInsets.symmetric(
                                 vertical: 10, horizontal: 14),
                             decoration: BoxDecoration(
-                              color:  const Color(0x22E53935),
+                              color:        const Color(0x22E53935),
                               borderRadius: BorderRadius.circular(10),
-                              border: Border.all(color: const Color(0x55E53935)),
+                              border: Border.all(
+                                  color: const Color(0x55E53935)),
                             ),
                             child: Text(_errorMsg!,
                                 textAlign:     TextAlign.right,
@@ -214,6 +229,7 @@ class _LoginScreenState extends State<LoginScreen>
 
                         const SizedBox(height: 20),
 
+                        // ── زر الدخول ──────────────────────────────
                         SizedBox(
                           height: 50,
                           child: ElevatedButton(
@@ -237,7 +253,47 @@ class _LoginScreenState extends State<LoginScreen>
                           ),
                         ),
 
-                        // ── زر البصمة ──────────────────────────────
+                        // ── مربع تفعيل البصمة ──────────────────────
+                        if (_biometricAvailable) ...[
+                          const SizedBox(height: 16),
+                          GestureDetector(
+                            onTap: () => setState(
+                                () => _enableBiometric = !_enableBiometric),
+                            child: Row(
+                              mainAxisAlignment: MainAxisAlignment.end,
+                              children: [
+                                const Text('تفعيل الدخول بالبصمة',
+                                    textDirection: TextDirection.rtl,
+                                    style: TextStyle(
+                                        color: Colors.white70, fontSize: 14)),
+                                const SizedBox(width: 10),
+                                AnimatedContainer(
+                                  duration: const Duration(milliseconds: 200),
+                                  width:  22,
+                                  height: 22,
+                                  decoration: BoxDecoration(
+                                    color: _enableBiometric
+                                        ? const Color(0xFFE53935)
+                                        : Colors.transparent,
+                                    borderRadius: BorderRadius.circular(6),
+                                    border: Border.all(
+                                      color: _enableBiometric
+                                          ? const Color(0xFFE53935)
+                                          : const Color(0xFF555555),
+                                      width: 2,
+                                    ),
+                                  ),
+                                  child: _enableBiometric
+                                      ? const Icon(Icons.check,
+                                          color: Colors.white, size: 14)
+                                      : null,
+                                ),
+                              ],
+                            ),
+                          ),
+                        ],
+
+                        // ── زر البصمة (يظهر إذا مفعّلة مسبقاً) ────
                         if (_biometricAvailable && _hasSavedEmpId) ...[
                           const SizedBox(height: 16),
                           const Row(children: [
