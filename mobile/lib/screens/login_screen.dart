@@ -92,11 +92,41 @@ class _LoginScreenState extends State<LoginScreen>
       await prefs.setString('_shaab_role',  result.role);
 
       // حفظ أو حذف البصمة بحسب الاختيار
-      final shouldEnable = fromBiometric ? true : _enableBiometric;
-      if (shouldEnable) {
+      if (fromBiometric) {
+        // دخول عبر البصمة → ابقِ الإعدادات كما هي
         await prefs.setString('_shaab_empId', empId);
         await prefs.setBool('_shaab_biometric_enabled', true);
+      } else if (_enableBiometric) {
+        // المستخدم فعّل المربع → اطلب البصمة الآن للتحقق
+        bool bioConfirmed = false;
+        try {
+          bioConfirmed = await _auth.authenticate(
+            localizedReason: 'سجّل بصمتك لتفعيل الدخول السريع',
+            options: const AuthenticationOptions(
+              biometricOnly: true,
+              stickyAuth:    true,
+            ),
+          );
+        } catch (_) {}
+
+        if (bioConfirmed) {
+          await prefs.setString('_shaab_empId', empId);
+          await prefs.setBool('_shaab_biometric_enabled', true);
+        } else {
+          // لم تنجح البصمة → لا تفعّل
+          await prefs.remove('_shaab_empId');
+          await prefs.setBool('_shaab_biometric_enabled', false);
+          if (mounted) {
+            ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
+              content: Text('لم يتم تفعيل البصمة',
+                  textDirection: TextDirection.rtl),
+              backgroundColor: Color(0xFFB71C1C),
+              behavior: SnackBarBehavior.floating,
+            ));
+          }
+        }
       } else {
+        // المربع غير مفعّل → احذف البصمة
         await prefs.remove('_shaab_empId');
         await prefs.setBool('_shaab_biometric_enabled', false);
       }

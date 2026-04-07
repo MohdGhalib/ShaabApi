@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:local_auth/local_auth.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'login_screen.dart';
 import 'home_screen.dart';
@@ -40,33 +41,71 @@ class _SplashScreenState extends State<SplashScreen>
       if (mounted) _textCtrl.forward();
     });
 
-    Future.delayed(const Duration(milliseconds: 3000), () {
+    Future.delayed(const Duration(milliseconds: 2500), () {
       if (!mounted) return;
       _navigate();
     });
   }
 
   Future<void> _navigate() async {
-    final prefs = await SharedPreferences.getInstance();
-    final token = prefs.getString('_shaab_token');
-    final name  = prefs.getString('_shaab_name');
-    final title = prefs.getString('_shaab_title') ?? '';
-    final role  = prefs.getString('_shaab_role')  ?? 'cc_employee';
+    final prefs    = await SharedPreferences.getInstance();
+    final token    = prefs.getString('_shaab_token');
+    final name     = prefs.getString('_shaab_name');
+    final title    = prefs.getString('_shaab_title') ?? '';
+    final role     = prefs.getString('_shaab_role')  ?? 'cc_employee';
+    final bioOn    = prefs.getBool('_shaab_biometric_enabled') ?? false;
+    final savedId  = prefs.getString('_shaab_empId') ?? '';
 
     if (!mounted) return;
-    if (token != null && name != null) {
-      Navigator.of(context).pushReplacement(
-        MaterialPageRoute(
-          builder: (_) => HomeScreen(
-            token: token, name: name, title: title, role: role,
-          ),
-        ),
-      );
-    } else {
-      Navigator.of(context).pushReplacement(
-        MaterialPageRoute(builder: (_) => const LoginScreen()),
-      );
+
+    // لا يوجد جلسة محفوظة → شاشة الدخول
+    if (token == null || name == null) {
+      _goLogin();
+      return;
     }
+
+    // البصمة مفعّلة → يجب التحقق منها قبل الدخول
+    if (bioOn && savedId.isNotEmpty) {
+      final auth = LocalAuthentication();
+      try {
+        final ok = await auth.authenticate(
+          localizedReason: 'أثبت هويتك للدخول',
+          options: const AuthenticationOptions(
+            biometricOnly: true,
+            stickyAuth:    true,
+          ),
+        );
+        if (!mounted) return;
+        if (ok) {
+          _goHome(token, name, title, role);
+        } else {
+          // فشلت البصمة → شاشة الدخول
+          _goLogin();
+        }
+      } catch (_) {
+        if (mounted) _goLogin();
+      }
+      return;
+    }
+
+    // لا بصمة → دخول مباشر
+    _goHome(token, name, title, role);
+  }
+
+  void _goHome(String token, String name, String title, String role) {
+    Navigator.of(context).pushReplacement(
+      MaterialPageRoute(
+        builder: (_) => HomeScreen(
+          token: token, name: name, title: title, role: role,
+        ),
+      ),
+    );
+  }
+
+  void _goLogin() {
+    Navigator.of(context).pushReplacement(
+      MaterialPageRoute(builder: (_) => const LoginScreen()),
+    );
   }
 
   @override
