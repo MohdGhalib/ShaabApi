@@ -287,11 +287,11 @@ function _renderTableM(get, isAdmin) {
             <td style="text-align:center;">${typeLabel}</td>
             <td><span class="text-box-cell">${sanitize(x.notes)}</span>${photoCell}${editBox}</td>
             <td><div class="added-by" style="font-size:12px;color:var(--text-main);">📥 ${sanitize(x.addedBy||'—')}</div>${deliveredRow}${approvedByRow}</td>
-            <td><small>${_toLatinDigits(x.time)}</small></td>
             <td style="vertical-align:top;">
                 <span class="status-badge ${statusClass}">${x.status}${x.status==='تم التسليم' && x.deliveredBy ? ' بواسطة '+sanitize(x.deliveredBy) : ''}</span>
                 ${deliveryTimeBox}
             </td>
+            <td><small>${_toLatinDigits(x.time)}</small></td>
             <td>${actions}</td>
         </tr>`;
     }).join('');
