@@ -378,6 +378,7 @@
                     setProfileUI();
                     init();
                     if (typeof initSessionWatcher === 'function') initSessionWatcher();
+                    if (typeof initClock === 'function') initClock();
                     if (typeof _scheduleSync === 'function') _scheduleSync();
                     if (typeof _initSSE === 'function') _initSSE();
                     applyThemeIcon();
