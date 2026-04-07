@@ -25,6 +25,13 @@ class HomeScreen extends StatefulWidget {
 
 class _HomeScreenState extends State<HomeScreen> {
   int _tab = 0;
+  final ValueNotifier<int> _refreshTrigger = ValueNotifier(0);
+
+  @override
+  void dispose() {
+    _refreshTrigger.dispose();
+    super.dispose();
+  }
 
   Future<void> _logout() async {
     await ApiService.clearToken();
@@ -92,14 +99,18 @@ class _HomeScreenState extends State<HomeScreen> {
             role:  widget.role,
           ),
           MyMontasiatScreen(
-            token: widget.token,
-            name:  widget.name,
+            token:          widget.token,
+            name:           widget.name,
+            refreshTrigger: _refreshTrigger,
           ),
         ],
       ),
       bottomNavigationBar: BottomNavigationBar(
         currentIndex: _tab,
-        onTap: (i) => setState(() => _tab = i),
+        onTap: (i) {
+          setState(() => _tab = i);
+          if (i == 1) _refreshTrigger.value++;
+        },
         backgroundColor: const Color(0xFF1A1A1A),
         selectedItemColor: const Color(0xFFE53935),
         unselectedItemColor: Colors.white38,

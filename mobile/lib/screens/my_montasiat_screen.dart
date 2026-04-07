@@ -6,11 +6,13 @@ import '../services/api_service.dart';
 class MyMontasiatScreen extends StatefulWidget {
   final String token;
   final String name;
+  final ValueNotifier<int> refreshTrigger;
 
   const MyMontasiatScreen({
     super.key,
     required this.token,
     required this.name,
+    required this.refreshTrigger,
   });
 
   @override
@@ -30,6 +32,13 @@ class _MyMontasiatScreenState extends State<MyMontasiatScreen>
   void initState() {
     super.initState();
     _load();
+    widget.refreshTrigger.addListener(_load);
+  }
+
+  @override
+  void dispose() {
+    widget.refreshTrigger.removeListener(_load);
+    super.dispose();
   }
 
   Future<void> _load() async {
