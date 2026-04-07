@@ -199,6 +199,7 @@ function exportMontasiat() {
     const rows = db.montasiat.map(x => ({
         'المحافظة':    x.city          || '',
         'الفرع':       x.branch        || '',
+        'النوع':       x.type          || '',
         'التفاصيل':    x.notes         || '',
         'الحالة':      x.status        || '',
         'وقت الإضافة': _toLatinDigits(x.time || ''),
