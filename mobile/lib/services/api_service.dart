@@ -76,6 +76,49 @@ class ApiService {
     return null;
   }
 
+  // ── قراءة قاعدة بيانات الموظفين ─────────────────────────────────────
+  static Future<List<Map<String, dynamic>>?> fetchEmployeesDb(
+      String token) async {
+    try {
+      final res = await http
+          .get(
+            Uri.parse('$kBaseUrl/api/storage?keys=Shaab_Employees_DB'),
+            headers: {'Authorization': 'Bearer $token'},
+          )
+          .timeout(const Duration(seconds: 15));
+      if (res.statusCode == 200) {
+        final outer = jsonDecode(res.body) as Map<String, dynamic>;
+        final raw   = outer['Shaab_Employees_DB'] as String?;
+        if (raw == null || raw.isEmpty) return [];
+        return (jsonDecode(raw) as List).cast<Map<String, dynamic>>();
+      }
+    } catch (_) {}
+    return null;
+  }
+
+  // ── حفظ قاعدة بيانات الموظفين ────────────────────────────────────────
+  static Future<bool> saveEmployeesDb(
+      String token, List<Map<String, dynamic>> emps) async {
+    try {
+      final res = await http
+          .post(
+            Uri.parse('$kBaseUrl/api/storage'),
+            headers: {
+              'Content-Type':  'application/json',
+              'Authorization': 'Bearer $token',
+            },
+            body: jsonEncode({
+              'key':   'Shaab_Employees_DB',
+              'value': jsonEncode(emps),
+            }),
+          )
+          .timeout(const Duration(seconds: 20));
+      return res.statusCode == 200;
+    } catch (_) {
+      return false;
+    }
+  }
+
   // ── حفظ قاعدة البيانات الرئيسية ─────────────────────────────────────
   static Future<bool> saveMasterDb(
       String token, Map<String, dynamic> db) async {

@@ -23,6 +23,9 @@ dependencies:
   flutter_local_notifications: ^17.2.2
   workmanager: ^0.9.0
 
+  # تشفير
+  crypto: ^3.0.3
+
   # واجهة
   google_fonts: ^6.2.1
 

@@ -48,7 +48,9 @@ const PERMISSIONS = {
     media: [
         'addC',
         'viewPrices'
-    ]
+    ],
+    // موظف فرع — صلاحيات التطبيق فقط، لا دخول للموقع
+    branch_employee: []
 };
 
 function perm(p) {
@@ -150,6 +152,11 @@ async function login() {
             else if (emp.title === 'موظف ميديا') role = 'media';
             else if (emp.title === 'مدير قسم السيطرة') role = 'control_employee';
             else if (emp.title === 'موظف سيطرة') role = 'control_sub';
+            else if (emp.title === 'موظف فرع')  role = 'branch_employee';
+            if (role === 'branch_employee') {
+                _showLoginError('هذا الحساب مخصص لتطبيق الجوال فقط');
+                return;
+            }
             currentUser = { ...emp, isAdmin:false, role };
         }
     } else {

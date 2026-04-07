@@ -305,6 +305,7 @@ public class AuthController : ControllerBase
         "موظف ميديا"        => "media",
         "مدير قسم السيطرة"  => "control_employee",
         "موظف سيطرة"        => "control_sub",
+        "موظف فرع"          => "branch_employee",
         _                   => "cc_employee"
     };
 }

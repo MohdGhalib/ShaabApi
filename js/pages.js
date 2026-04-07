@@ -266,6 +266,7 @@ e: `
 
                 <option value="موظف ميديا">موظف ميديا</option>
                 <option value="مدير قسم السيطرة">مدير قسم السيطرة</option>
+                <option value="موظف فرع">موظف فرع</option>
             </select>
         </div>
         <div>

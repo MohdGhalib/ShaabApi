@@ -3,6 +3,7 @@ import 'package:local_auth/local_auth.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../services/api_service.dart';
 import 'home_screen.dart';
+import 'manager_home_screen.dart';
 
 class LoginScreen extends StatefulWidget {
   const LoginScreen({super.key});
@@ -86,6 +87,12 @@ class _LoginScreenState extends State<LoginScreen>
     setState(() => _loading = false);
 
     if (result.ok) {
+      // موظف الكول سنتر لا يمكنه الدخول من التطبيق
+      if (result.role == 'cc_employee') {
+        _shake('غير مسموح لهذه الصلاحية بالدخول من التطبيق');
+        return;
+      }
+
       final prefs = await SharedPreferences.getInstance();
       await prefs.setString('_shaab_name',  result.name);
       await prefs.setString('_shaab_title', result.title);
@@ -132,14 +139,22 @@ class _LoginScreenState extends State<LoginScreen>
       }
 
       if (!mounted) return;
+      final isManager = result.role == 'cc_manager' || result.isAdmin;
       Navigator.of(context).pushReplacement(
         MaterialPageRoute(
-          builder: (_) => HomeScreen(
-            token: result.token,
-            name:  result.name,
-            title: result.title,
-            role:  result.role,
-          ),
+          builder: (_) => isManager
+              ? ManagerHomeScreen(
+                  token: result.token,
+                  name:  result.name,
+                  title: result.title,
+                  role:  result.role,
+                )
+              : HomeScreen(
+                  token: result.token,
+                  name:  result.name,
+                  title: result.title,
+                  role:  result.role,
+                ),
         ),
       );
     } else {

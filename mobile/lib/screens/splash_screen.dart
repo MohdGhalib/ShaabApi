@@ -3,6 +3,7 @@ import 'package:local_auth/local_auth.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'login_screen.dart';
 import 'home_screen.dart';
+import 'manager_home_screen.dart';
 
 class SplashScreen extends StatefulWidget {
   const SplashScreen({super.key});
@@ -64,6 +65,12 @@ class _SplashScreenState extends State<SplashScreen>
       return;
     }
 
+    // موظف الكول سنتر لا يمكنه الدخول من التطبيق
+    if (role == 'cc_employee') {
+      _goLogin();
+      return;
+    }
+
     // البصمة مفعّلة → يجب التحقق منها قبل الدخول
     if (bioOn && savedId.isNotEmpty) {
       final auth = LocalAuthentication();
@@ -93,11 +100,12 @@ class _SplashScreenState extends State<SplashScreen>
   }
 
   void _goHome(String token, String name, String title, String role) {
+    final isManager = role == 'cc_manager' || role == 'admin';
     Navigator.of(context).pushReplacement(
       MaterialPageRoute(
-        builder: (_) => HomeScreen(
-          token: token, name: name, title: title, role: role,
-        ),
+        builder: (_) => isManager
+            ? ManagerHomeScreen(token: token, name: name, title: title, role: role)
+            : HomeScreen(token: token, name: name, title: title, role: role),
       ),
     );
   }
