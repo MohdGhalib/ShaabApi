@@ -57,6 +57,7 @@ function addControl() {
 function resetControlForm() {
     document.getElementById("cNotes").value = "";
     document.getElementById("cFile").value  = "";
+    const _lbl = document.getElementById('cFileLabel'); if (_lbl) _lbl.textContent = 'لم يُختر ملف';
     document.getElementById("cCustomerPhone").value = "";
     document.getElementById("cMoveNumber").value    = "";
     document.getElementById("cInvoiceValue").value  = "";

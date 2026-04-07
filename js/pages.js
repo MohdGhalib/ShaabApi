@@ -200,8 +200,12 @@ c: `
             🔗 <span id="linkedInqPreviewText"></span>
         </div>
     </div>
-    <label style="font-size:13px;color:var(--text-dim);">المرفقات (صور أو ملفات):</label>
-    <input type="file" id="cFile" style="margin-bottom:15px;background:none;border:none;">
+    <label style="font-size:13px;color:var(--text-dim);display:block;margin-bottom:6px;">المرفقات (صور أو ملفات):</label>
+    <input type="file" id="cFile" style="display:none;" onchange="(function(i){var d=document.getElementById('cFileLabel');if(d)d.textContent=i.files[0]?i.files[0].name:'لم يُختر ملف';})(this)">
+    <div style="display:flex;align-items:center;gap:10px;margin-bottom:15px;">
+        <button type="button" class="btn" style="padding:7px 16px;font-size:13px;background:var(--bg-input);color:var(--text-main);border:1px solid var(--border);border-radius:10px;cursor:pointer;white-space:nowrap;" onclick="document.getElementById('cFile').click()">📎 اختر ملف</button>
+        <span id="cFileLabel" style="font-size:13px;color:var(--text-dim);">لم يُختر ملف</span>
+    </div>
     <textarea id="cNotes" placeholder="نص الملاحظة الواردة من السيطرة..." rows="3"></textarea>
     <button class="btn btn-main" style="margin-top:15px" onclick="addControl()">إرسال الشكوى</button>
 </div>
