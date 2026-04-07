@@ -196,7 +196,28 @@ function saveEditMontasia(id) {
 
 /* ══ تصدير / استيراد Excel ══ */
 function exportMontasiat() {
-    const rows = db.montasiat.map(x => ({
+    const get = id => { const el = document.getElementById(id); return el ? el.value : ''; };
+    const f = {
+        city:        get('searchCityM'),
+        branch:      get('searchBranchM'),
+        date:        get('searchDateM'),
+        text:        get('searchTextM').toLowerCase(),
+        addedBy:     get('searchAddedByM'),
+        deliveredBy: get('searchDeliveredByM'),
+        type:        get('searchTypeM'),
+    };
+    const filtered = db.montasiat.filter(x =>
+        !x.deleted &&
+        (!f.city        || x.city === f.city) &&
+        (!f.branch      || x.branch === f.branch) &&
+        (!f.date        || x.iso.startsWith(f.date)) &&
+        (!f.text        || (x.notes||'').toLowerCase().includes(f.text)) &&
+        (!f.addedBy     || (x.addedBy||'').includes(f.addedBy)) &&
+        (!f.deliveredBy || (x.deliveredBy||'').includes(f.deliveredBy)) &&
+        (!f.type        || (x.type||'') === f.type)
+    );
+    if (!filtered.length) return alert('لا توجد نتائج للتصدير بالفلتر الحالي');
+    const rows = filtered.map(x => ({
         'المحافظة':    x.city          || '',
         'الفرع':       x.branch        || '',
         'النوع':       x.type          || '',
@@ -210,7 +231,8 @@ function exportMontasiat() {
     const ws = XLSX.utils.json_to_sheet(rows);
     const wb = XLSX.utils.book_new();
     XLSX.utils.book_append_sheet(wb, ws, 'المنتسيات');
-    XLSX.writeFile(wb, `منتسيات_${iso()}.xlsx`);
+    const suffix = f.type || f.city || f.addedBy || f.date || '';
+    XLSX.writeFile(wb, `منتسيات${suffix ? '_' + suffix : ''}_${iso()}.xlsx`);
 }
 
 let _importMontasiaData = [];
