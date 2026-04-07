@@ -102,9 +102,9 @@ class _SplashScreenState extends State<SplashScreen>
   }
 
   void _goHome(String token, String name, String title, String role) {
-    final isManager        = role == 'cc_manager' || role == 'admin';
-    final isControl        = role == 'control_employee' || role == 'control_sub';
-    final isBranchManager  = role == 'branch_manager';
+    final isManager       = role == 'cc_manager' || role == 'admin';
+    final isControl       = role == 'control_employee' || role == 'control_sub';
+    final isBranchManager = role == 'branch_manager' || role == 'area_manager';
     Navigator.of(context).pushReplacement(
       MaterialPageRoute(
         builder: (_) {

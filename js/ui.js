@@ -60,7 +60,7 @@ function applyThemeIcon() {
 
 /* ── ترقيم الصفحات ── */
 const _pg = { M:1, I:1, C:1, O:1 };
-const _PAGE_SIZE = 50;
+const _PAGE_SIZE = 10;
 
 function changePage(table, dir) {
     _pg[table] = Math.max(1, (_pg[table] || 1) + dir);
@@ -281,13 +281,26 @@ function updateBranches(cityId, branchId) {
 
 function populateEmployeeDropdowns() {
     const nonMediaEmps = employees.filter(e => e.title !== 'موظف ميديا' && e.title !== 'مدير قسم السيطرة' && e.title !== 'موظف سيطرة');
-    ['searchAddedByM','searchDeliveredByM','searchAddedByO','searchAddedByI'].forEach(id => {
+    ['searchAddedByM','searchDeliveredByM','searchAddedByO'].forEach(id => {
         const el = document.getElementById(id); if (!el) return;
         const cur = el.value;
         el.innerHTML = '<option value="">الكل</option><option value="المدير">المدير</option>';
         nonMediaEmps.forEach(e => el.innerHTML += `<option value="${sanitize(e.name)}">${sanitize(e.name)}</option>`);
         if (cur) el.value = cur;
     });
+    // بحث الاستفسارات: مسؤول الكول سنتر وموظف الكول سنتر وموظف الميديا فقط
+    const inqEl = document.getElementById('searchAddedByI');
+    if (inqEl) {
+        const cur = inqEl.value;
+        const inqEmps = employees.filter(e =>
+            e.title === 'مدير الكول سنتر' ||
+            e.title === 'موظف كول سنتر'   ||
+            e.title === 'موظف ميديا'
+        );
+        inqEl.innerHTML = '<option value="">الكل</option><option value="المدير">المدير</option>';
+        inqEmps.forEach(e => inqEl.innerHTML += `<option value="${sanitize(e.name)}">${sanitize(e.name)}</option>`);
+        if (cur) inqEl.value = cur;
+    }
     populateLinkedInquirySelect();
 }
 
@@ -298,20 +311,22 @@ function populateLinkedInquirySelect() {
     const reservedSeqs = new Set(
         db.complaints.filter(c => !c.deleted && c.linkedInqSeq).map(c => String(c.linkedInqSeq))
     );
-    const canClaim = currentUser?.role === 'cc_employee' || currentUser?.role === 'cc_manager' || currentUser?.isAdmin;
+    // إعادة الحجز: مسؤول الكول سنتر والمدير فقط
+    const canReclaim = currentUser?.role === 'cc_manager' || currentUser?.isAdmin;
+    // حجز الجديد: مسؤول الكول سنتر وموظف الكول سنتر والمدير
+    const canClaim   = canReclaim || currentUser?.role === 'cc_employee';
     const complaints = db.inquiries.filter(x => !x.deleted && x.type === 'شكوى');
     complaints.forEach(x => {
-        const seqStr    = String(x.seq);
+        const seqStr     = String(x.seq);
         const isReserved = reservedSeqs.has(seqStr);
-        const preview   = x.notes ? x.notes.substring(0, 25) : '...';
-        // الموظفون المخوَّلون يمكنهم حجز أي شكوى حتى لو محجوزة مسبقاً
-        if (isReserved && !canClaim) {
-            sel.innerHTML += `<option value="${x.seq}" disabled style="color:#666">🔒 محجوزة — #${x.seq} — ${x.branch} — ${sanitize(x.phone)}</option>`;
-        } else {
-            const label = isReserved
-                ? `🔄 محجوزة (إعادة حجز) — #${x.seq} — ${x.branch} — ${sanitize(x.phone)}`
-                : `#${x.seq} — ${x.branch} — ${sanitize(x.phone)} — ${sanitize(preview)}`;
-            sel.innerHTML += `<option value="${x.seq}">${label}</option>`;
+        const preview    = x.notes ? x.notes.substring(0, 25) : '...';
+        if (isReserved && !canReclaim) {
+            // محجوزة ولا يملك صلاحية إعادة الحجز → معطّلة
+            sel.innerHTML += `<option value="${x.seq}" disabled style="color:#666">🔒 #${x.seq} — ${x.branch} — ${sanitize(x.phone)}</option>`;
+        } else if (isReserved && canReclaim) {
+            sel.innerHTML += `<option value="${x.seq}">🔄 (إعادة حجز) — #${x.seq} — ${x.branch} — ${sanitize(x.phone)}</option>`;
+        } else if (canClaim) {
+            sel.innerHTML += `<option value="${x.seq}">#${x.seq} — ${x.branch} — ${sanitize(x.phone)} — ${sanitize(preview)}</option>`;
         }
     });
     if (cur) sel.value = cur;

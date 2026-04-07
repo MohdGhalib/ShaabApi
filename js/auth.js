@@ -52,7 +52,9 @@ const PERMISSIONS = {
     // موظف فرع — صلاحيات التطبيق فقط، لا دخول للموقع
     branch_employee: [],
     // مدير فرع — صلاحيات التطبيق فقط، لا دخول للموقع
-    branch_manager: []
+    branch_manager: [],
+    // مدير منطقة — صلاحيات التطبيق فقط، لا دخول للموقع
+    area_manager: []
 };
 
 function perm(p) {
@@ -154,9 +156,10 @@ async function login() {
             else if (emp.title === 'موظف ميديا') role = 'media';
             else if (emp.title === 'مدير قسم السيطرة') role = 'control_employee';
             else if (emp.title === 'موظف سيطرة') role = 'control_sub';
-            else if (emp.title === 'موظف فرع')  role = 'branch_employee';
-            else if (emp.title === 'مدير فرع')   role = 'branch_manager';
-            if (role === 'branch_employee' || role === 'branch_manager') {
+            else if (emp.title === 'موظف فرع')   role = 'branch_employee';
+            else if (emp.title === 'مدير فرع')    role = 'branch_manager';
+            else if (emp.title === 'مدير منطقة')  role = 'area_manager';
+            if (role === 'branch_employee' || role === 'branch_manager' || role === 'area_manager') {
                 _showLoginError('هذا الحساب مخصص لتطبيق الجوال فقط');
                 return;
             }
@@ -187,6 +190,13 @@ async function login() {
             };
         } catch(e) {
             _showLoginError('خطأ في الاتصال بالسيرفر');
+            return;
+        }
+        // منع أدوار الجوال من الدخول عبر الويب
+        if (['branch_employee','branch_manager','area_manager'].includes(currentUser?.role)) {
+            _showLoginError('هذا الحساب مخصص لتطبيق الجوال فقط');
+            setToken(null);
+            currentUser = null;
             return;
         }
         // تحميل البيانات بعد الحصول على الـ token

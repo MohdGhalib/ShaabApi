@@ -144,7 +144,7 @@ class _LoginScreenState extends State<LoginScreen>
       final role             = result.role;
       final isManager        = role == 'cc_manager' || result.isAdmin;
       final isControl        = role == 'control_employee' || role == 'control_sub';
-      final isBranchManager  = role == 'branch_manager';
+      final isBranchManager  = role == 'branch_manager' || role == 'area_manager';
 
       Navigator.of(context).pushReplacement(
         MaterialPageRoute(

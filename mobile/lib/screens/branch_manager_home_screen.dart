@@ -5,7 +5,7 @@ import '../services/status_checker.dart';
 import 'login_screen.dart';
 import 'add_montasia_screen.dart';
 import 'my_montasiat_screen.dart';
-import 'manager_control_screen.dart';
+import 'branch_complaints_screen.dart';
 
 class BranchManagerHomeScreen extends StatefulWidget {
   final String token;
@@ -123,8 +123,10 @@ class _BranchManagerHomeScreenState extends State<BranchManagerHomeScreen>
             name:           widget.name,
             refreshTrigger: _refreshTrigger,
           ),
-          ManagerControlScreen(
+          BranchComplaintsScreen(
             token:          widget.token,
+            name:           widget.name,
+            role:           widget.role,
             refreshTrigger: _refreshTrigger,
           ),
         ],

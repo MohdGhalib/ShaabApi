@@ -259,15 +259,15 @@ e: `
         </div>
         <div>
             <label style="font-size:13px;color:var(--text-dim);display:block;margin-bottom:5px;">المسمى الوظيفي</label>
-            <select id="eTitle">
+            <select id="eTitle" onchange="onEmployeeTitleChange()">
                 <option value="">اختر المسمى الوظيفي</option>
                 <option value="مدير الكول سنتر">مدير الكول سنتر</option>
                 <option value="موظف كول سنتر">موظف كول سنتر</option>
-
                 <option value="موظف ميديا">موظف ميديا</option>
                 <option value="مدير قسم السيطرة">مدير قسم السيطرة</option>
                 <option value="موظف فرع">موظف فرع</option>
                 <option value="مدير فرع">مدير فرع</option>
+                <option value="مدير منطقة">مدير منطقة</option>
             </select>
         </div>
         <div>
@@ -275,7 +275,24 @@ e: `
             <input type="text" id="eId" placeholder="مثال: 1234">
         </div>
     </div>
-    <button class="btn btn-main" onclick="addEmployee()">➕ إضافة الموظف</button>
+    <!-- اختيار الفرع: موظف فرع / مدير فرع (فرع واحد) -->
+    <div id="eSingleBranchSection" style="display:none;margin-top:12px;padding:14px;background:var(--bg-input);border-radius:12px;border:1px solid var(--border);">
+        <label style="font-size:13px;color:var(--text-dim);display:block;margin-bottom:8px;">📍 الفرع المسؤول عنه / التابع له</label>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;">
+            <select id="eBranchCity" onchange="updateBranches('eBranchCity','eBranchName')">
+                <option value="">المحافظة</option>
+            </select>
+            <select id="eBranchName"><option value="">الفرع</option></select>
+        </div>
+    </div>
+    <!-- اختيار الأفرع: مدير منطقة (متعدد) -->
+    <div id="eMultiBranchSection" style="display:none;margin-top:12px;padding:14px;background:var(--bg-input);border-radius:12px;border:1px solid var(--border);">
+        <label style="font-size:13px;color:var(--text-dim);display:block;margin-bottom:8px;">📍 الأفرع المسؤول عنها (يمكن تحديد أكثر من فرع)</label>
+        <div id="eMultiBranchList" style="max-height:220px;overflow-y:auto;display:grid;grid-template-columns:repeat(auto-fill,minmax(180px,1fr));gap:6px;padding:4px;"></div>
+    </div>
+    <div style="margin-top:15px;">
+        <button class="btn btn-main" onclick="addEmployee()">➕ إضافة الموظف</button>
+    </div>
 </div>
 <div class="card">
     <h3 style="margin-bottom:20px;">قائمة الموظفين المسجلين</h3>

@@ -210,8 +210,20 @@ function _renderTableM(get, isAdmin) {
         deliveredBy: get("searchDeliveredByM"),
         type:        get("searchTypeM")
     };
+    // فلتر الفرع لموظف/مدير الفرع ومدير المنطقة
+    const _myRole = currentUser?.role;
+    let _branchFilter = null;
+    if (_myRole === 'branch_employee' || _myRole === 'branch_manager') {
+        const _me = employees.find(e => e.empId === currentUser?.empId);
+        if (_me?.assignedBranch) _branchFilter = { type:'single', branch:_me.assignedBranch.branch };
+    } else if (_myRole === 'area_manager') {
+        const _me = employees.find(e => e.empId === currentUser?.empId);
+        if (_me?.assignedBranches?.length) _branchFilter = { type:'multi', branches:_me.assignedBranches.map(b=>b.branch) };
+    }
+
     const allRows = db.montasiat.filter(x =>
         !x.deleted &&
+        (!_branchFilter || (_branchFilter.type==='single' ? x.branch===_branchFilter.branch : _branchFilter.branches.includes(x.branch))) &&
         (!f.city        || x.city===f.city) &&
         (!f.branch      || x.branch===f.branch) &&
         (!f.date        || x.iso.startsWith(f.date)) &&
