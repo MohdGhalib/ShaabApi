@@ -4,6 +4,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 import '../services/api_service.dart';
 import 'home_screen.dart';
 import 'manager_home_screen.dart';
+import 'control_home_screen.dart';
 
 class LoginScreen extends StatefulWidget {
   const LoginScreen({super.key});
@@ -139,22 +140,30 @@ class _LoginScreenState extends State<LoginScreen>
       }
 
       if (!mounted) return;
-      final isManager = result.role == 'cc_manager' || result.isAdmin;
+      final role      = result.role;
+      final isManager = role == 'cc_manager' || result.isAdmin;
+      final isControl = role == 'control_employee' || role == 'control_sub';
+
       Navigator.of(context).pushReplacement(
         MaterialPageRoute(
-          builder: (_) => isManager
-              ? ManagerHomeScreen(
-                  token: result.token,
-                  name:  result.name,
-                  title: result.title,
-                  role:  result.role,
-                )
-              : HomeScreen(
-                  token: result.token,
-                  name:  result.name,
-                  title: result.title,
-                  role:  result.role,
-                ),
+          builder: (_) {
+            if (isManager) {
+              return ManagerHomeScreen(
+                token: result.token, name: result.name,
+                title: result.title, role: role,
+              );
+            }
+            if (isControl) {
+              return ControlHomeScreen(
+                token: result.token, name: result.name,
+                title: result.title, role: role,
+              );
+            }
+            return HomeScreen(
+              token: result.token, name: result.name,
+              title: result.title, role: role,
+            );
+          },
         ),
       );
     } else {
