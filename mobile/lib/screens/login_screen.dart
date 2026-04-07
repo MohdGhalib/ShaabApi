@@ -5,6 +5,7 @@ import '../services/api_service.dart';
 import 'home_screen.dart';
 import 'manager_home_screen.dart';
 import 'control_home_screen.dart';
+import 'branch_manager_home_screen.dart';
 
 class LoginScreen extends StatefulWidget {
   const LoginScreen({super.key});
@@ -140,9 +141,10 @@ class _LoginScreenState extends State<LoginScreen>
       }
 
       if (!mounted) return;
-      final role      = result.role;
-      final isManager = role == 'cc_manager' || result.isAdmin;
-      final isControl = role == 'control_employee' || role == 'control_sub';
+      final role             = result.role;
+      final isManager        = role == 'cc_manager' || result.isAdmin;
+      final isControl        = role == 'control_employee' || role == 'control_sub';
+      final isBranchManager  = role == 'branch_manager';
 
       Navigator.of(context).pushReplacement(
         MaterialPageRoute(
@@ -155,6 +157,12 @@ class _LoginScreenState extends State<LoginScreen>
             }
             if (isControl) {
               return ControlHomeScreen(
+                token: result.token, name: result.name,
+                title: result.title, role: role,
+              );
+            }
+            if (isBranchManager) {
+              return BranchManagerHomeScreen(
                 token: result.token, name: result.name,
                 title: result.title, role: role,
               );

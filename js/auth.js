@@ -50,7 +50,9 @@ const PERMISSIONS = {
         'viewPrices'
     ],
     // موظف فرع — صلاحيات التطبيق فقط، لا دخول للموقع
-    branch_employee: []
+    branch_employee: [],
+    // مدير فرع — صلاحيات التطبيق فقط، لا دخول للموقع
+    branch_manager: []
 };
 
 function perm(p) {
@@ -153,7 +155,8 @@ async function login() {
             else if (emp.title === 'مدير قسم السيطرة') role = 'control_employee';
             else if (emp.title === 'موظف سيطرة') role = 'control_sub';
             else if (emp.title === 'موظف فرع')  role = 'branch_employee';
-            if (role === 'branch_employee') {
+            else if (emp.title === 'مدير فرع')   role = 'branch_manager';
+            if (role === 'branch_employee' || role === 'branch_manager') {
                 _showLoginError('هذا الحساب مخصص لتطبيق الجوال فقط');
                 return;
             }
