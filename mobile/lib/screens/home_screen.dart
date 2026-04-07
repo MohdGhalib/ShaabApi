@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../services/api_service.dart';
+import '../services/status_checker.dart';
 import 'login_screen.dart';
 import 'add_montasia_screen.dart';
 import 'my_montasiat_screen.dart';
@@ -23,14 +24,31 @@ class HomeScreen extends StatefulWidget {
   State<HomeScreen> createState() => _HomeScreenState();
 }
 
-class _HomeScreenState extends State<HomeScreen> {
+class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
   int _tab = 0;
   final ValueNotifier<int> _refreshTrigger = ValueNotifier(0);
 
   @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addObserver(this);
+  }
+
+  @override
   void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
     _refreshTrigger.dispose();
     super.dispose();
+  }
+
+  /// يُفحص الحالات عند استئناف التطبيق من الخلفية
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (state == AppLifecycleState.resumed) {
+      StatusChecker.check();
+      // تحديث تاب منتسياتي إذا كان مفتوحاً
+      if (_tab == 1) _refreshTrigger.value++;
+    }
   }
 
   Future<void> _logout() async {

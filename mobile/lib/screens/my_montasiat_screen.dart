@@ -2,6 +2,7 @@ import 'dart:convert';
 import 'package:flutter/material.dart';
 import '../constants.dart';
 import '../services/api_service.dart';
+import '../services/status_checker.dart';
 
 class MyMontasiatScreen extends StatefulWidget {
   final String token;
@@ -57,6 +58,8 @@ class _MyMontasiatScreenState extends State<MyMontasiatScreen>
             x['source'] == 'mobile')
         .toList();
     setState(() { _items = all; _loading = false; });
+    // حفظ الحالات التي رآها المستخدم حتى لا يُعاد إشعاره بها
+    await StatusChecker.saveSeenStatuses(all);
   }
 
   // ── نافذة التسليم الكاملة ───────────────────────────────────────────
