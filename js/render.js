@@ -225,12 +225,19 @@ function _renderTableM(get, isAdmin) {
     _pg.M = _pageM;
     const rows = allRows.slice((_pageM - 1) * _PAGE_SIZE, _pageM * _PAGE_SIZE);
     tbodyM.innerHTML = rows.map(x => {
-        const statusClass = x.status==='تم التسليم' ? 'done' : x.status==='مرفوضة' ? 'rejected' : x.status==='بانتظار الموافقة' ? 'awaiting' : 'pending';
+        const statusClass = x.status==='تم التسليم' ? 'done'
+            : x.status==='مرفوضة'         ? 'rejected'
+            : x.status==='بانتظار الموافقة' ? 'awaiting'
+            : x.status==='قيد الاستلام'   ? 'mobile-pending'
+            : x.status==='تمت الموافقة'   ? 'mob-approved'
+            : 'pending';
         let actions = '';
         if (perm('approveM') && x.status==='بانتظار الموافقة') actions += `<button class="btn-approve" onclick="approveMontasia(${x.id})">✓ موافقة</button>`;
+        // الموافقة على منتسيات التطبيق (قيد الاستلام) — مدير أو موظف كول سنتر
+        if ((perm('deliverM') || currentUser?.isAdmin) && x.status==='قيد الاستلام') actions += `<button class="btn-approve" onclick="approveMontasiaFromMobile(${x.id})">✓ موافقة</button>`;
         if (perm('editM'))   actions += `<button class="btn-edit-sm" onclick="startEditMontasia(${x.id})">✏️ تعديل</button>`;
         if (perm('deliverM') && x.status==='قيد الانتظار') actions += `<button class="btn-deliver" onclick="deliver(${x.id})" style="margin:2px">تسليم</button>`;
-        if (perm('rejectM')  && (x.status==='قيد الانتظار'||x.status==='بانتظار الموافقة')) actions += `<button class="btn-reject" onclick="rejectMontasia(${x.id})">رفض</button>`;
+        if (perm('rejectM')  && (x.status==='قيد الانتظار'||x.status==='بانتظار الموافقة'||x.status==='قيد الاستلام')) actions += `<button class="btn-reject" onclick="rejectMontasia(${x.id})">رفض</button>`;
         if (canDelete) actions += `<button class="btn-delete-sm" onclick="deleteMontasia(${x.id})">🗑</button>`;
         const editBox = perm('editM') ? `
             <div class="inline-edit-box" id="edit-${x.id}" style="display:none;">
@@ -253,11 +260,21 @@ function _renderTableM(get, isAdmin) {
             : x.type==='أخرى'
             ? `<span style="padding:2px 8px;border-radius:6px;font-size:12px;font-weight:700;background:rgba(100,181,246,0.15);color:#90caf9;">أخرى</span>`
             : `<span style="color:var(--text-dim);font-size:12px;">—</span>`;
+        const photoCell = x.photoBase64
+            ? `<div style="margin-top:6px;">
+                   <img src="data:image/jpeg;base64,${x.photoBase64}"
+                        style="max-width:90px;max-height:70px;border-radius:6px;cursor:pointer;border:1px solid rgba(255,255,255,0.1);"
+                        onclick="_showPhoto('${x.id}')" title="عرض الصورة"/>
+               </div>` : '';
+        const mobileTag = x.source==='mobile'
+            ? `<span style="padding:1px 6px;border-radius:5px;font-size:10px;background:rgba(255,152,0,0.15);color:#ffb74d;margin-right:4px;">📱</span>` : '';
+        const approvedByRow = x.approvedBy
+            ? `<div class="added-by">✓ وافق: ${sanitize(x.approvedBy)}</div>` : '';
         return `<tr data-id="${x.id}">
-            <td><b>${x.branch}</b><br><small>${x.city}</small></td>
+            <td><b>${x.branch}</b><br><small>${x.city}</small>${mobileTag}</td>
             <td style="text-align:center;">${typeLabel}</td>
-            <td><span class="text-box-cell">${sanitize(x.notes)}</span>${editBox}</td>
-            <td><div class="added-by" style="font-size:12px;color:var(--text-main);">📥 ${sanitize(x.addedBy||'—')}</div>${deliveredRow}</td>
+            <td><span class="text-box-cell">${sanitize(x.notes)}</span>${photoCell}${editBox}</td>
+            <td><div class="added-by" style="font-size:12px;color:var(--text-main);">📥 ${sanitize(x.addedBy||'—')}</div>${deliveredRow}${approvedByRow}</td>
             <td><small>${_toLatinDigits(x.time)}</small></td>
             <td style="vertical-align:top;">
                 <span class="status-badge ${statusClass}">${x.status}${x.status==='تم التسليم' && x.deliveredBy ? ' بواسطة '+sanitize(x.deliveredBy) : ''}</span>
@@ -287,7 +304,7 @@ function _renderTableO(get) {
     };
     const allRowsO = db.montasiat.filter(x =>
         !x.deleted &&
-        (x.status==='قيد الانتظار' || x.status==='بانتظار الموافقة') &&
+        (x.status==='قيد الانتظار' || x.status==='بانتظار الموافقة' || x.status==='قيد الاستلام') &&
         (!f.city    || x.city===f.city) &&
         (!f.branch  || x.branch===f.branch) &&
         (!f.date    || x.iso.startsWith(f.date)) &&
@@ -303,10 +320,14 @@ function _renderTableO(get) {
         let actionBtn = '—';
         if (x.status==='بانتظار الموافقة' && perm('approveM'))
             actionBtn = `<button class="btn-approve" onclick="approveMontasia(${x.id})">✓ موافقة</button>`;
+        else if (x.status==='قيد الاستلام' && (perm('deliverM') || currentUser?.isAdmin))
+            actionBtn = `<button class="btn-approve" onclick="approveMontasiaFromMobile(${x.id})">✓ موافقة</button>`;
         else if (x.status==='قيد الانتظار' && perm('deliverM'))
             actionBtn = `<button class="btn-deliver" onclick="deliver(${x.id})">تسليم</button>`;
         const statusDot = x.status==='بانتظار الموافقة'
-            ? `<span class="status-badge awaiting" style="font-size:11px;padding:2px 8px;">${x.status}</span><br>` : '';
+            ? `<span class="status-badge awaiting" style="font-size:11px;padding:2px 8px;">${x.status}</span><br>`
+            : x.status==='قيد الاستلام'
+            ? `<span class="status-badge mobile-pending" style="font-size:11px;padding:2px 8px;">📱 ${x.status}</span><br>` : '';
         return `<tr>
             <td><b>${x.branch}</b><br><small>${x.city}</small></td>
             <td><span class="text-box-cell">${sanitize(x.notes)}</span></td>

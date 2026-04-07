@@ -127,6 +127,29 @@ function approveMontasia(id) {
     if (item) { item.status='قيد الانتظار'; save(); }
 }
 
+// الموافقة على منتسيات التطبيق → تمت الموافقة
+function approveMontasiaFromMobile(id) {
+    const item = db.montasiat.find(x => x.id===id);
+    if (!item) return;
+    item.status     = 'تمت الموافقة';
+    item.approvedBy = currentUser ? currentUser.name : '—';
+    item.approvedAt = now();
+    save();
+}
+
+// عرض صورة المنتسية في نافذة منبثقة
+function _showPhoto(idStr) {
+    const id   = Number(idStr);
+    const item = db.montasiat.find(x => x.id===id);
+    if (!item?.photoBase64) return;
+    const overlay = document.createElement('div');
+    overlay.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.88);z-index:9999;display:flex;align-items:center;justify-content:center;cursor:pointer;';
+    overlay.innerHTML = `<img src="data:image/jpeg;base64,${item.photoBase64}"
+        style="max-width:90vw;max-height:90vh;border-radius:10px;box-shadow:0 8px 40px rgba(0,0,0,0.6);" />`;
+    overlay.addEventListener('click', () => overlay.remove());
+    document.body.appendChild(overlay);
+}
+
 function confirmDeliverDirect(id) {
     const item = db.montasiat.find(x => x.id===id);
     if (!item) return;
