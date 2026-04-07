@@ -22,6 +22,16 @@ dependencies:
   # واجهة
   google_fonts: ^6.2.1
 
+dev_dependencies:
+  flutter_launcher_icons: ^0.14.3
+
+flutter_launcher_icons:
+  android: true
+  ios: false
+  image_path: "assets/logo.png"
+  adaptive_icon_background: "#ffffff"
+  adaptive_icon_foreground: "assets/logo.png"
+
 flutter:
   uses-material-design: true
 
