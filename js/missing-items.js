@@ -127,11 +127,11 @@ function approveMontasia(id) {
     if (item) { item.status='قيد الانتظار'; save(); }
 }
 
-// الموافقة على منتسيات التطبيق → تمت الموافقة
+// الموافقة على منتسيات التطبيق → قيد الانتظار (لتفعيل نظام التسليم)
 function approveMontasiaFromMobile(id) {
     const item = db.montasiat.find(x => x.id===id);
     if (!item) return;
-    item.status     = 'تمت الموافقة';
+    item.status     = 'قيد الانتظار';
     item.approvedBy = currentUser ? currentUser.name : '—';
     item.approvedAt = now();
     save();

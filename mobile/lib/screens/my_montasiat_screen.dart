@@ -1,5 +1,6 @@
 import 'dart:convert';
 import 'package:flutter/material.dart';
+import '../constants.dart';
 import '../services/api_service.dart';
 
 class MyMontasiatScreen extends StatefulWidget {
@@ -19,7 +20,7 @@ class MyMontasiatScreen extends StatefulWidget {
 class _MyMontasiatScreenState extends State<MyMontasiatScreen>
     with AutomaticKeepAliveClientMixin {
   List<Map<String, dynamic>> _items = [];
-  bool _loading = false;
+  bool    _loading = false;
   String? _error;
 
   @override
@@ -49,57 +50,306 @@ class _MyMontasiatScreenState extends State<MyMontasiatScreen>
     setState(() { _items = all; _loading = false; });
   }
 
-  // ── تسليم المنتسية ───────────────────────────────────────────────────
-  Future<void> _deliver(Map<String, dynamic> item) async {
-    final confirm = await showDialog<bool>(
+  // ── نافذة التسليم الكاملة ───────────────────────────────────────────
+  Future<void> _openDeliverDialog(Map<String, dynamic> item) async {
+    String  deliverType    = 'same';  // 'same' | 'other'
+    String? selectedCity;
+    String? selectedBranch;
+    List<String> branchList = [];
+
+    final result = await showDialog<Map<String, dynamic>>(
       context: context,
-      builder: (ctx) => Directionality(
-        textDirection: TextDirection.rtl,
-        child: AlertDialog(
-          backgroundColor: const Color(0xFF1E1E1E),
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-          title: const Text('تأكيد التسليم',
-              style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
-          content: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.end,
-            children: [
-              Text('${item['branch']} — ${item['city']}',
-                  style: const TextStyle(
-                      color: Colors.white, fontWeight: FontWeight.w600, fontSize: 15)),
-              const SizedBox(height: 8),
-              Text(
-                (item['notes'] as String? ?? '').length > 80
-                    ? '${(item['notes'] as String).substring(0, 80)}...'
-                    : (item['notes'] as String? ?? ''),
-                style: const TextStyle(color: Colors.white70, fontSize: 13),
+      barrierDismissible: false,
+      builder: (ctx) => StatefulBuilder(
+        builder: (ctx, setDlg) => Directionality(
+          textDirection: TextDirection.rtl,
+          child: AlertDialog(
+            backgroundColor: const Color(0xFF1E1E1E),
+            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(18)),
+            titlePadding: const EdgeInsets.fromLTRB(20, 20, 20, 0),
+            contentPadding: const EdgeInsets.fromLTRB(20, 14, 20, 0),
+            title: Row(
+              children: [
+                const Icon(Icons.local_shipping_outlined,
+                    color: Color(0xFF4DD0E1), size: 22),
+                const SizedBox(width: 8),
+                const Text('تسليم المنتسية',
+                    style: TextStyle(
+                        color: Colors.white,
+                        fontSize: 17,
+                        fontWeight: FontWeight.bold)),
+              ],
+            ),
+            content: SingleChildScrollView(
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.end,
+                children: [
+                  // معلومات المنتسية
+                  Container(
+                    width: double.infinity,
+                    padding: const EdgeInsets.all(12),
+                    decoration: BoxDecoration(
+                      color: const Color(0xFF252525),
+                      borderRadius: BorderRadius.circular(10),
+                    ),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.end,
+                      children: [
+                        Text('${item['branch']} — ${item['city']}',
+                            style: const TextStyle(
+                                color: Colors.white,
+                                fontWeight: FontWeight.bold,
+                                fontSize: 14)),
+                        if (item['notes'] != null) ...[
+                          const SizedBox(height: 4),
+                          Text(
+                            (item['notes'] as String).length > 60
+                                ? '${(item['notes'] as String).substring(0, 60)}...'
+                                : item['notes'] as String,
+                            style: const TextStyle(
+                                color: Colors.white60, fontSize: 12),
+                          ),
+                        ],
+                      ],
+                    ),
+                  ),
+                  const SizedBox(height: 16),
+
+                  // اختيار نوع التسليم
+                  const Text('جهة التسليم',
+                      style: TextStyle(
+                          color: Colors.white70,
+                          fontSize: 13,
+                          fontWeight: FontWeight.w600)),
+                  const SizedBox(height: 8),
+
+                  // نفس الفرع
+                  GestureDetector(
+                    onTap: () => setDlg(() {
+                      deliverType    = 'same';
+                      selectedCity   = null;
+                      selectedBranch = null;
+                    }),
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 14, vertical: 12),
+                      decoration: BoxDecoration(
+                        color: deliverType == 'same'
+                            ? const Color(0xFF4DD0E1).withOpacity(0.1)
+                            : const Color(0xFF252525),
+                        borderRadius: BorderRadius.circular(10),
+                        border: Border.all(
+                          color: deliverType == 'same'
+                              ? const Color(0xFF4DD0E1)
+                              : const Color(0xFF333333),
+                          width: deliverType == 'same' ? 1.5 : 1,
+                        ),
+                      ),
+                      child: Row(
+                        children: [
+                          Icon(
+                            deliverType == 'same'
+                                ? Icons.radio_button_checked
+                                : Icons.radio_button_unchecked,
+                            color: deliverType == 'same'
+                                ? const Color(0xFF4DD0E1)
+                                : Colors.white38,
+                            size: 20,
+                          ),
+                          const SizedBox(width: 10),
+                          Text('نفس الفرع  (${item['branch']})',
+                              style: const TextStyle(
+                                  color: Colors.white, fontSize: 14)),
+                        ],
+                      ),
+                    ),
+                  ),
+
+                  const SizedBox(height: 8),
+
+                  // فرع آخر
+                  GestureDetector(
+                    onTap: () => setDlg(() => deliverType = 'other'),
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 14, vertical: 12),
+                      decoration: BoxDecoration(
+                        color: deliverType == 'other'
+                            ? const Color(0xFF4DD0E1).withOpacity(0.1)
+                            : const Color(0xFF252525),
+                        borderRadius: BorderRadius.circular(10),
+                        border: Border.all(
+                          color: deliverType == 'other'
+                              ? const Color(0xFF4DD0E1)
+                              : const Color(0xFF333333),
+                          width: deliverType == 'other' ? 1.5 : 1,
+                        ),
+                      ),
+                      child: Row(
+                        children: [
+                          Icon(
+                            deliverType == 'other'
+                                ? Icons.radio_button_checked
+                                : Icons.radio_button_unchecked,
+                            color: deliverType == 'other'
+                                ? const Color(0xFF4DD0E1)
+                                : Colors.white38,
+                            size: 20,
+                          ),
+                          const SizedBox(width: 10),
+                          const Text('فرع آخر',
+                              style: TextStyle(color: Colors.white, fontSize: 14)),
+                        ],
+                      ),
+                    ),
+                  ),
+
+                  // اختيار المحافظة والفرع عند "فرع آخر"
+                  if (deliverType == 'other') ...[
+                    const SizedBox(height: 14),
+
+                    // المحافظة
+                    DropdownButtonFormField<String>(
+                      value: selectedCity,
+                      isExpanded: true,
+                      dropdownColor: const Color(0xFF252525),
+                      style: const TextStyle(color: Colors.white, fontSize: 14),
+                      iconEnabledColor: const Color(0xFF4DD0E1),
+                      decoration: InputDecoration(
+                        labelText: 'المحافظة',
+                        labelStyle: const TextStyle(color: Colors.white54),
+                        filled: true,
+                        fillColor: const Color(0xFF252525),
+                        border: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(10),
+                            borderSide: BorderSide.none),
+                        focusedBorder: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(10),
+                            borderSide: const BorderSide(
+                                color: Color(0xFF4DD0E1), width: 1.5)),
+                        contentPadding: const EdgeInsets.symmetric(
+                            horizontal: 12, vertical: 12),
+                      ),
+                      hint: const Text('اختر المحافظة',
+                          style: TextStyle(color: Colors.white38)),
+                      items: kBranches.keys
+                          .map((c) => DropdownMenuItem(
+                                value: c,
+                                child: Text(c,
+                                    textDirection: TextDirection.rtl),
+                              ))
+                          .toList(),
+                      onChanged: (v) => setDlg(() {
+                        selectedCity   = v;
+                        selectedBranch = null;
+                        branchList     = kBranches[v] ?? [];
+                      }),
+                    ),
+
+                    const SizedBox(height: 10),
+
+                    // الفرع
+                    DropdownButtonFormField<String>(
+                      value: selectedBranch,
+                      isExpanded: true,
+                      dropdownColor: const Color(0xFF252525),
+                      style: const TextStyle(color: Colors.white, fontSize: 14),
+                      iconEnabledColor: const Color(0xFF4DD0E1),
+                      decoration: InputDecoration(
+                        labelText: 'الفرع',
+                        labelStyle: const TextStyle(color: Colors.white54),
+                        filled: true,
+                        fillColor: const Color(0xFF252525),
+                        border: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(10),
+                            borderSide: BorderSide.none),
+                        focusedBorder: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(10),
+                            borderSide: const BorderSide(
+                                color: Color(0xFF4DD0E1), width: 1.5)),
+                        contentPadding: const EdgeInsets.symmetric(
+                            horizontal: 12, vertical: 12),
+                      ),
+                      hint: const Text('اختر الفرع',
+                          style: TextStyle(color: Colors.white38)),
+                      items: branchList
+                          .map((b) => DropdownMenuItem(
+                                value: b,
+                                child: Text(b,
+                                    textDirection: TextDirection.rtl),
+                              ))
+                          .toList(),
+                      onChanged: selectedCity == null
+                          ? null
+                          : (v) => setDlg(() => selectedBranch = v),
+                    ),
+                  ],
+
+                  const SizedBox(height: 6),
+                ],
               ),
-              const SizedBox(height: 14),
-              const Text('هل تأكد تسليم هذه المنتسية؟',
-                  style: TextStyle(color: Color(0xFFFFCA28), fontSize: 13)),
+            ),
+            actionsPadding: const EdgeInsets.fromLTRB(16, 8, 16, 16),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.pop(ctx, null),
+                child: const Text('إلغاء',
+                    style: TextStyle(color: Colors.white54)),
+              ),
+              ElevatedButton.icon(
+                icon: const Icon(Icons.check, size: 18),
+                label: const Text('تسليم',
+                    style: TextStyle(fontWeight: FontWeight.bold)),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: const Color(0xFF2E7D32),
+                  foregroundColor: Colors.white,
+                  shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(10)),
+                  padding: const EdgeInsets.symmetric(
+                      horizontal: 20, vertical: 10),
+                ),
+                onPressed: () {
+                  if (deliverType == 'other') {
+                    if (selectedCity == null) {
+                      ScaffoldMessenger.of(ctx).showSnackBar(const SnackBar(
+                        content: Text('اختر المحافظة',
+                            textDirection: TextDirection.rtl),
+                        backgroundColor: Color(0xFFB71C1C),
+                        behavior: SnackBarBehavior.floating,
+                      ));
+                      return;
+                    }
+                    if (selectedBranch == null) {
+                      ScaffoldMessenger.of(ctx).showSnackBar(const SnackBar(
+                        content: Text('اختر الفرع',
+                            textDirection: TextDirection.rtl),
+                        backgroundColor: Color(0xFFB71C1C),
+                        behavior: SnackBarBehavior.floating,
+                      ));
+                      return;
+                    }
+                  }
+                  Navigator.pop(ctx, {
+                    'type':   deliverType,
+                    'city':   selectedCity,
+                    'branch': selectedBranch,
+                  });
+                },
+              ),
             ],
           ),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.pop(ctx, false),
-              child: const Text('إلغاء', style: TextStyle(color: Colors.white54)),
-            ),
-            ElevatedButton(
-              style: ElevatedButton.styleFrom(
-                backgroundColor: const Color(0xFF388E3C),
-                shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(10)),
-              ),
-              onPressed: () => Navigator.pop(ctx, true),
-              child: const Text('تسليم', style: TextStyle(color: Colors.white)),
-            ),
-          ],
         ),
       ),
     );
 
-    if (confirm != true) return;
+    if (result == null) return;
+    await _commitDeliver(item, result);
+  }
 
+  // ── تأكيد الحفظ ─────────────────────────────────────────────────────
+  Future<void> _commitDeliver(
+      Map<String, dynamic> item, Map<String, dynamic> delivery) async {
     final db = await ApiService.fetchMasterDb(widget.token);
     if (db == null) { _snack('تعذّر الاتصال بالسيرفر', isError: true); return; }
 
@@ -109,14 +359,19 @@ class _MyMontasiatScreenState extends State<MyMontasiatScreen>
 
     final now = DateTime.now();
     final timeStr =
-        '${now.hour.toString().padLeft(2,'0')}:${now.minute.toString().padLeft(2,'0')}'
-        ' | ${now.day.toString().padLeft(2,'0')}/${now.month.toString().padLeft(2,'0')}/${now.year}';
+        '${now.hour.toString().padLeft(2, '0')}:${now.minute.toString().padLeft(2, '0')}'
+        ' | ${now.day.toString().padLeft(2, '0')}/${now.month.toString().padLeft(2, '0')}/${now.year}';
 
     list[idx]['status']      = 'تم التسليم';
     list[idx]['deliveredBy'] = widget.name;
     list[idx]['dt']          = timeStr;
-    db['montasiat'] = list;
 
+    if (delivery['type'] == 'other') {
+      list[idx]['deliveryCity']   = delivery['city'];
+      list[idx]['deliveryBranch'] = delivery['branch'];
+    }
+
+    db['montasiat'] = list;
     final ok = await ApiService.saveMasterDb(widget.token, db);
     if (!mounted) return;
 
@@ -131,25 +386,26 @@ class _MyMontasiatScreenState extends State<MyMontasiatScreen>
   void _snack(String msg, {bool isError = false}) {
     ScaffoldMessenger.of(context).showSnackBar(SnackBar(
       content: Text(msg, textDirection: TextDirection.rtl),
-      backgroundColor: isError ? const Color(0xFFB71C1C) : const Color(0xFF2E7D32),
+      backgroundColor:
+          isError ? const Color(0xFFB71C1C) : const Color(0xFF2E7D32),
       behavior: SnackBarBehavior.floating,
     ));
   }
 
   // ── بطاقة المنتسية ──────────────────────────────────────────────────
   Widget _card(Map<String, dynamic> item) {
-    final status     = item['status'] as String? ?? '';
-    final approved   = status == 'تمت الموافقة';
-    final delivered  = status == 'تم التسليم';
-    final pending    = status == 'قيد الاستلام';
-    final rejected   = status == 'مرفوضة';
-    final hasPhoto   = item['photoBase64'] != null;
+    final status    = item['status'] as String? ?? '';
+    final readyDlv  = status == 'قيد الانتظار';   // جاهز للتسليم
+    final delivered = status == 'تم التسليم';
+    final waiting   = status == 'قيد الاستلام';   // ينتظر موافقة CC
+    final rejected  = status == 'مرفوضة';
+    final hasPhoto  = item['photoBase64'] != null;
 
     Color statusColor;
-    if (delivered)       statusColor = const Color(0xFF81C784);
-    else if (approved)   statusColor = const Color(0xFF4DD0E1);
-    else if (rejected)   statusColor = const Color(0xFFEF9A9A);
-    else                 statusColor = const Color(0xFFFFB74D);
+    if (delivered)    statusColor = const Color(0xFF81C784);
+    else if (readyDlv) statusColor = const Color(0xFF4DD0E1);
+    else if (rejected) statusColor = const Color(0xFFEF9A9A);
+    else               statusColor = const Color(0xFFFFB74D);
 
     return Container(
       margin: const EdgeInsets.only(bottom: 14),
@@ -157,11 +413,16 @@ class _MyMontasiatScreenState extends State<MyMontasiatScreen>
         color: const Color(0xFF1E1E1E),
         borderRadius: BorderRadius.circular(16),
         border: Border.all(
-          color: approved
-              ? const Color(0xFF4DD0E1).withOpacity(0.4)
+          color: readyDlv
+              ? const Color(0xFF4DD0E1).withOpacity(0.5)
               : const Color(0xFF2A2A2A),
-          width: approved ? 1.5 : 1,
+          width: readyDlv ? 1.5 : 1,
         ),
+        boxShadow: readyDlv
+            ? [BoxShadow(
+                color: const Color(0xFF4DD0E1).withOpacity(0.08),
+                blurRadius: 8, spreadRadius: 1)]
+            : null,
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.end,
@@ -173,9 +434,9 @@ class _MyMontasiatScreenState extends State<MyMontasiatScreen>
             child: Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
-                // شارة الحالة
                 Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                  padding: const EdgeInsets.symmetric(
+                      horizontal: 10, vertical: 4),
                   decoration: BoxDecoration(
                     color: statusColor.withOpacity(0.12),
                     borderRadius: BorderRadius.circular(8),
@@ -183,9 +444,10 @@ class _MyMontasiatScreenState extends State<MyMontasiatScreen>
                   ),
                   child: Text(status,
                       style: TextStyle(
-                          color: statusColor, fontSize: 11, fontWeight: FontWeight.bold)),
+                          color: statusColor,
+                          fontSize: 11,
+                          fontWeight: FontWeight.bold)),
                 ),
-                // الفرع والمحافظة
                 Column(
                   crossAxisAlignment: CrossAxisAlignment.end,
                   children: [
@@ -197,7 +459,8 @@ class _MyMontasiatScreenState extends State<MyMontasiatScreen>
                             fontSize: 15)),
                     Text('${item['city']}',
                         textDirection: TextDirection.rtl,
-                        style: const TextStyle(color: Colors.white54, fontSize: 12)),
+                        style: const TextStyle(
+                            color: Colors.white54, fontSize: 12)),
                   ],
                 ),
               ],
@@ -214,7 +477,8 @@ class _MyMontasiatScreenState extends State<MyMontasiatScreen>
                 textDirection: TextDirection.rtl,
                 maxLines: 3,
                 overflow: TextOverflow.ellipsis,
-                style: const TextStyle(color: Colors.white70, fontSize: 13, height: 1.5),
+                style: const TextStyle(
+                    color: Colors.white70, fontSize: 13, height: 1.5),
               ),
             ),
 
@@ -233,32 +497,46 @@ class _MyMontasiatScreenState extends State<MyMontasiatScreen>
               ),
             ),
 
-          // ── الوقت ───────────────────────────────────
+          // ── وقت + معلومات التسليم ───────────────────
           Padding(
             padding: const EdgeInsets.fromLTRB(14, 10, 14, 0),
-            child: Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.end,
               children: [
                 if (delivered && item['dt'] != null)
                   Text('⏱ ${item['dt']}',
-                      style: const TextStyle(color: Color(0xFF81C784), fontSize: 11)),
-                const Spacer(),
-                Text('🕐 ${item['time'] ?? ''}',
-                    style: const TextStyle(color: Colors.white38, fontSize: 11)),
+                      style: const TextStyle(
+                          color: Color(0xFF81C784), fontSize: 11)),
+                if (delivered && item['deliveryBranch'] != null)
+                  Text(
+                    '🔀 سُلِّم لـ: ${item['deliveryBranch']} — ${item['deliveryCity']}',
+                    textDirection: TextDirection.rtl,
+                    style: const TextStyle(
+                        color: Color(0xFF64B5F6), fontSize: 11),
+                  ),
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.end,
+                  children: [
+                    Text('🕐 ${item['time'] ?? ''}',
+                        style: const TextStyle(
+                            color: Colors.white38, fontSize: 11)),
+                  ],
+                ),
               ],
             ),
           ),
 
-          // ── زر التسليم (فقط بعد الموافقة) ──────────
-          if (approved)
+          // ── زر التسليم (قيد الانتظار فقط) ──────────
+          if (readyDlv)
             Padding(
               padding: const EdgeInsets.all(14),
               child: SizedBox(
                 width: double.infinity,
                 child: ElevatedButton.icon(
-                  icon: const Icon(Icons.check_circle_outline, size: 18),
+                  icon: const Icon(Icons.local_shipping_outlined, size: 18),
                   label: const Text('تسليم المنتسية',
-                      style: TextStyle(fontSize: 15, fontWeight: FontWeight.bold)),
+                      style: TextStyle(
+                          fontSize: 15, fontWeight: FontWeight.bold)),
                   style: ElevatedButton.styleFrom(
                     backgroundColor: const Color(0xFF2E7D32),
                     foregroundColor: Colors.white,
@@ -267,7 +545,7 @@ class _MyMontasiatScreenState extends State<MyMontasiatScreen>
                         borderRadius: BorderRadius.circular(12)),
                     elevation: 0,
                   ),
-                  onPressed: () => _deliver(item),
+                  onPressed: () => _openDeliverDialog(item),
                 ),
               ),
             )
@@ -277,6 +555,47 @@ class _MyMontasiatScreenState extends State<MyMontasiatScreen>
       ),
     );
   }
+
+  // ── ملخص الأعداد ────────────────────────────────────────────────────
+  Widget _buildSummary() {
+    final waiting   = _items.where((x) => x['status'] == 'قيد الاستلام').length;
+    final readyDlv  = _items.where((x) => x['status'] == 'قيد الانتظار').length;
+    final delivered = _items.where((x) => x['status'] == 'تم التسليم').length;
+
+    return Container(
+      padding: const EdgeInsets.all(14),
+      decoration: BoxDecoration(
+        color: const Color(0xFF1A1A1A),
+        borderRadius: BorderRadius.circular(14),
+        border: Border.all(color: const Color(0xFF2A2A2A)),
+      ),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.spaceAround,
+        children: [
+          _summaryItem('قيد الاستلام',    waiting,   const Color(0xFFFFB74D)),
+          _vDivider(),
+          _summaryItem('جاهز للتسليم',   readyDlv,  const Color(0xFF4DD0E1)),
+          _vDivider(),
+          _summaryItem('تم التسليم',     delivered, const Color(0xFF81C784)),
+        ],
+      ),
+    );
+  }
+
+  Widget _summaryItem(String label, int count, Color color) => Column(
+    children: [
+      Text('$count',
+          style: TextStyle(
+              color: color, fontSize: 22, fontWeight: FontWeight.bold)),
+      const SizedBox(height: 2),
+      Text(label,
+          textDirection: TextDirection.rtl,
+          style: const TextStyle(color: Colors.white54, fontSize: 10)),
+    ],
+  );
+
+  Widget _vDivider() =>
+      Container(height: 36, width: 1, color: const Color(0xFF2A2A2A));
 
   @override
   Widget build(BuildContext context) {
@@ -306,33 +625,26 @@ class _MyMontasiatScreenState extends State<MyMontasiatScreen>
                 color: const Color(0xFFE53935),
                 backgroundColor: const Color(0xFF1E1E1E),
                 child: _items.isEmpty
-                    ? ListView(
-                        children: const [
-                          SizedBox(height: 120),
-                          Center(
-                            child: Column(
-                              children: [
-                                Icon(Icons.inbox_outlined,
-                                    color: Colors.white24, size: 64),
-                                SizedBox(height: 16),
-                                Text('لم ترسل أي منتسية بعد',
-                                    style: TextStyle(
-                                        color: Colors.white38, fontSize: 16)),
-                              ],
-                            ),
-                          ),
-                        ],
-                      )
+                    ? ListView(children: const [
+                        SizedBox(height: 120),
+                        Center(
+                          child: Column(children: [
+                            Icon(Icons.inbox_outlined,
+                                color: Colors.white24, size: 64),
+                            SizedBox(height: 16),
+                            Text('لم ترسل أي منتسية بعد',
+                                style: TextStyle(
+                                    color: Colors.white38, fontSize: 16)),
+                          ]),
+                        ),
+                      ])
                     : ListView(
                         padding: const EdgeInsets.all(16),
                         children: [
-                          // ملخص سريع
                           _buildSummary(),
                           const SizedBox(height: 16),
-                          // البطاقات
                           ..._items.map(_card),
                           const SizedBox(height: 20),
-                          // تلميح السحب
                           const Center(
                             child: Text('اسحب للأسفل للتحديث',
                                 style: TextStyle(
@@ -342,44 +654,4 @@ class _MyMontasiatScreenState extends State<MyMontasiatScreen>
                       ),
               );
   }
-
-  Widget _buildSummary() {
-    final pending   = _items.where((x) => x['status'] == 'قيد الاستلام').length;
-    final approved  = _items.where((x) => x['status'] == 'تمت الموافقة').length;
-    final delivered = _items.where((x) => x['status'] == 'تم التسليم').length;
-
-    return Container(
-      padding: const EdgeInsets.all(14),
-      decoration: BoxDecoration(
-        color: const Color(0xFF1A1A1A),
-        borderRadius: BorderRadius.circular(14),
-        border: Border.all(color: const Color(0xFF2A2A2A)),
-      ),
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.spaceAround,
-        children: [
-          _summaryItem('قيد الاستلام', pending,   const Color(0xFFFFB74D)),
-          _vDivider(),
-          _summaryItem('بانتظار التسليم', approved,  const Color(0xFF4DD0E1)),
-          _vDivider(),
-          _summaryItem('تم التسليم',  delivered, const Color(0xFF81C784)),
-        ],
-      ),
-    );
-  }
-
-  Widget _summaryItem(String label, int count, Color color) => Column(
-    children: [
-      Text('$count',
-          style: TextStyle(
-              color: color, fontSize: 22, fontWeight: FontWeight.bold)),
-      const SizedBox(height: 2),
-      Text(label,
-          textDirection: TextDirection.rtl,
-          style: const TextStyle(color: Colors.white54, fontSize: 10)),
-    ],
-  );
-
-  Widget _vDivider() => Container(
-      height: 36, width: 1, color: const Color(0xFF2A2A2A));
 }
