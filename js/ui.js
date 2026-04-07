@@ -118,6 +118,132 @@ function _updateBadges() {
     set('badge-m', 'm', newM);
     set('badge-c', 'c', newC);
     set('badge-i', 'i', newI);
+
+    // ── شارة جرس الإشعارات ──
+    const total = newM + newC + newI;
+    const bell  = document.getElementById('notifBellBadge');
+    if (bell) {
+        bell.textContent  = total > 9 ? '9+' : total;
+        bell.style.display = total > 0 ? 'flex' : 'none';
+    }
+}
+
+/* ── لوحة الإشعارات ── */
+let _notifOpen = false;
+
+function _toggleNotifPanel() {
+    _notifOpen = !_notifOpen;
+    const panel = document.getElementById('notifPanel');
+    if (!panel) return;
+    if (_notifOpen) {
+        _renderNotifPanel();
+        panel.style.display = 'block';
+        // أعد تشغيل الأنيميشن
+        panel.style.animation = 'none';
+        void panel.offsetWidth;
+        panel.style.animation = '';
+    } else {
+        panel.style.display = 'none';
+    }
+}
+
+// إغلاق لوحة الإشعارات عند النقر خارجها
+document.addEventListener('click', e => {
+    if (!_notifOpen) return;
+    const btn   = document.getElementById('notifBellBtn');
+    const panel = document.getElementById('notifPanel');
+    if (btn && !btn.contains(e.target) && panel && !panel.contains(e.target)) {
+        _notifOpen = false;
+        panel.style.display = 'none';
+    }
+});
+
+function _renderNotifPanel() {
+    const lastM = _getLastSeen('m');
+    const lastC = _getLastSeen('c');
+    const lastI = _getLastSeen('i');
+
+    const newMItems = (db.montasiat  || []).filter(x => !x.deleted && x.id > lastM).slice(0, 4);
+    const newCItems = (db.complaints || []).filter(x => !x.deleted && x.id > lastC).slice(0, 4);
+    const newIItems = (db.inquiries  || []).filter(x => !x.deleted && x.id > lastI).slice(0, 4);
+    const total     = newMItems.length + newCItems.length + newIItems.length;
+
+    const sItem = `padding:9px 12px;cursor:pointer;border-radius:10px;transition:background 0.15s;
+                   font-size:13px;display:flex;flex-direction:column;gap:2px;`;
+    const sLabel= `font-size:10px;font-weight:700;letter-spacing:0.5px;color:var(--text-dim);
+                   padding:6px 12px 3px;`;
+    let html = `
+    <div style="padding:12px 16px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;">
+        <span style="font-weight:700;font-size:14px;color:var(--text-main);">🔔 الإشعارات</span>
+        ${total > 0
+            ? `<button onclick="_markAllNotifRead()"
+                  style="font-size:12px;padding:4px 12px;border-radius:8px;border:1px solid var(--border);
+                         background:transparent;color:var(--text-dim);font-family:'Cairo';cursor:pointer;">
+                  ✓ تم القراءة</button>`
+            : ''}
+    </div>
+    <div style="overflow-y:auto;max-height:310px;padding:8px;">`;
+
+    if (total === 0) {
+        html += `<div style="padding:28px;text-align:center;color:var(--text-dim);font-size:13px;">
+                    ✅ لا توجد إشعارات جديدة</div>`;
+    }
+
+    if (newMItems.length) {
+        html += `<div style="${sLabel}">📋 منتسيات</div>`;
+        newMItems.forEach(x => {
+            html += `<div style="${sItem}" onclick="_navFromNotif('m',${x.id})"
+                         onmouseover="this.style.background='rgba(211,47,47,0.08)'"
+                         onmouseout="this.style.background=''">
+                <span style="font-weight:700;color:var(--text-main);">${sanitize(x.branch)} — ${sanitize(x.city)}</span>
+                <span style="color:var(--text-dim);font-size:11px;">${sanitize((x.notes||'').substring(0,45))}${(x.notes||'').length>45?'…':''}</span>
+            </div>`;
+        });
+    }
+
+    if (newCItems.length) {
+        html += `<div style="${sLabel}">🚨 شكاوي</div>`;
+        newCItems.forEach(x => {
+            html += `<div style="${sItem}" onclick="_navFromNotif('c',${x.id})"
+                         onmouseover="this.style.background='rgba(211,47,47,0.08)'"
+                         onmouseout="this.style.background=''">
+                <span style="font-weight:700;color:var(--text-main);">${sanitize(x.branch)} — ${sanitize(x.city)}</span>
+                <span style="color:var(--text-dim);font-size:11px;">${sanitize((x.notes||'').substring(0,45))}${(x.notes||'').length>45?'…':''}</span>
+            </div>`;
+        });
+    }
+
+    if (newIItems.length) {
+        html += `<div style="${sLabel}">💬 استفسارات</div>`;
+        newIItems.forEach(x => {
+            html += `<div style="${sItem}" onclick="_navFromNotif('i',${x.id})"
+                         onmouseover="this.style.background='rgba(211,47,47,0.08)'"
+                         onmouseout="this.style.background=''">
+                <span style="font-weight:700;color:var(--text-main);">${sanitize(x.branch)} — ${sanitize(x.city)}</span>
+                <span style="color:var(--text-dim);font-size:11px;">${sanitize((x.text||x.notes||'').substring(0,45))}${((x.text||x.notes||'').length>45)?'…':''}</span>
+            </div>`;
+        });
+    }
+
+    html += `</div>`;
+    document.getElementById('notifPanel').innerHTML = html;
+}
+
+function _navFromNotif(tab, id) {
+    _notifOpen = false;
+    const panel = document.getElementById('notifPanel');
+    if (panel) panel.style.display = 'none';
+    viewDashboardItem(tab, id);
+}
+
+function _markAllNotifRead() {
+    _markTabSeen('m');
+    _markTabSeen('c');
+    _markTabSeen('i');
+    _notifOpen = false;
+    const panel = document.getElementById('notifPanel');
+    if (panel) panel.style.display = 'none';
+    _updateBadges();
 }
 
 function _syncEmpGroup() {
