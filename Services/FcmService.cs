@@ -6,7 +6,6 @@ using System.Text.Json;
 
 namespace ShaabApi.Services;
 
-/// خدمة إرسال إشعارات Firebase Cloud Messaging
 public class FcmService
 {
     private readonly AppDbContext _db;
@@ -26,7 +25,11 @@ public class FcmService
         {
             if (_initialized) return;
             var json = Environment.GetEnvironmentVariable("FIREBASE_SERVICE_ACCOUNT_JSON");
-            if (string.IsNullOrEmpty(json)) return;
+            if (string.IsNullOrEmpty(json))
+            {
+                Console.WriteLine("[FCM] FIREBASE_SERVICE_ACCOUNT_JSON not set — notifications disabled");
+                return;
+            }
             try
             {
                 if (FirebaseApp.DefaultInstance == null)
@@ -37,6 +40,7 @@ public class FcmService
                     });
                 }
                 _initialized = true;
+                Console.WriteLine("[FCM] Firebase initialized successfully");
             }
             catch (Exception ex)
             {
@@ -45,33 +49,41 @@ public class FcmService
         }
     }
 
-    /// إرسال إشعار لأدوار محددة
-    public async Task SendToRoles(string[] roles, string title, string body)
+    public bool IsReady => _initialized;
+
+    // ── قراءة كل الـ tokens من DB (في نطاق الـ request) ───────────────────
+    public async Task<List<FcmTokenRecord>> GetAllTokens()
     {
-        if (!_initialized) return;
-        var tokens = await GetTokensForRoles(roles);
-        if (tokens.Count == 0) return;
-        await SendToTokens(tokens, title, body);
+        var row = await _db.Storage.FindAsync("Shaab_FCM_Tokens");
+        if (row == null || string.IsNullOrEmpty(row.StoreValue)) return [];
+        try { return JsonSerializer.Deserialize<List<FcmTokenRecord>>(row.StoreValue) ?? []; }
+        catch { return []; }
     }
 
-    /// إرسال إشعار لموظف محدد بـ empId
-    public async Task SendToEmp(string empId, string title, string body)
+    // ── إرسال إشعار — STATIC لا يحتاج DB ─────────────────────────────────
+    public static async Task SendToRolesStatic(
+        List<FcmTokenRecord> allTokens,
+        string[] roles,
+        string title,
+        string body)
     {
         if (!_initialized) return;
-        var tokens = await GetTokensForEmp(empId);
+        var tokens = allTokens
+            .Where(t => roles.Contains(t.Role))
+            .Select(t => t.FcmToken)
+            .Distinct()
+            .ToList();
         if (tokens.Count == 0) return;
-        await SendToTokens(tokens, title, body);
+        await SendBatch(tokens, title, body);
     }
 
-    private async Task SendToTokens(List<string> tokens, string title, string body)
+    private static async Task SendBatch(List<string> tokens, string title, string body)
     {
         try
         {
-            // FCM يسمح بـ 500 token لكل batch
-            var batches = tokens.Chunk(500).ToList();
-            foreach (var batch in batches)
+            foreach (var batch in tokens.Chunk(500))
             {
-                var message = new MulticastMessage
+                var msg = new MulticastMessage
                 {
                     Tokens       = batch.ToList(),
                     Notification = new Notification { Title = title, Body = body },
@@ -80,74 +92,34 @@ public class FcmService
                         Priority     = Priority.High,
                         Notification = new AndroidNotification
                         {
-                            ChannelId  = "shaab_main",
-                            Sound      = "melodic_notification",
+                            ChannelId   = "shaab_main",
+                            Sound       = "melodic_notification",
                             ClickAction = "FLUTTER_NOTIFICATION_CLICK",
                         }
                     }
                 };
-                var result = await FirebaseMessaging.DefaultInstance.SendEachForMulticastAsync(message);
-                Console.WriteLine($"[FCM] Sent {result.SuccessCount}/{batch.Length} notifications");
-
-                // حذف التوكنات غير الصالحة
-                var invalid = new List<string>();
+                var result = await FirebaseMessaging.DefaultInstance.SendEachForMulticastAsync(msg);
+                Console.WriteLine($"[FCM] Sent {result.SuccessCount}/{batch.Length} — title: {title}");
                 for (int i = 0; i < result.Responses.Count; i++)
-                {
                     if (!result.Responses[i].IsSuccess)
-                    {
-                        var errCode = result.Responses[i].Exception?.MessagingErrorCode;
-                        if (errCode == MessagingErrorCode.Unregistered ||
-                            errCode == MessagingErrorCode.InvalidArgument)
-                        {
-                            invalid.Add(batch[i]);
-                        }
-                    }
-                }
-                if (invalid.Count > 0) await RemoveInvalidTokens(invalid);
+                        Console.WriteLine($"[FCM] Token[{i}] error: {result.Responses[i].Exception?.Message}");
             }
         }
         catch (Exception ex)
         {
-            Console.WriteLine($"[FCM] SendToTokens error: {ex.Message}");
+            Console.WriteLine($"[FCM] SendBatch error: {ex.Message}");
         }
     }
 
-    private async Task<List<string>> GetTokensForRoles(string[] roles)
-    {
-        var all = await GetAllTokens();
-        return all
-            .Where(t => roles.Contains(t.Role))
-            .Select(t => t.FcmToken)
-            .Distinct()
-            .ToList();
-    }
-
-    private async Task<List<string>> GetTokensForEmp(string empId)
-    {
-        var all = await GetAllTokens();
-        return all
-            .Where(t => t.EmpId == empId)
-            .Select(t => t.FcmToken)
-            .Distinct()
-            .ToList();
-    }
-
-    private async Task<List<FcmTokenRecord>> GetAllTokens()
-    {
-        var row = await _db.Storage.FindAsync("Shaab_FCM_Tokens");
-        if (row == null || string.IsNullOrEmpty(row.StoreValue)) return [];
-        try { return JsonSerializer.Deserialize<List<FcmTokenRecord>>(row.StoreValue) ?? []; }
-        catch { return []; }
-    }
-
-    private async Task RemoveInvalidTokens(List<string> invalidTokens)
+    // ── حذف tokens غير صالحة (يُستدعى ضمن request scope) ──────────────────
+    public async Task RemoveInvalidTokens(List<string> invalid)
     {
         var row = await _db.Storage.FindAsync("Shaab_FCM_Tokens");
         if (row == null) return;
         try
         {
             var list = JsonSerializer.Deserialize<List<FcmTokenRecord>>(row.StoreValue ?? "[]") ?? [];
-            list = list.Where(t => !invalidTokens.Contains(t.FcmToken)).ToList();
+            list = list.Where(t => !invalid.Contains(t.FcmToken)).ToList();
             row.StoreValue = JsonSerializer.Serialize(list);
             row.UpdatedAt  = DateTime.UtcNow;
             await _db.SaveChangesAsync();

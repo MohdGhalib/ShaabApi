@@ -111,7 +111,11 @@ public class StorageController : ControllerBase
         // كشف العناصر الجديدة في Shaab_Master_DB → إرسال FCM
         if (body.Key == "Shaab_Master_DB" && !string.IsNullOrEmpty(body.Value))
         {
-            _ = Task.Run(() => _DetectAndNotify(oldValue, body.Value!));
+            // قراءة الـ tokens في نطاق الـ request قبل أن يُغلق الـ DbContext
+            var allTokens = await _fcm.GetAllTokens();
+            var oldSnap   = oldValue;
+            var newSnap   = body.Value!;
+            _ = Task.Run(() => _DetectAndNotify(allTokens, oldSnap, newSnap));
         }
 
         await _db.SaveChangesAsync();
@@ -122,7 +126,8 @@ public class StorageController : ControllerBase
         return Ok(new { ok = true });
     }
 
-    private async Task _DetectAndNotify(string? oldValue, string newValue)
+    // آمن للاستدعاء من Task.Run — لا يستخدم DbContext
+    private static async Task _DetectAndNotify(List<FcmTokenRecord> allTokens, string? oldValue, string newValue)
     {
         try
         {
@@ -130,25 +135,29 @@ public class StorageController : ControllerBase
 
             // ── منتسية جديدة → كول سنتر ──
             if (newM > 0)
-                await _fcm.SendToRoles(["cc_manager", "cc_employee"],
+                await FcmService.SendToRolesStatic(allTokens,
+                    ["cc_manager", "cc_employee"],
                     "📋 منتسية جديدة",
                     newM == 1 ? "تم إرسال منتسية جديدة" : $"تم إرسال {newM} منتسيات جديدة");
 
             // ── منتسية تم تسليمها → مدير الفرع / مدير المنطقة / موظف الفرع ──
             if (deliveredM > 0)
-                await _fcm.SendToRoles(["branch_manager", "area_manager", "branch_employee"],
+                await FcmService.SendToRolesStatic(allTokens,
+                    ["branch_manager", "area_manager", "branch_employee"],
                     "✅ تم تسليم منتسية",
                     deliveredM == 1 ? "تمت الموافقة على منتسيتك وتسليمها" : $"تمت الموافقة على {deliveredM} منتسيات وتسليمها");
 
             // ── شكوى جديدة → كول سنتر + السيطرة + مديرو الفروع والمناطق ──
             if (newC > 0)
-                await _fcm.SendToRoles(["cc_manager", "control_employee", "branch_manager", "area_manager"],
+                await FcmService.SendToRolesStatic(allTokens,
+                    ["cc_manager", "control_employee", "branch_manager", "area_manager"],
                     "🚨 شكوى جديدة",
                     newC == 1 ? "تم إضافة شكوى جديدة" : $"تم إضافة {newC} شكاوي جديدة");
 
             // ── استفسار جديد → كول سنتر ──
             if (newI > 0)
-                await _fcm.SendToRoles(["cc_manager", "cc_employee"],
+                await FcmService.SendToRolesStatic(allTokens,
+                    ["cc_manager", "cc_employee"],
                     "💬 استفسار جديد",
                     newI == 1 ? "تم إضافة استفسار جديد" : $"تم إضافة {newI} استفسارات جديدة");
         }
