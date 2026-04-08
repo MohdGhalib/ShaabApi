@@ -25,6 +25,24 @@ function _logAudit(action, entity, summary) {
 
 /* ── صوت الإشعار (consideration.mp3) ── */
 let _notifAudio = null;
+let _audioUnlocked = false;
+
+// نُهيئ الـ Audio ونفتحه عند أول تفاعل لتفادي قيود autoplay
+function _unlockAudio() {
+    if (_audioUnlocked) return;
+    try {
+        _notifAudio = new Audio('audio/consideration.mp3');
+        _notifAudio.volume = 1;
+        // تشغيل وإيقاف فوري لفتح قناة الصوت
+        const p = _notifAudio.play();
+        if (p) p.then(() => { _notifAudio.pause(); _notifAudio.currentTime = 0; }).catch(() => {});
+        _audioUnlocked = true;
+    } catch(e) {}
+}
+document.addEventListener('click',   _unlockAudio, { capture: true });
+document.addEventListener('keydown', _unlockAudio, { capture: true });
+document.addEventListener('touchstart', _unlockAudio, { capture: true });
+
 function _playSound() {
     try {
         if (!_notifAudio) _notifAudio = new Audio('audio/consideration.mp3');

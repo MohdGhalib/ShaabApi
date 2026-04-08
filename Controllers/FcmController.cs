@@ -25,6 +25,10 @@ public class FcmController : ControllerBase
     {
         if (string.IsNullOrEmpty(body.FcmToken)) return BadRequest();
 
+        // تهيئة Firebase عند التسجيل إن لم تتم بعد
+        var fcm = HttpContext.RequestServices.GetRequiredService<FcmService>();
+        await fcm.EnsureInitializedAsync();
+
         var empId = body.EmpId ?? User.FindFirst("empId")?.Value ?? "";
         var role  = body.Role  ?? User.FindFirst("role")?.Value  ?? "";
 
