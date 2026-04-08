@@ -119,6 +119,20 @@ class ApiService {
     }
   }
 
+  // ── تسجيل FCM Token على السيرفر ──────────────────────────────────────
+  static Future<void> registerFcmToken(String authToken, String empId, String role, String fcmToken) async {
+    try {
+      await http.post(
+        Uri.parse('$kBaseUrl/api/fcm/register'),
+        headers: {
+          'Content-Type':  'application/json',
+          'Authorization': 'Bearer $authToken',
+        },
+        body: jsonEncode({'empId': empId, 'role': role, 'fcmToken': fcmToken}),
+      ).timeout(const Duration(seconds: 10));
+    } catch (_) {}
+  }
+
   // ── حفظ قاعدة البيانات الرئيسية ─────────────────────────────────────
   static Future<bool> saveMasterDb(
       String token, Map<String, dynamic> db) async {

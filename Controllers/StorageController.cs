@@ -3,6 +3,7 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using ShaabApi.Data;
 using ShaabApi.Models;
+using ShaabApi.Services;
 using System.Text.Json;
 
 namespace ShaabApi.Controllers;
@@ -21,17 +22,20 @@ public class StorageController : ControllerBase
         "Shaab_Employees_DB",
         "Shaab_Breaks_DB",
         "Shaab_Sessions_DB",
-        "Shaab_PriceList_DB"
+        "Shaab_PriceList_DB",
+        "Shaab_FCM_Tokens"
     ];
 
     // هذه المفاتيح لا يمكن تعديلها إلا من قِبل المدراء
     private static readonly HashSet<string> _adminOnlyKeys = ["Shaab_Employees_DB"];
 
     private readonly AppDbContext _db;
+    private readonly FcmService   _fcm;
 
-    public StorageController(AppDbContext db)
+    public StorageController(AppDbContext db, FcmService fcm)
     {
         _db = db;
+        _fcm = fcm;
     }
 
     // GET /api/storage?keys=key1,key2,...
@@ -93,6 +97,7 @@ public class StorageController : ControllerBase
         }
 
         var existing = await _db.Storage.FindAsync(body.Key);
+        var oldValue = existing?.StoreValue; // للمقارنة لاحقاً
         if (existing is null)
         {
             _db.Storage.Add(new StorageEntry { StoreKey = body.Key, StoreValue = body.Value });
@@ -103,6 +108,12 @@ public class StorageController : ControllerBase
             existing.UpdatedAt  = DateTime.UtcNow;
         }
 
+        // كشف العناصر الجديدة في Shaab_Master_DB → إرسال FCM
+        if (body.Key == "Shaab_Master_DB" && !string.IsNullOrEmpty(body.Value))
+        {
+            _ = Task.Run(() => _DetectAndNotify(oldValue, body.Value!));
+        }
+
         await _db.SaveChangesAsync();
 
         // إرسال حدث SSE لجميع المتصلين (fire-and-forget)
@@ -110,6 +121,72 @@ public class StorageController : ControllerBase
 
         return Ok(new { ok = true });
     }
+
+    private async Task _DetectAndNotify(string? oldValue, string newValue)
+    {
+        try
+        {
+            var (newM, newC, newI) = DbHelper.CountNew(oldValue, newValue);
+
+            if (newM > 0)
+                await _fcm.SendToRoles(["cc_manager", "cc_employee"],
+                    "📋 منتسية جديدة",
+                    newM == 1 ? "تم إضافة منتسية جديدة" : $"تم إضافة {newM} منتسيات جديدة");
+
+            if (newC > 0)
+                await _fcm.SendToRoles(["cc_manager", "control_employee"],
+                    "🚨 شكوى جديدة",
+                    newC == 1 ? "تم إضافة شكوى جديدة" : $"تم إضافة {newC} شكاوي جديدة");
+
+            if (newI > 0)
+                await _fcm.SendToRoles(["cc_manager", "cc_employee"],
+                    "💬 استفسار جديد",
+                    newI == 1 ? "تم إضافة استفسار جديد" : $"تم إضافة {newI} استفسارات جديدة");
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"[FCM] DetectAndNotify error: {ex.Message}");
+        }
+    }
 }
 
 public record StorageRequest(string Key, string? Value);
+
+// ── مساعدة: كشف العناصر الجديدة وإرسال إشعار FCM ──────────────────────────
+file static class DbHelper
+{
+    private static HashSet<long> _GetIds(JsonElement root, string key)
+    {
+        var ids = new HashSet<long>();
+        if (root.TryGetProperty(key, out var arr) && arr.ValueKind == JsonValueKind.Array)
+            foreach (var el in arr.EnumerateArray())
+                if (el.TryGetProperty("id", out var idEl) && idEl.TryGetInt64(out var id))
+                    ids.Add(id);
+        return ids;
+    }
+
+    public static (int newM, int newC, int newI) CountNew(string? oldJson, string newJson)
+    {
+        HashSet<long> oldM = [], oldC = [], oldI = [];
+        if (!string.IsNullOrEmpty(oldJson))
+        {
+            try
+            {
+                var o = JsonDocument.Parse(oldJson).RootElement;
+                oldM = _GetIds(o, "montasiat");
+                oldC = _GetIds(o, "complaints");
+                oldI = _GetIds(o, "inquiries");
+            }
+            catch { }
+        }
+        try
+        {
+            var n = JsonDocument.Parse(newJson).RootElement;
+            var nm = _GetIds(n, "montasiat").Except(oldM).Count();
+            var nc = _GetIds(n, "complaints").Except(oldC).Count();
+            var ni = _GetIds(n, "inquiries").Except(oldI).Count();
+            return (nm, nc, ni);
+        }
+        catch { return (0, 0, 0); }
+    }
+}

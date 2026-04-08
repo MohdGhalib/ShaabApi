@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "610352757409",
+    "project_id": "alshaeb-f3f69",
+    "storage_bucket": "alshaeb-f3f69.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:610352757409:android:7941589209caaf6eb1cee0",
+        "android_client_info": {
+          "package_name": "com.shaab.shaab_app"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyCjTygkX4HKEcBZxqCtF2L2WOXjXsSQ4oE"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

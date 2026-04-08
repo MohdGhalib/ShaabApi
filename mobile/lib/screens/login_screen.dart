@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:local_auth/local_auth.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../services/api_service.dart';
+import '../services/notification_service.dart';
 import 'home_screen.dart';
 import 'manager_home_screen.dart';
 import 'control_home_screen.dart';
@@ -139,6 +140,13 @@ class _LoginScreenState extends State<LoginScreen>
         await prefs.remove('_shaab_empId');
         await prefs.setBool('_shaab_biometric_enabled', false);
       }
+
+      // تسجيل FCM Token بعد الدخول (fire-and-forget)
+      NotificationService.getFcmToken().then((fcmToken) {
+        if (fcmToken != null) {
+          ApiService.registerFcmToken(result.token, empId, result.role, fcmToken);
+        }
+      });
 
       if (!mounted) return;
       final role             = result.role;

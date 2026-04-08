@@ -4,6 +4,7 @@ using Microsoft.Extensions.FileProviders;
 using Microsoft.IdentityModel.Tokens;
 using ShaabApi.Controllers;
 using ShaabApi.Data;
+using ShaabApi.Services;
 using System.Security.Cryptography;
 using System.Text;
 using System.Text.Json;
@@ -45,6 +46,7 @@ builder.Services.AddDbContext<AppDbContext>(options =>
 
 builder.Services.AddControllers();
 builder.Services.AddHttpContextAccessor();
+builder.Services.AddScoped<FcmService>();
 
 // JWT Authentication
 var jwtKey = builder.Configuration["Jwt:Key"]!;

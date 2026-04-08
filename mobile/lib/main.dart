@@ -1,12 +1,27 @@
+import 'package:firebase_core/firebase_core.dart';
+import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:workmanager/workmanager.dart';
+import 'firebase_options.dart';
 import 'screens/splash_screen.dart';
 import 'services/notification_service.dart';
 import 'services/status_checker.dart';
 
-/// نقطة الدخول لمهام الخلفية — يجب أن تكون دالة مستقلة (top-level)
+/// معالج رسائل FCM في الخلفية — يجب أن يكون top-level
+@pragma('vm:entry-point')
+Future<void> _firebaseMessagingBackgroundHandler(RemoteMessage message) async {
+  await Firebase.initializeApp(options: DefaultFirebaseOptions.currentPlatform);
+  await NotificationService.init();
+  final title = message.notification?.title ?? message.data['title'] ?? 'إشعار جديد';
+  final body  = message.notification?.body  ?? message.data['body']  ?? '';
+  if (body.isNotEmpty) {
+    await NotificationService.show(message.hashCode, title, body);
+  }
+}
+
+/// مهام WorkManager في الخلفية
 @pragma('vm:entry-point')
 void callbackDispatcher() {
   Workmanager().executeTask((taskName, inputData) async {
@@ -19,17 +34,23 @@ void callbackDispatcher() {
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
 
+  // تهيئة Firebase
+  await Firebase.initializeApp(options: DefaultFirebaseOptions.currentPlatform);
+
+  // معالج رسائل الخلفية
+  FirebaseMessaging.onBackgroundMessage(_firebaseMessagingBackgroundHandler);
+
   SystemChrome.setSystemUIOverlayStyle(const SystemUiOverlayStyle(
     statusBarColor:           Colors.transparent,
     statusBarIconBrightness:  Brightness.light,
     systemNavigationBarColor: Color(0xFF121212),
   ));
 
-  // تهيئة الإشعارات
+  // تهيئة الإشعارات المحلية
   await NotificationService.init();
   await NotificationService.requestPermission();
 
-  // تهيئة WorkManager للفحص في الخلفية
+  // WorkManager للفحص الدوري
   await Workmanager().initialize(callbackDispatcher, isInDebugMode: false);
   await Workmanager().registerPeriodicTask(
     'shaab_status_check',

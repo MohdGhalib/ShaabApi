@@ -1,12 +1,13 @@
+import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 
 class NotificationService {
   static final _plugin = FlutterLocalNotificationsPlugin();
   static bool _initialized = false;
 
-  static const _channelId   = 'shaab_montasia';
-  static const _channelName = 'تحديثات المنتسيات';
-  static const _channelDesc = 'إشعارات حالة المنتسيات المرسلة عبر التطبيق';
+  static const _channelId   = 'shaab_main';
+  static const _channelName = 'إشعارات الشعب';
+  static const _channelDesc = 'إشعارات المنتسيات والشكاوي والاستفسارات';
 
   static Future<void> init() async {
     if (_initialized) return;
@@ -15,12 +16,11 @@ class NotificationService {
     const settings = InitializationSettings(android: androidSettings);
     await _plugin.initialize(settings);
 
-    // إنشاء قناة الإشعارات (Android 8+)
     const channel = AndroidNotificationChannel(
       _channelId,
       _channelName,
       description: _channelDesc,
-      importance: Importance.high,
+      importance: Importance.max,
       playSound: true,
       enableVibration: true,
     );
@@ -30,13 +30,38 @@ class NotificationService {
         ?.createNotificationChannel(channel);
 
     _initialized = true;
+
+    // استقبال رسائل FCM وهو التطبيق في المقدمة
+    FirebaseMessaging.onMessage.listen((RemoteMessage message) {
+      final title = message.notification?.title ?? message.data['title'] ?? 'إشعار';
+      final body  = message.notification?.body  ?? message.data['body']  ?? '';
+      if (body.isNotEmpty) {
+        show(message.hashCode, title, body);
+      }
+    });
   }
 
   static Future<void> requestPermission() async {
+    // طلب إذن إشعارات FCM
+    await FirebaseMessaging.instance.requestPermission(
+      alert: true,
+      badge: true,
+      sound: true,
+    );
+    // طلب إذن إشعارات محلية (Android 13+)
     await _plugin
         .resolvePlatformSpecificImplementation<
             AndroidFlutterLocalNotificationsPlugin>()
         ?.requestNotificationsPermission();
+  }
+
+  /// الحصول على FCM Token الجهاز
+  static Future<String?> getFcmToken() async {
+    try {
+      return await FirebaseMessaging.instance.getToken();
+    } catch (_) {
+      return null;
+    }
   }
 
   static Future<void> show(int id, String title, String body) async {
@@ -49,7 +74,7 @@ class NotificationService {
           _channelId,
           _channelName,
           channelDescription: _channelDesc,
-          importance: Importance.high,
+          importance: Importance.max,
           priority: Priority.high,
           icon: '@mipmap/ic_launcher',
           styleInformation: BigTextStyleInformation(''),
