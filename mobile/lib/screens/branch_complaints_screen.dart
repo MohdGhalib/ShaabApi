@@ -82,13 +82,13 @@ class _BranchComplaintsScreenState extends State<BranchComplaintsScreen>
       setState(() { _loading = false; _error = 'تعذّر الاتصال بالسيرفر'; });
       return;
     }
-    // مدير الفرع/المنطقة يرى الشكاوى التي لها رد من قسم السيطرة فقط
+    // مدير الفرع/المنطقة يرى الشكاوى بعد اكتمال المتابعة مع الزبون فقط
     // مع فلترة حسب الفروع المخصصة له
     final all = (db['complaints'] as List? ?? [])
         .cast<Map<String, dynamic>>()
         .where((x) {
           if (x['deleted'] == true) return false;
-          if ((x['audit'] as String? ?? '').isEmpty) return false;
+          if ((x['followupResult'] as String? ?? '').isEmpty) return false;
           if (assignedBranches.isNotEmpty) {
             return assignedBranches.contains(x['branch']?.toString());
           }
