@@ -86,7 +86,7 @@ class _SplashScreenState extends State<SplashScreen>
         );
         if (!mounted) return;
         if (ok) {
-          _goHome(token, name, title, role);
+          _goHome(token, name, title, role, empId: savedId);
         } else {
           // فشلت البصمة → شاشة الدخول
           _goLogin();
@@ -98,19 +98,19 @@ class _SplashScreenState extends State<SplashScreen>
     }
 
     // لا بصمة → دخول مباشر
-    _goHome(token, name, title, role);
+    _goHome(token, name, title, role, empId: savedId);
   }
 
-  void _goHome(String token, String name, String title, String role) {
+  void _goHome(String token, String name, String title, String role, {String empId = ''}) {
     final isManager       = role == 'cc_manager' || role == 'admin';
-    final isControl       = role == 'control_employee' || role == 'control_sub';
+    final isControl       = role == 'control_employee' || role == 'control_sub' || role == 'media';
     final isBranchManager = role == 'branch_manager' || role == 'area_manager';
     Navigator.of(context).pushReplacement(
       MaterialPageRoute(
         builder: (_) {
           if (isManager)       return ManagerHomeScreen(token: token, name: name, title: title, role: role);
           if (isControl)       return ControlHomeScreen(token: token, name: name, title: title, role: role);
-          if (isBranchManager) return BranchManagerHomeScreen(token: token, name: name, title: title, role: role);
+          if (isBranchManager) return BranchManagerHomeScreen(token: token, name: name, title: title, role: role, empId: empId);
           return HomeScreen(token: token, name: name, title: title, role: role);
         },
       ),

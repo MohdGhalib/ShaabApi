@@ -143,7 +143,7 @@ class _LoginScreenState extends State<LoginScreen>
       if (!mounted) return;
       final role             = result.role;
       final isManager        = role == 'cc_manager' || result.isAdmin;
-      final isControl        = role == 'control_employee' || role == 'control_sub';
+      final isControl        = role == 'control_employee' || role == 'control_sub' || role == 'media';
       final isBranchManager  = role == 'branch_manager' || role == 'area_manager';
 
       Navigator.of(context).pushReplacement(
@@ -165,6 +165,7 @@ class _LoginScreenState extends State<LoginScreen>
               return BranchManagerHomeScreen(
                 token: result.token, name: result.name,
                 title: result.title, role: role,
+                empId: empId,
               );
             }
             return HomeScreen(

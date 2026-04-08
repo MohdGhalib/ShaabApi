@@ -89,6 +89,8 @@ function recordLogout() {
 
 function doLogout() {
     if (typeof stopClock === 'function') stopClock();
+    const _bellW = document.getElementById('notifBellWidget');
+    if (_bellW) _bellW.style.display = 'none';
     recordLogout();
     setToken(null);
     // مسح توقيتات المشاهدة عند تسجيل الخروج
@@ -221,6 +223,26 @@ async function login() {
 
     // تشغيل الساعة العقربية
     if (typeof initClock === 'function') initClock();
+
+    // إظهار جرس الإشعارات في شريط العلوي
+    (function() {
+        const bell = document.getElementById('notifBellWidget');
+        const clock = document.getElementById('clockWidget');
+        if (!bell) return;
+        bell.style.display = 'block';
+        // ضع الجرس يمين الساعة بفجوة 8px
+        function _positionBell() {
+            if (!clock || clock.style.display === 'none') {
+                bell.style.left = '290px';
+            } else {
+                const r = clock.getBoundingClientRect();
+                bell.style.left = (r.right + 8) + 'px';
+            }
+        }
+        _positionBell();
+        // أعِد الضبط عند تغيير حجم النافذة
+        window.addEventListener('resize', _positionBell);
+    })();
 
     // تهيئة SSE (سيرفر فقط)
     if (!IS_LOCAL && typeof _initSSE === 'function') _initSSE();

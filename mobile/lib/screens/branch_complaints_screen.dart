@@ -7,6 +7,7 @@ class BranchComplaintsScreen extends StatefulWidget {
   final String token;
   final String name;
   final String role;
+  final String empId;
   final ValueNotifier<int> refreshTrigger;
 
   const BranchComplaintsScreen({
@@ -14,6 +15,7 @@ class BranchComplaintsScreen extends StatefulWidget {
     required this.token,
     required this.name,
     required this.role,
+    this.empId = '',
     required this.refreshTrigger,
   });
 
@@ -46,6 +48,25 @@ class _BranchComplaintsScreenState extends State<BranchComplaintsScreen>
 
   Future<void> _load() async {
     setState(() { _loading = true; _error = null; });
+
+    // قراءة الفروع المخصصة للموظف
+    List<String> assignedBranches = [];
+    if (widget.empId.isNotEmpty) {
+      final emps = await ApiService.fetchEmployeesDb(widget.token);
+      if (emps != null) {
+        final emp = emps.where((e) => e['empId']?.toString() == widget.empId).firstOrNull;
+        if (emp != null) {
+          final single = emp['assignedBranch']?.toString();
+          final multi  = (emp['assignedBranches'] as List?)?.map((e) => e.toString()).toList();
+          if (multi != null && multi.isNotEmpty) {
+            assignedBranches = multi;
+          } else if (single != null && single.isNotEmpty) {
+            assignedBranches = [single];
+          }
+        }
+      }
+    }
+
     final db = await ApiService.fetchMasterDb(widget.token);
     if (!mounted) return;
     if (db == null) {
@@ -53,11 +74,17 @@ class _BranchComplaintsScreenState extends State<BranchComplaintsScreen>
       return;
     }
     // مدير الفرع/المنطقة يرى الشكاوى التي لها رد من قسم السيطرة فقط
+    // مع فلترة حسب الفروع المخصصة له
     final all = (db['complaints'] as List? ?? [])
         .cast<Map<String, dynamic>>()
-        .where((x) =>
-            x['deleted'] != true &&
-            (x['audit'] as String? ?? '').isNotEmpty)
+        .where((x) {
+          if (x['deleted'] == true) return false;
+          if ((x['audit'] as String? ?? '').isEmpty) return false;
+          if (assignedBranches.isNotEmpty) {
+            return assignedBranches.contains(x['branch']?.toString());
+          }
+          return true;
+        })
         .toList();
     setState(() { _items = all; _loading = false; });
   }
