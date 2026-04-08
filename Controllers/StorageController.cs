@@ -133,6 +133,7 @@ public class StorageController : ControllerBase
         try
         {
             var (newM, newC, newI, deliveredM) = DbHelper.CountNew(oldValue, newValue);
+            Console.WriteLine($"[FCM] Detect → newM={newM} newC={newC} newI={newI} deliveredM={deliveredM} | tokens={allTokens.Count} [{string.Join(",", allTokens.Select(t => t.Role))}]");
 
             // ── منتسية جديدة → كول سنتر ──
             if (newM > 0)
