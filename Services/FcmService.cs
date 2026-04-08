@@ -81,7 +81,7 @@ public class FcmService
                         Notification = new AndroidNotification
                         {
                             ChannelId  = "shaab_main",
-                            Sound      = "default",
+                            Sound      = "melodic_notification",
                             ClickAction = "FLUTTER_NOTIFICATION_CLICK",
                         }
                     }
