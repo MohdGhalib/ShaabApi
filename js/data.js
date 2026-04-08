@@ -23,36 +23,60 @@ function _logAudit(action, entity, summary) {
     if (db.auditLog.length > 200) db.auditLog = db.auditLog.slice(-200);
 }
 
+/* ── صوت الإشعار (consideration.mp3) ── */
+let _notifAudio = null;
+function _playSound() {
+    try {
+        if (!_notifAudio) _notifAudio = new Audio('audio/consideration.mp3');
+        _notifAudio.currentTime = 0;
+        _notifAudio.play().catch(() => {});
+    } catch(e) {}
+}
+
 /* ── إشعارات المتصفح ── */
-let _prevCounts = { montasiat: -1, inquiries: -1, complaints: -1 };
+let _prevCounts = { montasiat: -1, complaints: -1, auditedC: -1, controlC: -1 };
 
 function _checkNotifications() {
     if (!currentUser) return;
-    if (!('Notification' in window)) return;
-    // إذا لم يُمنح الإذن بعد، اطلبه مرة واحدة بسياق واضح (عند وجود إشعار فعلي)
-    if (Notification.permission === 'default') {
-        Notification.requestPermission().catch(() => {});
-        return;
-    }
-    if (Notification.permission !== 'granted') return;
 
-    const pendingM   = (db.montasiat  || []).filter(x => !x.deleted && x.status === 'قيد الانتظار').length;
-    const noAuditC   = (db.complaints || []).filter(x => !x.deleted && x.status === 'تمت الموافقة' && !x.audit).length;
+    const role    = currentUser.role;
+    const isAdmin = currentUser.isAdmin;
 
-    if (_prevCounts.montasiat >= 0 && pendingM > _prevCounts.montasiat) {
-        new Notification('محامص الشعب', {
-            body: `منتسية جديدة قيد الانتظار (${pendingM})`,
-            icon: 'img/logo.png'
-        });
+    const isCcOrMedia     = isAdmin || role === 'cc_manager' || role === 'media';
+    const isControlRole   = role === 'control_employee' || role === 'control_sub' || role === 'control';
+
+    // ── عدادات ──
+    const pendingM  = (db.montasiat  || []).filter(x => !x.deleted && x.status === 'قيد الانتظار').length;
+    const auditedC  = (db.complaints || []).filter(x => !x.deleted && x.audit).length;
+    const controlC  = (db.complaints || []).filter(x => !x.deleted).length;
+
+    if (_prevCounts.montasiat >= 0) {
+        // منتسية جديدة → كول سنتر + ميديا
+        if (isCcOrMedia && pendingM > _prevCounts.montasiat) {
+            _playSound();
+            if (Notification.permission === 'granted')
+                new Notification('محامص الشعب', { body: `منتسية جديدة قيد الانتظار (${pendingM})`, icon: 'img/logo.png' });
+        }
+        // رد جديد على شكوى (audit) → كول سنتر + ميديا
+        if (isCcOrMedia && auditedC > _prevCounts.auditedC) {
+            _playSound();
+            if (Notification.permission === 'granted')
+                new Notification('محامص الشعب', { body: `تم الرد على شكوى`, icon: 'img/logo.png' });
+        }
+        // شكوى جديدة → قسم السيطرة
+        if (isControlRole && controlC > _prevCounts.controlC) {
+            _playSound();
+            if (Notification.permission === 'granted')
+                new Notification('محامص الشعب', { body: `شكوى جديدة في قسم السيطرة`, icon: 'img/logo.png' });
+        }
     }
-    if (_prevCounts.complaints >= 0 && noAuditC > _prevCounts.complaints) {
-        new Notification('محامص الشعب', {
-            body: `شكوى جديدة بدون رد (${noAuditC})`,
-            icon: 'img/logo.png'
-        });
-    }
-    _prevCounts.montasiat   = pendingM;
-    _prevCounts.complaints  = noAuditC;
+
+    // طلب إذن المتصفح إن لم يُمنح
+    if (Notification.permission === 'default') Notification.requestPermission().catch(() => {});
+
+    _prevCounts.montasiat = pendingM;
+    _prevCounts.auditedC  = auditedC;
+    _prevCounts.controlC  = controlC;
 }
 
 const DEFAULT_PRICE_LIST = [
@@ -492,11 +516,18 @@ function _initSSE() {
         try { await loadAllData(); renderAll(); } catch(e) { /* صامت */ }
     });
     es.addEventListener('new-complaint', (e) => {
-        if (currentUser?.role === 'cc_manager' || currentUser?.isAdmin) {
+        const role    = currentUser?.role;
+        const isAdmin = currentUser?.isAdmin;
+        // كول سنتر + ميديا → popup + صوت
+        if (isAdmin || role === 'cc_manager' || role === 'media') {
             let info = {};
             try { info = JSON.parse(e.data); } catch {}
-            _playComplaintAlert();
+            _playSound();
             _showComplaintPopup(info);
+        }
+        // قسم السيطرة → صوت فقط
+        if (role === 'control_employee' || role === 'control_sub' || role === 'control') {
+            _playSound();
         }
     });
     es.addEventListener('heartbeat', () => { /* keep-alive */ });
@@ -509,55 +540,8 @@ function _initSSE() {
     };
 }
 
-/* ── صوت تنبيه الشكوى الجديدة لمدير الكول سنتر ── */
-let _audioCtx = null;
-
-// نُنشئ AudioContext عند أول تفاعل للمستخدم لتفادي قيود autoplay
-document.addEventListener('click',   _unlockAudio, { once: false, capture: true });
-document.addEventListener('keydown', _unlockAudio, { once: false, capture: true });
-
-function _unlockAudio() {
-    if (_audioCtx) {
-        if (_audioCtx.state === 'suspended') _audioCtx.resume();
-        return;
-    }
-    try {
-        _audioCtx = new (window.AudioContext || window.webkitAudioContext)();
-    } catch(e) {}
-}
-
-function _playComplaintAlert() {
-    try {
-        if (!_audioCtx) _audioCtx = new (window.AudioContext || window.webkitAudioContext)();
-        if (_audioCtx.state === 'suspended') _audioCtx.resume();
-
-        const master = _audioCtx.createGain();
-        master.gain.value = 0.55;
-        master.connect(_audioCtx.destination);
-
-        const tones = [
-            { freq: 880,  start: 0.00, dur: 0.18 },
-            { freq: 1100, start: 0.22, dur: 0.18 },
-            { freq: 1320, start: 0.44, dur: 0.22 },
-            { freq: 1100, start: 0.70, dur: 0.14 },
-            { freq: 1320, start: 0.88, dur: 0.30 },
-        ];
-
-        tones.forEach(({ freq, start, dur }) => {
-            const osc  = _audioCtx.createOscillator();
-            const gain = _audioCtx.createGain();
-            osc.connect(gain);
-            gain.connect(master);
-            osc.type = 'sine';
-            osc.frequency.value = freq;
-            gain.gain.setValueAtTime(0.001, _audioCtx.currentTime + start);
-            gain.gain.linearRampToValueAtTime(1, _audioCtx.currentTime + start + 0.03);
-            gain.gain.exponentialRampToValueAtTime(0.001, _audioCtx.currentTime + start + dur);
-            osc.start(_audioCtx.currentTime + start);
-            osc.stop(_audioCtx.currentTime + start + dur + 0.05);
-        });
-    } catch(e) { /* المتصفح لا يدعم Web Audio */ }
-}
+/* ── _playComplaintAlert محوّل إلى _playSound ── */
+function _playComplaintAlert() { _playSound(); }
 
 
 /* ── popup تنبيه الشكوى الجديدة ── */

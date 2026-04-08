@@ -177,6 +177,7 @@ app.Use(async (ctx, next) =>
         "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com https://fonts.gstatic.com; " +
         "font-src 'self' https://fonts.gstatic.com; " +
         "img-src 'self' data:; " +
+        "media-src 'self'; " +
         "connect-src 'self'; " +
         "frame-ancestors 'none';";
     if (!app.Environment.IsDevelopment())
