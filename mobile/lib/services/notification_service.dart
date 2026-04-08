@@ -23,7 +23,7 @@ class NotificationService {
       importance: Importance.max,
       playSound: true,
       enableVibration: true,
-      sound: RawResourceAndroidNotificationSound('melodic_notification'),
+      sound: RawResourceAndroidNotificationSound('consideration'),
     );
     await _plugin
         .resolvePlatformSpecificImplementation<
@@ -78,7 +78,7 @@ class NotificationService {
           importance: Importance.max,
           priority: Priority.high,
           icon: '@mipmap/ic_launcher',
-          sound: RawResourceAndroidNotificationSound('melodic_notification'),
+          sound: RawResourceAndroidNotificationSound('consideration'),
           styleInformation: BigTextStyleInformation(''),
         ),
       ),

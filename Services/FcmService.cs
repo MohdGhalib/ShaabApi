@@ -120,7 +120,7 @@ public class FcmService
                         Notification = new AndroidNotification
                         {
                             ChannelId   = "shaab_main",
-                            Sound       = "melodic_notification",
+                            Sound       = "consideration",
                             ClickAction = "FLUTTER_NOTIFICATION_CLICK",
                         }
                     }
