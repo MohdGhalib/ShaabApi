@@ -12,66 +12,73 @@ public class FcmService
     private static bool _initialized = false;
     private static readonly object _lock = new();
 
+    public const string CredsKey = "Shaab_Firebase_Creds";
+
     public FcmService(AppDbContext db)
     {
         _db = db;
-        EnsureInitialized();
     }
 
-    private static void EnsureInitialized()
+    // يُستدعى في أول request لمحاولة التهيئة من DB أو env var
+    public async Task EnsureInitializedAsync()
     {
         if (_initialized) return;
+
+        string? json = null;
+
+        // 1) env var (raw)
+        var raw = Environment.GetEnvironmentVariable("FIREBASE_SERVICE_ACCOUNT_JSON");
+        if (!string.IsNullOrEmpty(raw)) { json = raw; Console.WriteLine("[FCM] Using env var (raw)"); }
+
+        // 2) env var (base64)
+        if (json == null)
+        {
+            var b64 = Environment.GetEnvironmentVariable("FIREBASE_SERVICE_ACCOUNT_JSON_B64");
+            if (!string.IsNullOrEmpty(b64))
+            {
+                try { json = System.Text.Encoding.UTF8.GetString(Convert.FromBase64String(b64)); Console.WriteLine("[FCM] Using env var (base64)"); }
+                catch (Exception ex) { Console.WriteLine($"[FCM] base64 decode error: {ex.Message}"); }
+            }
+        }
+
+        // 3) قاعدة البيانات
+        if (json == null)
+        {
+            try
+            {
+                var row = await _db.Storage.FindAsync(CredsKey);
+                if (row != null && !string.IsNullOrEmpty(row.StoreValue))
+                {
+                    json = row.StoreValue;
+                    Console.WriteLine("[FCM] Using credentials from database");
+                }
+            }
+            catch (Exception ex) { Console.WriteLine($"[FCM] DB read error: {ex.Message}"); }
+        }
+
+        if (json == null)
+        {
+            Console.WriteLine("[FCM] No credentials found — notifications disabled");
+            return;
+        }
+
         lock (_lock)
         {
             if (_initialized) return;
-            // دعم raw JSON أو base64
-            var raw    = Environment.GetEnvironmentVariable("FIREBASE_SERVICE_ACCOUNT_JSON");
-            var b64    = Environment.GetEnvironmentVariable("FIREBASE_SERVICE_ACCOUNT_JSON_B64");
-            string? json = null;
-            if (!string.IsNullOrEmpty(raw))
-            {
-                json = raw;
-                Console.WriteLine("[FCM] Using raw JSON env var");
-            }
-            else if (!string.IsNullOrEmpty(b64))
-            {
-                try
-                {
-                    json = System.Text.Encoding.UTF8.GetString(Convert.FromBase64String(b64));
-                    Console.WriteLine("[FCM] Using base64 env var");
-                }
-                catch (Exception ex)
-                {
-                    Console.WriteLine($"[FCM] base64 decode failed: {ex.Message}");
-                }
-            }
-            if (string.IsNullOrEmpty(json))
-            {
-                Console.WriteLine("[FCM] FIREBASE_SERVICE_ACCOUNT_JSON not set — notifications disabled");
-                return;
-            }
             try
             {
                 if (FirebaseApp.DefaultInstance == null)
-                {
-                    FirebaseApp.Create(new AppOptions
-                    {
-                        Credential = GoogleCredential.FromJson(json)
-                    });
-                }
+                    FirebaseApp.Create(new AppOptions { Credential = GoogleCredential.FromJson(json) });
                 _initialized = true;
                 Console.WriteLine("[FCM] Firebase initialized successfully");
             }
-            catch (Exception ex)
-            {
-                Console.WriteLine($"[FCM] Init failed: {ex.Message}");
-            }
+            catch (Exception ex) { Console.WriteLine($"[FCM] Init failed: {ex.Message}"); }
         }
     }
 
     public bool IsReady => _initialized;
 
-    // ── قراءة كل الـ tokens من DB (في نطاق الـ request) ───────────────────
+    // ── قراءة كل الـ tokens من DB ─────────────────────────────────────────
     public async Task<List<FcmTokenRecord>> GetAllTokens()
     {
         var row = await _db.Storage.FindAsync("Shaab_FCM_Tokens");
@@ -80,7 +87,7 @@ public class FcmService
         catch { return []; }
     }
 
-    // ── إرسال إشعار — STATIC لا يحتاج DB ─────────────────────────────────
+    // ── إرسال إشعار ───────────────────────────────────────────────────────
     public static async Task SendToRolesStatic(
         List<FcmTokenRecord> allTokens,
         string[] roles,
@@ -125,13 +132,10 @@ public class FcmService
                         Console.WriteLine($"[FCM] Token[{i}] error: {result.Responses[i].Exception?.Message}");
             }
         }
-        catch (Exception ex)
-        {
-            Console.WriteLine($"[FCM] SendBatch error: {ex.Message}");
-        }
+        catch (Exception ex) { Console.WriteLine($"[FCM] SendBatch error: {ex.Message}"); }
     }
 
-    // ── حذف tokens غير صالحة (يُستدعى ضمن request scope) ──────────────────
+    // ── حذف tokens غير صالحة ──────────────────────────────────────────────
     public async Task RemoveInvalidTokens(List<string> invalid)
     {
         var row = await _db.Storage.FindAsync("Shaab_FCM_Tokens");

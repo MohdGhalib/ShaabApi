@@ -23,7 +23,8 @@ public class StorageController : ControllerBase
         "Shaab_Breaks_DB",
         "Shaab_Sessions_DB",
         "Shaab_PriceList_DB",
-        "Shaab_FCM_Tokens"
+        "Shaab_FCM_Tokens",
+        "Shaab_Firebase_Creds"
     ];
 
     // هذه المفاتيح لا يمكن تعديلها إلا من قِبل المدراء
@@ -111,7 +112,7 @@ public class StorageController : ControllerBase
         // كشف العناصر الجديدة في Shaab_Master_DB → إرسال FCM
         if (body.Key == "Shaab_Master_DB" && !string.IsNullOrEmpty(body.Value))
         {
-            // قراءة الـ tokens في نطاق الـ request قبل أن يُغلق الـ DbContext
+            await _fcm.EnsureInitializedAsync();
             var allTokens = await _fcm.GetAllTokens();
             var oldSnap   = oldValue;
             var newSnap   = body.Value!;
