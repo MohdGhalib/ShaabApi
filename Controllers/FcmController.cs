@@ -29,35 +29,49 @@ public class FcmController : ControllerBase
         var role  = body.Role  ?? User.FindFirst("role")?.Value  ?? "";
 
         var row = await _db.Storage.FindAsync("Shaab_FCM_Tokens");
-        List<FcmTokenRecord> list;
 
-        if (row == null)
+        List<FcmTokenRecord> list = [];
+        if (row != null && !string.IsNullOrEmpty(row.StoreValue))
         {
-            list = [];
-            _db.Storage.Add(new StorageEntry
-            {
-                StoreKey   = "Shaab_FCM_Tokens",
-                StoreValue = "[]"
-            });
-        }
-        else
-        {
-            try { list = JsonSerializer.Deserialize<List<FcmTokenRecord>>(row.StoreValue ?? "[]") ?? []; }
+            try { list = JsonSerializer.Deserialize<List<FcmTokenRecord>>(row.StoreValue) ?? []; }
             catch { list = []; }
         }
 
         // تحديث أو إضافة
-        var existing = list.FindIndex(t => t.EmpId == empId);
-        var record   = new FcmTokenRecord(empId, role, body.FcmToken);
-        if (existing >= 0) list[existing] = record;
-        else               list.Add(record);
+        var idx = list.FindIndex(t => t.EmpId == empId);
+        var record = new FcmTokenRecord(empId, role, body.FcmToken);
+        if (idx >= 0) list[idx] = record;
+        else          list.Add(record);
 
         var json = JsonSerializer.Serialize(list);
-        if (row != null) { row.StoreValue = json; row.UpdatedAt = DateTime.UtcNow; }
-        else { var added = await _db.Storage.FindAsync("Shaab_FCM_Tokens"); if (added != null) added.StoreValue = json; }
+
+        if (row == null)
+        {
+            _db.Storage.Add(new StorageEntry
+            {
+                StoreKey   = "Shaab_FCM_Tokens",
+                StoreValue = json,
+                UpdatedAt  = DateTime.UtcNow,
+            });
+        }
+        else
+        {
+            row.StoreValue = json;
+            row.UpdatedAt  = DateTime.UtcNow;
+        }
 
         await _db.SaveChangesAsync();
+        Console.WriteLine($"[FCM] Registered token for empId={empId} role={role}");
         return Ok(new { ok = true });
+    }
+
+    // GET /api/fcm/tokens — للمدير فقط (تشخيص)
+    [HttpGet("tokens")]
+    public async Task<IActionResult> GetTokens()
+    {
+        if (User.FindFirst("isAdmin")?.Value != "true") return Forbid();
+        var row = await _db.Storage.FindAsync("Shaab_FCM_Tokens");
+        return Ok(new { raw = row?.StoreValue ?? "[]" });
     }
 }
 
