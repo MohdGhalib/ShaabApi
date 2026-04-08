@@ -24,15 +24,30 @@ public class FcmService
         lock (_lock)
         {
             if (_initialized) return;
-            var json = Environment.GetEnvironmentVariable("FIREBASE_SERVICE_ACCOUNT_JSON");
-            Console.WriteLine($"[FCM] ENV VAR length={json?.Length ?? -1}, isNull={json is null}, isEmpty={json == string.Empty}");
+            // دعم raw JSON أو base64
+            var raw    = Environment.GetEnvironmentVariable("FIREBASE_SERVICE_ACCOUNT_JSON");
+            var b64    = Environment.GetEnvironmentVariable("FIREBASE_SERVICE_ACCOUNT_JSON_B64");
+            string? json = null;
+            if (!string.IsNullOrEmpty(raw))
+            {
+                json = raw;
+                Console.WriteLine("[FCM] Using raw JSON env var");
+            }
+            else if (!string.IsNullOrEmpty(b64))
+            {
+                try
+                {
+                    json = System.Text.Encoding.UTF8.GetString(Convert.FromBase64String(b64));
+                    Console.WriteLine("[FCM] Using base64 env var");
+                }
+                catch (Exception ex)
+                {
+                    Console.WriteLine($"[FCM] base64 decode failed: {ex.Message}");
+                }
+            }
             if (string.IsNullOrEmpty(json))
             {
                 Console.WriteLine("[FCM] FIREBASE_SERVICE_ACCOUNT_JSON not set — notifications disabled");
-                // محاولة قراءة المتغير بأسماء بديلة للتشخيص
-                var allEnv = Environment.GetEnvironmentVariables();
-                var fcmKeys = allEnv.Keys.Cast<string>().Where(k => k.Contains("FIREBASE") || k.Contains("FCM")).ToList();
-                Console.WriteLine($"[FCM] Related env vars found: {string.Join(", ", fcmKeys.Select(k => $"{k}(len={allEnv[k]?.ToString()?.Length ?? 0})"))}");
                 return;
             }
             try
