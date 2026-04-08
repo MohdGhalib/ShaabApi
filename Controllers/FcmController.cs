@@ -78,7 +78,9 @@ public class FcmController : ControllerBase
     [HttpPost("set-credentials")]
     public async Task<IActionResult> SetCredentials([FromBody] FcmCredsRequest body)
     {
-        if (User.FindFirst("isAdmin")?.Value != "true") return Forbid();
+        var isAdmin = User.FindFirst("isAdmin")?.Value == "true";
+        var role    = User.FindFirst("role")?.Value ?? "";
+        if (!isAdmin && role != "cc_manager") return Forbid();
         if (string.IsNullOrWhiteSpace(body.Json)) return BadRequest(new { error = "json is required" });
 
         // تحقق أن الـ JSON صالح
