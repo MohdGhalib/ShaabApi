@@ -36,17 +36,59 @@ function onEmployeeTitleChange() {
         single.style.display = 'none';
         multi.style.display  = 'block';
         const listEl = document.getElementById('eMultiBranchList');
-        if (listEl && !listEl.dataset.populated) {
-            listEl.dataset.populated = '1';
-            Object.entries(branches).forEach(([city, brs]) => {
-                brs.forEach(b => {
-                    const lbl = document.createElement('label');
-                    lbl.style.cssText = 'display:flex;align-items:center;gap:6px;padding:5px 8px;border-radius:8px;cursor:pointer;font-size:13px;';
-                    lbl.innerHTML = `<input type="checkbox" value="${city}::${b}" style="accent-color:var(--accent-red);"> ${b} <small style="color:var(--text-dim)">(${city})</small>`;
-                    listEl.appendChild(lbl);
-                });
+        if (!listEl) return;
+
+        // جمع الفروع المحجوزة لمديري المناطق الحاليين مع اسم صاحبها
+        const takenBy = {};
+        employees.forEach(e => {
+            if (e.title !== 'مدير منطقة') return;
+            (e.assignedBranches || []).forEach(b => {
+                takenBy[b.city + '::' + b.branch] = e.name;
             });
-        }
+        });
+
+        // إعادة بناء القائمة في كل مرة لتعكس الحجوزات الحالية
+        listEl.innerHTML = '';
+        Object.entries(branches).forEach(([city, brs]) => {
+            // ── عنوان المحافظة ──
+            const hdr = document.createElement('div');
+            hdr.style.cssText = 'grid-column:1/-1;margin-top:10px;padding:4px 10px 5px;'
+                + 'font-weight:700;font-size:12px;color:var(--accent-red);letter-spacing:0.4px;'
+                + 'border-bottom:1px solid var(--border);';
+            hdr.textContent = city;
+            listEl.appendChild(hdr);
+
+            brs.forEach(b => {
+                const key     = city + '::' + b;
+                const manager = takenBy[key];
+                const isTaken = !!manager;
+
+                const lbl = document.createElement('label');
+                lbl.title = isTaken ? `محجوز لـ: ${manager}` : '';
+                lbl.style.cssText = 'display:flex;align-items:center;gap:6px;padding:6px 8px;'
+                    + `border-radius:8px;font-size:13px;`
+                    + `cursor:${isTaken ? 'not-allowed' : 'pointer'};`
+                    + `opacity:${isTaken ? '0.4' : '1'};`
+                    + (isTaken ? 'text-decoration:line-through;' : '');
+
+                const cb = document.createElement('input');
+                cb.type    = 'checkbox';
+                cb.value   = key;
+                cb.style.accentColor = 'var(--accent-red)';
+                if (isTaken) cb.disabled = true;
+
+                lbl.appendChild(cb);
+                lbl.appendChild(document.createTextNode(' ' + b));
+                if (isTaken) {
+                    const note = document.createElement('small');
+                    note.style.color = 'var(--accent-red)';
+                    note.style.fontSize = '10px';
+                    note.textContent = ` (${manager})`;
+                    lbl.appendChild(note);
+                }
+                listEl.appendChild(lbl);
+            });
+        });
     } else {
         single.style.display = 'none';
         multi.style.display  = 'none';
