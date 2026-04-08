@@ -319,9 +319,14 @@ public record RateEntry(int Count, DateTime LockUntil);
 
 public class EmpRecord
 {
-    [JsonPropertyName("empId")]    public string  EmpId        { get; set; } = "";
-    [JsonPropertyName("name")]     public string  Name         { get; set; } = "";
-    [JsonPropertyName("title")]    public string  Title        { get; set; } = "";
-    [JsonPropertyName("salt")]     public string? Salt         { get; set; }
+    [JsonPropertyName("empId")]        public string  EmpId        { get; set; } = "";
+    [JsonPropertyName("name")]         public string  Name         { get; set; } = "";
+    [JsonPropertyName("title")]        public string  Title        { get; set; } = "";
+    [JsonPropertyName("salt")]         public string? Salt         { get; set; }
     [JsonPropertyName("passwordHash")] public string? PasswordHash { get; set; }
+
+    // يحفظ جميع الحقول الإضافية (assignedBranch, assignedBranches, addedBy, id, ...)
+    // ويُعيد كتابتها عند إعادة التسلسل — ضروري لمنع فقدان البيانات
+    [JsonExtensionData]
+    public Dictionary<string, JsonElement>? Extra { get; set; }
 }
