@@ -154,6 +154,7 @@ class _BranchManagerHomeScreenState extends State<BranchManagerHomeScreen>
           MyMontasiatScreen(
             token:          widget.token,
             name:           widget.name,
+            empId:          widget.empId,
             refreshTrigger: _refreshTrigger,
           ),
           BranchComplaintsScreen(

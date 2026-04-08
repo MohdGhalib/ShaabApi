@@ -152,6 +152,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
           MyMontasiatScreen(
             token:          widget.token,
             name:           widget.name,
+            empId:          widget.empId,
             refreshTrigger: _refreshTrigger,
           ),
         ],

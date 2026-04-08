@@ -7,6 +7,7 @@ import '../services/status_checker.dart';
 class MyMontasiatScreen extends StatefulWidget {
   final String token;
   final String name;
+  final String empId;
   final ValueNotifier<int> refreshTrigger;
 
   const MyMontasiatScreen({
@@ -14,6 +15,7 @@ class MyMontasiatScreen extends StatefulWidget {
     required this.token,
     required this.name,
     required this.refreshTrigger,
+    this.empId = '',
   });
 
   @override
@@ -23,6 +25,7 @@ class MyMontasiatScreen extends StatefulWidget {
 class _MyMontasiatScreenState extends State<MyMontasiatScreen>
     with AutomaticKeepAliveClientMixin {
   List<Map<String, dynamic>> _items = [];
+  List<String> _assignedBranches = [];
   bool    _loading = false;
   String? _error;
 
@@ -32,7 +35,7 @@ class _MyMontasiatScreenState extends State<MyMontasiatScreen>
   @override
   void initState() {
     super.initState();
-    _load();
+    _loadAssigned().then((_) => _load());
     widget.refreshTrigger.addListener(_load);
   }
 
@@ -40,6 +43,33 @@ class _MyMontasiatScreenState extends State<MyMontasiatScreen>
   void dispose() {
     widget.refreshTrigger.removeListener(_load);
     super.dispose();
+  }
+
+  Future<void> _loadAssigned() async {
+    if (widget.empId.isEmpty) return;
+    final emps = await ApiService.fetchEmployeesDb(widget.token);
+    if (emps == null || !mounted) return;
+    final emp = emps
+        .where((e) => e['empId']?.toString() == widget.empId)
+        .firstOrNull;
+    if (emp == null) return;
+
+    List<String> branches = [];
+    final multi = emp['assignedBranches'];
+    if (multi is List && multi.isNotEmpty) {
+      branches = multi
+          .map((e) => (e as Map<String, dynamic>)['branch']?.toString() ?? '')
+          .where((b) => b.isNotEmpty)
+          .toList();
+    }
+    if (branches.isEmpty) {
+      final single = emp['assignedBranch'];
+      if (single is Map) {
+        final b = single['branch']?.toString() ?? '';
+        if (b.isNotEmpty) branches = [b];
+      }
+    }
+    if (mounted) setState(() => _assignedBranches = branches);
   }
 
   Future<void> _load() async {
@@ -52,13 +82,18 @@ class _MyMontasiatScreenState extends State<MyMontasiatScreen>
     }
     final all = (db['montasiat'] as List? ?? [])
         .cast<Map<String, dynamic>>()
-        .where((x) =>
-            x['deleted'] != true &&
-            (x['addedBy'] ?? '') == widget.name &&
-            x['source'] == 'mobile')
+        .where((x) {
+          if (x['deleted'] == true) return false;
+          if ((x['addedBy'] ?? '') != widget.name) return false;
+          if (x['source'] != 'mobile') return false;
+          // فلترة حسب الفروع المخصصة إن وُجدت
+          if (_assignedBranches.isNotEmpty) {
+            return _assignedBranches.contains(x['branch']?.toString());
+          }
+          return true;
+        })
         .toList();
     setState(() { _items = all; _loading = false; });
-    // حفظ الحالات التي رآها المستخدم حتى لا يُعاد إشعاره بها
     await StatusChecker.saveSeenStatuses(all);
   }
 
