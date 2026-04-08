@@ -25,13 +25,15 @@ function onEmployeeTitleChange() {
         multi.style.display  = 'none';
         // تعبئة خيارات المحافظة
         const cityEl = document.getElementById('eBranchCity');
-        if (cityEl && cityEl.options.length <= 1) {
-            Object.keys(branches).forEach(c => {
-                const opt = document.createElement('option');
-                opt.value = c; opt.textContent = c;
-                cityEl.appendChild(opt);
-            });
-        }
+        cityEl.innerHTML = '<option value="">المحافظة</option>';
+        Object.keys(branches).forEach(c => {
+            const opt = document.createElement('option');
+            opt.value = c; opt.textContent = c;
+            cityEl.appendChild(opt);
+        });
+        document.getElementById('eBranchName').innerHTML = '<option value="">الفرع</option>';
+        // لمدير الفرع: تحديث الفروع مع إظهار المحجوز
+        cityEl.onchange = () => _updateBranchNameForBranchManager(title);
     } else if (title === 'مدير منطقة') {
         single.style.display = 'none';
         multi.style.display  = 'block';
@@ -221,8 +223,157 @@ function renderEmployees() {
         <td><span class="emp-id-display">${sanitize(e.empId)}</span></td>
         <td style="display:flex;gap:6px;flex-wrap:wrap;">
             ${_canChangeEmpPassword(e) ? `<button class="btn-delete-sm" style="background:rgba(33,150,243,0.15);color:#64b5f6;border-color:rgba(33,150,243,0.3);" onclick="openSetEmpPassword('${e.empId}')">🔑 كلمة المرور</button>` : ''}
+            ${(e.title === 'مدير فرع' || e.title === 'موظف فرع') && currentUser?.isAdmin ? `<button class="btn-delete-sm" style="background:rgba(76,175,80,0.15);color:#81c784;border-color:rgba(76,175,80,0.3);" onclick="openTransferModal('${e.empId}')">↔ نقل</button>` : ''}
             <button class="btn-delete-sm" onclick="deleteEmployee('${e.empId}')">🗑 حذف</button>
         </td>
     </tr>`;
     }).join('');
+}
+
+// ── تحديث قائمة الفروع لمدير الفرع (مع حجب المحجوز) ─────────────────────────
+function _updateBranchNameForBranchManager(title) {
+    const city = document.getElementById('eBranchCity')?.value;
+    const brEl = document.getElementById('eBranchName');
+    if (!brEl) return;
+
+    // الفروع المحجوزة لمديري الفروع الحاليين
+    const takenBy = {};
+    if (title === 'مدير فرع') {
+        employees.forEach(e => {
+            if (e.title !== 'مدير فرع') return;
+            if (e.assignedBranch?.city === city) {
+                takenBy[e.assignedBranch.branch] = e.name;
+            }
+        });
+    }
+
+    let html = '<option value="">الفرع</option>';
+    if (city && branches[city]) {
+        branches[city].forEach(b => {
+            const manager = takenBy[b];
+            if (manager) {
+                html += `<option value="${b}" disabled style="color:var(--accent-red);opacity:0.6">${b} — محجوز لـ: ${manager}</option>`;
+            } else {
+                html += `<option value="${b}">${b}</option>`;
+            }
+        });
+    }
+    brEl.innerHTML = html;
+}
+
+// ── نقل موظف فرع / مدير فرع إلى فرع آخر ─────────────────────────────────────
+let _transferTargetEmpId = null;
+
+function openTransferModal(empId) {
+    const emp = employees.find(e => e.empId === empId);
+    if (!emp) return;
+    _transferTargetEmpId = empId;
+
+    document.getElementById('transferEmpName').textContent = `${emp.name} — ${emp.title}`;
+    const cur = emp.assignedBranch
+        ? `${emp.assignedBranch.branch} (${emp.assignedBranch.city})`
+        : 'غير محدد';
+    document.getElementById('transferCurrentBranch').textContent = cur;
+
+    // تعبئة المحافظات
+    const cityEl = document.getElementById('transferCity');
+    cityEl.innerHTML = '<option value="">اختر المحافظة</option>';
+    Object.keys(branches).forEach(c => {
+        const opt = document.createElement('option');
+        opt.value = c; opt.textContent = c;
+        cityEl.appendChild(opt);
+    });
+    document.getElementById('transferBranch').innerHTML = '<option value="">اختر الفرع</option>';
+    document.getElementById('transferMsg').textContent = '';
+    document.getElementById('transferConflictSection').style.display = 'none';
+    document.getElementById('transferConfirmBtn').style.display = 'block';
+    document.getElementById('transferModal').classList.remove('hidden');
+}
+
+function closeTransferModal() {
+    _transferTargetEmpId = null;
+    document.getElementById('transferModal').classList.add('hidden');
+}
+
+function updateTransferBranches() {
+    const city = document.getElementById('transferCity').value;
+    const brEl = document.getElementById('transferBranch');
+    brEl.innerHTML = '<option value="">اختر الفرع</option>';
+    if (city && branches[city]) {
+        branches[city].forEach(b => {
+            brEl.innerHTML += `<option value="${b}">${b}</option>`;
+        });
+    }
+    _checkTransferConflict();
+}
+
+function _checkTransferConflict() {
+    const city   = document.getElementById('transferCity').value;
+    const branch = document.getElementById('transferBranch').value;
+    const msgEl  = document.getElementById('transferMsg');
+    const confEl = document.getElementById('transferConflictSection');
+
+    if (!city || !branch) { msgEl.textContent = ''; confEl.style.display = 'none'; return; }
+
+    const emp   = employees.find(e => e.empId === _transferTargetEmpId);
+    const other = employees.find(e =>
+        e.empId !== _transferTargetEmpId &&
+        e.title === 'مدير فرع' &&
+        e.assignedBranch?.city === city &&
+        e.assignedBranch?.branch === branch
+    );
+
+    if (other) {
+        msgEl.style.color = 'var(--accent-red)';
+        msgEl.textContent = '';
+        document.getElementById('transferConflictOtherName').textContent = other.name;
+        document.getElementById('transferConflictEmpName').textContent   = emp?.name || '';
+        confEl.style.display = 'block';
+        document.getElementById('transferConfirmBtn').style.display = 'none';
+    } else {
+        msgEl.textContent = '';
+        confEl.style.display = 'none';
+        document.getElementById('transferConfirmBtn').style.display = 'block';
+    }
+}
+
+function confirmTransfer(action) {
+    // action: 'move' | 'swap'
+    const city   = document.getElementById('transferCity').value;
+    const branch = document.getElementById('transferBranch').value;
+    const msgEl  = document.getElementById('transferMsg');
+    if (!city || !branch) {
+        msgEl.style.color = 'var(--accent-red)';
+        msgEl.textContent = 'يرجى اختيار المحافظة والفرع';
+        return;
+    }
+
+    const emp   = employees.find(e => e.empId === _transferTargetEmpId);
+    if (!emp) { closeTransferModal(); return; }
+
+    const other = employees.find(e =>
+        e.empId !== _transferTargetEmpId &&
+        e.title === 'مدير فرع' &&
+        e.assignedBranch?.city === city &&
+        e.assignedBranch?.branch === branch
+    );
+
+    if (other) {
+        if (action === 'swap') {
+            // تبديل الفروع
+            const empOld = emp.assignedBranch ? { ...emp.assignedBranch } : null;
+            other.assignedBranch = empOld;
+            emp.assignedBranch   = { city, branch };
+        } else {
+            // نقل فقط — إخلاء الآخر
+            other.assignedBranch = null;
+            emp.assignedBranch   = { city, branch };
+        }
+    } else {
+        emp.assignedBranch = { city, branch };
+    }
+
+    saveEmployees();
+    renderEmployees();
+    closeTransferModal();
 }

@@ -218,6 +218,57 @@
     </div>
 </div>
 
+<!-- ══ TRANSFER EMPLOYEE MODAL ══ -->
+<div class="modal-overlay hidden" id="transferModal" onclick="if(event.target===this)closeTransferModal()">
+    <div class="modal-box" style="max-width:420px;text-align:right;">
+        <button class="modal-close" onclick="closeTransferModal()">✕</button>
+        <div style="font-size:28px;margin-bottom:10px;">↔</div>
+        <h3 style="margin:0 0 4px;color:var(--accent-red);">نقل الموظف لفرع آخر</h3>
+        <p id="transferEmpName" style="color:var(--text-dim);font-size:13px;margin:0 0 6px;"></p>
+        <p style="font-size:12px;color:var(--text-dim);margin:0 0 18px;">الفرع الحالي: <span id="transferCurrentBranch" style="color:var(--text-main);font-weight:600;"></span></p>
+
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:10px;">
+            <div><label style="font-size:12px;color:var(--text-dim);display:block;margin-bottom:4px;">المحافظة</label>
+                <select id="transferCity" onchange="updateTransferBranches()"
+                    style="width:100%;padding:9px 12px;border-radius:10px;border:1px solid var(--border);background:var(--bg-input);color:var(--text-main);font-family:'Cairo';font-size:13px;">
+                </select>
+            </div>
+            <div><label style="font-size:12px;color:var(--text-dim);display:block;margin-bottom:4px;">الفرع الجديد</label>
+                <select id="transferBranch" onchange="_checkTransferConflict()"
+                    style="width:100%;padding:9px 12px;border-radius:10px;border:1px solid var(--border);background:var(--bg-input);color:var(--text-main);font-family:'Cairo';font-size:13px;">
+                    <option value="">اختر الفرع</option>
+                </select>
+            </div>
+        </div>
+
+        <div id="transferMsg" style="font-size:13px;min-height:18px;margin-bottom:10px;"></div>
+
+        <!-- تعارض: فرع محجوز لمدير آخر -->
+        <div id="transferConflictSection" style="display:none;background:rgba(229,57,53,0.08);border:1px solid rgba(229,57,53,0.3);border-radius:10px;padding:12px 14px;margin-bottom:12px;">
+            <p style="font-size:13px;color:var(--text-main);margin:0 0 10px;">
+                هذا الفرع محجوز لـ <b id="transferConflictOtherName" style="color:var(--accent-red);"></b>.
+                اختر ما تريد:
+            </p>
+            <div style="display:flex;flex-direction:column;gap:8px;">
+                <button onclick="confirmTransfer('swap')"
+                    style="padding:9px 14px;border-radius:10px;border:1px solid rgba(76,175,80,0.4);background:rgba(76,175,80,0.12);color:#81c784;font-family:'Cairo';font-size:13px;font-weight:700;cursor:pointer;">
+                    ↔ تبديل الفروع بين <span id="transferConflictEmpName"></span> والآخر
+                </button>
+                <button onclick="confirmTransfer('move')"
+                    style="padding:9px 14px;border-radius:10px;border:1px solid rgba(255,152,0,0.4);background:rgba(255,152,0,0.1);color:#ffb74d;font-family:'Cairo';font-size:13px;font-weight:700;cursor:pointer;">
+                    ↗ نقل فقط (وإخلاء الآخر من فرعه)
+                </button>
+            </div>
+        </div>
+
+        <!-- زر نقل عادي (بدون تعارض) -->
+        <button onclick="confirmTransfer('move')" id="transferConfirmBtn"
+            style="width:100%;padding:11px;border-radius:10px;border:none;background:var(--accent-red);color:#fff;font-family:'Cairo';font-size:14px;font-weight:700;cursor:pointer;margin-top:4px;">
+            ✅ تأكيد النقل
+        </button>
+    </div>
+</div>
+
 <!-- ══ DELIVERY MODAL ══ -->
 <div class="modal-overlay hidden" id="deliveryModal">
     <div class="modal-box" style="width:480px;max-width:95vw;">

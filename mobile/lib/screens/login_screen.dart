@@ -100,11 +100,12 @@ class _LoginScreenState extends State<LoginScreen>
       await prefs.setString('_shaab_name',  result.name);
       await prefs.setString('_shaab_title', result.title);
       await prefs.setString('_shaab_role',  result.role);
+      // دائماً احفظ empId لاستعادة الجلسة والفروع المخصصة
+      await prefs.setString('_shaab_empId', empId);
 
       // حفظ أو حذف البصمة بحسب الاختيار
       if (fromBiometric) {
         // دخول عبر البصمة → ابقِ الإعدادات كما هي
-        await prefs.setString('_shaab_empId', empId);
         await prefs.setBool('_shaab_biometric_enabled', true);
       } else if (_enableBiometric) {
         // المستخدم فعّل المربع → اطلب البصمة الآن للتحقق
@@ -120,11 +121,9 @@ class _LoginScreenState extends State<LoginScreen>
         } catch (_) {}
 
         if (bioConfirmed) {
-          await prefs.setString('_shaab_empId', empId);
           await prefs.setBool('_shaab_biometric_enabled', true);
         } else {
           // لم تنجح البصمة → لا تفعّل
-          await prefs.remove('_shaab_empId');
           await prefs.setBool('_shaab_biometric_enabled', false);
           if (mounted) {
             ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
@@ -136,8 +135,7 @@ class _LoginScreenState extends State<LoginScreen>
           }
         }
       } else {
-        // المربع غير مفعّل → احذف البصمة
-        await prefs.remove('_shaab_empId');
+        // المربع غير مفعّل → ألغِ البصمة (empId محفوظ مسبقاً)
         await prefs.setBool('_shaab_biometric_enabled', false);
       }
 

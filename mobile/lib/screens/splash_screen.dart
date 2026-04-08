@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:local_auth/local_auth.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import '../services/api_service.dart';
+import '../services/notification_service.dart';
 import 'login_screen.dart';
 import 'home_screen.dart';
 import 'manager_home_screen.dart';
@@ -102,6 +104,14 @@ class _SplashScreenState extends State<SplashScreen>
   }
 
   void _goHome(String token, String name, String title, String role, {String empId = ''}) {
+    // تجديد FCM token عند كل دخول تلقائي
+    if (empId.isNotEmpty) {
+      NotificationService.getFcmToken().then((fcmToken) {
+        if (fcmToken != null) {
+          ApiService.registerFcmToken(token, empId, role, fcmToken);
+        }
+      });
+    }
     final isManager       = role == 'cc_manager' || role == 'admin';
     final isControl       = role == 'control_employee' || role == 'control_sub' || role == 'media';
     final isBranchManager = role == 'branch_manager' || role == 'area_manager';
