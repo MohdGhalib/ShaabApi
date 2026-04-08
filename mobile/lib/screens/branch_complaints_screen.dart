@@ -56,12 +56,21 @@ class _BranchComplaintsScreenState extends State<BranchComplaintsScreen>
       if (emps != null) {
         final emp = emps.where((e) => e['empId']?.toString() == widget.empId).firstOrNull;
         if (emp != null) {
-          final single = emp['assignedBranch']?.toString();
-          final multi  = (emp['assignedBranches'] as List?)?.map((e) => e.toString()).toList();
-          if (multi != null && multi.isNotEmpty) {
-            assignedBranches = multi;
-          } else if (single != null && single.isNotEmpty) {
-            assignedBranches = [single];
+          // assignedBranches → List of { city, branch } objects
+          final multi = emp['assignedBranches'];
+          if (multi is List && multi.isNotEmpty) {
+            assignedBranches = multi
+                .map((e) => (e as Map<String, dynamic>)['branch']?.toString() ?? '')
+                .where((b) => b.isNotEmpty)
+                .toList();
+          }
+          // assignedBranch → { city, branch } object
+          if (assignedBranches.isEmpty) {
+            final single = emp['assignedBranch'];
+            if (single is Map) {
+              final b = single['branch']?.toString() ?? '';
+              if (b.isNotEmpty) assignedBranches = [b];
+            }
           }
         }
       }

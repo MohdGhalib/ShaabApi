@@ -53,14 +53,23 @@ class _AddMontasiaTabState extends State<AddMontasiaTab> {
     if (emp == null) return;
 
     List<String> branches = [];
-    final multi = (emp['assignedBranches'] as List?)
-        ?.map((e) => e.toString())
-        .toList();
-    final single = emp['assignedBranch']?.toString();
-    if (multi != null && multi.isNotEmpty) {
-      branches = multi;
-    } else if (single != null && single.isNotEmpty) {
-      branches = [single];
+
+    // assignedBranches → قائمة objects كل منها { city, branch }
+    final multi = emp['assignedBranches'];
+    if (multi is List && multi.isNotEmpty) {
+      branches = multi
+          .map((e) => (e as Map<String, dynamic>)['branch']?.toString() ?? '')
+          .where((b) => b.isNotEmpty)
+          .toList();
+    }
+
+    // assignedBranch → object { city, branch }
+    if (branches.isEmpty) {
+      final single = emp['assignedBranch'];
+      if (single is Map) {
+        final b = single['branch']?.toString() ?? '';
+        if (b.isNotEmpty) branches = [b];
+      }
     }
 
     if (!mounted) return;
