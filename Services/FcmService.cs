@@ -25,9 +25,14 @@ public class FcmService
         {
             if (_initialized) return;
             var json = Environment.GetEnvironmentVariable("FIREBASE_SERVICE_ACCOUNT_JSON");
+            Console.WriteLine($"[FCM] ENV VAR length={json?.Length ?? -1}, isNull={json is null}, isEmpty={json == string.Empty}");
             if (string.IsNullOrEmpty(json))
             {
                 Console.WriteLine("[FCM] FIREBASE_SERVICE_ACCOUNT_JSON not set — notifications disabled");
+                // محاولة قراءة المتغير بأسماء بديلة للتشخيص
+                var allEnv = Environment.GetEnvironmentVariables();
+                var fcmKeys = allEnv.Keys.Cast<string>().Where(k => k.Contains("FIREBASE") || k.Contains("FCM")).ToList();
+                Console.WriteLine($"[FCM] Related env vars found: {string.Join(", ", fcmKeys.Select(k => $"{k}(len={allEnv[k]?.ToString()?.Length ?? 0})"))}");
                 return;
             }
             try
