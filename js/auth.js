@@ -230,17 +230,17 @@ async function login() {
         const clock = document.getElementById('clockWidget');
         if (!bell) return;
         bell.style.display = 'block';
-        // ضع الجرس يمين الساعة بفجوة 8px
         function _positionBell() {
             if (!clock || clock.style.display === 'none') {
-                bell.style.left = '290px';
+                bell.style.left = '300px';
             } else {
                 const r = clock.getBoundingClientRect();
-                bell.style.left = (r.right + 8) + 'px';
+                // r.right > 0 بعد الرسم
+                bell.style.left = ((r.right > 0 ? r.right : 300) + 8) + 'px';
             }
         }
-        _positionBell();
-        // أعِد الضبط عند تغيير حجم النافذة
+        // ننتظر إطار الرسم الأول حتى تكون أبعاد الساعة جاهزة
+        requestAnimationFrame(() => requestAnimationFrame(_positionBell));
         window.addEventListener('resize', _positionBell);
     })();
 
