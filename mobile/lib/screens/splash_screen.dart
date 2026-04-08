@@ -111,7 +111,7 @@ class _SplashScreenState extends State<SplashScreen>
           if (isManager)       return ManagerHomeScreen(token: token, name: name, title: title, role: role);
           if (isControl)       return ControlHomeScreen(token: token, name: name, title: title, role: role);
           if (isBranchManager) return BranchManagerHomeScreen(token: token, name: name, title: title, role: role, empId: empId);
-          return HomeScreen(token: token, name: name, title: title, role: role);
+          return HomeScreen(token: token, name: name, title: title, role: role, empId: empId);
         },
       ),
     );

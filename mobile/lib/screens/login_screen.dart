@@ -171,6 +171,7 @@ class _LoginScreenState extends State<LoginScreen>
             return HomeScreen(
               token: result.token, name: result.name,
               title: result.title, role: role,
+              empId: empId,
             );
           },
         ),

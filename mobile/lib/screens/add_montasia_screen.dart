@@ -11,6 +11,7 @@ class AddMontasiaTab extends StatefulWidget {
   final String name;
   final String title;
   final String role;
+  final String empId;
 
   const AddMontasiaTab({
     super.key,
@@ -18,6 +19,7 @@ class AddMontasiaTab extends StatefulWidget {
     required this.name,
     required this.title,
     required this.role,
+    this.empId = '',
   });
 
   @override
@@ -33,7 +35,68 @@ class _AddMontasiaTabState extends State<AddMontasiaTab> {
   bool     _submitting = false;
   String?  _successMsg;
 
-  List<String> get _branches => _city != null ? (kBranches[_city] ?? []) : [];
+  /// الفروع المخصصة لهذا الموظف (فارغة = كل الفروع)
+  List<String> _assignedBranches = [];
+
+  @override
+  void initState() {
+    super.initState();
+    if (widget.empId.isNotEmpty) _loadAssigned();
+  }
+
+  Future<void> _loadAssigned() async {
+    final emps = await ApiService.fetchEmployeesDb(widget.token);
+    if (emps == null || !mounted) return;
+    final emp = emps
+        .where((e) => e['empId']?.toString() == widget.empId)
+        .firstOrNull;
+    if (emp == null) return;
+
+    List<String> branches = [];
+    final multi = (emp['assignedBranches'] as List?)
+        ?.map((e) => e.toString())
+        .toList();
+    final single = emp['assignedBranch']?.toString();
+    if (multi != null && multi.isNotEmpty) {
+      branches = multi;
+    } else if (single != null && single.isNotEmpty) {
+      branches = [single];
+    }
+
+    if (!mounted) return;
+    setState(() {
+      _assignedBranches = branches;
+      // اختيار تلقائي إذا كان فرع واحد فقط
+      if (branches.length == 1) {
+        _branch = branches.first;
+        _city   = _findCity(branches.first);
+      }
+    });
+  }
+
+  /// ابحث عن المحافظة التي ينتمي إليها الفرع
+  String? _findCity(String branch) {
+    for (final entry in kBranches.entries) {
+      if (entry.value.contains(branch)) return entry.key;
+    }
+    return null;
+  }
+
+  /// المحافظات المتاحة (مصفّاة حسب الفروع المخصصة)
+  List<String> get _allowedCities {
+    if (_assignedBranches.isEmpty) return kBranches.keys.toList();
+    return kBranches.keys.where((city) =>
+      (kBranches[city] ?? []).any((b) => _assignedBranches.contains(b))
+    ).toList();
+  }
+
+  /// الفروع المتاحة للمحافظة المختارة (مصفّاة حسب الفروع المخصصة)
+  List<String> get _branches {
+    if (_city == null) return [];
+    final all = kBranches[_city] ?? [];
+    if (_assignedBranches.isEmpty) return all;
+    return all.where((b) => _assignedBranches.contains(b)).toList();
+  }
 
   Future<void> _pickPhoto() async {
     final xfile = await ImagePicker().pickImage(
@@ -211,13 +274,17 @@ class _AddMontasiaTabState extends State<AddMontasiaTab> {
 
           _dropdown(
             label: 'المحافظة', value: _city,
-            items: kBranches.keys.toList(),
-            onChanged: (v) => setState(() { _city = v; _branch = null; }),
+            items: _allowedCities,
+            onChanged: _assignedBranches.length == 1
+                ? null  // فرع واحد محدد → المحافظة ثابتة
+                : (v) => setState(() { _city = v; _branch = null; }),
           ),
 
           _dropdown(
             label: 'الفرع', value: _branch, items: _branches,
-            onChanged: _city == null ? null : (v) => setState(() => _branch = v),
+            onChanged: (_city == null || _assignedBranches.length == 1)
+                ? null  // فرع واحد محدد → الفرع ثابت
+                : (v) => setState(() => _branch = v),
           ),
 
           _dropdown(

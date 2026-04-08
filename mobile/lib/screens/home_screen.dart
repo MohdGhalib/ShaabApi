@@ -11,6 +11,7 @@ class HomeScreen extends StatefulWidget {
   final String name;
   final String title;
   final String role;
+  final String empId;
 
   const HomeScreen({
     super.key,
@@ -18,6 +19,7 @@ class HomeScreen extends StatefulWidget {
     required this.name,
     required this.title,
     required this.role,
+    this.empId = '',
   });
 
   @override
@@ -145,6 +147,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
             name:  widget.name,
             title: widget.title,
             role:  widget.role,
+            empId: widget.empId,
           ),
           MyMontasiatScreen(
             token:          widget.token,
