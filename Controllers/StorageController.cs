@@ -322,7 +322,7 @@ file static class DbHelper
 
             return (newMItems, newCIds, ni, approvedM, deliveredM);
         }
-        catch { return ([], 0, 0, [], []); }
+        catch { return ([], new List<long>(), 0, [], []); }
     }
 
     // ── إيجاد tokens موظفي الفرع ومدير الفرع فقط (بدون مدير المنطقة) ──────
