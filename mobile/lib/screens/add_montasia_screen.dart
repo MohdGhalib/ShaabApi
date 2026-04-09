@@ -33,7 +33,6 @@ class _AddMontasiaTabState extends State<AddMontasiaTab> {
   final _notesCtrl = TextEditingController();
   File?    _photo;
   bool     _submitting = false;
-  String?  _successMsg;
 
   /// الفروع المخصصة لهذا الموظف (فارغة = كل الفروع)
   List<String> _assignedBranches = [];
@@ -144,7 +143,7 @@ class _AddMontasiaTabState extends State<AddMontasiaTab> {
     final notes = _notesCtrl.text.trim();
     if (notes.isEmpty)   { _err('أدخل التفاصيل'); return; }
 
-    setState(() { _submitting = true; _successMsg = null; });
+    setState(() { _submitting = true; });
 
     final db = await ApiService.fetchMasterDb(widget.token);
     if (db == null) {
@@ -184,9 +183,9 @@ class _AddMontasiaTabState extends State<AddMontasiaTab> {
     if (ok) {
       setState(() {
         _city = null; _branch = null; _type = null; _photo = null;
-        _successMsg = 'تم الإرسال بنجاح ✓\nستصل للكول سنتر قيد الاستلام';
       });
       _notesCtrl.clear();
+      _showSuccessDialog();
     } else {
       _err('فشل الحفظ، حاول مرة أخرى');
     }
@@ -198,6 +197,72 @@ class _AddMontasiaTabState extends State<AddMontasiaTab> {
       backgroundColor: const Color(0xFFB71C1C),
       behavior: SnackBarBehavior.floating,
     ));
+  }
+
+  Future<void> _showSuccessDialog() async {
+    if (!mounted) return;
+    await showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (ctx) => Directionality(
+        textDirection: TextDirection.rtl,
+        child: AlertDialog(
+          backgroundColor: const Color(0xFF1E1E1E),
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(22)),
+          contentPadding: const EdgeInsets.fromLTRB(24, 28, 24, 8),
+          actionsPadding: const EdgeInsets.fromLTRB(16, 0, 16, 20),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Container(
+                width: 76,
+                height: 76,
+                decoration: BoxDecoration(
+                  color: const Color(0xFF2E7D32).withOpacity(0.15),
+                  shape: BoxShape.circle,
+                ),
+                child: const Icon(Icons.check_circle_outline,
+                    color: Color(0xFF66BB6A), size: 50),
+              ),
+              const SizedBox(height: 18),
+              const Text(
+                'تم الإرسال بنجاح',
+                style: TextStyle(
+                    color: Colors.white,
+                    fontSize: 18,
+                    fontWeight: FontWeight.bold),
+              ),
+              const SizedBox(height: 10),
+              const Text(
+                'تم إرسال المنتسية للنظام بنجاح\nوستصل للكول سنتر قيد الاستلام',
+                textAlign: TextAlign.center,
+                style: TextStyle(
+                    color: Colors.white54, fontSize: 13, height: 1.7),
+              ),
+            ],
+          ),
+          actionsAlignment: MainAxisAlignment.center,
+          actions: [
+            SizedBox(
+              width: double.infinity,
+              child: ElevatedButton(
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: const Color(0xFF2E7D32),
+                  foregroundColor: Colors.white,
+                  padding: const EdgeInsets.symmetric(vertical: 13),
+                  shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(12)),
+                ),
+                onPressed: () => Navigator.pop(ctx),
+                child: const Text('حسناً',
+                    style: TextStyle(
+                        fontSize: 15, fontWeight: FontWeight.bold)),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
   }
 
   Widget _dropdown({
@@ -261,26 +326,6 @@ class _AddMontasiaTabState extends State<AddMontasiaTab> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-
-          if (_successMsg != null)
-            Container(
-              margin: const EdgeInsets.only(bottom: 20),
-              padding: const EdgeInsets.all(16),
-              decoration: BoxDecoration(
-                color: const Color(0xFF1B5E20).withOpacity(0.3),
-                borderRadius: BorderRadius.circular(14),
-                border: Border.all(color: const Color(0xFF388E3C)),
-              ),
-              child: Text(
-                _successMsg!,
-                textAlign: TextAlign.center,
-                textDirection: TextDirection.rtl,
-                style: const TextStyle(
-                  color: Color(0xFF81C784), fontSize: 15,
-                  fontWeight: FontWeight.w600, height: 1.6,
-                ),
-              ),
-            ),
 
           _dropdown(
             label: 'المحافظة', value: _city,
