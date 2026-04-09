@@ -260,6 +260,16 @@ input:checked + .toggle-slider:before{transform:translateX(24px);background:#fff
         </div>
       </div>
 
+      <div class="form-group">
+        <label class="form-label">المسمى الوظيفي الجديد <span style="color:#666;font-size:11px">(اختياري — اتركه إذا لم يتغير)</span></label>
+        <select id="titleSelect" class="form-select" onchange="updateTransferBtn()">
+          <option value="">— بدون تغيير —</option>
+          <option value="موظف فرع">👤 موظف فرع</option>
+          <option value="مدير فرع">🏪 مدير فرع</option>
+          <option value="مدير منطقة">🗺️ مدير منطقة</option>
+        </select>
+      </div>
+
       <div id="transferWarn" class="warn-box">
         ⚠️ سيتم نقل الموظف من فرعه الحالي إلى الفرع المختار
       </div>
@@ -489,34 +499,40 @@ function updateTransferBtn() {
 document.getElementById('branchSelect').addEventListener('change', updateTransferBtn);
 
 async function doTransfer() {
-  const empId   = document.getElementById('empSelect').value;
-  const city    = document.getElementById('citySelect').value;
-  const branch  = document.getElementById('branchSelect').value;
+  const empId    = document.getElementById('empSelect').value;
+  const city     = document.getElementById('citySelect').value;
+  const branch   = document.getElementById('branchSelect').value;
+  const newTitle = document.getElementById('titleSelect').value;
   if (!empId || !branch) return;
 
   const emp = _employees.find(e => e.empId === empId);
   const empName = emp?.name || empId;
 
-  if (!confirm(`هل تريد نقل "${empName}" إلى فرع "${branch}" — ${city}؟`)) return;
+  const titleLine = newTitle ? `\nالمسمى الجديد: ${newTitle}` : '';
+  if (!confirm(`هل تريد نقل "${empName}" إلى فرع "${branch}" — ${city}؟${titleLine}`)) return;
 
   const btn = document.getElementById('transferBtn');
   btn.disabled = true; btn.textContent = 'جاري النقل...';
 
   try {
+    const payload = { empId, newBranch: branch, newCity: city };
+    if (newTitle) payload.newTitle = newTitle;
     const res = await fetch('api/admin/transfer', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json', Authorization: 'Bearer ' + _token },
-      body: JSON.stringify({ empId, newBranch: branch, newCity: city })
+      body: JSON.stringify(payload)
     });
     const data = await res.json();
     if (!res.ok) { showToast(data.error || 'فشل النقل', true); return; }
 
-    showToast(`✅ تم نقل ${empName} إلى فرع ${branch}`);
+    const titleMsg = newTitle ? ` — ${newTitle}` : '';
+    showToast(`✅ تم نقل ${empName} إلى فرع ${branch}${titleMsg}`);
     // reset form
     document.getElementById('empSelect').value   = '';
     document.getElementById('citySelect').value  = '';
+    document.getElementById('titleSelect').value = '';
     document.getElementById('branchSelect').innerHTML = '<option value="">— اختر الفرع —</option>';
-    document.getElementById('empDetail').style.display  = 'none';
+    document.getElementById('empDetail').style.display   = 'none';
     document.getElementById('transferWarn').style.display = 'none';
     await loadEmployees();
   } catch { showToast('تعذّر الاتصال بالسيرفر', true); }

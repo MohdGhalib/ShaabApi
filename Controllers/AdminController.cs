@@ -146,6 +146,8 @@ public class AdminController : ControllerBase
                         ["branch"] = body.NewBranch,
                         ["city"]   = body.NewCity ?? ""
                     };
+                    if (!string.IsNullOrEmpty(body.NewTitle))
+                        node["title"] = body.NewTitle;
                     found = true;
                     break;
                 }
@@ -163,11 +165,14 @@ public class AdminController : ControllerBase
             if (_fcm.IsReady)
             {
                 var allTokens = await _fcm.GetAllTokens();
+                var fcmMsg = string.IsNullOrEmpty(body.NewTitle)
+                    ? $"تم نقلك إلى فرع {body.NewBranch} — {body.NewCity}"
+                    : $"تم نقلك إلى فرع {body.NewBranch} — {body.NewCity} ومسماك الوظيفي أصبح {body.NewTitle}";
                 await FcmService.SendToEmpIdsStatic(
                     allTokens,
                     [body.EmpId],
-                    "🔄 تم تغيير فرعك",
-                    $"تم نقلك إلى فرع {body.NewBranch} — {body.NewCity}");
+                    "🔄 تم تغيير بياناتك",
+                    fcmMsg);
             }
 
             return Ok(new { ok = true, empName });
@@ -228,7 +233,7 @@ public class AppControlData
 }
 
 public record AdminUnlockRequest(string? Password);
-public record TransferRequest(string? EmpId, string? NewBranch, string? NewCity);
+public record TransferRequest(string? EmpId, string? NewBranch, string? NewCity, string? NewTitle);
 
 public class BroadcastRequest
 {
