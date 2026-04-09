@@ -175,33 +175,15 @@ input:checked + .toggle-slider:before{transform:translateX(24px);background:#fff
       <div class="form-group">
         <label class="form-label">المستلمون <span style="color:#e53935">*</span></label>
         <div class="roles-grid" id="rolesGrid">
-          <label class="role-chip all-chip" onclick="toggleAllRoles(this)">
-            <input type="checkbox" value="all"> 🌐 الجميع
-          </label>
-          <label class="role-chip" onclick="toggleRoleChip(this)">
-            <input type="checkbox" value="branch_employee"> 👤 موظف فرع
-          </label>
-          <label class="role-chip" onclick="toggleRoleChip(this)">
-            <input type="checkbox" value="branch_manager"> 🏪 مدير فرع
-          </label>
-          <label class="role-chip" onclick="toggleRoleChip(this)">
-            <input type="checkbox" value="area_manager"> 🗺️ مدير منطقة
-          </label>
-          <label class="role-chip" onclick="toggleRoleChip(this)">
-            <input type="checkbox" value="cc_employee"> 📞 موظف كول سنتر
-          </label>
-          <label class="role-chip" onclick="toggleRoleChip(this)">
-            <input type="checkbox" value="cc_manager"> 👑 مدير كول سنتر
-          </label>
-          <label class="role-chip" onclick="toggleRoleChip(this)">
-            <input type="checkbox" value="control_employee"> 🛡️ مدير السيطرة
-          </label>
-          <label class="role-chip" onclick="toggleRoleChip(this)">
-            <input type="checkbox" value="control_sub"> 🔒 موظف سيطرة
-          </label>
-          <label class="role-chip" onclick="toggleRoleChip(this)">
-            <input type="checkbox" value="media"> 📸 موظف ميديا
-          </label>
+          <div class="role-chip all-chip" onclick="toggleAllRoles(this)" data-value="all">🌐 الجميع</div>
+          <div class="role-chip" onclick="toggleRoleChip(this)" data-value="branch_employee">👤 موظف فرع</div>
+          <div class="role-chip" onclick="toggleRoleChip(this)" data-value="branch_manager">🏪 مدير فرع</div>
+          <div class="role-chip" onclick="toggleRoleChip(this)" data-value="area_manager">🗺️ مدير منطقة</div>
+          <div class="role-chip" onclick="toggleRoleChip(this)" data-value="cc_employee">📞 موظف كول سنتر</div>
+          <div class="role-chip" onclick="toggleRoleChip(this)" data-value="cc_manager">👑 مدير كول سنتر</div>
+          <div class="role-chip" onclick="toggleRoleChip(this)" data-value="control_employee">🛡️ مدير السيطرة</div>
+          <div class="role-chip" onclick="toggleRoleChip(this)" data-value="control_sub">🔒 موظف سيطرة</div>
+          <div class="role-chip" onclick="toggleRoleChip(this)" data-value="media">📸 موظف ميديا</div>
         </div>
       </div>
 
@@ -532,26 +514,17 @@ async function doTransfer() {
 }
 
 // ── Broadcast Notification ───────────────────────────────────────────────
-function toggleRoleChip(label) {
-  const chip = label.classList;
-  chip.toggle('selected');
-  // deselect "all" if individual selected
-  const allChip = document.querySelector('.all-chip');
-  if (allChip.classList.contains('selected')) {
-    allChip.classList.remove('selected');
-    allChip.querySelector('input').checked = false;
-  }
+function toggleRoleChip(el) {
+  el.classList.toggle('selected');
+  // deselect "all" if any individual chip is toggled
+  document.querySelector('.all-chip').classList.remove('selected');
   updateNotifPreview();
 }
 
-function toggleAllRoles(label) {
-  const allSelected = label.classList.contains('selected');
-  // deselect all individual chips
-  document.querySelectorAll('.role-chip:not(.all-chip)').forEach(c => {
-    c.classList.remove('selected');
-    c.querySelector('input').checked = false;
-  });
-  label.classList.toggle('selected', !allSelected);
+function toggleAllRoles(el) {
+  const wasSelected = el.classList.contains('selected');
+  document.querySelectorAll('.role-chip:not(.all-chip)').forEach(c => c.classList.remove('selected'));
+  el.classList.toggle('selected', !wasSelected);
   updateNotifPreview();
 }
 
@@ -575,11 +548,8 @@ document.addEventListener('DOMContentLoaded', () => {
 
 function _getSelectedRoles() {
   if (document.querySelector('.all-chip.selected')) return ['all'];
-  const roles = [];
-  document.querySelectorAll('.role-chip:not(.all-chip).selected').forEach(c => {
-    roles.push(c.querySelector('input').value);
-  });
-  return roles;
+  return [...document.querySelectorAll('.role-chip:not(.all-chip).selected')]
+    .map(c => c.dataset.value);
 }
 
 async function sendBroadcast() {
@@ -610,6 +580,7 @@ async function sendBroadcast() {
     document.getElementById('notifBody').value  = '';
     document.getElementById('notifPreview').style.display = 'none';
     document.querySelectorAll('.role-chip').forEach(c => c.classList.remove('selected'));
+    updateNotifPreview();
   } catch { showToast('تعذّر الاتصال بالسيرفر', true); }
   finally { btn.disabled = false; btn.textContent = '📣 إرسال الإشعار'; }
 }
