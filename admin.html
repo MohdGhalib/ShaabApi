@@ -92,36 +92,70 @@ input:checked + .toggle-slider:before{transform:translateX(24px);background:#fff
 .role-chip.all-chip.selected{border-color:#ff8a65;color:#ff8a65;background:rgba(255,138,101,.1)}
 .role-chip input[type=checkbox]{display:none}
 
-/* ── Stop type cards ── */
-.stop-type-card{display:block;cursor:pointer;border-radius:12px;border:1.5px solid #2a2a2a;background:#111;transition:.2s}
+/* ── App Control Hero ── */
+.app-hero{border-radius:16px 16px 0 0;margin:-24px -24px 24px;padding:32px 24px 28px;text-align:center;position:relative;overflow:hidden;transition:background .6s}
+.app-hero.is-active{background:radial-gradient(ellipse at 50% 0%,rgba(46,125,50,.18) 0%,transparent 70%)}
+.app-hero.is-stopped{background:radial-gradient(ellipse at 50% 0%,rgba(211,47,47,.18) 0%,transparent 70%)}
+.app-hero::before{content:'';position:absolute;inset:0;border-bottom:1px solid rgba(255,255,255,.05)}
+
+/* Pulse ring */
+.pulse-wrap{position:relative;width:110px;height:110px;margin:0 auto 20px}
+.pulse-wrap::before,.pulse-wrap::after{content:'';position:absolute;inset:-8px;border-radius:50%;border:1.5px solid;animation:pulse-out 2.4s ease-out infinite;opacity:0}
+.pulse-wrap.is-active::before{border-color:rgba(76,175,80,.7);animation-delay:0s}
+.pulse-wrap.is-active::after{border-color:rgba(76,175,80,.4);animation-delay:.8s}
+.pulse-wrap.is-stopped::before{border-color:rgba(229,57,53,.7);animation-delay:0s}
+.pulse-wrap.is-stopped::after{border-color:rgba(229,57,53,.4);animation-delay:.6s}
+@keyframes pulse-out{0%{transform:scale(.85);opacity:.8}100%{transform:scale(1.5);opacity:0}}
+.pulse-core{width:110px;height:110px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:38px;position:relative;z-index:1;transition:.4s}
+.pulse-core.is-active{background:rgba(46,125,50,.15);border:2px solid rgba(76,175,80,.4);box-shadow:0 0 30px rgba(76,175,80,.15)}
+.pulse-core.is-stopped{background:rgba(211,47,47,.15);border:2px solid rgba(229,57,53,.4);box-shadow:0 0 30px rgba(229,57,53,.15)}
+
+/* Countdown ring */
+.cd-wrap{position:relative;width:160px;height:160px;margin:0 auto 16px}
+.cd-svg{position:absolute;inset:0;transform:rotate(-90deg)}
+.cd-track{fill:none;stroke:#1e1e1e;stroke-width:7}
+.cd-bar{fill:none;stroke:url(#cdGrad);stroke-width:7;stroke-linecap:round;stroke-dasharray:439.82;stroke-dashoffset:0;transition:stroke-dashoffset 1s linear}
+.cd-inner{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px}
+.cd-digits{font-size:30px;font-weight:800;color:#ef5350;letter-spacing:2px;font-variant-numeric:tabular-nums;line-height:1}
+.cd-sub{font-size:10px;color:#666;letter-spacing:1.5px;text-transform:uppercase}
+
+/* Status text */
+.hero-title{font-size:22px;font-weight:800;margin-bottom:6px}
+.hero-sub{font-size:13px;color:#666;line-height:1.5}
+.hero-reason{margin-top:10px;padding:10px 16px;background:rgba(0,0,0,.3);border-radius:10px;font-size:13px;color:#ccc;line-height:1.6;max-width:340px;margin-left:auto;margin-right:auto;word-break:break-word}
+
+/* Presets */
+.presets-wrap{display:flex;flex-wrap:wrap;gap:8px;margin-bottom:16px}
+.preset-pill{padding:7px 16px;border-radius:20px;border:1.5px solid #2a2a2a;background:#111;color:#888;font-size:12px;font-weight:700;font-family:'Cairo',sans-serif;cursor:pointer;transition:.2s}
+.preset-pill:hover{border-color:#e53935;color:#ef5350}
+.preset-pill.picked{border-color:#e53935;background:rgba(229,57,53,.1);color:#ef5350}
+
+/* Start/end time boxes */
+.time2-row{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:16px}
+.time2-box{background:#0d0d0d;border:1.5px solid #1e1e1e;border-radius:11px;padding:11px 14px}
+.time2-lbl{font-size:10px;color:#555;margin-bottom:5px;letter-spacing:.5px}
+.time2-box input[type=datetime-local]{width:100%;background:transparent;border:none;outline:none;font-family:'Cairo',sans-serif;font-size:13px;font-weight:600;color-scheme:dark;cursor:pointer}
+.time2-box input[type=datetime-local].green{color:#81c784}
+.time2-box input[type=datetime-local].red{color:#ef9a9a}
+.time2-box input[type=datetime-local]::-webkit-calendar-picker-indicator{filter:invert(1) opacity(.35);cursor:pointer}
+
+/* Action buttons */
+.btn-stop-big{width:100%;padding:15px;border:none;border-radius:13px;background:linear-gradient(135deg,#d32f2f,#b71c1c);color:#fff;font-size:16px;font-weight:800;font-family:'Cairo',sans-serif;cursor:pointer;box-shadow:0 4px 22px rgba(211,47,47,.35);transition:.25s;letter-spacing:.5px}
+.btn-stop-big:hover{transform:translateY(-2px);box-shadow:0 7px 28px rgba(211,47,47,.5)}
+.btn-stop-big:disabled{background:#2a2a2a;color:#555;cursor:not-allowed;transform:none;box-shadow:none}
+.btn-resume-big{width:100%;padding:15px;border:none;border-radius:13px;background:linear-gradient(135deg,#2e7d32,#1b5e20);color:#fff;font-size:16px;font-weight:800;font-family:'Cairo',sans-serif;cursor:pointer;box-shadow:0 4px 22px rgba(46,125,50,.35);transition:.25s;letter-spacing:.5px}
+.btn-resume-big:hover{transform:translateY(-2px);box-shadow:0 7px 28px rgba(46,125,50,.5)}
+.btn-resume-big:disabled{background:#2a2a2a;color:#555;cursor:not-allowed;transform:none;box-shadow:none}
+
+/* Stop form collapsible */
+.stop-form-wrap{animation:fadeDown .25s ease}
+@keyframes fadeDown{from{opacity:0;transform:translateY(-8px)}to{opacity:1;transform:translateY(0)}}
+
+/* Stop type cards */
+.stop-type-card{display:block;border:1.5px solid #252525;border-radius:13px;background:#111;cursor:pointer;transition:.2s;overflow:hidden}
 .stop-type-card input[type=radio]{display:none}
-.stop-type-inner{display:flex;flex-direction:column;align-items:center;gap:5px;padding:14px 10px;text-align:center}
-.stop-type-card:hover{border-color:#444}
-.stop-type-card.active{border-color:#e53935;background:rgba(229,57,53,.09)}
-
-/* ── Time row ── */
-.time-row{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:16px}
-.time-box{background:#0d0d0d;border:1.5px solid #1e1e1e;border-radius:11px;padding:12px 14px}
-.time-box-label{font-size:11px;color:#666;margin-bottom:6px}
-.time-box input[type=datetime-local]{width:100%;background:transparent;border:none;outline:none;font-family:'Cairo',sans-serif;font-size:13px;font-weight:600;color:#81c784;color-scheme:dark;cursor:pointer}
-.time-box input[type=datetime-local]::-webkit-calendar-picker-indicator{filter:invert(1) opacity(.4);cursor:pointer}
-
-/* ── Modern datetime picker (end time) ── */
-.dt-card{position:relative;background:#111;border:1.5px solid #2a2a2a;border-radius:16px;overflow:hidden;transition:border-color .25s,background .25s;cursor:pointer}
-.dt-card:hover{border-color:#555}
-.dt-card.has-val{border-color:rgba(229,57,53,.45);background:rgba(229,57,53,.04)}
-.dt-card-inner{display:flex;align-items:stretch;gap:0}
-.dt-seg{display:flex;flex-direction:column;align-items:center;justify-content:center;padding:14px 16px;flex:1}
-.dt-seg-day{font-size:38px;font-weight:800;line-height:1;color:#ef5350}
-.dt-seg-monthyear{display:flex;flex-direction:column;align-items:flex-start;gap:1px}
-.dt-seg-month{font-size:15px;font-weight:700;color:#fff}
-.dt-seg-year{font-size:12px;color:#555}
-.dt-sep{width:1px;background:#1e1e1e;align-self:stretch;margin:12px 0}
-.dt-seg-time{font-size:28px;font-weight:800;letter-spacing:3px;color:#fff}
-.dt-seg-timelabel{font-size:10px;color:#555;margin-top:3px;letter-spacing:1px}
-.dt-seg-icon{font-size:22px;padding:14px 16px;opacity:.35;align-self:center}
-.dt-placeholder{padding:18px 20px;font-size:13px;color:#555;display:flex;align-items:center;gap:10px}
-.dt-hidden{position:absolute;inset:0;opacity:0;width:100%;height:100%;cursor:pointer}
+.stop-type-card.active{border-color:#e53935;background:rgba(229,57,53,.07)}
+.stop-type-inner{display:flex;flex-direction:column;align-items:center;gap:4px;padding:14px 10px;text-align:center}
 
 /* ── datetime ── */
 .form-input[type=datetime-local]{color-scheme:dark}
@@ -155,106 +189,112 @@ input:checked + .toggle-slider:before{transform:translateX(24px);background:#fff
   <div class="container">
 
     <!-- ── بطاقة حالة التطبيق ── -->
-    <div class="card">
-      <div class="card-title">
-        <span class="card-title-icon">📱</span>
-        حالة تطبيق الجوال
+    <div class="card" id="ctrlCard" style="padding:24px;overflow:hidden">
+
+      <!-- Hero -->
+      <div class="app-hero is-active" id="appHero">
+        <div class="pulse-wrap is-active" id="pulseWrap">
+          <div class="pulse-core is-active" id="pulseCore">📱</div>
+        </div>
+        <div class="hero-title" id="heroTitle">التطبيق نشط</div>
+        <div class="hero-sub"   id="heroSub">جميع الفروع تعمل بشكل طبيعي</div>
       </div>
 
-      <div class="status-row">
-        <div>
-          <div style="font-size:12px;color:#666;margin-bottom:4px">الحالة الحالية</div>
-          <span class="status-badge status-active" id="statusBadge">🟢 التطبيق نشط</span>
+      <!-- Countdown Ring (timer stop) -->
+      <div class="cd-wrap" id="cdWrap" style="display:none">
+        <svg class="cd-svg" viewBox="0 0 160 160">
+          <defs>
+            <linearGradient id="cdGrad" x1="0%" y1="0%" x2="100%" y2="0%">
+              <stop offset="0%" stop-color="#ef5350"/>
+              <stop offset="100%" stop-color="#ff8a65"/>
+            </linearGradient>
+          </defs>
+          <circle class="cd-track" cx="80" cy="80" r="70"/>
+          <circle class="cd-bar"   cx="80" cy="80" r="70" id="cdBar"/>
+        </svg>
+        <div class="cd-inner">
+          <div class="cd-digits" id="cdDigits">00:00:00</div>
+          <div class="cd-sub">متبقي</div>
         </div>
       </div>
 
-      <div class="toggle-row">
-        <span class="toggle-label">إيقاف التطبيق على أجهزة الفروع</span>
-        <label class="toggle">
-          <input type="checkbox" id="stoppedToggle" onchange="onToggleChange()">
-          <span class="toggle-slider"></span>
-        </label>
+      <!-- Active stop info (when stopped) -->
+      <div id="stopInfoBlock" style="display:none">
+        <div style="background:#0d0d0d;border:1.5px solid #1e1e1e;border-radius:11px;padding:12px 16px;margin-bottom:12px;text-align:right">
+          <div style="font-size:10px;color:#555;margin-bottom:4px;letter-spacing:.4px">سبب الإيقاف</div>
+          <div style="font-size:14px;color:#ef9a9a;font-weight:700" id="stopReasonDisplay">—</div>
+        </div>
+        <div class="time2-row" id="stopTimesRow">
+          <div class="time2-box">
+            <div class="time2-lbl">⏰ بدأ الإيقاف</div>
+            <div style="font-size:13px;font-weight:700;color:#fff" id="dispStartTime">—</div>
+          </div>
+          <div class="time2-box" id="dispEndBox" style="display:none">
+            <div class="time2-lbl">🏁 ينتهي في</div>
+            <div style="font-size:13px;font-weight:700;color:#ef9a9a" id="dispEndTime">—</div>
+          </div>
+        </div>
+        <button class="btn-resume-big" id="resumeBtn" onclick="resumeApp()">▶ استئناف التطبيق الآن</button>
       </div>
 
-      <div id="stopFields" style="display:none">
+      <!-- Open stop form button (when active) -->
+      <button class="btn-stop-big" id="openStopBtn" onclick="openStopForm()" style="margin-top:4px">⏸ إيقاف التطبيق</button>
 
-        <!-- نوع الإيقاف -->
-        <div class="form-group">
-          <label class="form-label">نوع الإيقاف</label>
-          <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
-            <label class="stop-type-card active" id="cardManual">
-              <input type="radio" name="stopType" value="manual" onchange="onStopTypeChange()" checked>
-              <div class="stop-type-inner">
-                <span style="font-size:22px">🔒</span>
-                <span style="font-weight:700;font-size:14px;color:#fff">إيقاف يدوي</span>
-                <span style="font-size:11px;color:#888">تُستأنف يدوياً فقط</span>
-              </div>
-            </label>
-            <label class="stop-type-card" id="cardTemp">
-              <input type="radio" name="stopType" value="temp" onchange="onStopTypeChange()">
-              <div class="stop-type-inner">
-                <span style="font-size:22px">⏱️</span>
-                <span style="font-weight:700;font-size:14px;color:#fff">إيقاف مؤقت</span>
-                <span style="font-size:11px;color:#888">تُستأنف تلقائياً</span>
-              </div>
-            </label>
-          </div>
-        </div>
+      <!-- Stop Form -->
+      <div class="stop-form-wrap" id="stopFormWrap" style="display:none">
 
-        <!-- وقت بدء الإيقاف (قابل للتعديل) -->
-        <div class="time-row" style="margin-bottom:16px">
-          <div class="time-box">
-            <div class="time-box-label">⏰ وقت بدء الإيقاف</div>
-            <input type="datetime-local" id="startTimeInput" oninput="onStartTimeInput()">
-          </div>
-          <div class="time-box" id="endTimeSummaryBox" style="display:none">
-            <div class="time-box-label">🏁 وقت انتهاء الإيقاف</div>
-            <div style="font-size:12px;font-weight:600;color:#ef9a9a" id="endTimeSummary">—</div>
-          </div>
-        </div>
-
-        <!-- سبب الإيقاف -->
-        <div class="form-group">
-          <label class="form-label">سبب الإيقاف <span style="color:#e53935">*</span></label>
-          <textarea id="stopReason" class="form-textarea" placeholder="مثال: صيانة مجدولة للنظام..." rows="3"></textarea>
-        </div>
-
-        <!-- وقت الانتهاء — بطاقة عصرية (مؤقت فقط) -->
-        <div class="form-group" id="stopUntilGroup" style="display:none">
-          <label class="form-label">وقت انتهاء الإيقاف <span style="color:#e53935">*</span></label>
-          <div class="dt-card" id="dtCard" onclick="document.getElementById('stopUntil').focus()">
-            <!-- placeholder قبل الاختيار -->
-            <div class="dt-placeholder" id="dtPlaceholder">
-              <span style="font-size:20px">📅</span>
-              <span>اضغط لتحديد وقت انتهاء الإيقاف</span>
+        <!-- Stop type -->
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:14px">
+          <label class="stop-type-card active" id="cardManual">
+            <input type="radio" name="stopType" value="manual" onchange="onStopTypeChange()" checked>
+            <div class="stop-type-inner">
+              <span style="font-size:22px">🔒</span>
+              <span style="font-weight:700;font-size:14px;color:#fff">يدوي</span>
+              <span style="font-size:11px;color:#888">يدوياً فقط</span>
             </div>
-            <!-- العرض بعد الاختيار -->
-            <div class="dt-card-inner" id="dtDisplay" style="display:none">
-              <div class="dt-seg" style="flex-direction:row;gap:10px;align-items:center">
-                <span class="dt-seg-day" id="dtDay">--</span>
-                <div class="dt-seg-monthyear">
-                  <span class="dt-seg-month" id="dtMonth">---</span>
-                  <span class="dt-seg-year"  id="dtYear">----</span>
-                </div>
-              </div>
-              <div class="dt-sep"></div>
-              <div class="dt-seg">
-                <span class="dt-seg-time" id="dtTime">--:--</span>
-                <span class="dt-seg-timelabel">HOUR : MIN</span>
-              </div>
-              <span class="dt-seg-icon">✏️</span>
+          </label>
+          <label class="stop-type-card" id="cardTemp">
+            <input type="radio" name="stopType" value="temp" onchange="onStopTypeChange()">
+            <div class="stop-type-inner">
+              <span style="font-size:22px">⏱</span>
+              <span style="font-weight:700;font-size:14px;color:#fff">مؤقت</span>
+              <span style="font-size:11px;color:#888">تلقائياً</span>
             </div>
-            <input type="datetime-local" id="stopUntil" class="dt-hidden" oninput="onStopUntilInput()">
+          </label>
+        </div>
+
+        <!-- Preset pills (temp only) -->
+        <div class="presets-wrap" id="presetsWrap" style="display:none">
+          <button class="preset-pill" onclick="applyPreset(15)">15 دقيقة</button>
+          <button class="preset-pill" onclick="applyPreset(30)">30 دقيقة</button>
+          <button class="preset-pill" onclick="applyPreset(60)">ساعة</button>
+          <button class="preset-pill" onclick="applyPreset(120)">ساعتان</button>
+          <button class="preset-pill" onclick="applyPreset(240)">4 ساعات</button>
+          <button class="preset-pill" id="pillCustom" onclick="toggleCustomTime()">مخصص ✏</button>
+        </div>
+
+        <!-- Start + End time -->
+        <div class="time2-row">
+          <div class="time2-box">
+            <div class="time2-lbl">⏰ وقت البدء</div>
+            <input type="datetime-local" id="startTimeInput" class="green">
+          </div>
+          <div class="time2-box" id="endTimeBox" style="display:none">
+            <div class="time2-lbl">🏁 وقت الانتهاء</div>
+            <input type="datetime-local" id="stopUntil" class="red" oninput="onStopUntilInput()">
           </div>
         </div>
 
+        <!-- Reason -->
+        <div style="margin-bottom:14px">
+          <label style="font-size:12px;color:#555;display:block;margin-bottom:6px">سبب الإيقاف <span style="color:#e53935">*</span></label>
+          <textarea id="stopReason" class="form-textarea" placeholder="مثال: صيانة مجدولة للنظام..." rows="2"></textarea>
+        </div>
+
+        <button class="btn-stop-big" id="saveCtrlBtn" onclick="saveControl()">🔴 تأكيد الإيقاف</button>
+        <button onclick="closeStopForm()" style="width:100%;margin-top:8px;background:none;border:1.5px solid #252525;border-radius:13px;color:#666;padding:12px;font-family:'Cairo',sans-serif;font-size:14px;cursor:pointer;transition:.2s" onmouseover="this.style.borderColor='#555'" onmouseout="this.style.borderColor='#252525'">إلغاء</button>
       </div>
 
-      <div id="resumeInfo" class="info-box">
-        ✅ سيتم استئناف التطبيق وإلغاء الإيقاف الحالي
-      </div>
-
-      <button class="btn-primary" id="saveCtrlBtn" onclick="saveControl()">💾 حفظ الحالة</button>
     </div>
 
     <!-- ── بطاقة إرسال إشعار جماعي ── -->
@@ -451,41 +491,99 @@ function _toDatetimeLocal(iso) {
   } catch { return ''; }
 }
 
-function renderControlState(data) {
-  const stopped   = data.stopped === true;
-  const badge     = document.getElementById('statusBadge');
-  const header    = document.getElementById('globalStatus');
-  const toggle    = document.getElementById('stoppedToggle');
-  const fields    = document.getElementById('stopFields');
-  const resumeBox = document.getElementById('resumeInfo');
+let _cdTimer = null;
+let _cdTotal  = 0;
 
-  badge.textContent       = stopped ? '🔴 التطبيق موقوف' : '🟢 التطبيق نشط';
-  badge.className         = 'status-badge ' + (stopped ? 'status-stopped' : 'status-active');
+function renderControlState(data) {
+  const stopped = data.stopped === true;
+  const header  = document.getElementById('globalStatus');
   header.textContent      = stopped ? 'موقوف' : 'نشط';
   header.style.background = stopped ? '#c62828' : '#2e7d32';
 
-  toggle.checked          = stopped;
-  fields.style.display    = stopped ? 'block' : 'none';
-  resumeBox.style.display = 'none';
+  const hero         = document.getElementById('appHero');
+  const pulseWrap    = document.getElementById('pulseWrap');
+  const pulseCore    = document.getElementById('pulseCore');
+  const heroTitle    = document.getElementById('heroTitle');
+  const heroSub      = document.getElementById('heroSub');
+  const cdWrap       = document.getElementById('cdWrap');
+  const stopInfoBlock = document.getElementById('stopInfoBlock');
+  const openStopBtn  = document.getElementById('openStopBtn');
+  const stopFormWrap = document.getElementById('stopFormWrap');
+
+  stopFormWrap.style.display = 'none';
 
   if (stopped) {
-    document.getElementById('stopReason').value = data.reason || '';
+    hero.className      = 'app-hero is-stopped';
+    pulseWrap.className = 'pulse-wrap is-stopped';
+    pulseCore.className = 'pulse-core is-stopped';
+    pulseCore.textContent  = '⏸';
+    heroTitle.textContent  = 'التطبيق موقوف';
+    heroSub.textContent    = 'تم إيقاف التطبيق على أجهزة الفروع';
+    heroSub.style.color    = '#ef9a9a';
 
-    // وقت البدء
-    document.getElementById('startTimeInput').value = _toDatetimeLocal(data.stoppedAt);
+    stopInfoBlock.style.display = 'block';
+    openStopBtn.style.display   = 'none';
 
-    // نوع الإيقاف + وقت الانتهاء
-    const isTemp = !!data.stopUntil;
-    _setStopType(isTemp ? 'temp' : 'manual');
+    document.getElementById('stopReasonDisplay').textContent = data.reason || '—';
+    document.getElementById('dispStartTime').textContent     = _fmtLocal(data.stoppedAt) || '—';
 
-    if (isTemp) {
-      document.getElementById('stopUntil').value = _toDatetimeLocal(data.stopUntil);
-      _renderDtCard(data.stopUntil);
+    const dispEndBox = document.getElementById('dispEndBox');
+    if (data.stopUntil) {
+      dispEndBox.style.display = 'block';
+      document.getElementById('dispEndTime').textContent = _fmtLocal(data.stopUntil) || '—';
+      cdWrap.style.display = 'flex';
+      _startCountdown(data.stoppedAt, data.stopUntil);
     } else {
-      document.getElementById('stopUntil').value = '';
-      _renderDtCard(null);
+      dispEndBox.style.display = 'none';
+      cdWrap.style.display = 'none';
+      _stopCountdown();
     }
+  } else {
+    hero.className      = 'app-hero is-active';
+    pulseWrap.className = 'pulse-wrap is-active';
+    pulseCore.className = 'pulse-core is-active';
+    pulseCore.textContent  = '📱';
+    heroTitle.textContent  = 'التطبيق نشط';
+    heroSub.textContent    = 'جميع الفروع تعمل بشكل طبيعي';
+    heroSub.style.color    = '#666';
+
+    stopInfoBlock.style.display = 'none';
+    openStopBtn.style.display   = 'block';
+    cdWrap.style.display = 'none';
+    _stopCountdown();
   }
+}
+
+function openStopForm() {
+  document.getElementById('stopFormWrap').style.display = 'block';
+  document.getElementById('openStopBtn').style.display  = 'none';
+  document.getElementById('startTimeInput').value = _toDatetimeLocal(new Date().toISOString());
+  _setStopType('manual');
+  document.getElementById('stopUntil').value  = '';
+  document.getElementById('stopReason').value = '';
+  document.querySelectorAll('.preset-pill').forEach(p => p.classList.remove('picked'));
+}
+
+function closeStopForm() {
+  document.getElementById('stopFormWrap').style.display = 'none';
+  document.getElementById('openStopBtn').style.display  = 'block';
+}
+
+async function resumeApp() {
+  const btn = document.getElementById('resumeBtn');
+  btn.disabled = true; btn.textContent = 'جاري الاستئناف...';
+  try {
+    const res = await fetch('api/admin/control', {
+      method:  'POST',
+      headers: { 'Content-Type': 'application/json', Authorization: 'Bearer ' + _token },
+      body:    JSON.stringify({ stopped: false, reason: '', stopUntil: null, stoppedAt: null })
+    });
+    const data = await res.json();
+    if (!res.ok) { showToast(data.error || 'فشل الاستئناف', true); return; }
+    showToast('✅ تم استئناف التطبيق');
+    await loadControl();
+  } catch { showToast('تعذّر الاتصال بالسيرفر', true); }
+  finally { btn.disabled = false; btn.textContent = '▶ استئناف التطبيق الآن'; }
 }
 
 function _setStopType(type) {
@@ -493,36 +591,9 @@ function _setStopType(type) {
   document.querySelector('input[name=stopType][value=manual]').checked = !isTemp;
   document.querySelector('input[name=stopType][value=temp]').checked   =  isTemp;
   document.getElementById('cardManual').classList.toggle('active', !isTemp);
-  document.getElementById('cardTemp').classList.toggle('active',   isTemp);
-  document.getElementById('stopUntilGroup').style.display = isTemp ? 'block' : 'none';
-}
-
-const MONTHS_AR = ['يناير','فبراير','مارس','أبريل','مايو','يونيو','يوليو','أغسطس','سبتمبر','أكتوبر','نوفمبر','ديسمبر'];
-
-function _renderDtCard(iso) {
-  const card    = document.getElementById('dtCard');
-  const ph      = document.getElementById('dtPlaceholder');
-  const display = document.getElementById('dtDisplay');
-  const summary = document.getElementById('endTimeSummary');
-  const sumBox  = document.getElementById('endTimeSummaryBox');
-  if (!iso) {
-    card.classList.remove('has-val');
-    ph.style.display      = 'flex';
-    display.style.display = 'none';
-    sumBox.style.display  = 'none';
-    return;
-  }
-  const d = new Date(iso);
-  card.classList.add('has-val');
-  ph.style.display      = 'none';
-  display.style.display = 'flex';
-  document.getElementById('dtDay').textContent   = String(d.getDate()).padStart(2,'0');
-  document.getElementById('dtMonth').textContent = MONTHS_AR[d.getMonth()];
-  document.getElementById('dtYear').textContent  = d.getFullYear();
-  document.getElementById('dtTime').textContent  =
-    String(d.getHours()).padStart(2,'0') + ':' + String(d.getMinutes()).padStart(2,'0');
-  sumBox.style.display  = 'block';
-  summary.textContent   = _fmtLocal(iso) || '—';
+  document.getElementById('cardTemp').classList.toggle('active',    isTemp);
+  document.getElementById('presetsWrap').style.display = isTemp ? 'flex' : 'none';
+  document.getElementById('endTimeBox').style.display  = isTemp ? 'block' : 'none';
 }
 
 function onStopTypeChange() {
@@ -530,59 +601,96 @@ function onStopTypeChange() {
   _setStopType(type);
   if (type === 'manual') {
     document.getElementById('stopUntil').value = '';
-    _renderDtCard(null);
+    document.querySelectorAll('.preset-pill').forEach(p => p.classList.remove('picked'));
   }
+}
+
+function applyPreset(minutes) {
+  _setStopType('temp');
+  const end = new Date(Date.now() + minutes * 60000);
+  document.getElementById('stopUntil').value = _toDatetimeLocal(end.toISOString());
+  document.querySelectorAll('.preset-pill').forEach(p => p.classList.remove('picked'));
+  const map = {15:0, 30:1, 60:2, 120:3, 240:4};
+  const idx = map[minutes];
+  if (idx !== undefined) document.querySelectorAll('.preset-pill')[idx].classList.add('picked');
+}
+
+function toggleCustomTime() {
+  _setStopType('temp');
+  document.querySelectorAll('.preset-pill').forEach(p => p.classList.remove('picked'));
+  document.getElementById('pillCustom').classList.add('picked');
+  const inp = document.getElementById('stopUntil');
+  inp.focus();
+  try { inp.showPicker(); } catch(_) {}
 }
 
 function onStopUntilInput() {
-  const val = document.getElementById('stopUntil').value;
-  _renderDtCard(val ? new Date(val).toISOString() : null);
-}
-
-function onStartTimeInput() { /* just editable — no extra action needed */ }
-
-function onToggleChange() {
-  const stopped = document.getElementById('stoppedToggle').checked;
-  document.getElementById('stopFields').style.display  = stopped ? 'block' : 'none';
-  document.getElementById('resumeInfo').style.display  = (!stopped && _currentControl.stopped) ? 'block' : 'none';
-  if (stopped) {
-    document.getElementById('startTimeInput').value = _toDatetimeLocal(new Date().toISOString());
-    _setStopType('manual');
-    _renderDtCard(null);
-  }
+  document.querySelectorAll('.preset-pill').forEach(p => p.classList.remove('picked'));
+  document.getElementById('pillCustom').classList.add('picked');
 }
 
 async function saveControl() {
-  const stopped  = document.getElementById('stoppedToggle').checked;
   const reason   = document.getElementById('stopReason').value.trim();
   const stopType = document.querySelector('input[name=stopType]:checked')?.value ?? 'manual';
   const until    = stopType === 'temp' ? document.getElementById('stopUntil').value : '';
 
-  if (stopped && !reason) { showToast('أدخل سبب الإيقاف', true); return; }
-  if (stopped && stopType === 'temp' && !until) { showToast('أدخل وقت انتهاء الإيقاف', true); return; }
+  if (!reason)                        { showToast('أدخل سبب الإيقاف', true);          return; }
+  if (stopType === 'temp' && !until)  { showToast('أدخل وقت انتهاء الإيقاف', true);  return; }
 
   const btn = document.getElementById('saveCtrlBtn');
   btn.disabled = true; btn.textContent = 'جاري الحفظ...';
-
   try {
     const startVal = document.getElementById('startTimeInput').value;
     const body = {
-      stopped,
-      reason:    stopped ? reason : '',
-      stopUntil: stopped && until ? new Date(until).toISOString() : null,
-      stoppedAt: stopped ? (startVal ? new Date(startVal).toISOString() : (_currentControl.stoppedAt || null)) : null
+      stopped:   true,
+      reason:    reason,
+      stopUntil: until ? new Date(until).toISOString() : null,
+      stoppedAt: startVal ? new Date(startVal).toISOString() : new Date().toISOString()
     };
     const res = await fetch('api/admin/control', {
-      method: 'POST',
+      method:  'POST',
       headers: { 'Content-Type': 'application/json', Authorization: 'Bearer ' + _token },
-      body: JSON.stringify(body)
+      body:    JSON.stringify(body)
     });
     const data = await res.json();
     if (!res.ok) { showToast(data.error || 'فشل الحفظ', true); return; }
-    showToast(stopped ? '🔴 تم إيقاف التطبيق' : '✅ تم استئناف التطبيق');
+    showToast('🔴 تم إيقاف التطبيق');
     await loadControl();
   } catch { showToast('تعذّر الاتصال بالسيرفر', true); }
-  finally { btn.disabled = false; btn.textContent = '💾 حفظ الحالة'; }
+  finally { btn.disabled = false; btn.textContent = '🔴 تأكيد الإيقاف'; }
+}
+
+// ── Countdown ring ────────────────────────────────────────────────────────
+function _startCountdown(startIso, endIso) {
+  _stopCountdown();
+  const endMs   = new Date(endIso).getTime();
+  const startMs = startIso ? new Date(startIso).getTime() : (endMs - 3600000);
+  _cdTotal      = Math.max(endMs - startMs, 1);
+
+  function tick() {
+    const remaining = endMs - Date.now();
+    if (remaining <= 0) {
+      document.getElementById('cdDigits').textContent = '00:00:00';
+      document.getElementById('cdBar').style.strokeDashoffset = '439.82';
+      _stopCountdown();
+      setTimeout(loadControl, 2000);
+      return;
+    }
+    const h  = Math.floor(remaining / 3600000);
+    const m  = Math.floor((remaining % 3600000) / 60000);
+    const s  = Math.floor((remaining % 60000) / 1000);
+    const p2 = n => String(n).padStart(2,'0');
+    document.getElementById('cdDigits').textContent = `${p2(h)}:${p2(m)}:${p2(s)}`;
+    const offset = (1 - remaining / _cdTotal) * 439.82;
+    document.getElementById('cdBar').style.strokeDashoffset = String(Math.max(0, offset));
+  }
+
+  tick();
+  _cdTimer = setInterval(tick, 1000);
+}
+
+function _stopCountdown() {
+  if (_cdTimer) { clearInterval(_cdTimer); _cdTimer = null; }
 }
 
 // ── Load employees ────────────────────────────────────────────────────────
