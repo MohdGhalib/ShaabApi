@@ -4,6 +4,9 @@ class NavigationService {
   static final GlobalKey<NavigatorState> navigatorKey =
       GlobalKey<NavigatorState>();
 
+  static final GlobalKey<ScaffoldMessengerState> messengerKey =
+      GlobalKey<ScaffoldMessengerState>();
+
   /// ID المنتسية المعلّق للانتقال إليها عند فتح الإشعار
   static final ValueNotifier<int?> pendingMontasiaId =
       ValueNotifier<int?>(null);

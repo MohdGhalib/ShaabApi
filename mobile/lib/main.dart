@@ -61,6 +61,18 @@ void main() async {
     existingWorkPolicy: ExistingPeriodicWorkPolicy.keep,
   );
 
+  // ── معالج رسائل FCM عند فتح التطبيق (المقدمة) ──────────────────────────
+  // يُسجَّل هنا مرة واحدة في الـ main isolate بدون أي شرط _initialized
+  FirebaseMessaging.onMessage.listen((RemoteMessage message) {
+    final title      = message.notification?.title ?? message.data['title'] ?? 'إشعار';
+    final body       = message.notification?.body  ?? message.data['body']  ?? '';
+    final montasiaId = message.data['montasiaId']?.toString();
+    if (body.isNotEmpty) {
+      NotificationService.show(message.hashCode, title, body, payload: montasiaId);
+      NotificationService.showInAppBanner(title, body, montasiaId: montasiaId);
+    }
+  });
+
   // معالج النقر على إشعار FCM والتطبيق في الخلفية
   FirebaseMessaging.onMessageOpenedApp.listen((RemoteMessage message) {
     if (message.data.isNotEmpty) {
@@ -83,8 +95,9 @@ class ShaabApp extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
-      title:        'الشعب',
-      navigatorKey: NavigationService.navigatorKey,
+      title:                'الشعب',
+      navigatorKey:         NavigationService.navigatorKey,
+      scaffoldMessengerKey: NavigationService.messengerKey,
       debugShowCheckedModeBanner: false,
       theme: ThemeData(
         colorScheme:  ColorScheme.fromSeed(

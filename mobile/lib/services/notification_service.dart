@@ -43,19 +43,7 @@ class NotificationService {
         ?.createNotificationChannel(channel);
 
     _initialized = true;
-
-    // استقبال رسائل FCM وهو التطبيق في المقدمة
-    FirebaseMessaging.onMessage.listen((RemoteMessage message) {
-      final title      = message.notification?.title ?? message.data['title'] ?? 'إشعار';
-      final body       = message.notification?.body  ?? message.data['body']  ?? '';
-      final montasiaId = message.data['montasiaId']?.toString();
-      if (body.isNotEmpty) {
-        // إشعار محلي في درج الإشعارات
-        show(message.hashCode, title, body, payload: montasiaId);
-        // بانر داخل التطبيق يضمن الظهور حتى لو كان التطبيق في المقدمة
-        showInAppBanner(title, body, montasiaId: montasiaId);
-      }
-    });
+    // onMessage.listen مسجَّل في main.dart لضمان تشغيله في الـ main isolate دائماً
   }
 
   static Future<void> requestPermission() async {
@@ -105,33 +93,64 @@ class NotificationService {
 
   /// بانر إشعار داخلي يظهر فوق الشاشة عند استقبال إشعار والتطبيق مفتوح
   static void showInAppBanner(String title, String body, {String? montasiaId}) {
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      final context = NavigationService.navigatorKey.currentContext;
-      if (context == null) return;
-      try {
-        final overlay = Overlay.of(context);
-        late OverlayEntry entry;
-        entry = OverlayEntry(
-          builder: (_) => _NotificationBanner(
-            title: title,
-            body: body,
-            onTap: () {
-              try { entry.remove(); } catch (_) {}
-              if (montasiaId != null) {
-                NavigationService.handleData({'montasiaId': montasiaId});
-              }
-            },
-            onDismiss: () {
-              try { entry.remove(); } catch (_) {}
-            },
-          ),
-        );
-        overlay.insert(entry);
-        Future.delayed(const Duration(seconds: 5), () {
-          try { entry.remove(); } catch (_) {}
-        });
-      } catch (_) {}
-    });
+    // الطريقة الأساسية: OverlayEntry عبر NavigatorState مباشرة
+    final overlay = NavigationService.navigatorKey.currentState?.overlay;
+    if (overlay != null) {
+      late OverlayEntry entry;
+      entry = OverlayEntry(
+        builder: (_) => _NotificationBanner(
+          title: title,
+          body: body,
+          onTap: () {
+            try { entry.remove(); } catch (_) {}
+            if (montasiaId != null) {
+              NavigationService.handleData({'montasiaId': montasiaId});
+            }
+          },
+          onDismiss: () {
+            try { entry.remove(); } catch (_) {}
+          },
+        ),
+      );
+      overlay.insert(entry);
+      Future.delayed(const Duration(seconds: 5), () {
+        try { entry.remove(); } catch (_) {}
+      });
+      return;
+    }
+
+    // الطريقة الاحتياطية: SnackBar عبر ScaffoldMessengerKey
+    final messenger = NavigationService.messengerKey.currentState;
+    if (messenger == null) return;
+    messenger.showSnackBar(SnackBar(
+      content: Directionality(
+        textDirection: TextDirection.rtl,
+        child: Row(children: [
+          const Icon(Icons.notifications_active, color: Color(0xFF81C784), size: 20),
+          const SizedBox(width: 10),
+          Expanded(child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Text(title, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13)),
+              if (body.isNotEmpty)
+                Text(body, style: const TextStyle(fontSize: 12, color: Colors.white70)),
+            ],
+          )),
+        ]),
+      ),
+      backgroundColor: const Color(0xFF1E2A1E),
+      duration: const Duration(seconds: 5),
+      behavior: SnackBarBehavior.floating,
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+      action: montasiaId != null
+          ? SnackBarAction(
+              label: 'عرض',
+              textColor: const Color(0xFF81C784),
+              onPressed: () => NavigationService.handleData({'montasiaId': montasiaId}),
+            )
+          : null,
+    ));
   }
 }
 
