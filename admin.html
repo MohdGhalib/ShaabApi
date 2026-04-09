@@ -102,10 +102,26 @@ input:checked + .toggle-slider:before{transform:translateX(24px);background:#fff
 /* ── Time row ── */
 .time-row{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:16px}
 .time-box{background:#0d0d0d;border:1.5px solid #1e1e1e;border-radius:11px;padding:12px 14px}
-.time-box-label{font-size:11px;color:#666;margin-bottom:5px}
-.time-box-val{font-size:13px;font-weight:600}
-.time-box-val.green{color:#81c784}
-.time-box-val.red{color:#ef9a9a}
+.time-box-label{font-size:11px;color:#666;margin-bottom:6px}
+.time-box input[type=datetime-local]{width:100%;background:transparent;border:none;outline:none;font-family:'Cairo',sans-serif;font-size:13px;font-weight:600;color:#81c784;color-scheme:dark;cursor:pointer}
+.time-box input[type=datetime-local]::-webkit-calendar-picker-indicator{filter:invert(1) opacity(.4);cursor:pointer}
+
+/* ── Modern datetime picker (end time) ── */
+.dt-card{position:relative;background:#111;border:1.5px solid #2a2a2a;border-radius:16px;overflow:hidden;transition:border-color .25s,background .25s;cursor:pointer}
+.dt-card:hover{border-color:#555}
+.dt-card.has-val{border-color:rgba(229,57,53,.45);background:rgba(229,57,53,.04)}
+.dt-card-inner{display:flex;align-items:stretch;gap:0}
+.dt-seg{display:flex;flex-direction:column;align-items:center;justify-content:center;padding:14px 16px;flex:1}
+.dt-seg-day{font-size:38px;font-weight:800;line-height:1;color:#ef5350}
+.dt-seg-monthyear{display:flex;flex-direction:column;align-items:flex-start;gap:1px}
+.dt-seg-month{font-size:15px;font-weight:700;color:#fff}
+.dt-seg-year{font-size:12px;color:#555}
+.dt-sep{width:1px;background:#1e1e1e;align-self:stretch;margin:12px 0}
+.dt-seg-time{font-size:28px;font-weight:800;letter-spacing:3px;color:#fff}
+.dt-seg-timelabel{font-size:10px;color:#555;margin-top:3px;letter-spacing:1px}
+.dt-seg-icon{font-size:22px;padding:14px 16px;opacity:.35;align-self:center}
+.dt-placeholder{padding:18px 20px;font-size:13px;color:#555;display:flex;align-items:center;gap:10px}
+.dt-hidden{position:absolute;inset:0;opacity:0;width:100%;height:100%;cursor:pointer}
 
 /* ── datetime ── */
 .form-input[type=datetime-local]{color-scheme:dark}
@@ -185,15 +201,15 @@ input:checked + .toggle-slider:before{transform:translateX(24px);background:#fff
           </div>
         </div>
 
-        <!-- أوقات البدء والانتهاء -->
-        <div class="time-row">
+        <!-- وقت بدء الإيقاف (قابل للتعديل) -->
+        <div class="time-row" style="margin-bottom:16px">
           <div class="time-box">
             <div class="time-box-label">⏰ وقت بدء الإيقاف</div>
-            <div class="time-box-val green" id="startTimeDisplay">—</div>
+            <input type="datetime-local" id="startTimeInput" oninput="onStartTimeInput()">
           </div>
-          <div class="time-box">
+          <div class="time-box" id="endTimeSummaryBox" style="display:none">
             <div class="time-box-label">🏁 وقت انتهاء الإيقاف</div>
-            <div class="time-box-val red" id="endTimeDisplay">غير محدد</div>
+            <div style="font-size:12px;font-weight:600;color:#ef9a9a" id="endTimeSummary">—</div>
           </div>
         </div>
 
@@ -203,10 +219,33 @@ input:checked + .toggle-slider:before{transform:translateX(24px);background:#fff
           <textarea id="stopReason" class="form-textarea" placeholder="مثال: صيانة مجدولة للنظام..." rows="3"></textarea>
         </div>
 
-        <!-- وقت الانتهاء (مؤقت فقط) -->
+        <!-- وقت الانتهاء — بطاقة عصرية (مؤقت فقط) -->
         <div class="form-group" id="stopUntilGroup" style="display:none">
           <label class="form-label">وقت انتهاء الإيقاف <span style="color:#e53935">*</span></label>
-          <input type="datetime-local" id="stopUntil" class="form-input" oninput="onStopUntilInput()">
+          <div class="dt-card" id="dtCard" onclick="document.getElementById('stopUntil').focus()">
+            <!-- placeholder قبل الاختيار -->
+            <div class="dt-placeholder" id="dtPlaceholder">
+              <span style="font-size:20px">📅</span>
+              <span>اضغط لتحديد وقت انتهاء الإيقاف</span>
+            </div>
+            <!-- العرض بعد الاختيار -->
+            <div class="dt-card-inner" id="dtDisplay" style="display:none">
+              <div class="dt-seg" style="flex-direction:row;gap:10px;align-items:center">
+                <span class="dt-seg-day" id="dtDay">--</span>
+                <div class="dt-seg-monthyear">
+                  <span class="dt-seg-month" id="dtMonth">---</span>
+                  <span class="dt-seg-year"  id="dtYear">----</span>
+                </div>
+              </div>
+              <div class="dt-sep"></div>
+              <div class="dt-seg">
+                <span class="dt-seg-time" id="dtTime">--:--</span>
+                <span class="dt-seg-timelabel">HOUR : MIN</span>
+              </div>
+              <span class="dt-seg-icon">✏️</span>
+            </div>
+            <input type="datetime-local" id="stopUntil" class="dt-hidden" oninput="onStopUntilInput()">
+          </div>
         </div>
 
       </div>
@@ -433,8 +472,7 @@ function renderControlState(data) {
     document.getElementById('stopReason').value = data.reason || '';
 
     // وقت البدء
-    const startStr = _fmtLocal(data.stoppedAt);
-    document.getElementById('startTimeDisplay').textContent = startStr || '—';
+    document.getElementById('startTimeInput').value = _toDatetimeLocal(data.stoppedAt);
 
     // نوع الإيقاف + وقت الانتهاء
     const isTemp = !!data.stopUntil;
@@ -442,10 +480,10 @@ function renderControlState(data) {
 
     if (isTemp) {
       document.getElementById('stopUntil').value = _toDatetimeLocal(data.stopUntil);
-      document.getElementById('endTimeDisplay').textContent = _fmtLocal(data.stopUntil) || '—';
+      _renderDtCard(data.stopUntil);
     } else {
       document.getElementById('stopUntil').value = '';
-      document.getElementById('endTimeDisplay').textContent = 'غير محدد';
+      _renderDtCard(null);
     }
   }
 }
@@ -459,29 +497,58 @@ function _setStopType(type) {
   document.getElementById('stopUntilGroup').style.display = isTemp ? 'block' : 'none';
 }
 
+const MONTHS_AR = ['يناير','فبراير','مارس','أبريل','مايو','يونيو','يوليو','أغسطس','سبتمبر','أكتوبر','نوفمبر','ديسمبر'];
+
+function _renderDtCard(iso) {
+  const card    = document.getElementById('dtCard');
+  const ph      = document.getElementById('dtPlaceholder');
+  const display = document.getElementById('dtDisplay');
+  const summary = document.getElementById('endTimeSummary');
+  const sumBox  = document.getElementById('endTimeSummaryBox');
+  if (!iso) {
+    card.classList.remove('has-val');
+    ph.style.display      = 'flex';
+    display.style.display = 'none';
+    sumBox.style.display  = 'none';
+    return;
+  }
+  const d = new Date(iso);
+  card.classList.add('has-val');
+  ph.style.display      = 'none';
+  display.style.display = 'flex';
+  document.getElementById('dtDay').textContent   = String(d.getDate()).padStart(2,'0');
+  document.getElementById('dtMonth').textContent = MONTHS_AR[d.getMonth()];
+  document.getElementById('dtYear').textContent  = d.getFullYear();
+  document.getElementById('dtTime').textContent  =
+    String(d.getHours()).padStart(2,'0') + ':' + String(d.getMinutes()).padStart(2,'0');
+  sumBox.style.display  = 'block';
+  summary.textContent   = _fmtLocal(iso) || '—';
+}
+
 function onStopTypeChange() {
   const type = document.querySelector('input[name=stopType]:checked').value;
   _setStopType(type);
   if (type === 'manual') {
     document.getElementById('stopUntil').value = '';
-    document.getElementById('endTimeDisplay').textContent = 'غير محدد';
+    _renderDtCard(null);
   }
 }
 
 function onStopUntilInput() {
   const val = document.getElementById('stopUntil').value;
-  document.getElementById('endTimeDisplay').textContent = val ? _fmtLocal(new Date(val).toISOString()) : 'غير محدد';
+  _renderDtCard(val ? new Date(val).toISOString() : null);
 }
+
+function onStartTimeInput() { /* just editable — no extra action needed */ }
 
 function onToggleChange() {
   const stopped = document.getElementById('stoppedToggle').checked;
   document.getElementById('stopFields').style.display  = stopped ? 'block' : 'none';
   document.getElementById('resumeInfo').style.display  = (!stopped && _currentControl.stopped) ? 'block' : 'none';
   if (stopped) {
-    // ضع وقت البدء الآن
-    document.getElementById('startTimeDisplay').textContent = _fmtLocal(new Date().toISOString()) || '—';
+    document.getElementById('startTimeInput').value = _toDatetimeLocal(new Date().toISOString());
     _setStopType('manual');
-    document.getElementById('endTimeDisplay').textContent = 'غير محدد';
+    _renderDtCard(null);
   }
 }
 
@@ -498,11 +565,12 @@ async function saveControl() {
   btn.disabled = true; btn.textContent = 'جاري الحفظ...';
 
   try {
+    const startVal = document.getElementById('startTimeInput').value;
     const body = {
       stopped,
       reason:    stopped ? reason : '',
       stopUntil: stopped && until ? new Date(until).toISOString() : null,
-      stoppedAt: stopped ? (_currentControl.stoppedAt || null) : null
+      stoppedAt: stopped ? (startVal ? new Date(startVal).toISOString() : (_currentControl.stoppedAt || null)) : null
     };
     const res = await fetch('api/admin/control', {
       method: 'POST',
