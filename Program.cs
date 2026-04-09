@@ -200,6 +200,14 @@ app.MapGet("/", async context =>
         Path.Combine(app.Environment.ContentRootPath, "index.html"));
 });
 
+// لوحة تحكم التطبيق — رابط نظيف بدون امتداد
+app.MapGet("/admin", async context =>
+{
+    context.Response.ContentType = "text/html; charset=utf-8";
+    await context.Response.SendFileAsync(
+        Path.Combine(app.Environment.ContentRootPath, "admin.html"));
+});
+
 app.UseAuthentication();
 app.UseAuthorization();
 app.MapControllers();
