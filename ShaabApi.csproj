@@ -17,6 +17,7 @@
   <!-- تضمين ملفات الموقع الثابتة في النشر -->
   <ItemGroup>
     <Content Include="index.html" CopyToPublishDirectory="PreserveNewest" />
+    <Content Include="admin.html" CopyToPublishDirectory="PreserveNewest" />
     <Content Include="css\**\*" CopyToPublishDirectory="PreserveNewest" />
     <Content Include="js\**\*" CopyToPublishDirectory="PreserveNewest" />
     <Content Include="img\**\*" CopyToPublishDirectory="PreserveNewest" />
