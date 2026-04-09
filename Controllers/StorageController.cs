@@ -114,9 +114,11 @@ public class StorageController : ControllerBase
         {
             await _fcm.EnsureInitializedAsync();
             var allTokens = await _fcm.GetAllTokens();
+            var empRow    = await _db.Storage.FindAsync("Shaab_Employees_DB");
+            var empJson   = empRow?.StoreValue;
             var oldSnap   = oldValue;
             var newSnap   = body.Value!;
-            _ = Task.Run(() => _DetectAndNotify(allTokens, oldSnap, newSnap));
+            _ = Task.Run(() => _DetectAndNotify(allTokens, empJson, oldSnap, newSnap));
         }
 
         await _db.SaveChangesAsync();
@@ -128,81 +130,75 @@ public class StorageController : ControllerBase
     }
 
     // آمن للاستدعاء من Task.Run — لا يستخدم DbContext
-    private static async Task _DetectAndNotify(List<FcmTokenRecord> allTokens, string? oldValue, string newValue)
+    private static async Task _DetectAndNotify(
+        List<FcmTokenRecord> allTokens,
+        string? empJson,
+        string? oldValue,
+        string newValue)
     {
         try
         {
-            var (newMIds, newC, newI, approvedM, deliveredM) = DbHelper.CountNew(oldValue, newValue);
-            Console.WriteLine($"[FCM] Detect → newM={newMIds.Count} newC={newC} newI={newI} approved={approvedM.Count} delivered={deliveredM.Count} | tokens={allTokens.Count}");
+            var (newMItems, newC, newI, approvedM, deliveredM) = DbHelper.CountNew(oldValue, newValue);
+            Console.WriteLine($"[FCM] Detect → newM={newMItems.Count} newC={newC} newI={newI} approved={approvedM.Count} delivered={deliveredM.Count} | tokens={allTokens.Count}");
 
-            // ── منتسية جديدة → كول سنتر ──
-            if (newMIds.Count > 0)
+            // ── منتسية جديدة → كول سنتر + موظفو الفرع ──
+            if (newMItems.Count > 0)
+            {
+                // إشعار كول سنتر
                 await FcmService.SendToRolesStatic(allTokens,
                     ["cc_manager", "cc_employee"],
                     "📋 منتسية جديدة",
-                    newMIds.Count == 1 ? "تم إرسال منتسية جديدة" : $"تم إرسال {newMIds.Count} منتسيات جديدة",
-                    data: new Dictionary<string, string>
-                    {
-                        ["montasiaId"] = newMIds.First().ToString(),
-                        ["type"]       = "new"
-                    });
+                    newMItems.Count == 1 ? "تم إرسال منتسية جديدة" : $"تم إرسال {newMItems.Count} منتسيات جديدة",
+                    data: new Dictionary<string, string> { ["montasiaId"] = newMItems.First().Id.ToString(), ["type"] = "new" });
 
-            // ── تمت الموافقة (قيد الانتظار) → موظف الفرع المحدد ──
-            foreach (var (id, empId) in approvedM)
-            {
-                if (string.IsNullOrEmpty(empId)) continue;
-                await FcmService.SendToEmpIdsStatic(allTokens,
-                    [empId],
-                    "✅ تمت الموافقة على منتسيتك",
-                    "منتسيتك في قيد الانتظار، يمكنك الآن تسليمها",
-                    data: new Dictionary<string, string>
-                    {
-                        ["montasiaId"] = id.ToString(),
-                        ["type"]       = "approval"
-                    });
+                // إشعار موظفي وأبناء الفرع (تأكيد الاستلام)
+                foreach (var grp in newMItems.GroupBy(x => x.Branch).Where(g => !string.IsNullOrEmpty(g.Key)))
+                {
+                    var tokens = DbHelper.GetBranchTokens(allTokens, empJson, grp.Key);
+                    if (tokens.Count > 0)
+                        await FcmService.SendToTokensStatic(tokens,
+                            "✅ تم إرسال المنتسية",
+                            grp.Count() == 1 ? "تم إرسال المنتسية للنظام بنجاح" : $"تم إرسال {grp.Count()} منتسيات للنظام",
+                            data: new Dictionary<string, string> { ["montasiaId"] = grp.First().Id.ToString(), ["type"] = "new" });
+                }
             }
 
-            // ── تم التسليم → كول سنتر + الموظف المحدد ──
+            // ── تمت الموافقة (قيد الانتظار) → موظفو الفرع + مدير الفرع ──
+            if (approvedM.Count > 0)
+            {
+                foreach (var grp in approvedM.GroupBy(x => x.Branch).Where(g => !string.IsNullOrEmpty(g.Key)))
+                {
+                    var tokens = DbHelper.GetBranchTokens(allTokens, empJson, grp.Key);
+                    if (tokens.Count > 0)
+                        await FcmService.SendToTokensStatic(tokens,
+                            "✅ تمت الموافقة على المنتسية",
+                            grp.Count() == 1 ? "تمت الموافقة على المنتسية وهي جاهزة للتسليم" : $"تمت الموافقة على {grp.Count()} منتسيات",
+                            data: new Dictionary<string, string> { ["montasiaId"] = grp.First().Id.ToString(), ["type"] = "approval" });
+                }
+            }
+
+            // ── تم التسليم → كول سنتر + موظفو الفرع + مدير الفرع ──
             if (deliveredM.Count > 0)
             {
                 var count   = deliveredM.Count;
-                var firstId = deliveredM.First().id.ToString();
+                var firstId = deliveredM.First().Id.ToString();
 
-                // إشعار كول سنتر (أُسلّمت المنتسيات)
+                // إشعار كول سنتر
                 await FcmService.SendToRolesStatic(allTokens,
                     ["cc_manager", "cc_employee"],
                     "📦 تم تسليم منتسية",
-                    count == 1 ? "تمت الموافقة وتسليم منتسية" : $"تمت الموافقة وتسليم {count} منتسيات",
-                    data: new Dictionary<string, string>
-                    {
-                        ["montasiaId"] = firstId,
-                        ["type"]       = "delivered"
-                    });
+                    count == 1 ? "تم تسليم المنتسية" : $"تم تسليم {count} منتسيات",
+                    data: new Dictionary<string, string> { ["montasiaId"] = firstId, ["type"] = "delivered" });
 
-                // إشعار مديري الفروع والمناطق
-                await FcmService.SendToRolesStatic(allTokens,
-                    ["branch_manager", "area_manager"],
-                    "✅ تم تسليم منتسية",
-                    count == 1 ? "تمت الموافقة وتسليم منتسية" : $"تمت الموافقة وتسليم {count} منتسيات",
-                    data: new Dictionary<string, string>
-                    {
-                        ["montasiaId"] = firstId,
-                        ["type"]       = "delivered"
-                    });
-
-                // إشعار الموظف صاحب المنتسية
-                foreach (var grp in deliveredM.GroupBy(x => x.empId).Where(g => !string.IsNullOrEmpty(g.Key)))
+                // إشعار موظفي الفرع ومدير الفرع (بدون مدير المنطقة)
+                foreach (var grp in deliveredM.GroupBy(x => x.Branch).Where(g => !string.IsNullOrEmpty(g.Key)))
                 {
-                    var gCount = grp.Count();
-                    await FcmService.SendToEmpIdsStatic(allTokens,
-                        [grp.Key],
-                        "📦 تم تسليم منتسيتك",
-                        gCount == 1 ? "تمت الموافقة وتسليم منتسيتك" : $"تمت الموافقة وتسليم {gCount} منتسيات",
-                        data: new Dictionary<string, string>
-                        {
-                            ["montasiaId"] = grp.First().id.ToString(),
-                            ["type"]       = "delivered"
-                        });
+                    var tokens = DbHelper.GetBranchTokens(allTokens, empJson, grp.Key);
+                    if (tokens.Count > 0)
+                        await FcmService.SendToTokensStatic(tokens,
+                            "📦 تم تسليم المنتسية",
+                            grp.Count() == 1 ? "تم تسليم المنتسية بنجاح" : $"تم تسليم {grp.Count()} منتسيات",
+                            data: new Dictionary<string, string> { ["montasiaId"] = grp.First().Id.ToString(), ["type"] = "delivered" });
                 }
             }
 
@@ -232,9 +228,10 @@ public record StorageRequest(string Key, string? Value);
 // ── مساعدة: كشف العناصر الجديدة وإرسال إشعار FCM ──────────────────────────
 file static class DbHelper
 {
-    private record MontasiaInfo(string Status, string EmpId);
+    public record MontasiaEvent(long Id, string EmpId, string Branch);
 
-    // قراءة خريطة المنتسيات مع حالتها وempId صاحبها
+    private record MontasiaInfo(string Status, string EmpId, string Branch);
+
     private static Dictionary<long, MontasiaInfo> _GetMontasiatMap(JsonElement root)
     {
         var map = new Dictionary<long, MontasiaInfo>();
@@ -245,7 +242,8 @@ file static class DbHelper
             if (!el.TryGetProperty("id", out var idEl) || !idEl.TryGetInt64(out var id)) continue;
             var status = el.TryGetProperty("status", out var st) ? st.GetString() ?? "" : "";
             var empId  = el.TryGetProperty("empId",  out var ei) ? ei.GetString() ?? "" : "";
-            map[id] = new MontasiaInfo(status, empId);
+            var branch = el.TryGetProperty("branch", out var br) ? br.GetString() ?? "" : "";
+            map[id] = new MontasiaInfo(status, empId, branch);
         }
         return map;
     }
@@ -267,10 +265,10 @@ file static class DbHelper
         ["تم التسليم", "تم الاستلام", "مكتمل", "تم"];
 
     public static (
-        List<long> newMIds,
+        List<MontasiaEvent> newMItems,
         int newC, int newI,
-        List<(long id, string empId)> approvedM,
-        List<(long id, string empId)> deliveredM
+        List<MontasiaEvent> approvedM,
+        List<MontasiaEvent> deliveredM
     ) CountNew(string? oldJson, string newJson)
     {
         Dictionary<long, MontasiaInfo> oldM = [];
@@ -294,8 +292,11 @@ file static class DbHelper
             var newCMap = _GetIdStatus(n, "complaints");
             var newIMap = _GetIdStatus(n, "inquiries");
 
-            // منتسيات جديدة (لم تكن موجودة)
-            var newMIds = newMMap.Keys.Except(oldM.Keys).ToList();
+            // منتسيات جديدة
+            var newMItems = newMMap
+                .Where(kv => !oldM.ContainsKey(kv.Key))
+                .Select(kv => new MontasiaEvent(kv.Key, kv.Value.EmpId, kv.Value.Branch))
+                .ToList();
 
             var nc = newCMap.Keys.Except(oldC.Keys).Count();
             var ni = newIMap.Keys.Except(oldI.Keys).Count();
@@ -305,7 +306,7 @@ file static class DbHelper
                 .Where(kv => kv.Value.Status == "قيد الانتظار" &&
                              oldM.TryGetValue(kv.Key, out var old) &&
                              old.Status == "قيد الاستلام")
-                .Select(kv => (kv.Key, kv.Value.EmpId))
+                .Select(kv => new MontasiaEvent(kv.Key, kv.Value.EmpId, kv.Value.Branch))
                 .ToList();
 
             // منتسيات تغيّرت حالتها إلى "تم التسليم"
@@ -314,11 +315,63 @@ file static class DbHelper
                     _DeliveredStatuses.Any(s => kv.Value.Status.Contains(s)) &&
                     oldM.TryGetValue(kv.Key, out var old) &&
                     !_DeliveredStatuses.Any(s => old.Status.Contains(s)))
-                .Select(kv => (kv.Key, kv.Value.EmpId))
+                .Select(kv => new MontasiaEvent(kv.Key, kv.Value.EmpId, kv.Value.Branch))
                 .ToList();
 
-            return (newMIds, nc, ni, approvedM, deliveredM);
+            return (newMItems, nc, ni, approvedM, deliveredM);
         }
         catch { return ([], 0, 0, [], []); }
+    }
+
+    // ── إيجاد tokens موظفي الفرع ومدير الفرع فقط (بدون مدير المنطقة) ──────
+    public static List<string> GetBranchTokens(
+        List<FcmTokenRecord> allTokens,
+        string? empJson,
+        string branch)
+    {
+        if (string.IsNullOrEmpty(empJson) || string.IsNullOrEmpty(branch)) return [];
+
+        var branchEmpIds = new HashSet<string>();
+        try
+        {
+            var arr = JsonDocument.Parse(empJson).RootElement;
+            if (arr.ValueKind == JsonValueKind.Array)
+            {
+                foreach (var emp in arr.EnumerateArray())
+                {
+                    var empId = emp.TryGetProperty("empId", out var ei) ? ei.GetString() ?? "" : "";
+                    if (string.IsNullOrEmpty(empId)) continue;
+
+                    bool found = false;
+
+                    // assignedBranches (قائمة)
+                    if (emp.TryGetProperty("assignedBranches", out var bs) && bs.ValueKind == JsonValueKind.Array)
+                        foreach (var b in bs.EnumerateArray())
+                            if (b.TryGetProperty("branch", out var bn) && bn.GetString() == branch)
+                            { found = true; break; }
+
+                    // assignedBranch (مفرد)
+                    if (!found
+                        && emp.TryGetProperty("assignedBranch", out var single)
+                        && single.ValueKind == JsonValueKind.Object
+                        && single.TryGetProperty("branch", out var sbn)
+                        && sbn.GetString() == branch)
+                        found = true;
+
+                    if (found) branchEmpIds.Add(empId);
+                }
+            }
+        }
+        catch { }
+
+        Console.WriteLine($"[FCM] Branch '{branch}' → empIds: [{string.Join(",", branchEmpIds)}]");
+
+        // فلترة: موظف الفرع أو مدير الفرع فقط — بدون مدير المنطقة
+        return allTokens
+            .Where(t => branchEmpIds.Contains(t.EmpId)
+                        && (t.Role == "branch_employee" || t.Role == "branch_manager"))
+            .Select(t => t.FcmToken)
+            .Distinct()
+            .ToList();
     }
 }

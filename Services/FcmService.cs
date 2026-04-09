@@ -105,6 +105,17 @@ public class FcmService
         await SendBatch(tokens, title, body, data);
     }
 
+    // ── إرسال إشعار لقائمة tokens مباشرة ────────────────────────────────
+    public static async Task SendToTokensStatic(
+        List<string> tokens,
+        string title,
+        string body,
+        Dictionary<string, string>? data = null)
+    {
+        if (!_initialized || tokens.Count == 0) return;
+        await SendBatch(tokens, title, body, data);
+    }
+
     // ── إرسال إشعار لموظفين محددين بـ empId ──────────────────────────────
     public static async Task SendToEmpIdsStatic(
         List<FcmTokenRecord> allTokens,
