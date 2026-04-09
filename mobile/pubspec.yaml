@@ -30,6 +30,9 @@ dependencies:
   # تشفير
   crypto: ^3.0.3
 
+  # روابط خارجية
+  url_launcher: ^6.3.0
+
   # واجهة
   google_fonts: ^6.2.1
 

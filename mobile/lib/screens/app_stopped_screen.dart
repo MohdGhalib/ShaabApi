@@ -1,5 +1,6 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
+import 'package:url_launcher/url_launcher.dart';
 import '../services/api_service.dart';
 import 'splash_screen.dart';
 
@@ -183,6 +184,48 @@ class _AppStoppedScreenState extends State<AppStoppedScreen> {
                   'يُرجى الانتظار حتى يُستأنف التطبيق',
                   textDirection: TextDirection.rtl,
                   style: TextStyle(color: Colors.white38, fontSize: 12),
+                ),
+                const SizedBox(height: 28),
+
+                // أزرار التحديث والتواصل
+                Row(
+                  children: [
+                    Expanded(
+                      child: OutlinedButton.icon(
+                        icon: const Icon(Icons.refresh_rounded, size: 18),
+                        label: const Text('تحديث',
+                            style: TextStyle(fontSize: 14, fontWeight: FontWeight.w700)),
+                        style: OutlinedButton.styleFrom(
+                          foregroundColor: const Color(0xFF4DD0E1),
+                          side: const BorderSide(color: Color(0xFF4DD0E1), width: 1.3),
+                          padding: const EdgeInsets.symmetric(vertical: 13),
+                          shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(12)),
+                        ),
+                        onPressed: _check,
+                      ),
+                    ),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: ElevatedButton.icon(
+                        icon: const Icon(Icons.phone_rounded, size: 18),
+                        label: const Text('تواصل',
+                            style: TextStyle(fontSize: 14, fontWeight: FontWeight.w700)),
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: const Color(0xFF2E7D32),
+                          foregroundColor: Colors.white,
+                          padding: const EdgeInsets.symmetric(vertical: 13),
+                          shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(12)),
+                          elevation: 0,
+                        ),
+                        onPressed: () async {
+                          final uri = Uri(scheme: 'tel', path: '0785110515');
+                          if (await canLaunchUrl(uri)) await launchUrl(uri);
+                        },
+                      ),
+                    ),
+                  ],
                 ),
               ],
             ),
