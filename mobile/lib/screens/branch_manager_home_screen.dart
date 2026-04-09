@@ -42,12 +42,17 @@ class _BranchManagerHomeScreenState extends State<BranchManagerHomeScreen>
     if (NavigationService.pendingMontasiaId.value != null) {
       WidgetsBinding.instance.addPostFrameCallback((_) => _switchToMontasiat());
     }
+    if (NavigationService.pendingComplaintId.value != null) {
+      WidgetsBinding.instance.addPostFrameCallback((_) => _switchToComplaints());
+    }
     NavigationService.pendingMontasiaId.addListener(_onPendingMontasia);
+    NavigationService.pendingComplaintId.addListener(_onPendingComplaint);
   }
 
   @override
   void dispose() {
     NavigationService.pendingMontasiaId.removeListener(_onPendingMontasia);
+    NavigationService.pendingComplaintId.removeListener(_onPendingComplaint);
     WidgetsBinding.instance.removeObserver(this);
     _refreshTrigger.dispose();
     super.dispose();
@@ -59,8 +64,19 @@ class _BranchManagerHomeScreenState extends State<BranchManagerHomeScreen>
     }
   }
 
+  void _onPendingComplaint() {
+    if (NavigationService.pendingComplaintId.value != null) {
+      _switchToComplaints();
+    }
+  }
+
   void _switchToMontasiat() {
     setState(() => _tab = 1);
+    _refreshTrigger.value++;
+  }
+
+  void _switchToComplaints() {
+    setState(() => _tab = 2);
     _refreshTrigger.value++;
   }
 

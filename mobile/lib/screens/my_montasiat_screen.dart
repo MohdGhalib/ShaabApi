@@ -121,7 +121,6 @@ class _MyMontasiatScreenState extends State<MyMontasiatScreen>
         .cast<Map<String, dynamic>>()
         .where((x) {
           if (x['deleted'] == true) return false;
-          if ((x['addedBy'] ?? '') != widget.name) return false;
           if (x['source'] != 'mobile') return false;
           // فلترة حسب الفروع المخصصة إن وُجدت
           if (_assignedBranches.isNotEmpty) {
@@ -744,7 +743,7 @@ class _MyMontasiatScreenState extends State<MyMontasiatScreen>
                             Icon(Icons.inbox_outlined,
                                 color: Colors.white24, size: 64),
                             SizedBox(height: 16),
-                            Text('لم ترسل أي منتسية بعد',
+                            Text('لا توجد منتسيات للفرع',
                                 style: TextStyle(
                                     color: Colors.white38, fontSize: 16)),
                           ]),

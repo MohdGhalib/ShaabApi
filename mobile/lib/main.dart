@@ -64,12 +64,17 @@ void main() async {
   // ── معالج رسائل FCM عند فتح التطبيق (المقدمة) ──────────────────────────
   // يُسجَّل هنا مرة واحدة في الـ main isolate بدون أي شرط _initialized
   FirebaseMessaging.onMessage.listen((RemoteMessage message) {
-    final title      = message.notification?.title ?? message.data['title'] ?? 'إشعار';
-    final body       = message.notification?.body  ?? message.data['body']  ?? '';
-    final montasiaId = message.data['montasiaId']?.toString();
+    final title       = message.notification?.title ?? message.data['title'] ?? 'إشعار';
+    final body        = message.notification?.body  ?? message.data['body']  ?? '';
+    final montasiaId  = message.data['montasiaId']?.toString();
+    final complaintId = message.data['complaintId']?.toString();
     if (body.isNotEmpty) {
-      NotificationService.show(message.hashCode, title, body, payload: montasiaId);
-      NotificationService.showInAppBanner(title, body, montasiaId: montasiaId);
+      final payload = complaintId != null
+          ? 'complaintId:$complaintId'
+          : montasiaId;
+      NotificationService.show(message.hashCode, title, body, payload: payload);
+      NotificationService.showInAppBanner(title, body,
+          montasiaId: montasiaId, complaintId: complaintId);
     }
   });
 

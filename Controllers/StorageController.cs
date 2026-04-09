@@ -138,7 +138,8 @@ public class StorageController : ControllerBase
     {
         try
         {
-            var (newMItems, newC, newI, approvedM, deliveredM) = DbHelper.CountNew(oldValue, newValue);
+            var (newMItems, newCIds, newI, approvedM, deliveredM) = DbHelper.CountNew(oldValue, newValue);
+            var newC = newCIds.Count;
             Console.WriteLine($"[FCM] Detect → newM={newMItems.Count} newC={newC} newI={newI} approved={approvedM.Count} delivered={deliveredM.Count} | tokens={allTokens.Count}");
 
             // ── منتسية جديدة → كول سنتر + موظفو الفرع ──
@@ -207,7 +208,8 @@ public class StorageController : ControllerBase
                 await FcmService.SendToRolesStatic(allTokens,
                     ["cc_manager", "control_employee", "branch_manager", "area_manager"],
                     "🚨 شكوى جديدة",
-                    newC == 1 ? "تم إضافة شكوى جديدة" : $"تم إضافة {newC} شكاوي جديدة");
+                    newC == 1 ? "تم إضافة شكوى جديدة" : $"تم إضافة {newC} شكاوي جديدة",
+                    data: new Dictionary<string, string> { ["complaintId"] = newCIds.First().ToString(), ["type"] = "complaint" });
 
             // ── استفسار جديد → كول سنتر ──
             if (newI > 0)
@@ -266,7 +268,7 @@ file static class DbHelper
 
     public static (
         List<MontasiaEvent> newMItems,
-        int newC, int newI,
+        List<long> newCIds, int newI,
         List<MontasiaEvent> approvedM,
         List<MontasiaEvent> deliveredM
     ) CountNew(string? oldJson, string newJson)
@@ -298,7 +300,7 @@ file static class DbHelper
                 .Select(kv => new MontasiaEvent(kv.Key, kv.Value.EmpId, kv.Value.Branch))
                 .ToList();
 
-            var nc = newCMap.Keys.Except(oldC.Keys).Count();
+            var newCIds = newCMap.Keys.Except(oldC.Keys).ToList();
             var ni = newIMap.Keys.Except(oldI.Keys).Count();
 
             // منتسيات تمت الموافقة عليها: قيد الاستلام → قيد الانتظار
@@ -318,7 +320,7 @@ file static class DbHelper
                 .Select(kv => new MontasiaEvent(kv.Key, kv.Value.EmpId, kv.Value.Branch))
                 .ToList();
 
-            return (newMItems, nc, ni, approvedM, deliveredM);
+            return (newMItems, newCIds, ni, approvedM, deliveredM);
         }
         catch { return ([], 0, 0, [], []); }
     }

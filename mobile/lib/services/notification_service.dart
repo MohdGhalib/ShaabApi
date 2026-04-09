@@ -23,7 +23,12 @@ class NotificationService {
       onDidReceiveNotificationResponse: (NotificationResponse response) {
         final payload = response.payload;
         if (payload != null && payload.isNotEmpty) {
-          NavigationService.handleData({'montasiaId': payload});
+          if (payload.startsWith('complaintId:')) {
+            final id = int.tryParse(payload.substring('complaintId:'.length));
+            if (id != null) NavigationService.pendingComplaintId.value = id;
+          } else {
+            NavigationService.handleData({'montasiaId': payload});
+          }
         }
       },
     );
@@ -92,7 +97,17 @@ class NotificationService {
   }
 
   /// بانر إشعار داخلي يظهر فوق الشاشة عند استقبال إشعار والتطبيق مفتوح
-  static void showInAppBanner(String title, String body, {String? montasiaId}) {
+  static void showInAppBanner(String title, String body,
+      {String? montasiaId, String? complaintId}) {
+    void handleTap() {
+      if (montasiaId != null) {
+        NavigationService.handleData({'montasiaId': montasiaId});
+      } else if (complaintId != null) {
+        final id = int.tryParse(complaintId);
+        if (id != null) NavigationService.pendingComplaintId.value = id;
+      }
+    }
+
     // الطريقة الأساسية: OverlayEntry عبر NavigatorState مباشرة
     final overlay = NavigationService.navigatorKey.currentState?.overlay;
     if (overlay != null) {
@@ -103,9 +118,7 @@ class NotificationService {
           body: body,
           onTap: () {
             try { entry.remove(); } catch (_) {}
-            if (montasiaId != null) {
-              NavigationService.handleData({'montasiaId': montasiaId});
-            }
+            handleTap();
           },
           onDismiss: () {
             try { entry.remove(); } catch (_) {}
@@ -143,11 +156,11 @@ class NotificationService {
       duration: const Duration(seconds: 5),
       behavior: SnackBarBehavior.floating,
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-      action: montasiaId != null
+      action: (montasiaId != null || complaintId != null)
           ? SnackBarAction(
               label: 'عرض',
               textColor: const Color(0xFF81C784),
-              onPressed: () => NavigationService.handleData({'montasiaId': montasiaId}),
+              onPressed: handleTap,
             )
           : null,
     ));
