@@ -151,7 +151,7 @@ public class FcmService
                         Priority     = Priority.High,
                         Notification = new AndroidNotification
                         {
-                            ChannelId   = "shaab_main",
+                            ChannelId   = "shaab_v2",
                             Sound       = "consideration",
                             ClickAction = "FLUTTER_NOTIFICATION_CLICK",
                         }
