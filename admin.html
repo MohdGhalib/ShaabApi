@@ -197,6 +197,16 @@ input:checked + .toggle-slider:before{transform:translateX(24px);background:#fff
         <textarea id="notifBody" class="form-textarea" placeholder="اكتب نص الرسالة هنا..." rows="3"></textarea>
       </div>
 
+      <div class="form-group">
+        <label class="form-label">عدد مرات الإرسال</label>
+        <div style="display:flex;align-items:center;gap:12px">
+          <button type="button" onclick="changeRepeat(-1)" style="width:36px;height:36px;border-radius:50%;border:1.5px solid #2a2a2a;background:#111;color:#fff;font-size:20px;cursor:pointer;line-height:1;flex-shrink:0">−</button>
+          <span id="repeatCount" style="font-size:20px;font-weight:800;min-width:32px;text-align:center">1</span>
+          <button type="button" onclick="changeRepeat(1)"  style="width:36px;height:36px;border-radius:50%;border:1.5px solid #2a2a2a;background:#111;color:#fff;font-size:20px;cursor:pointer;line-height:1;flex-shrink:0">+</button>
+          <span style="font-size:12px;color:#666">مرة (بفاصل ثانية واحدة بين كل إرسال)</span>
+        </div>
+      </div>
+
       <div id="notifPreview" style="display:none;background:#111;border:1px solid #252525;border-radius:12px;padding:14px 16px;margin-bottom:16px;">
         <div style="font-size:11px;color:#666;margin-bottom:8px">معاينة الإشعار</div>
         <div style="display:flex;gap:10px;align-items:flex-start">
@@ -557,30 +567,45 @@ function _getSelectedRoles() {
     .map(inp => inp.value);
 }
 
+let _repeatCount = 1;
+function changeRepeat(delta) {
+  _repeatCount = Math.max(1, Math.min(10, _repeatCount + delta));
+  document.getElementById('repeatCount').textContent = _repeatCount;
+}
+
 async function sendBroadcast() {
-  const title = document.getElementById('notifTitle').value.trim();
-  const body  = document.getElementById('notifBody').value.trim();
-  const roles = _getSelectedRoles();
+  const title  = document.getElementById('notifTitle').value.trim();
+  const body   = document.getElementById('notifBody').value.trim();
+  const roles  = _getSelectedRoles();
+  const repeat = _repeatCount;
 
   if (!roles.length)  { showToast('اختر المستلمين', true); return; }
   if (!title)         { showToast('أدخل عنوان الإشعار', true); return; }
   if (!body)          { showToast('أدخل نص الإشعار', true); return; }
 
   const recipientLabel = roles.includes('all') ? 'جميع المستخدمين' : `${roles.length} مسمى وظيفي`;
-  if (!confirm(`إرسال إشعار إلى ${recipientLabel}؟\n\n${title}\n${body}`)) return;
+  const repeatLabel    = repeat > 1 ? ` × ${repeat} مرات` : '';
+  if (!confirm(`إرسال إشعار إلى ${recipientLabel}${repeatLabel}؟\n\n${title}\n${body}`)) return;
 
   const btn = document.getElementById('sendNotifBtn');
-  btn.disabled = true; btn.textContent = 'جاري الإرسال...';
+  btn.disabled = true;
 
   try {
-    const res = await fetch('api/admin/broadcast', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json', Authorization: 'Bearer ' + _token },
-      body: JSON.stringify({ title, body, roles })
-    });
-    const data = await res.json();
-    if (!res.ok) { showToast(data.error || 'فشل الإرسال', true); return; }
-    showToast(`✅ تم إرسال الإشعار (${data.sent ?? '?'} جهاز)`);
+    let lastSent = 0;
+    for (let i = 0; i < repeat; i++) {
+      if (i > 0) await new Promise(r => setTimeout(r, 1000));
+      btn.textContent = repeat > 1 ? `جاري الإرسال... (${i + 1}/${repeat})` : 'جاري الإرسال...';
+      const res = await fetch('api/admin/broadcast', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', Authorization: 'Bearer ' + _token },
+        body: JSON.stringify({ title, body, roles })
+      });
+      const data = await res.json();
+      if (!res.ok) { showToast(data.error || 'فشل الإرسال', true); return; }
+      lastSent = data.sent ?? 0;
+    }
+    const timesLabel = repeat > 1 ? ` × ${repeat} مرات` : '';
+    showToast(`✅ تم إرسال الإشعار (${lastSent} جهاز)${timesLabel}`);
     document.getElementById('notifTitle').value = '';
     document.getElementById('notifBody').value  = '';
     document.getElementById('notifPreview').style.display = 'none';
@@ -588,6 +613,8 @@ async function sendBroadcast() {
       c.classList.remove('selected');
       c.querySelector('input').checked = false;
     });
+    _repeatCount = 1;
+    document.getElementById('repeatCount').textContent = '1';
     updateNotifPreview();
   } catch { showToast('تعذّر الاتصال بالسيرفر', true); }
   finally { btn.disabled = false; btn.textContent = '📣 إرسال الإشعار'; }
