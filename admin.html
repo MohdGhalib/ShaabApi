@@ -92,6 +92,21 @@ input:checked + .toggle-slider:before{transform:translateX(24px);background:#fff
 .role-chip.all-chip.selected{border-color:#ff8a65;color:#ff8a65;background:rgba(255,138,101,.1)}
 .role-chip input[type=checkbox]{display:none}
 
+/* ── Stop type cards ── */
+.stop-type-card{display:block;cursor:pointer;border-radius:12px;border:1.5px solid #2a2a2a;background:#111;transition:.2s}
+.stop-type-card input[type=radio]{display:none}
+.stop-type-inner{display:flex;flex-direction:column;align-items:center;gap:5px;padding:14px 10px;text-align:center}
+.stop-type-card:hover{border-color:#444}
+.stop-type-card.active{border-color:#e53935;background:rgba(229,57,53,.09)}
+
+/* ── Time row ── */
+.time-row{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:16px}
+.time-box{background:#0d0d0d;border:1.5px solid #1e1e1e;border-radius:11px;padding:12px 14px}
+.time-box-label{font-size:11px;color:#666;margin-bottom:5px}
+.time-box-val{font-size:13px;font-weight:600}
+.time-box-val.green{color:#81c784}
+.time-box-val.red{color:#ef9a9a}
+
 /* ── datetime ── */
 .form-input[type=datetime-local]{color-scheme:dark}
 ::-webkit-calendar-picker-indicator{filter:invert(1) opacity(.5);cursor:pointer}
@@ -135,7 +150,6 @@ input:checked + .toggle-slider:before{transform:translateX(24px);background:#fff
           <div style="font-size:12px;color:#666;margin-bottom:4px">الحالة الحالية</div>
           <span class="status-badge status-active" id="statusBadge">🟢 التطبيق نشط</span>
         </div>
-        <div id="stoppedAtInfo" style="font-size:12px;color:#666;text-align:left;display:none"></div>
       </div>
 
       <div class="toggle-row">
@@ -147,15 +161,54 @@ input:checked + .toggle-slider:before{transform:translateX(24px);background:#fff
       </div>
 
       <div id="stopFields" style="display:none">
+
+        <!-- نوع الإيقاف -->
+        <div class="form-group">
+          <label class="form-label">نوع الإيقاف</label>
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
+            <label class="stop-type-card active" id="cardManual">
+              <input type="radio" name="stopType" value="manual" onchange="onStopTypeChange()" checked>
+              <div class="stop-type-inner">
+                <span style="font-size:22px">🔒</span>
+                <span style="font-weight:700;font-size:14px;color:#fff">إيقاف يدوي</span>
+                <span style="font-size:11px;color:#888">تُستأنف يدوياً فقط</span>
+              </div>
+            </label>
+            <label class="stop-type-card" id="cardTemp">
+              <input type="radio" name="stopType" value="temp" onchange="onStopTypeChange()">
+              <div class="stop-type-inner">
+                <span style="font-size:22px">⏱️</span>
+                <span style="font-weight:700;font-size:14px;color:#fff">إيقاف مؤقت</span>
+                <span style="font-size:11px;color:#888">تُستأنف تلقائياً</span>
+              </div>
+            </label>
+          </div>
+        </div>
+
+        <!-- أوقات البدء والانتهاء -->
+        <div class="time-row">
+          <div class="time-box">
+            <div class="time-box-label">⏰ وقت بدء الإيقاف</div>
+            <div class="time-box-val green" id="startTimeDisplay">—</div>
+          </div>
+          <div class="time-box">
+            <div class="time-box-label">🏁 وقت انتهاء الإيقاف</div>
+            <div class="time-box-val red" id="endTimeDisplay">غير محدد</div>
+          </div>
+        </div>
+
+        <!-- سبب الإيقاف -->
         <div class="form-group">
           <label class="form-label">سبب الإيقاف <span style="color:#e53935">*</span></label>
           <textarea id="stopReason" class="form-textarea" placeholder="مثال: صيانة مجدولة للنظام..." rows="3"></textarea>
         </div>
-        <div class="form-group">
-          <label class="form-label">يُستأنف تلقائياً في (اختياري)</label>
-          <input type="datetime-local" id="stopUntil" class="form-input">
-          <div style="font-size:11px;color:#666;margin-top:5px">اتركه فارغاً إذا أردت الإيقاف لأجل غير مسمى</div>
+
+        <!-- وقت الانتهاء (مؤقت فقط) -->
+        <div class="form-group" id="stopUntilGroup" style="display:none">
+          <label class="form-label">وقت انتهاء الإيقاف <span style="color:#e53935">*</span></label>
+          <input type="datetime-local" id="stopUntil" class="form-input" oninput="onStopUntilInput()">
         </div>
+
       </div>
 
       <div id="resumeInfo" class="info-box">
@@ -342,59 +395,104 @@ async function loadControl() {
   } catch (e) { showToast('تعذّر تحميل حالة التطبيق', true); }
 }
 
-function renderControlState(data) {
-  const stopped  = data.stopped === true;
-  const badge    = document.getElementById('statusBadge');
-  const header   = document.getElementById('globalStatus');
-  const toggle   = document.getElementById('stoppedToggle');
-  const fields   = document.getElementById('stopFields');
-  const resumeBox = document.getElementById('resumeInfo');
-  const atInfo   = document.getElementById('stoppedAtInfo');
+function _fmtLocal(iso) {
+  if (!iso) return null;
+  try {
+    const d = new Date(iso);
+    return d.toLocaleString('ar-JO', { year:'numeric', month:'2-digit', day:'2-digit', hour:'2-digit', minute:'2-digit' });
+  } catch { return null; }
+}
 
-  badge.textContent  = stopped ? '🔴 التطبيق موقوف' : '🟢 التطبيق نشط';
-  badge.className    = 'status-badge ' + (stopped ? 'status-stopped' : 'status-active');
-  header.textContent = stopped ? 'موقوف' : 'نشط';
+function _toDatetimeLocal(iso) {
+  if (!iso) return '';
+  try {
+    const d = new Date(iso);
+    const p = n => String(n).padStart(2,'0');
+    return `${d.getFullYear()}-${p(d.getMonth()+1)}-${p(d.getDate())}T${p(d.getHours())}:${p(d.getMinutes())}`;
+  } catch { return ''; }
+}
+
+function renderControlState(data) {
+  const stopped   = data.stopped === true;
+  const badge     = document.getElementById('statusBadge');
+  const header    = document.getElementById('globalStatus');
+  const toggle    = document.getElementById('stoppedToggle');
+  const fields    = document.getElementById('stopFields');
+  const resumeBox = document.getElementById('resumeInfo');
+
+  badge.textContent       = stopped ? '🔴 التطبيق موقوف' : '🟢 التطبيق نشط';
+  badge.className         = 'status-badge ' + (stopped ? 'status-stopped' : 'status-active');
+  header.textContent      = stopped ? 'موقوف' : 'نشط';
   header.style.background = stopped ? '#c62828' : '#2e7d32';
 
-  toggle.checked = stopped;
-  fields.style.display = stopped ? 'block' : 'none';
+  toggle.checked          = stopped;
+  fields.style.display    = stopped ? 'block' : 'none';
   resumeBox.style.display = 'none';
 
   if (stopped) {
     document.getElementById('stopReason').value = data.reason || '';
-    if (data.stopUntil) {
-      // convert ISO to local datetime-local format
-      const d = new Date(data.stopUntil);
-      const pad = n => String(n).padStart(2,'0');
-      document.getElementById('stopUntil').value =
-        `${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
+
+    // وقت البدء
+    const startStr = _fmtLocal(data.stoppedAt);
+    document.getElementById('startTimeDisplay').textContent = startStr || '—';
+
+    // نوع الإيقاف + وقت الانتهاء
+    const isTemp = !!data.stopUntil;
+    _setStopType(isTemp ? 'temp' : 'manual');
+
+    if (isTemp) {
+      document.getElementById('stopUntil').value = _toDatetimeLocal(data.stopUntil);
+      document.getElementById('endTimeDisplay').textContent = _fmtLocal(data.stopUntil) || '—';
     } else {
       document.getElementById('stopUntil').value = '';
+      document.getElementById('endTimeDisplay').textContent = 'غير محدد';
     }
-    if (data.stoppedAt) {
-      const d = new Date(data.stoppedAt);
-      atInfo.style.display = 'block';
-      atInfo.textContent   = 'أُوقف في: ' + d.toLocaleString('ar-JO');
-    }
-  } else {
-    atInfo.style.display = 'none';
   }
+}
+
+function _setStopType(type) {
+  const isTemp = type === 'temp';
+  document.querySelector('input[name=stopType][value=manual]').checked = !isTemp;
+  document.querySelector('input[name=stopType][value=temp]').checked   =  isTemp;
+  document.getElementById('cardManual').classList.toggle('active', !isTemp);
+  document.getElementById('cardTemp').classList.toggle('active',   isTemp);
+  document.getElementById('stopUntilGroup').style.display = isTemp ? 'block' : 'none';
+}
+
+function onStopTypeChange() {
+  const type = document.querySelector('input[name=stopType]:checked').value;
+  _setStopType(type);
+  if (type === 'manual') {
+    document.getElementById('stopUntil').value = '';
+    document.getElementById('endTimeDisplay').textContent = 'غير محدد';
+  }
+}
+
+function onStopUntilInput() {
+  const val = document.getElementById('stopUntil').value;
+  document.getElementById('endTimeDisplay').textContent = val ? _fmtLocal(new Date(val).toISOString()) : 'غير محدد';
 }
 
 function onToggleChange() {
   const stopped = document.getElementById('stoppedToggle').checked;
   document.getElementById('stopFields').style.display  = stopped ? 'block' : 'none';
   document.getElementById('resumeInfo').style.display  = (!stopped && _currentControl.stopped) ? 'block' : 'none';
+  if (stopped) {
+    // ضع وقت البدء الآن
+    document.getElementById('startTimeDisplay').textContent = _fmtLocal(new Date().toISOString()) || '—';
+    _setStopType('manual');
+    document.getElementById('endTimeDisplay').textContent = 'غير محدد';
+  }
 }
 
 async function saveControl() {
-  const stopped = document.getElementById('stoppedToggle').checked;
-  const reason  = document.getElementById('stopReason').value.trim();
-  const until   = document.getElementById('stopUntil').value;
+  const stopped  = document.getElementById('stoppedToggle').checked;
+  const reason   = document.getElementById('stopReason').value.trim();
+  const stopType = document.querySelector('input[name=stopType]:checked')?.value ?? 'manual';
+  const until    = stopType === 'temp' ? document.getElementById('stopUntil').value : '';
 
-  if (stopped && !reason) {
-    showToast('أدخل سبب الإيقاف', true); return;
-  }
+  if (stopped && !reason) { showToast('أدخل سبب الإيقاف', true); return; }
+  if (stopped && stopType === 'temp' && !until) { showToast('أدخل وقت انتهاء الإيقاف', true); return; }
 
   const btn = document.getElementById('saveCtrlBtn');
   btn.disabled = true; btn.textContent = 'جاري الحفظ...';
