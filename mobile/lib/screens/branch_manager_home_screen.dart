@@ -7,6 +7,7 @@ import 'login_screen.dart';
 import 'add_montasia_screen.dart';
 import 'my_montasiat_screen.dart';
 import 'branch_complaints_screen.dart';
+import 'app_stopped_screen.dart';
 
 class BranchManagerHomeScreen extends StatefulWidget {
   final String token;
@@ -84,8 +85,30 @@ class _BranchManagerHomeScreenState extends State<BranchManagerHomeScreen>
   void didChangeAppLifecycleState(AppLifecycleState state) {
     if (state == AppLifecycleState.resumed) {
       StatusChecker.check();
+      _checkAppControl();
       _refreshTrigger.value++;
     }
+  }
+
+  Future<void> _checkAppControl() async {
+    final ctrl = await ApiService.fetchAppControl(widget.token);
+    if (ctrl == null || !mounted) return;
+    final stopped = ctrl['stopped'] as bool? ?? false;
+    if (!stopped) return;
+    final stopUntil = ctrl['stopUntil'] as String?;
+    if (stopUntil != null) {
+      final until = DateTime.tryParse(stopUntil);
+      if (until != null && DateTime.now().isAfter(until)) return;
+    }
+    if (!mounted) return;
+    final reason = ctrl['reason'] as String? ?? '';
+    Navigator.of(context).pushAndRemoveUntil(
+      MaterialPageRoute(
+        builder: (_) => AppStoppedScreen(
+          token: widget.token, reason: reason, stopUntil: stopUntil),
+      ),
+      (route) => false,
+    );
   }
 
   Future<void> _logout() async {

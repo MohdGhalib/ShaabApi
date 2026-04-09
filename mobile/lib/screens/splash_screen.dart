@@ -8,6 +8,7 @@ import 'home_screen.dart';
 import 'manager_home_screen.dart';
 import 'control_home_screen.dart';
 import 'branch_manager_home_screen.dart';
+import 'app_stopped_screen.dart';
 
 class SplashScreen extends StatefulWidget {
   const SplashScreen({super.key});
@@ -103,6 +104,39 @@ class _SplashScreenState extends State<SplashScreen>
     _goHome(token, name, title, role, empId: savedId);
   }
 
+  /// فحص حالة التطبيق (للأدوار التي قد تُوقف)
+  Future<bool> _checkAppStopped(String token, String role) async {
+    final isBranchRole = role == 'branch_employee' ||
+        role == 'branch_manager' ||
+        role == 'area_manager';
+    if (!isBranchRole) return false;
+
+    final ctrl = await ApiService.fetchAppControl(token);
+    if (ctrl == null) return false;
+
+    final stopped = ctrl['stopped'] as bool? ?? false;
+    if (!stopped) return false;
+
+    final stopUntil = ctrl['stopUntil'] as String?;
+    if (stopUntil != null) {
+      final until = DateTime.tryParse(stopUntil);
+      if (until != null && DateTime.now().isAfter(until)) return false;
+    }
+
+    if (!mounted) return true;
+    final reason = ctrl['reason'] as String? ?? '';
+    Navigator.of(context).pushReplacement(
+      MaterialPageRoute(
+        builder: (_) => AppStoppedScreen(
+          token:     token,
+          reason:    reason,
+          stopUntil: stopUntil,
+        ),
+      ),
+    );
+    return true;
+  }
+
   void _goHome(String token, String name, String title, String role, {String empId = ''}) {
     // تجديد FCM token عند كل دخول تلقائي
     if (empId.isNotEmpty) {
@@ -112,19 +146,24 @@ class _SplashScreenState extends State<SplashScreen>
         }
       });
     }
-    final isManager       = role == 'cc_manager' || role == 'admin';
-    final isControl       = role == 'control_employee' || role == 'control_sub' || role == 'media';
-    final isBranchManager = role == 'branch_manager' || role == 'area_manager';
-    Navigator.of(context).pushReplacement(
-      MaterialPageRoute(
-        builder: (_) {
-          if (isManager)       return ManagerHomeScreen(token: token, name: name, title: title, role: role);
-          if (isControl)       return ControlHomeScreen(token: token, name: name, title: title, role: role);
-          if (isBranchManager) return BranchManagerHomeScreen(token: token, name: name, title: title, role: role, empId: empId);
-          return HomeScreen(token: token, name: name, title: title, role: role, empId: empId);
-        },
-      ),
-    );
+
+    // فحص إيقاف التطبيق قبل الانتقال
+    _checkAppStopped(token, role).then((stopped) {
+      if (stopped || !mounted) return;
+      final isManager       = role == 'cc_manager' || role == 'admin';
+      final isControl       = role == 'control_employee' || role == 'control_sub' || role == 'media';
+      final isBranchManager = role == 'branch_manager' || role == 'area_manager';
+      Navigator.of(context).pushReplacement(
+        MaterialPageRoute(
+          builder: (_) {
+            if (isManager)       return ManagerHomeScreen(token: token, name: name, title: title, role: role);
+            if (isControl)       return ControlHomeScreen(token: token, name: name, title: title, role: role);
+            if (isBranchManager) return BranchManagerHomeScreen(token: token, name: name, title: title, role: role, empId: empId);
+            return HomeScreen(token: token, name: name, title: title, role: role, empId: empId);
+          },
+        ),
+      );
+    });
   }
 
   void _goLogin() {

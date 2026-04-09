@@ -6,6 +6,7 @@ import '../services/status_checker.dart';
 import 'login_screen.dart';
 import 'add_montasia_screen.dart';
 import 'my_montasiat_screen.dart';
+import 'app_stopped_screen.dart';
 
 class HomeScreen extends StatefulWidget {
   final String token;
@@ -66,9 +67,30 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
   void didChangeAppLifecycleState(AppLifecycleState state) {
     if (state == AppLifecycleState.resumed) {
       StatusChecker.check();
-      // تحديث تاب منتسياتي إذا كان مفتوحاً
+      _checkAppControl();
       if (_tab == 1) _refreshTrigger.value++;
     }
+  }
+
+  Future<void> _checkAppControl() async {
+    final ctrl = await ApiService.fetchAppControl(widget.token);
+    if (ctrl == null || !mounted) return;
+    final stopped = ctrl['stopped'] as bool? ?? false;
+    if (!stopped) return;
+    final stopUntil = ctrl['stopUntil'] as String?;
+    if (stopUntil != null) {
+      final until = DateTime.tryParse(stopUntil);
+      if (until != null && DateTime.now().isAfter(until)) return;
+    }
+    if (!mounted) return;
+    final reason = ctrl['reason'] as String? ?? '';
+    Navigator.of(context).pushAndRemoveUntil(
+      MaterialPageRoute(
+        builder: (_) => AppStoppedScreen(
+          token: widget.token, reason: reason, stopUntil: stopUntil),
+      ),
+      (route) => false,
+    );
   }
 
   Future<void> _logout() async {

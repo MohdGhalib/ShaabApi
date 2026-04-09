@@ -119,6 +119,22 @@ class ApiService {
     }
   }
 
+  // ── قراءة حالة التطبيق من لوحة التحكم ──────────────────────────────
+  static Future<Map<String, dynamic>?> fetchAppControl(String token) async {
+    try {
+      final res = await http
+          .get(
+            Uri.parse('$kBaseUrl/api/admin/control'),
+            headers: {'Authorization': 'Bearer $token'},
+          )
+          .timeout(const Duration(seconds: 10));
+      if (res.statusCode == 200) {
+        return jsonDecode(res.body) as Map<String, dynamic>;
+      }
+    } catch (_) {}
+    return null;
+  }
+
   // ── تسجيل FCM Token على السيرفر ──────────────────────────────────────
   static Future<void> registerFcmToken(String authToken, String empId, String role, String fcmToken) async {
     try {
