@@ -77,6 +77,11 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
     if (ctrl == null || !mounted) return;
     final stopped = ctrl['stopped'] as bool? ?? false;
     if (!stopped) return;
+    final stoppedAt = ctrl['stoppedAt'] as String?;
+    if (stoppedAt != null) {
+      final from = DateTime.tryParse(stoppedAt);
+      if (from != null && DateTime.now().isBefore(from)) return;
+    }
     final stopUntil = ctrl['stopUntil'] as String?;
     if (stopUntil != null) {
       final until = DateTime.tryParse(stopUntil);

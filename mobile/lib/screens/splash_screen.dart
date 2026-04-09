@@ -117,6 +117,12 @@ class _SplashScreenState extends State<SplashScreen>
     final stopped = ctrl['stopped'] as bool? ?? false;
     if (!stopped) return false;
 
+    final stoppedAt = ctrl['stoppedAt'] as String?;
+    if (stoppedAt != null) {
+      final from = DateTime.tryParse(stoppedAt);
+      if (from != null && DateTime.now().isBefore(from)) return false;
+    }
+
     final stopUntil = ctrl['stopUntil'] as String?;
     if (stopUntil != null) {
       final until = DateTime.tryParse(stopUntil);
