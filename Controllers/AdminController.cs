@@ -177,6 +177,46 @@ public class AdminController : ControllerBase
             return StatusCode(500, new { error = ex.Message });
         }
     }
+
+    // ── POST /api/admin/broadcast ───────────────────────────────────────
+    [HttpPost("broadcast")]
+    [Authorize]
+    public async Task<IActionResult> Broadcast([FromBody] BroadcastRequest body)
+    {
+        if (User.FindFirst("isAdmin")?.Value != "true") return Forbid();
+        if (string.IsNullOrWhiteSpace(body.Title) || string.IsNullOrWhiteSpace(body.Body))
+            return BadRequest(new { error = "العنوان والنص مطلوبان" });
+        if (body.Roles == null || body.Roles.Count == 0)
+            return BadRequest(new { error = "حدد المستلمين" });
+
+        await _fcm.EnsureInitializedAsync();
+        if (!_fcm.IsReady)
+            return StatusCode(503, new { error = "خدمة الإشعارات غير متاحة" });
+
+        var allTokens = await _fcm.GetAllTokens();
+        Console.WriteLine($"[Admin] Broadcast → roles={string.Join(",", body.Roles)} totalTokens={allTokens.Count}");
+
+        List<string> tokens;
+        if (body.Roles.Contains("all"))
+        {
+            tokens = allTokens.Select(t => t.FcmToken).Distinct().ToList();
+        }
+        else
+        {
+            tokens = allTokens
+                .Where(t => body.Roles.Contains(t.Role))
+                .Select(t => t.FcmToken)
+                .Distinct()
+                .ToList();
+        }
+
+        if (tokens.Count == 0)
+            return Ok(new { ok = true, sent = 0, message = "لا يوجد مستلمون" });
+
+        await FcmService.SendToTokensStatic(tokens, body.Title.Trim(), body.Body.Trim());
+        Console.WriteLine($"[Admin] Broadcast sent to {tokens.Count} devices");
+        return Ok(new { ok = true, sent = tokens.Count });
+    }
 }
 
 public class AppControlData
@@ -189,3 +229,10 @@ public class AppControlData
 
 public record AdminUnlockRequest(string? Password);
 public record TransferRequest(string? EmpId, string? NewBranch, string? NewCity);
+
+public class BroadcastRequest
+{
+    [JsonPropertyName("title")] public string  Title { get; set; } = "";
+    [JsonPropertyName("body")]  public string  Body  { get; set; } = "";
+    [JsonPropertyName("roles")] public List<string> Roles { get; set; } = [];
+}
