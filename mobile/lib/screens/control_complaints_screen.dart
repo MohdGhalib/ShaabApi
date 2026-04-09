@@ -401,17 +401,23 @@ class _ControlComplaintsScreenState extends State<ControlComplaintsScreen>
   }
 
   Widget _card(Map<String, dynamic> item) {
-    final status       = item['status']       as String? ?? '';
-    final branch       = item['branch']       as String? ?? '';
-    final city         = item['city']         as String? ?? '';
-    final notes        = item['notes']        as String? ?? '';
-    final time         = item['time']         as String? ?? '';
-    final addedBy      = item['addedBy']      as String? ?? '';
-    final audit        = item['audit']        as String? ?? '';
-    final auditStatus  = item['auditStatus']  as String? ?? '';
-    final auditBy      = item['auditBy']      as String? ?? '';
-    final subReply     = item['controlEmpReply']    as String? ?? '';
-    final subApproved  = item['controlEmpReplyApproved'] == true;
+    final status         = item['status']         as String? ?? '';
+    final branch         = item['branch']         as String? ?? '';
+    final city           = item['city']           as String? ?? '';
+    final notes          = item['notes']          as String? ?? '';
+    final time           = item['time']           as String? ?? '';
+    final addedBy        = item['addedBy']        as String? ?? '';
+    final audit          = item['audit']          as String? ?? '';
+    final auditStatus    = item['auditStatus']    as String? ?? '';
+    final auditBy        = item['auditBy']        as String? ?? '';
+    final followupResult = item['followupResult'] as String? ?? '';
+    final followupBy     = item['followupBy']     as String? ?? '';
+    final callTime       = item['callTime']       as String? ?? '';
+    final noteDate       = item['noteDate']       as String? ?? '';
+    final moveNumber     = item['moveNumber']     as String? ?? '';
+    final invoiceValue   = item['invoiceValue']   as String? ?? '';
+    final subReply       = item['controlEmpReply']         as String? ?? '';
+    final subApproved    = item['controlEmpReplyApproved'] == true;
     final sc           = _statusColor(status);
     final hasAudit     = audit.isNotEmpty;
     final hasSubReply  = subReply.isNotEmpty && !subApproved;
@@ -477,6 +483,52 @@ class _ControlComplaintsScreenState extends State<ControlComplaintsScreen>
                     style: const TextStyle(color: Colors.white, fontSize: 13)),
                 if (auditBy.isNotEmpty)
                   Text('بواسطة: $auditBy',
+                      textDirection: TextDirection.rtl,
+                      style: const TextStyle(color: Colors.white38, fontSize: 11)),
+              ]),
+            ),
+          ],
+
+          // حالات الملاحظة (تاريخ، وقت الاتصال، رقم الحركة، الفاتورة)
+          if (_isManager && (callTime.isNotEmpty || noteDate.isNotEmpty || moveNumber.isNotEmpty || invoiceValue.isNotEmpty)) ...[
+            const SizedBox(height: 10),
+            Container(
+              width: double.infinity,
+              decoration: BoxDecoration(
+                color: const Color(0xFF1A1A2E),
+                borderRadius: BorderRadius.circular(8),
+                border: Border.all(color: const Color(0xFF1565C0).withOpacity(0.35)),
+              ),
+              child: Column(children: [
+                if (callTime.isNotEmpty)   _infoRow('🕐 وقت تلقي الاتصال', callTime),
+                if (noteDate.isNotEmpty)   _infoRow('📅 تاريخ الملاحظة',   noteDate),
+                if (moveNumber.isNotEmpty) _infoRow('🔢 رقم الحركة',        moveNumber),
+                if (invoiceValue.isNotEmpty) _infoRow('💰 قيمة الفاتورة',  invoiceValue),
+              ]),
+            ),
+          ],
+
+          // نتيجة المتابعة مع الزبون
+          if (followupResult.isNotEmpty) ...[
+            const SizedBox(height: 10),
+            Container(
+              width: double.infinity,
+              padding: const EdgeInsets.all(10),
+              decoration: BoxDecoration(
+                color: const Color(0xFF1A2E1A),
+                borderRadius: BorderRadius.circular(8),
+                border: Border.all(color: const Color(0xFF2E7D32).withOpacity(0.4)),
+              ),
+              child: Column(crossAxisAlignment: CrossAxisAlignment.end, children: [
+                const Text('📞 نتيجة المتابعة مع الزبون',
+                    textDirection: TextDirection.rtl,
+                    style: TextStyle(color: Color(0xFF81C784), fontSize: 11, fontWeight: FontWeight.bold)),
+                const SizedBox(height: 4),
+                Text(followupResult,
+                    textDirection: TextDirection.rtl, textAlign: TextAlign.right,
+                    style: const TextStyle(color: Colors.white, fontSize: 13)),
+                if (followupBy.isNotEmpty)
+                  Text('بواسطة: $followupBy',
                       textDirection: TextDirection.rtl,
                       style: const TextStyle(color: Colors.white38, fontSize: 11)),
               ]),
@@ -587,6 +639,25 @@ class _ControlComplaintsScreenState extends State<ControlComplaintsScreen>
       ),
     );
   }
+
+  Widget _infoRow(String label, String value) => Container(
+    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+    decoration: const BoxDecoration(
+      border: Border(bottom: BorderSide(color: Color(0xFF1E1E3A), width: 1)),
+    ),
+    child: Row(children: [
+      Expanded(
+        child: Text(value,
+            textDirection: TextDirection.rtl, textAlign: TextAlign.right,
+            style: const TextStyle(color: Colors.white, fontSize: 12)),
+      ),
+      const SizedBox(width: 8),
+      Text(label,
+          textDirection: TextDirection.rtl,
+          style: const TextStyle(
+              color: Color(0xFF90CAF9), fontSize: 11, fontWeight: FontWeight.bold)),
+    ]),
+  );
 
   Widget _badge(String text, Color color) => Container(
     padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),

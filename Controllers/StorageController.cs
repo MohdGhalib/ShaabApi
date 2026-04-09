@@ -138,9 +138,9 @@ public class StorageController : ControllerBase
     {
         try
         {
-            var (newMItems, newCIds, newI, approvedM, deliveredM) = DbHelper.CountNew(oldValue, newValue);
+            var (newMItems, newCIds, newI, approvedM, deliveredM, newAuditC) = DbHelper.CountNew(oldValue, newValue);
             var newC = newCIds.Count;
-            Console.WriteLine($"[FCM] Detect → newM={newMItems.Count} newC={newC} newI={newI} approved={approvedM.Count} delivered={deliveredM.Count} | tokens={allTokens.Count}");
+            Console.WriteLine($"[FCM] Detect → newM={newMItems.Count} newC={newC} newI={newI} approved={approvedM.Count} delivered={deliveredM.Count} newAudit={newAuditC} | tokens={allTokens.Count}");
 
             // ── منتسية جديدة → كول سنتر + موظفو الفرع ──
             if (newMItems.Count > 0)
@@ -211,6 +211,14 @@ public class StorageController : ControllerBase
                     newC == 1 ? "تم إضافة شكوى جديدة" : $"تم إضافة {newC} شكاوي جديدة",
                     data: new Dictionary<string, string> { ["complaintId"] = newCIds.First().ToString(), ["type"] = "complaint" });
 
+            // ── رد جديد من السيطرة على شكوى → كول سنتر + ميديا ──
+            if (newAuditC > 0)
+                await FcmService.SendToRolesStatic(allTokens,
+                    ["cc_manager", "cc_employee", "media"],
+                    "✅ تم الرد على شكوى",
+                    newAuditC == 1 ? "أضاف قسم السيطرة رداً على شكوى" : $"أضاف قسم السيطرة رداً على {newAuditC} شكاوي",
+                    data: new Dictionary<string, string> { ["type"] = "complaint_audit" });
+
             // ── استفسار جديد → كول سنتر ──
             if (newI > 0)
                 await FcmService.SendToRolesStatic(allTokens,
@@ -263,6 +271,21 @@ file static class DbHelper
         return map;
     }
 
+    // يعيد مجموعة IDs الشكاوى التي لها رد audit
+    private static HashSet<long> _GetAuditedComplaintIds(JsonElement root)
+    {
+        var set = new HashSet<long>();
+        if (!root.TryGetProperty("complaints", out var arr) || arr.ValueKind != JsonValueKind.Array)
+            return set;
+        foreach (var el in arr.EnumerateArray())
+            if (el.TryGetProperty("id", out var idEl) && idEl.TryGetInt64(out var id))
+            {
+                var audit = el.TryGetProperty("audit", out var a) ? a.GetString() ?? "" : "";
+                if (!string.IsNullOrEmpty(audit)) set.Add(id);
+            }
+        return set;
+    }
+
     private static readonly HashSet<string> _DeliveredStatuses =
         ["تم التسليم", "تم الاستلام", "مكتمل", "تم"];
 
@@ -270,7 +293,8 @@ file static class DbHelper
         List<MontasiaEvent> newMItems,
         List<long> newCIds, int newI,
         List<MontasiaEvent> approvedM,
-        List<MontasiaEvent> deliveredM
+        List<MontasiaEvent> deliveredM,
+        int newAuditC
     ) CountNew(string? oldJson, string newJson)
     {
         Dictionary<long, MontasiaInfo> oldM = [];
@@ -287,12 +311,19 @@ file static class DbHelper
             }
             catch { }
         }
+        HashSet<long> oldAudited = [];
+        if (!string.IsNullOrEmpty(oldJson))
+        {
+            try { oldAudited = _GetAuditedComplaintIds(JsonDocument.Parse(oldJson).RootElement); } catch { }
+        }
+
         try
         {
             var n       = JsonDocument.Parse(newJson).RootElement;
             var newMMap = _GetMontasiatMap(n);
             var newCMap = _GetIdStatus(n, "complaints");
             var newIMap = _GetIdStatus(n, "inquiries");
+            var newAudited = _GetAuditedComplaintIds(n);
 
             // منتسيات جديدة
             var newMItems = newMMap
@@ -302,6 +333,9 @@ file static class DbHelper
 
             var newCIds = newCMap.Keys.Except(oldC.Keys).ToList();
             var ni = newIMap.Keys.Except(oldI.Keys).Count();
+
+            // شكاوى حصلت على رد جديد من السيطرة
+            var newAuditC = newAudited.Except(oldAudited).Count();
 
             // منتسيات تمت الموافقة عليها: قيد الاستلام → قيد الانتظار
             var approvedM = newMMap
@@ -320,9 +354,9 @@ file static class DbHelper
                 .Select(kv => new MontasiaEvent(kv.Key, kv.Value.EmpId, kv.Value.Branch))
                 .ToList();
 
-            return (newMItems, newCIds, ni, approvedM, deliveredM);
+            return (newMItems, newCIds, ni, approvedM, deliveredM, newAuditC);
         }
-        catch { return ([], new List<long>(), 0, [], []); }
+        catch { return ([], new List<long>(), 0, [], [], 0); }
     }
 
     // ── إيجاد tokens موظفي الفرع ومدير الفرع فقط (بدون مدير المنطقة) ──────

@@ -499,7 +499,7 @@ function _renderTableC(get, isAdmin) {
 
         const canFollowup = perm('addC') && (!isMedia || x.addedBy === currentUser.name);
         let followupHtml = '';
-        if (x.audit && !isControl && !isControlEmployee && !isControlSub) {
+        if (x.audit && !isControl) {
             if (x.followupResult) {
                 followupHtml = `<div style="margin-top:10px;padding:12px;background:rgba(46,125,50,0.1);border:1px solid rgba(46,125,50,0.3);border-radius:10px;text-align:right;">
                     <div style="font-size:12px;color:#81c784;font-weight:700;margin-bottom:5px;">📞 نتيجة المتابعة مع الزبون</div>
