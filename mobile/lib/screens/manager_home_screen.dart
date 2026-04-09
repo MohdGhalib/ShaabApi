@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../services/api_service.dart';
+import '../services/navigation_service.dart';
 import '../services/status_checker.dart';
 import 'login_screen.dart';
 import 'manager_montasiat_screen.dart';
@@ -35,13 +36,30 @@ class _ManagerHomeScreenState extends State<ManagerHomeScreen>
   void initState() {
     super.initState();
     WidgetsBinding.instance.addObserver(this);
+    // إشعار منتسية → انتقل لتاب المنتسيات (tab 0)
+    if (NavigationService.pendingMontasiaId.value != null) {
+      WidgetsBinding.instance.addPostFrameCallback((_) => _switchToMontasiat());
+    }
+    NavigationService.pendingMontasiaId.addListener(_onPendingMontasia);
   }
 
   @override
   void dispose() {
+    NavigationService.pendingMontasiaId.removeListener(_onPendingMontasia);
     WidgetsBinding.instance.removeObserver(this);
     _refreshTrigger.dispose();
     super.dispose();
+  }
+
+  void _onPendingMontasia() {
+    if (NavigationService.pendingMontasiaId.value != null) {
+      _switchToMontasiat();
+    }
+  }
+
+  void _switchToMontasiat() {
+    setState(() => _tab = 0); // المنتسيات هو التاب الأول للمدير
+    _refreshTrigger.value++;
   }
 
   @override

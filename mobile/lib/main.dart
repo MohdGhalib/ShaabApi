@@ -6,6 +6,7 @@ import 'package:google_fonts/google_fonts.dart';
 import 'package:workmanager/workmanager.dart';
 import 'firebase_options.dart';
 import 'screens/splash_screen.dart';
+import 'services/navigation_service.dart';
 import 'services/notification_service.dart';
 import 'services/status_checker.dart';
 
@@ -60,6 +61,19 @@ void main() async {
     existingWorkPolicy: ExistingPeriodicWorkPolicy.keep,
   );
 
+  // معالج النقر على إشعار FCM والتطبيق في الخلفية
+  FirebaseMessaging.onMessageOpenedApp.listen((RemoteMessage message) {
+    if (message.data.isNotEmpty) {
+      NavigationService.handleData(message.data);
+    }
+  });
+
+  // معالج النقر على إشعار FCM والتطبيق مغلق تماماً
+  final initialMessage = await FirebaseMessaging.instance.getInitialMessage();
+  if (initialMessage != null && initialMessage.data.isNotEmpty) {
+    NavigationService.handleData(initialMessage.data);
+  }
+
   runApp(const ShaabApp());
 }
 
@@ -70,6 +84,7 @@ class ShaabApp extends StatelessWidget {
   Widget build(BuildContext context) {
     return MaterialApp(
       title:        'الشعب',
+      navigatorKey: NavigationService.navigatorKey,
       debugShowCheckedModeBanner: false,
       theme: ThemeData(
         colorScheme:  ColorScheme.fromSeed(

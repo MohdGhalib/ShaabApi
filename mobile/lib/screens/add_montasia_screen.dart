@@ -167,6 +167,7 @@ class _AddMontasiaTabState extends State<AddMontasiaTab> {
       'status':      'قيد الاستلام',
       'dt':          '',
       'addedBy':     widget.name,
+      'empId':       widget.empId,
       'deliveredBy': '',
       'source':      'mobile',
       if (photoBase64 != null) 'photoBase64': photoBase64,

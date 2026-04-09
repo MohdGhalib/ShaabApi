@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../services/api_service.dart';
+import '../services/navigation_service.dart';
 import '../services/status_checker.dart';
 import 'login_screen.dart';
 import 'add_montasia_screen.dart';
@@ -38,13 +39,29 @@ class _BranchManagerHomeScreenState extends State<BranchManagerHomeScreen>
   void initState() {
     super.initState();
     WidgetsBinding.instance.addObserver(this);
+    if (NavigationService.pendingMontasiaId.value != null) {
+      WidgetsBinding.instance.addPostFrameCallback((_) => _switchToMontasiat());
+    }
+    NavigationService.pendingMontasiaId.addListener(_onPendingMontasia);
   }
 
   @override
   void dispose() {
+    NavigationService.pendingMontasiaId.removeListener(_onPendingMontasia);
     WidgetsBinding.instance.removeObserver(this);
     _refreshTrigger.dispose();
     super.dispose();
+  }
+
+  void _onPendingMontasia() {
+    if (NavigationService.pendingMontasiaId.value != null) {
+      _switchToMontasiat();
+    }
+  }
+
+  void _switchToMontasiat() {
+    setState(() => _tab = 1);
+    _refreshTrigger.value++;
   }
 
   @override

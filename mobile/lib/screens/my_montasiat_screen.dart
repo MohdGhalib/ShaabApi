@@ -2,6 +2,7 @@ import 'dart:convert';
 import 'package:flutter/material.dart';
 import '../constants.dart';
 import '../services/api_service.dart';
+import '../services/navigation_service.dart';
 import '../services/status_checker.dart';
 
 class MyMontasiatScreen extends StatefulWidget {
@@ -29,6 +30,10 @@ class _MyMontasiatScreenState extends State<MyMontasiatScreen>
   bool    _loading = false;
   String? _error;
 
+  final ScrollController _scrollCtrl = ScrollController();
+  final Map<int, GlobalKey> _itemKeys = {};
+  int? _highlightId;
+
   @override
   bool get wantKeepAlive => true;
 
@@ -37,12 +42,44 @@ class _MyMontasiatScreenState extends State<MyMontasiatScreen>
     super.initState();
     _loadAssigned().then((_) => _load());
     widget.refreshTrigger.addListener(_load);
+    NavigationService.pendingMontasiaId.addListener(_onPendingMontasia);
   }
 
   @override
   void dispose() {
+    NavigationService.pendingMontasiaId.removeListener(_onPendingMontasia);
     widget.refreshTrigger.removeListener(_load);
+    _scrollCtrl.dispose();
     super.dispose();
+  }
+
+  void _onPendingMontasia() {
+    final id = NavigationService.pendingMontasiaId.value;
+    if (id != null) {
+      setState(() => _highlightId = id);
+      _scrollToHighlighted();
+    }
+  }
+
+  void _scrollToHighlighted() {
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      final key = _itemKeys[_highlightId];
+      if (key?.currentContext != null) {
+        Scrollable.ensureVisible(
+          key!.currentContext!,
+          duration: const Duration(milliseconds: 500),
+          curve: Curves.easeInOut,
+          alignment: 0.1,
+        );
+      }
+    });
+  }
+
+  int _itemId(Map<String, dynamic> item) {
+    final v = item['id'];
+    if (v is int) return v;
+    if (v is double) return v.toInt();
+    return int.tryParse(v.toString()) ?? 0;
   }
 
   Future<void> _loadAssigned() async {
@@ -93,8 +130,23 @@ class _MyMontasiatScreenState extends State<MyMontasiatScreen>
           return true;
         })
         .toList();
-    setState(() { _items = all; _loading = false; });
+    final pending = NavigationService.pendingMontasiaId.value;
+    setState(() {
+      _items = all;
+      _loading = false;
+      if (pending != null) _highlightId = pending;
+    });
     await StatusChecker.saveSeenStatuses(all);
+    if (pending != null) {
+      _scrollToHighlighted();
+      // مسح الـ pending بعد 3 ثواني (بعد أن يشاهد المستخدم المنتسية)
+      Future.delayed(const Duration(seconds: 3), () {
+        if (NavigationService.pendingMontasiaId.value == pending) {
+          NavigationService.pendingMontasiaId.value = null;
+          if (mounted) setState(() => _highlightId = null);
+        }
+      });
+    }
   }
 
   // ── نافذة التسليم الكاملة ───────────────────────────────────────────
@@ -441,6 +493,10 @@ class _MyMontasiatScreenState extends State<MyMontasiatScreen>
 
   // ── بطاقة المنتسية ──────────────────────────────────────────────────
   Widget _card(Map<String, dynamic> item) {
+    final id        = _itemId(item);
+    final key       = _itemKeys.putIfAbsent(id, GlobalKey.new);
+    final isHighlit = _highlightId == id;
+
     final status    = item['status'] as String? ?? '';
     final readyDlv  = status == 'قيد الانتظار';   // جاهز للتسليم
     final delivered = status == 'تم التسليم';
@@ -455,21 +511,30 @@ class _MyMontasiatScreenState extends State<MyMontasiatScreen>
     else               statusColor = const Color(0xFFFFB74D);
 
     return Container(
+      key: key,
       margin: const EdgeInsets.only(bottom: 14),
       decoration: BoxDecoration(
-        color: const Color(0xFF1E1E1E),
+        color: isHighlit
+            ? const Color(0xFF1A2A1A)
+            : const Color(0xFF1E1E1E),
         borderRadius: BorderRadius.circular(16),
         border: Border.all(
-          color: readyDlv
-              ? const Color(0xFF4DD0E1).withOpacity(0.5)
-              : const Color(0xFF2A2A2A),
-          width: readyDlv ? 1.5 : 1,
+          color: isHighlit
+              ? const Color(0xFF66BB6A).withOpacity(0.8)
+              : readyDlv
+                  ? const Color(0xFF4DD0E1).withOpacity(0.5)
+                  : const Color(0xFF2A2A2A),
+          width: isHighlit ? 2 : readyDlv ? 1.5 : 1,
         ),
-        boxShadow: readyDlv
+        boxShadow: isHighlit
             ? [BoxShadow(
-                color: const Color(0xFF4DD0E1).withOpacity(0.08),
-                blurRadius: 8, spreadRadius: 1)]
-            : null,
+                color: const Color(0xFF66BB6A).withOpacity(0.15),
+                blurRadius: 12, spreadRadius: 2)]
+            : readyDlv
+                ? [BoxShadow(
+                    color: const Color(0xFF4DD0E1).withOpacity(0.08),
+                    blurRadius: 8, spreadRadius: 1)]
+                : null,
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.end,
@@ -686,6 +751,7 @@ class _MyMontasiatScreenState extends State<MyMontasiatScreen>
                         ),
                       ])
                     : ListView(
+                        controller: _scrollCtrl,
                         padding: const EdgeInsets.all(16),
                         children: [
                           _buildSummary(),

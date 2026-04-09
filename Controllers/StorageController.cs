@@ -132,22 +132,79 @@ public class StorageController : ControllerBase
     {
         try
         {
-            var (newM, newC, newI, deliveredM) = DbHelper.CountNew(oldValue, newValue);
-            Console.WriteLine($"[FCM] Detect → newM={newM} newC={newC} newI={newI} deliveredM={deliveredM} | tokens={allTokens.Count} [{string.Join(",", allTokens.Select(t => t.Role))}]");
+            var (newMIds, newC, newI, approvedM, deliveredM) = DbHelper.CountNew(oldValue, newValue);
+            Console.WriteLine($"[FCM] Detect → newM={newMIds.Count} newC={newC} newI={newI} approved={approvedM.Count} delivered={deliveredM.Count} | tokens={allTokens.Count}");
 
             // ── منتسية جديدة → كول سنتر ──
-            if (newM > 0)
+            if (newMIds.Count > 0)
                 await FcmService.SendToRolesStatic(allTokens,
                     ["cc_manager", "cc_employee"],
                     "📋 منتسية جديدة",
-                    newM == 1 ? "تم إرسال منتسية جديدة" : $"تم إرسال {newM} منتسيات جديدة");
+                    newMIds.Count == 1 ? "تم إرسال منتسية جديدة" : $"تم إرسال {newMIds.Count} منتسيات جديدة",
+                    data: new Dictionary<string, string>
+                    {
+                        ["montasiaId"] = newMIds.First().ToString(),
+                        ["type"]       = "new"
+                    });
 
-            // ── منتسية تم تسليمها → مدير الفرع / مدير المنطقة / موظف الفرع ──
-            if (deliveredM > 0)
+            // ── تمت الموافقة (قيد الانتظار) → موظف الفرع المحدد ──
+            foreach (var (id, empId) in approvedM)
+            {
+                if (string.IsNullOrEmpty(empId)) continue;
+                await FcmService.SendToEmpIdsStatic(allTokens,
+                    [empId],
+                    "✅ تمت الموافقة على منتسيتك",
+                    "منتسيتك في قيد الانتظار، يمكنك الآن تسليمها",
+                    data: new Dictionary<string, string>
+                    {
+                        ["montasiaId"] = id.ToString(),
+                        ["type"]       = "approval"
+                    });
+            }
+
+            // ── تم التسليم → كول سنتر + الموظف المحدد ──
+            if (deliveredM.Count > 0)
+            {
+                var count   = deliveredM.Count;
+                var firstId = deliveredM.First().id.ToString();
+
+                // إشعار كول سنتر (أُسلّمت المنتسيات)
                 await FcmService.SendToRolesStatic(allTokens,
-                    ["branch_manager", "area_manager", "branch_employee"],
+                    ["cc_manager", "cc_employee"],
+                    "📦 تم تسليم منتسية",
+                    count == 1 ? "تمت الموافقة وتسليم منتسية" : $"تمت الموافقة وتسليم {count} منتسيات",
+                    data: new Dictionary<string, string>
+                    {
+                        ["montasiaId"] = firstId,
+                        ["type"]       = "delivered"
+                    });
+
+                // إشعار مديري الفروع والمناطق
+                await FcmService.SendToRolesStatic(allTokens,
+                    ["branch_manager", "area_manager"],
                     "✅ تم تسليم منتسية",
-                    deliveredM == 1 ? "تمت الموافقة على منتسيتك وتسليمها" : $"تمت الموافقة على {deliveredM} منتسيات وتسليمها");
+                    count == 1 ? "تمت الموافقة وتسليم منتسية" : $"تمت الموافقة وتسليم {count} منتسيات",
+                    data: new Dictionary<string, string>
+                    {
+                        ["montasiaId"] = firstId,
+                        ["type"]       = "delivered"
+                    });
+
+                // إشعار الموظف صاحب المنتسية
+                foreach (var grp in deliveredM.GroupBy(x => x.empId).Where(g => !string.IsNullOrEmpty(g.Key)))
+                {
+                    var gCount = grp.Count();
+                    await FcmService.SendToEmpIdsStatic(allTokens,
+                        [grp.Key],
+                        "📦 تم تسليم منتسيتك",
+                        gCount == 1 ? "تمت الموافقة وتسليم منتسيتك" : $"تمت الموافقة وتسليم {gCount} منتسيات",
+                        data: new Dictionary<string, string>
+                        {
+                            ["montasiaId"] = grp.First().id.ToString(),
+                            ["type"]       = "delivered"
+                        });
+                }
+            }
 
             // ── شكوى جديدة → كول سنتر + السيطرة + مديرو الفروع والمناطق ──
             if (newC > 0)
@@ -175,6 +232,24 @@ public record StorageRequest(string Key, string? Value);
 // ── مساعدة: كشف العناصر الجديدة وإرسال إشعار FCM ──────────────────────────
 file static class DbHelper
 {
+    private record MontasiaInfo(string Status, string EmpId);
+
+    // قراءة خريطة المنتسيات مع حالتها وempId صاحبها
+    private static Dictionary<long, MontasiaInfo> _GetMontasiatMap(JsonElement root)
+    {
+        var map = new Dictionary<long, MontasiaInfo>();
+        if (!root.TryGetProperty("montasiat", out var arr) || arr.ValueKind != JsonValueKind.Array)
+            return map;
+        foreach (var el in arr.EnumerateArray())
+        {
+            if (!el.TryGetProperty("id", out var idEl) || !idEl.TryGetInt64(out var id)) continue;
+            var status = el.TryGetProperty("status", out var st) ? st.GetString() ?? "" : "";
+            var empId  = el.TryGetProperty("empId",  out var ei) ? ei.GetString() ?? "" : "";
+            map[id] = new MontasiaInfo(status, empId);
+        }
+        return map;
+    }
+
     private static Dictionary<long, string> _GetIdStatus(JsonElement root, string key)
     {
         var map = new Dictionary<long, string>();
@@ -191,15 +266,22 @@ file static class DbHelper
     private static readonly HashSet<string> _DeliveredStatuses =
         ["تم التسليم", "تم الاستلام", "مكتمل", "تم"];
 
-    public static (int newM, int newC, int newI, int deliveredM) CountNew(string? oldJson, string newJson)
+    public static (
+        List<long> newMIds,
+        int newC, int newI,
+        List<(long id, string empId)> approvedM,
+        List<(long id, string empId)> deliveredM
+    ) CountNew(string? oldJson, string newJson)
     {
-        Dictionary<long, string> oldM = [], oldC = [], oldI = [];
+        Dictionary<long, MontasiaInfo> oldM = [];
+        Dictionary<long, string> oldC = [], oldI = [];
+
         if (!string.IsNullOrEmpty(oldJson))
         {
             try
             {
                 var o = JsonDocument.Parse(oldJson).RootElement;
-                oldM = _GetIdStatus(o, "montasiat");
+                oldM = _GetMontasiatMap(o);
                 oldC = _GetIdStatus(o, "complaints");
                 oldI = _GetIdStatus(o, "inquiries");
             }
@@ -207,23 +289,36 @@ file static class DbHelper
         }
         try
         {
-            var n = JsonDocument.Parse(newJson).RootElement;
-            var newMMap = _GetIdStatus(n, "montasiat");
+            var n       = JsonDocument.Parse(newJson).RootElement;
+            var newMMap = _GetMontasiatMap(n);
             var newCMap = _GetIdStatus(n, "complaints");
             var newIMap = _GetIdStatus(n, "inquiries");
 
-            var nm = newMMap.Keys.Except(oldM.Keys).Count();
+            // منتسيات جديدة (لم تكن موجودة)
+            var newMIds = newMMap.Keys.Except(oldM.Keys).ToList();
+
             var nc = newCMap.Keys.Except(oldC.Keys).Count();
             var ni = newIMap.Keys.Except(oldI.Keys).Count();
 
-            // منتسيات تغيّرت حالتها إلى "تم التسليم"
-            var dm = newMMap.Count(kv =>
-                _DeliveredStatuses.Any(s => kv.Value.Contains(s)) &&
-                oldM.TryGetValue(kv.Key, out var oldStatus) &&
-                !_DeliveredStatuses.Any(s => oldStatus.Contains(s)));
+            // منتسيات تمت الموافقة عليها: قيد الاستلام → قيد الانتظار
+            var approvedM = newMMap
+                .Where(kv => kv.Value.Status == "قيد الانتظار" &&
+                             oldM.TryGetValue(kv.Key, out var old) &&
+                             old.Status == "قيد الاستلام")
+                .Select(kv => (kv.Key, kv.Value.EmpId))
+                .ToList();
 
-            return (nm, nc, ni, dm);
+            // منتسيات تغيّرت حالتها إلى "تم التسليم"
+            var deliveredM = newMMap
+                .Where(kv =>
+                    _DeliveredStatuses.Any(s => kv.Value.Status.Contains(s)) &&
+                    oldM.TryGetValue(kv.Key, out var old) &&
+                    !_DeliveredStatuses.Any(s => old.Status.Contains(s)))
+                .Select(kv => (kv.Key, kv.Value.EmpId))
+                .ToList();
+
+            return (newMIds, nc, ni, approvedM, deliveredM);
         }
-        catch { return (0, 0, 0, 0); }
+        catch { return ([], 0, 0, [], []); }
     }
 }

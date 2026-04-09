@@ -87,12 +87,13 @@ public class FcmService
         catch { return []; }
     }
 
-    // ── إرسال إشعار ───────────────────────────────────────────────────────
+    // ── إرسال إشعار حسب الدور ─────────────────────────────────────────────
     public static async Task SendToRolesStatic(
         List<FcmTokenRecord> allTokens,
         string[] roles,
         string title,
-        string body)
+        string body,
+        Dictionary<string, string>? data = null)
     {
         if (!_initialized) return;
         var tokens = allTokens
@@ -101,10 +102,29 @@ public class FcmService
             .Distinct()
             .ToList();
         if (tokens.Count == 0) return;
-        await SendBatch(tokens, title, body);
+        await SendBatch(tokens, title, body, data);
     }
 
-    private static async Task SendBatch(List<string> tokens, string title, string body)
+    // ── إرسال إشعار لموظفين محددين بـ empId ──────────────────────────────
+    public static async Task SendToEmpIdsStatic(
+        List<FcmTokenRecord> allTokens,
+        List<string> empIds,
+        string title,
+        string body,
+        Dictionary<string, string>? data = null)
+    {
+        if (!_initialized) return;
+        var tokens = allTokens
+            .Where(t => empIds.Contains(t.EmpId))
+            .Select(t => t.FcmToken)
+            .Distinct()
+            .ToList();
+        if (tokens.Count == 0) return;
+        await SendBatch(tokens, title, body, data);
+    }
+
+    private static async Task SendBatch(List<string> tokens, string title, string body,
+        Dictionary<string, string>? data = null)
     {
         try
         {
@@ -114,6 +134,7 @@ public class FcmService
                 {
                     Tokens       = batch.ToList(),
                     Notification = new Notification { Title = title, Body = body },
+                    Data         = data ?? [],
                     Android      = new AndroidConfig
                     {
                         Priority     = Priority.High,

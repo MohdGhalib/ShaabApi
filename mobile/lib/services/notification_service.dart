@@ -1,5 +1,6 @@
 import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
+import 'navigation_service.dart';
 
 class NotificationService {
   static final _plugin = FlutterLocalNotificationsPlugin();
@@ -14,7 +15,17 @@ class NotificationService {
 
     const androidSettings = AndroidInitializationSettings('@mipmap/ic_launcher');
     const settings = InitializationSettings(android: androidSettings);
-    await _plugin.initialize(settings);
+
+    // معالج النقر على الإشعار المحلي (التطبيق في المقدمة)
+    await _plugin.initialize(
+      settings,
+      onDidReceiveNotificationResponse: (NotificationResponse response) {
+        final payload = response.payload;
+        if (payload != null && payload.isNotEmpty) {
+          NavigationService.handleData({'montasiaId': payload});
+        }
+      },
+    );
 
     const channel = AndroidNotificationChannel(
       _channelId,
@@ -36,8 +47,9 @@ class NotificationService {
     FirebaseMessaging.onMessage.listen((RemoteMessage message) {
       final title = message.notification?.title ?? message.data['title'] ?? 'إشعار';
       final body  = message.notification?.body  ?? message.data['body']  ?? '';
+      final montasiaId = message.data['montasiaId']?.toString();
       if (body.isNotEmpty) {
-        show(message.hashCode, title, body);
+        show(message.hashCode, title, body, payload: montasiaId);
       }
     });
   }
@@ -65,7 +77,8 @@ class NotificationService {
     }
   }
 
-  static Future<void> show(int id, String title, String body) async {
+  static Future<void> show(int id, String title, String body,
+      {String? payload}) async {
     await _plugin.show(
       id,
       title,
@@ -82,6 +95,7 @@ class NotificationService {
           styleInformation: BigTextStyleInformation(''),
         ),
       ),
+      payload: payload,
     );
   }
 }
