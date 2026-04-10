@@ -23,8 +23,12 @@ class ShaabApplication : Application() {
             .setUsage(AudioAttributes.USAGE_NOTIFICATION)
             .build()
 
+        // حذف القنوات القديمة لضمان تطبيق الصوت الصحيح
+        manager.deleteNotificationChannel("shaab_v2")
+        manager.deleteNotificationChannel("shaab_v3")
+
         val channel = NotificationChannel(
-            "shaab_v3",
+            "shaab_v4",
             "إشعارات الشعب",
             NotificationManager.IMPORTANCE_HIGH
         ).apply {
