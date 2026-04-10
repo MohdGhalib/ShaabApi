@@ -228,7 +228,7 @@ async function login() {
     (function() {
         const bell = document.getElementById('notifBellWidget');
         if (!bell) return;
-        bell.style.display = 'block';
+        bell.style.display = 'flex';
     })();
 
     // تهيئة SSE (سيرفر فقط)
