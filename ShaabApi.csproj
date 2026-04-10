@@ -21,6 +21,7 @@
     <Content Include="css\**\*" CopyToPublishDirectory="PreserveNewest" />
     <Content Include="js\**\*" CopyToPublishDirectory="PreserveNewest" />
     <Content Include="img\**\*" CopyToPublishDirectory="PreserveNewest" />
+    <Content Include="audio\**\*" CopyToPublishDirectory="PreserveNewest" />
     <Content Include="pages\**\*" CopyToPublishDirectory="PreserveNewest" />
   </ItemGroup>
 
