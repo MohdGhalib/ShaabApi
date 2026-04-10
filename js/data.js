@@ -70,8 +70,11 @@ function _checkNotifications() {
 
     if (_prevCounts.montasiat >= 0) {
         // منتسية جديدة → كول سنتر + ميديا
-        // عند SSE: الإشعار يأتي من new-montasia مباشرة، نتجنب التكرار هنا
-        if (isCcOrMedia && pendingM > _prevCounts.montasiat && !_sseActive) {
+        // نتجنب التكرار فقط إذا أضافها المستخدم الحالي من الويب (popup يظهر من new-montasia)
+        // إضافات التطبيق تُطلق reload فقط دون new-montasia، فيجب إظهار popup هنا
+        const _ownWebAdd = !!window._justAddedMontasiaFromWeb;
+        window._justAddedMontasiaFromWeb = false;
+        if (isCcOrMedia && pendingM > _prevCounts.montasiat && !_ownWebAdd) {
             _playSound();
             _showMontasiaPopup({ branch: '', city: '', type: '', notes: '' });
         }

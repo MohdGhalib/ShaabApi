@@ -52,6 +52,8 @@ function _commitMontasia() {
     db.montasiat.unshift({ id:Date.now(), city:c, branch:b, notes:n, type:t, time:now(), iso:iso(),
         status:'قيد الانتظار', dt:'', addedBy:currentUser.name, deliveredBy:'' });
     save();
+    // علامة لمنع _checkNotifications() من إظهار popup مكرر عند وصول reload
+    window._justAddedMontasiaFromWeb = true;
     // إشعار SSE للمستخدمين الآخرين (كول سنتر + ميديا)
     if (!IS_LOCAL) {
         fetch('/api/sse/montasia-notify', {
