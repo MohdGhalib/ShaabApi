@@ -477,6 +477,8 @@
                     if (typeof _scheduleSync === 'function') _scheduleSync();
                     if (typeof _initSSE === 'function') _initSSE();
                     applyThemeIcon();
+                    const _bell = document.getElementById('notifBellWidget');
+                    if (_bell) _bell.style.display = 'flex';
                     return;
                 }
             } catch(e) {}
