@@ -13,10 +13,15 @@ import 'services/status_checker.dart';
 /// معالج رسائل FCM في الخلفية — يجب أن يكون top-level
 @pragma('vm:entry-point')
 Future<void> _firebaseMessagingBackgroundHandler(RemoteMessage message) async {
+  // إذا كانت الرسالة تحتوي على notification field، Android يعرضها تلقائياً
+  // بالـ channel الصحيح — لا نعرض إشعاراً ثانياً حتى لا يتكرر الصوت
+  if (message.notification != null) return;
+
+  // data-only messages فقط نعرضها يدوياً
   await Firebase.initializeApp(options: DefaultFirebaseOptions.currentPlatform);
   await NotificationService.init();
-  final title = message.notification?.title ?? message.data['title'] ?? 'إشعار جديد';
-  final body  = message.notification?.body  ?? message.data['body']  ?? '';
+  final title = message.data['title'] ?? 'إشعار جديد';
+  final body  = message.data['body']  ?? '';
   if (body.isNotEmpty) {
     await NotificationService.show(message.hashCode, title, body);
   }
