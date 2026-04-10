@@ -23,31 +23,42 @@ function _logAudit(action, entity, summary) {
     if (db.auditLog.length > 200) db.auditLog = db.auditLog.slice(-200);
 }
 
-/* ── صوت الإشعار (consideration.mp3) ── */
-let _notifAudio = null;
+/* ── صوت الإشعار (consideration.mp3) — AudioContext لموثوقية أعلى ── */
+let _audioCtx    = null;
+let _audioBuffer = null;
 let _audioUnlocked = false;
 
-// نُهيئ الـ Audio ونفتحه عند أول تفاعل لتفادي قيود autoplay
+// نُهيئ AudioContext عند أول تفاعل — يُلغي قيود autoplay نهائياً
 function _unlockAudio() {
     if (_audioUnlocked) return;
+    _audioUnlocked = true;
     try {
-        _notifAudio = new Audio('audio/consideration.mp3');
-        _notifAudio.volume = 1;
-        // تشغيل وإيقاف فوري لفتح قناة الصوت
-        const p = _notifAudio.play();
-        if (p) p.then(() => { _notifAudio.pause(); _notifAudio.currentTime = 0; }).catch(() => {});
-        _audioUnlocked = true;
+        _audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+        fetch('audio/consideration.mp3')
+            .then(r => r.arrayBuffer())
+            .then(buf => _audioCtx.decodeAudioData(buf))
+            .then(decoded => { _audioBuffer = decoded; })
+            .catch(() => {});
     } catch(e) {}
 }
-document.addEventListener('click',   _unlockAudio, { capture: true });
-document.addEventListener('keydown', _unlockAudio, { capture: true });
-document.addEventListener('touchstart', _unlockAudio, { capture: true });
+document.addEventListener('click',      _unlockAudio, { capture: true, once: false });
+document.addEventListener('keydown',    _unlockAudio, { capture: true, once: false });
+document.addEventListener('touchstart', _unlockAudio, { capture: true, once: false });
 
 function _playSound() {
     try {
-        if (!_notifAudio) _notifAudio = new Audio('audio/consideration.mp3');
-        _notifAudio.currentTime = 0;
-        _notifAudio.play().catch(() => {});
+        if (_audioCtx && _audioBuffer) {
+            // AudioContext لا يُحجب من السياقات الـ async بعد أول تفاعل
+            if (_audioCtx.state === 'suspended') _audioCtx.resume();
+            const src = _audioCtx.createBufferSource();
+            src.buffer = _audioBuffer;
+            src.connect(_audioCtx.destination);
+            src.start(0);
+        } else {
+            // احتياطي: HTMLAudioElement
+            const a = new Audio('audio/consideration.mp3');
+            a.play().catch(() => {});
+        }
     } catch(e) {}
 }
 
@@ -64,7 +75,8 @@ function _checkNotifications() {
     const isControlRole   = role === 'control_employee' || role === 'control_sub' || role === 'control';
 
     // ── عدادات ──
-    const pendingM  = (db.montasiat  || []).filter(x => !x.deleted && x.status === 'قيد الانتظار').length;
+    // نحسب كل المنتسيات غير المحذوفة (أي حالة) لكشف الجديد فور إرساله من أي مصدر
+    const pendingM  = (db.montasiat  || []).filter(x => !x.deleted).length;
     const auditedC  = (db.complaints || []).filter(x => !x.deleted && x.audit).length;
     const controlC  = (db.complaints || []).filter(x => !x.deleted).length;
 
