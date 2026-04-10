@@ -52,16 +52,7 @@ function _commitMontasia() {
     db.montasiat.unshift({ id:Date.now(), city:c, branch:b, notes:n, type:t, time:now(), iso:iso(),
         status:'قيد الانتظار', dt:'', addedBy:currentUser.name, deliveredBy:'' });
     save();
-    // علامة لمنع _checkNotifications() من إظهار popup مكرر عند وصول reload
-    window._justAddedMontasiaFromWeb = true;
-    // إشعار SSE للمستخدمين الآخرين (كول سنتر + ميديا)
-    if (!IS_LOCAL) {
-        fetch('/api/sse/montasia-notify', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${_token}` },
-            body: JSON.stringify({ branch: b, city: c, type: t, notes: (n||'').substring(0, 120) })
-        }).catch(() => {});
-    }
+    // الباك-إند يُطلق new-montasia SSE تلقائياً عند الحفظ لجميع المستخدمين
     document.getElementById("mNotes").value = "";
     document.getElementById("mType").value = "";
 }

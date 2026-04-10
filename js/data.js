@@ -23,42 +23,29 @@ function _logAudit(action, entity, summary) {
     if (db.auditLog.length > 200) db.auditLog = db.auditLog.slice(-200);
 }
 
-/* ── صوت الإشعار (consideration.mp3) — AudioContext لموثوقية أعلى ── */
-let _audioCtx    = null;
-let _audioBuffer = null;
+/* ── صوت الإشعار (consideration.mp3) ── */
+let _notifAudio    = null;
 let _audioUnlocked = false;
 
-// نُهيئ AudioContext عند أول تفاعل — يُلغي قيود autoplay نهائياً
+// نُهيئ الـ Audio ونفتحه عند أول تفاعل لتفادي قيود autoplay
 function _unlockAudio() {
     if (_audioUnlocked) return;
     _audioUnlocked = true;
     try {
-        _audioCtx = new (window.AudioContext || window.webkitAudioContext)();
-        fetch('audio/consideration.mp3')
-            .then(r => r.arrayBuffer())
-            .then(buf => _audioCtx.decodeAudioData(buf))
-            .then(decoded => { _audioBuffer = decoded; })
-            .catch(() => {});
+        if (!_notifAudio) _notifAudio = new Audio('audio/consideration.mp3');
+        const p = _notifAudio.play();
+        if (p) p.then(() => { _notifAudio.pause(); _notifAudio.currentTime = 0; }).catch(() => {});
     } catch(e) {}
 }
-document.addEventListener('click',      _unlockAudio, { capture: true, once: false });
-document.addEventListener('keydown',    _unlockAudio, { capture: true, once: false });
-document.addEventListener('touchstart', _unlockAudio, { capture: true, once: false });
+document.addEventListener('click',      _unlockAudio, { capture: true });
+document.addEventListener('keydown',    _unlockAudio, { capture: true });
+document.addEventListener('touchstart', _unlockAudio, { capture: true });
 
 function _playSound() {
     try {
-        if (_audioCtx && _audioBuffer) {
-            // AudioContext لا يُحجب من السياقات الـ async بعد أول تفاعل
-            if (_audioCtx.state === 'suspended') _audioCtx.resume();
-            const src = _audioCtx.createBufferSource();
-            src.buffer = _audioBuffer;
-            src.connect(_audioCtx.destination);
-            src.start(0);
-        } else {
-            // احتياطي: HTMLAudioElement
-            const a = new Audio('audio/consideration.mp3');
-            a.play().catch(() => {});
-        }
+        if (!_notifAudio) _notifAudio = new Audio('audio/consideration.mp3');
+        _notifAudio.currentTime = 0;
+        _notifAudio.play().catch(() => {});
     } catch(e) {}
 }
 
@@ -82,11 +69,9 @@ function _checkNotifications() {
 
     if (_prevCounts.montasiat >= 0) {
         // منتسية جديدة → كول سنتر + ميديا
-        // نتجنب التكرار فقط إذا أضافها المستخدم الحالي من الويب (popup يظهر من new-montasia)
-        // إضافات التطبيق تُطلق reload فقط دون new-montasia، فيجب إظهار popup هنا
-        const _ownWebAdd = !!window._justAddedMontasiaFromWeb;
-        window._justAddedMontasiaFromWeb = false;
-        if (isCcOrMedia && pendingM > _prevCounts.montasiat && !_ownWebAdd) {
+        // عند SSE نشط: الإشعار يأتي من new-montasia مباشرة (أفضل للصوت)
+        // عند انقطاع SSE: polling يتولى الإشعار هنا
+        if (isCcOrMedia && pendingM > _prevCounts.montasiat && !_sseActive) {
             _playSound();
             _showMontasiaPopup({ branch: '', city: '', type: '', notes: '' });
         }
@@ -570,6 +555,8 @@ function _initSSE() {
         if (isAdmin || role === 'cc_manager' || role === 'media') {
             let info = {};
             try { info = JSON.parse(e.data); } catch {}
+            // لا نُظهر popup لمن أضاف المنتسية بنفسه
+            if (info.addedBy && info.addedBy === currentUser?.name) return;
             _playSound();
             _showMontasiaPopup(info);
         }

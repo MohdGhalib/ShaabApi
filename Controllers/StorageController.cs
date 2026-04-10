@@ -162,6 +162,19 @@ public class StorageController : ControllerBase
                             grp.Count() == 1 ? "تم إرسال المنتسية للنظام بنجاح" : $"تم إرسال {grp.Count()} منتسيات للنظام",
                             data: new Dictionary<string, string> { ["montasiaId"] = grp.First().Id.ToString(), ["type"] = "new" });
                 }
+
+                // SSE: إشعار فوري لمستخدمي الويب (يُشغَّل الصوت من SSE handler مباشرة)
+                var first   = newMItems.First();
+                var truncNotes = (first.Notes ?? "").Length > 120 ? first.Notes.Substring(0, 120) : (first.Notes ?? "");
+                var ssePayload = System.Text.Json.JsonSerializer.Serialize(new {
+                    branch  = first.Branch,
+                    city    = first.City,
+                    type    = first.Type,
+                    notes   = truncNotes,
+                    addedBy = first.AddedBy,
+                    count   = newMItems.Count
+                });
+                _ = SseController.Broadcast("new-montasia", ssePayload);
             }
 
             // ── تمت الموافقة (قيد الانتظار) → موظفو الفرع + مدير الفرع ──
@@ -238,9 +251,9 @@ public record StorageRequest(string Key, string? Value);
 // ── مساعدة: كشف العناصر الجديدة وإرسال إشعار FCM ──────────────────────────
 file static class DbHelper
 {
-    public record MontasiaEvent(long Id, string EmpId, string Branch);
+    public record MontasiaEvent(long Id, string EmpId, string Branch, string City = "", string Type = "", string Notes = "", string AddedBy = "");
 
-    private record MontasiaInfo(string Status, string EmpId, string Branch);
+    private record MontasiaInfo(string Status, string EmpId, string Branch, string City, string Type, string Notes, string AddedBy);
 
     private static Dictionary<long, MontasiaInfo> _GetMontasiatMap(JsonElement root)
     {
@@ -250,10 +263,14 @@ file static class DbHelper
         foreach (var el in arr.EnumerateArray())
         {
             if (!el.TryGetProperty("id", out var idEl) || !idEl.TryGetInt64(out var id)) continue;
-            var status = el.TryGetProperty("status", out var st) ? st.GetString() ?? "" : "";
-            var empId  = el.TryGetProperty("empId",  out var ei) ? ei.GetString() ?? "" : "";
-            var branch = el.TryGetProperty("branch", out var br) ? br.GetString() ?? "" : "";
-            map[id] = new MontasiaInfo(status, empId, branch);
+            var status  = el.TryGetProperty("status",  out var st) ? st.GetString() ?? "" : "";
+            var empId   = el.TryGetProperty("empId",   out var ei) ? ei.GetString() ?? "" : "";
+            var branch  = el.TryGetProperty("branch",  out var br) ? br.GetString() ?? "" : "";
+            var city    = el.TryGetProperty("city",    out var ci) ? ci.GetString() ?? "" : "";
+            var type    = el.TryGetProperty("type",    out var ty) ? ty.GetString() ?? "" : "";
+            var notes   = el.TryGetProperty("notes",   out var no) ? no.GetString() ?? "" : "";
+            var addedBy = el.TryGetProperty("addedBy", out var ab) ? ab.GetString() ?? "" : "";
+            map[id] = new MontasiaInfo(status, empId, branch, city, type, notes, addedBy);
         }
         return map;
     }
@@ -328,7 +345,7 @@ file static class DbHelper
             // منتسيات جديدة
             var newMItems = newMMap
                 .Where(kv => !oldM.ContainsKey(kv.Key))
-                .Select(kv => new MontasiaEvent(kv.Key, kv.Value.EmpId, kv.Value.Branch))
+                .Select(kv => new MontasiaEvent(kv.Key, kv.Value.EmpId, kv.Value.Branch, kv.Value.City, kv.Value.Type, kv.Value.Notes, kv.Value.AddedBy))
                 .ToList();
 
             var newCIds = newCMap.Keys.Except(oldC.Keys).ToList();
