@@ -70,10 +70,10 @@ function _checkNotifications() {
 
     if (_prevCounts.montasiat >= 0) {
         // منتسية جديدة → كول سنتر + ميديا
-        if (isCcOrMedia && pendingM > _prevCounts.montasiat) {
+        // عند SSE: الإشعار يأتي من new-montasia مباشرة، نتجنب التكرار هنا
+        if (isCcOrMedia && pendingM > _prevCounts.montasiat && !_sseActive) {
             _playSound();
-            if (Notification.permission === 'granted')
-                new Notification('محامص الشعب', { body: `منتسية جديدة قيد الانتظار (${pendingM})`, icon: 'img/logo.png' });
+            _showMontasiaPopup({ branch: '', city: '', type: '', notes: '' });
         }
         // رد جديد على شكوى (audit) → كول سنتر + ميديا
         if (isCcOrMedia && auditedC > _prevCounts.auditedC) {
@@ -548,6 +548,17 @@ function _initSSE() {
             _playSound();
         }
     });
+    es.addEventListener('new-montasia', (e) => {
+        const role    = currentUser?.role;
+        const isAdmin = currentUser?.isAdmin;
+        // كول سنتر + ميديا + أدمن → popup + صوت
+        if (isAdmin || role === 'cc_manager' || role === 'media') {
+            let info = {};
+            try { info = JSON.parse(e.data); } catch {}
+            _playSound();
+            _showMontasiaPopup(info);
+        }
+    });
     es.addEventListener('heartbeat', () => { /* keep-alive */ });
     es.onerror = () => {
         _sseActive = false;
@@ -560,6 +571,122 @@ function _initSSE() {
 
 /* ── _playComplaintAlert محوّل إلى _playSound ── */
 function _playComplaintAlert() { _playSound(); }
+
+
+/* ── popup تنبيه المنتسية الجديدة ── */
+(function _injectMontasiaPopupStyles() {
+    const s = document.createElement('style');
+    s.textContent = `
+    #_mPopupOverlay {
+        position:fixed;inset:0;z-index:999997;
+        background:rgba(0,0,0,0.55);backdrop-filter:blur(3px);
+        display:flex;align-items:flex-start;justify-content:center;
+        padding-top:60px;
+        animation:_mFadeIn .25s ease;
+    }
+    @keyframes _mFadeIn { from{opacity:0} to{opacity:1} }
+    @keyframes _mSlideIn { from{opacity:0;transform:translateY(-28px) scale(.96)} to{opacity:1;transform:translateY(0) scale(1)} }
+    @keyframes _mPulse { 0%,100%{transform:scale(1)} 50%{transform:scale(1.18)} }
+    #_mPopupBox {
+        background:#0d1f0f;border:1px solid rgba(56,142,60,.5);
+        border-radius:20px;padding:28px 28px 22px;max-width:420px;width:92%;
+        box-shadow:0 8px 40px rgba(56,142,60,.3),0 2px 12px rgba(0,0,0,.6);
+        animation:_mSlideIn .3s cubic-bezier(.22,1,.36,1);
+        font-family:'Cairo',sans-serif;direction:rtl;
+    }
+    #_mPopupBox ._mIcon {
+        display:inline-block;font-size:36px;margin-bottom:6px;
+        animation:_mPulse 1s ease-in-out infinite;
+    }
+    #_mPopupBox ._mTitle {
+        font-size:18px;font-weight:800;color:#66bb6a;margin-bottom:4px;
+    }
+    #_mPopupBox ._mSub {
+        font-size:13px;color:#aaa;margin-bottom:16px;
+    }
+    #_mPopupBox ._mCard {
+        background:rgba(56,142,60,.1);border:1px solid rgba(56,142,60,.25);
+        border-radius:12px;padding:14px 16px;margin-bottom:20px;
+    }
+    #_mPopupBox ._mCard ._mBranch {
+        font-size:15px;font-weight:700;color:#a5d6a7;margin-bottom:4px;
+    }
+    #_mPopupBox ._mCard ._mType {
+        display:inline-block;font-size:11px;padding:2px 8px;border-radius:6px;
+        background:rgba(255,255,255,.08);color:#aaa;margin-bottom:6px;
+    }
+    #_mPopupBox ._mCard ._mNotes {
+        font-size:13px;color:#ccc;line-height:1.7;
+    }
+    #_mPopupBox ._mBtns {
+        display:flex;gap:10px;
+    }
+    #_mPopupBox ._mBtnView {
+        flex:1;padding:11px;border:none;border-radius:12px;cursor:pointer;
+        background:linear-gradient(135deg,#2e7d32,#43a047);
+        color:#fff;font-family:'Cairo',sans-serif;font-size:15px;font-weight:700;
+        transition:opacity .2s;
+    }
+    #_mPopupBox ._mBtnView:hover { opacity:.85; }
+    #_mPopupBox ._mBtnIgnore {
+        flex:1;padding:11px;border:1px solid rgba(255,255,255,.15);border-radius:12px;cursor:pointer;
+        background:rgba(255,255,255,.07);
+        color:#aaa;font-family:'Cairo',sans-serif;font-size:15px;font-weight:700;
+        transition:background .2s;
+    }
+    #_mPopupBox ._mBtnIgnore:hover { background:rgba(255,255,255,.13); }
+    `;
+    document.head.appendChild(s);
+})();
+
+function _showMontasiaPopup(info) {
+    const old = document.getElementById('_mPopupOverlay');
+    if (old) old.remove();
+
+    const branch = sanitize(info.branch || '');
+    const city   = sanitize(info.city   || '');
+    const type   = sanitize(info.type   || '');
+    const notes  = sanitize((info.notes  || '').substring(0, 120));
+
+    const overlay = document.createElement('div');
+    overlay.id = '_mPopupOverlay';
+    overlay.innerHTML = `
+        <div id="_mPopupBox">
+            <div style="text-align:center;margin-bottom:12px;">
+                <div class="_mIcon">📋</div>
+                <div class="_mTitle">منتسية جديدة قيد الانتظار</div>
+                <div class="_mSub">وردت للتو — تتطلب مراجعتك</div>
+            </div>
+            <div class="_mCard">
+                <div class="_mBranch">📍 ${branch}${city ? ' — ' + city : ''}</div>
+                ${type ? `<div class="_mType">${type}</div>` : ''}
+                ${notes ? `<div class="_mNotes" style="margin-top:4px">${notes}${(info.notes||'').length > 120 ? '…' : ''}</div>` : ''}
+            </div>
+            <div class="_mBtns">
+                <button class="_mBtnView"   onclick="_montasiaPopupView()">👁 عرض المنتسيات</button>
+                <button class="_mBtnIgnore" onclick="_montasiaPopupDismiss()">تجاهل</button>
+            </div>
+        </div>
+    `;
+    overlay.addEventListener('click', (e) => { if (e.target === overlay) _montasiaPopupDismiss(); });
+    document.body.appendChild(overlay);
+}
+
+function _montasiaPopupDismiss() {
+    const el = document.getElementById('_mPopupOverlay');
+    if (el) el.remove();
+}
+
+function _montasiaPopupView() {
+    _montasiaPopupDismiss();
+    if (typeof switchTab === 'function') {
+        switchTab('m');
+        setTimeout(() => {
+            const tbl = document.querySelector('#tableM');
+            if (tbl) tbl.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        }, 300);
+    }
+}
 
 
 /* ── popup تنبيه الشكوى الجديدة ── */

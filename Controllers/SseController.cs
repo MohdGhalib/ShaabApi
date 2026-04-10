@@ -108,6 +108,21 @@ public class SseController : ControllerBase
         return Ok(new { ok = true });
     }
 
+    // POST /api/sse/montasia-notify — يُطلق حدث تنبيه منتسية جديدة لجميع المتصلين
+    [HttpPost("montasia-notify")]
+    [Microsoft.AspNetCore.Authorization.Authorize]
+    public async Task<IActionResult> MontasiaNotify([FromBody] MontasiaNotifyRequest? body)
+    {
+        var payload = System.Text.Json.JsonSerializer.Serialize(new {
+            branch = body?.Branch ?? "",
+            city   = body?.City   ?? "",
+            type   = body?.Type   ?? "",
+            notes  = body?.Notes  ?? ""
+        });
+        await Broadcast("new-montasia", payload);
+        return Ok(new { ok = true });
+    }
+
     public static async Task Broadcast(string eventName, string data)
     {
         var deadClients = new List<string>();
@@ -132,3 +147,4 @@ public class SseController : ControllerBase
 
 public record SseClient(Stream Stream, CancellationTokenSource Cts);
 public record ComplaintNotifyRequest(string? Id, string? Branch, string? City, string? Notes);
+public record MontasiaNotifyRequest(string? Branch, string? City, string? Type, string? Notes);
