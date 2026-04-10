@@ -58,37 +58,33 @@
                  style="font-size:11px;font-weight:700;color:rgba(255,255,255,0.45);letter-spacing:1px;"></div>
         </div>
 
-    </div>
-</div>
-<style>
-@keyframes clockIn { from{opacity:0;transform:scale(0.88) translateY(-4px)} to{opacity:1;transform:scale(1) translateY(0)} }
-#clockWidget { animation: clockIn 0.35s cubic-bezier(.4,0,.2,1) both; }
-</style>
+        <!-- زر الإشعارات بجانب الساعة -->
+        <div id="notifBellWidget" style="display:none;position:relative;font-family:'Cairo';">
+            <button id="notifBellBtn" onclick="_toggleNotifPanel()" title="الإشعارات"
+                style="background:rgba(18,18,18,0.82);backdrop-filter:blur(12px);-webkit-backdrop-filter:blur(12px);
+                       border:1px solid rgba(211,47,47,0.25);border-radius:14px;
+                       padding:8px 16px;cursor:pointer;position:relative;
+                       box-shadow:0 4px 22px rgba(0,0,0,0.45),0 0 0 1px rgba(255,255,255,0.04);
+                       display:flex;align-items:center;gap:7px;height:100%;
+                       color:rgba(255,255,255,0.65);font-size:14px;font-family:'Cairo';
+                       transition:border-color 0.2s,color 0.2s;">
+                <span style="font-size:19px;line-height:1;">🔔</span>
+                <span style="font-weight:600;letter-spacing:0.2px;">الإشعارات</span>
+                <span id="notifBellBadge"
+                      style="display:none;position:absolute;top:5px;right:5px;
+                             background:#d32f2f;color:#fff;border-radius:50%;
+                             min-width:18px;height:18px;font-size:10px;font-weight:800;
+                             align-items:center;justify-content:center;padding:0 3px;line-height:1;
+                             box-shadow:0 1px 6px rgba(0,0,0,0.4);"></span>
+            </button>
+            <!-- لوحة الإشعارات تنزل تحت الزر -->
+            <div id="notifPanel"
+                 style="display:none;position:absolute;top:calc(100% + 10px);left:0;width:340px;
+                        background:var(--bg-card);border:1px solid var(--border);border-radius:16px;
+                        box-shadow:0 8px 36px rgba(0,0,0,0.55);z-index:9999;overflow:hidden;">
+            </div>
+        </div>
 
-<!-- ══ NOTIFICATION BELL (top bar) ══ -->
-<div id="notifBellWidget" style="display:none;position:fixed;top:10px;right:10px;z-index:9999;font-family:'Cairo';">
-    <button id="notifBellBtn" onclick="_toggleNotifPanel()" title="الإشعارات"
-        style="background:rgba(18,18,18,0.82);backdrop-filter:blur(12px);-webkit-backdrop-filter:blur(12px);
-               border:1px solid rgba(211,47,47,0.25);border-radius:14px;
-               padding:8px 16px;cursor:pointer;position:relative;
-               box-shadow:0 4px 22px rgba(0,0,0,0.45),0 0 0 1px rgba(255,255,255,0.04);
-               display:flex;align-items:center;gap:7px;height:100%;
-               color:rgba(255,255,255,0.65);font-size:14px;font-family:'Cairo';
-               transition:border-color 0.2s,color 0.2s;">
-        <span style="font-size:19px;line-height:1;">🔔</span>
-        <span style="font-weight:600;letter-spacing:0.2px;">الإشعارات</span>
-        <span id="notifBellBadge"
-              style="display:none;position:absolute;top:5px;right:5px;
-                     background:#d32f2f;color:#fff;border-radius:50%;
-                     min-width:18px;height:18px;font-size:10px;font-weight:800;
-                     align-items:center;justify-content:center;padding:0 3px;line-height:1;
-                     box-shadow:0 1px 6px rgba(0,0,0,0.4);"></span>
-    </button>
-    <!-- لوحة الإشعارات تنزل تحت الزر -->
-    <div id="notifPanel"
-         style="display:none;position:absolute;top:calc(100% + 10px);left:0;width:340px;
-                background:var(--bg-card);border:1px solid var(--border);border-radius:16px;
-                box-shadow:0 8px 36px rgba(0,0,0,0.55);z-index:9999;overflow:hidden;">
     </div>
 </div>
 <style>
