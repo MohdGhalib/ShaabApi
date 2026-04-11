@@ -101,6 +101,7 @@ class _ManagerHomeScreenState extends State<ManagerHomeScreen>
       ),
     );
     if (confirmed != true) return;
+    await ApiService.unregisterFcmToken(widget.token);
     await ApiService.clearToken();
     final prefs = await SharedPreferences.getInstance();
     await prefs.remove('_shaab_name');

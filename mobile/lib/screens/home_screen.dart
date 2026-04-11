@@ -129,6 +129,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
       ),
     );
     if (confirmed != true) return;
+    await ApiService.unregisterFcmToken(widget.token);
     await ApiService.clearToken();
     final prefs = await SharedPreferences.getInstance();
     await prefs.remove('_shaab_name');

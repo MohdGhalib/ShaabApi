@@ -7,7 +7,7 @@ class NotificationService {
   static final _plugin = FlutterLocalNotificationsPlugin();
   static bool _initialized = false;
 
-  static const _channelId   = 'shaab_v4';
+  static const _channelId   = 'shaab_v5';
   static const _channelName = 'إشعارات الشعب';
   static const _channelDesc = 'إشعارات المنتسيات والشكاوي والاستفسارات';
 

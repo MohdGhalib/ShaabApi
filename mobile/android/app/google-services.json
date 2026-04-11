@@ -7,6 +7,25 @@
   "client": [
     {
       "client_info": {
+        "mobilesdk_app_id": "1:610352757409:android:e23e341cc4085ecdb1cee0",
+        "android_client_info": {
+          "package_name": "com.shaab.Control"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyCjTygkX4HKEcBZxqCtF2L2WOXjXsSQ4oE"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    },
+    {
+      "client_info": {
         "mobilesdk_app_id": "1:610352757409:android:7941589209caaf6eb1cee0",
         "android_client_info": {
           "package_name": "com.shaab.shaab_app"

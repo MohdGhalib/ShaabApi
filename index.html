@@ -467,6 +467,12 @@
                     const d = await res.json();
                     setToken(savedToken);
                     currentUser = { name: d.name, title: d.title, empId: d.empId, isAdmin: d.isAdmin, role: d.role };
+                    // المدير يُوجَّه تلقائياً للوحة التحكم
+                    if (d.isAdmin) {
+                        sessionStorage.setItem('_shaab_admin_token', savedToken);
+                        window.location.replace('/admin.html');
+                        return;
+                    }
                     try { await loadAllData(); } catch(e) {}
                     document.getElementById('loadingScreen').style.display = 'none';
                     document.getElementById('mainApp').style.display       = 'flex';

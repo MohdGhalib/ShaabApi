@@ -149,6 +149,16 @@ class ApiService {
     } catch (_) {}
   }
 
+  // ── إلغاء تسجيل FCM Token عند تسجيل الخروج ──────────────────────────
+  static Future<void> unregisterFcmToken(String authToken) async {
+    try {
+      await http.post(
+        Uri.parse('$kBaseUrl/api/fcm/unregister'),
+        headers: {'Authorization': 'Bearer $authToken'},
+      ).timeout(const Duration(seconds: 10));
+    } catch (_) {}
+  }
+
   // ── حفظ قاعدة البيانات الرئيسية ─────────────────────────────────────
   static Future<bool> saveMasterDb(
       String token, Map<String, dynamic> db) async {

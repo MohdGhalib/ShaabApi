@@ -195,6 +195,12 @@ async function login() {
                 isAdmin: d.isAdmin,
                 role:    d.role
             };
+            // المدير يُوجَّه تلقائياً للوحة التحكم
+            if (d.isAdmin) {
+                sessionStorage.setItem('_shaab_admin_token', d.token);
+                window.location.replace('/admin.html');
+                return;
+            }
         } catch(e) {
             _showLoginError('خطأ في الاتصال بالسيرفر');
             return;

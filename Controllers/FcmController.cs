@@ -69,6 +69,35 @@ public class FcmController : ControllerBase
         return Ok(new { ok = true });
     }
 
+    // POST /api/fcm/unregister — يحذف FCM token للموظف عند تسجيل الخروج
+    [HttpPost("unregister")]
+    public async Task<IActionResult> Unregister()
+    {
+        var empId = User.FindFirst("empId")?.Value ?? "";
+        if (string.IsNullOrEmpty(empId)) return BadRequest();
+
+        var row = await _db.Storage.FindAsync("Shaab_FCM_Tokens");
+        if (row == null || string.IsNullOrEmpty(row.StoreValue))
+            return Ok(new { ok = true });
+
+        List<FcmTokenRecord> list;
+        try { list = JsonSerializer.Deserialize<List<FcmTokenRecord>>(row.StoreValue) ?? []; }
+        catch { return Ok(new { ok = true }); }
+
+        var before = list.Count;
+        list.RemoveAll(t => t.EmpId == empId);
+
+        if (list.Count != before)
+        {
+            row.StoreValue = JsonSerializer.Serialize(list);
+            row.UpdatedAt  = DateTime.UtcNow;
+            await _db.SaveChangesAsync();
+            Console.WriteLine($"[FCM] Unregistered token for empId={empId}");
+        }
+
+        return Ok(new { ok = true });
+    }
+
     // GET /api/fcm/tokens — للمدير فقط (تشخيص)
     [HttpGet("tokens")]
     public async Task<IActionResult> GetTokens()

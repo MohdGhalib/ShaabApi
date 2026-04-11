@@ -458,10 +458,16 @@ async function unlock() {
 
 function logout() {
   _token = '';
-  document.getElementById('panel').style.display = 'none';
-  document.getElementById('lockScreen').style.display = 'flex';
-  document.getElementById('pwdInput').value = '';
-  document.getElementById('lockErr').textContent = '';
+  sessionStorage.removeItem('_shaab_admin_token');
+  // إذا دخل عبر الصفحة الرئيسية، أعده إليها؛ وإلا أظهر شاشة القفل
+  if (document.referrer.includes(location.host) && !document.referrer.includes('admin')) {
+    window.location.replace('/');
+  } else {
+    document.getElementById('panel').style.display = 'none';
+    document.getElementById('lockScreen').style.display = 'flex';
+    document.getElementById('pwdInput').value = '';
+    document.getElementById('lockErr').textContent = '';
+  }
 }
 
 // ── Load control ─────────────────────────────────────────────────────────
@@ -845,6 +851,18 @@ function updateNotifPreview() {
     prev.style.display = 'none';
   }
 }
+
+// ── دخول تلقائي إذا جاء من صفحة تسجيل الدخول الرئيسية ──────────────────
+document.addEventListener('DOMContentLoaded', async () => {
+  const autoToken = sessionStorage.getItem('_shaab_admin_token');
+  if (autoToken) {
+    _token = autoToken;
+    document.getElementById('lockScreen').style.display = 'none';
+    document.getElementById('panel').style.display = 'block';
+    populateCities();
+    await Promise.all([loadControl(), loadEmployees()]);
+  }
+});
 
 document.addEventListener('DOMContentLoaded', () => {
   document.getElementById('notifTitle').addEventListener('input', updateNotifPreview);
