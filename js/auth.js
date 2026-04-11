@@ -185,7 +185,26 @@ async function login() {
                 _showLoginError(d.error || 'محاولات كثيرة');
                 return;
             }
-            if (!res.ok) { _showLoginError(''); return; }
+            if (!res.ok) {
+                // فشل تسجيل الدخول العادي — جرّب كلمة مرور لوحة التحكم
+                if (res.status !== 429) {
+                    try {
+                        const ar = await fetch('/api/admin/unlock', {
+                            method:  'POST',
+                            headers: { 'Content-Type': 'application/json' },
+                            body:    JSON.stringify({ password: pass })
+                        });
+                        if (ar.ok) {
+                            const ad = await ar.json();
+                            sessionStorage.setItem('_shaab_admin_token', ad.token);
+                            window.location.replace('/admin.html');
+                            return;
+                        }
+                    } catch(_) {}
+                }
+                _showLoginError('');
+                return;
+            }
             const d = await res.json();
             setToken(d.token);
             currentUser = {
