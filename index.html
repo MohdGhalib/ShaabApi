@@ -430,6 +430,170 @@
     </div>
 </div>
 
+<!-- ══ ADMIN PANEL ══ -->
+<div id="adminPanel" style="display:none;position:fixed;inset:0;background:#0f0f0f;z-index:10000;overflow-y:auto;font-family:'Cairo',sans-serif;color:#fff;direction:rtl">
+  <header style="background:#1a1a1a;border-bottom:1px solid #2a2a2a;padding:14px 24px;display:flex;align-items:center;gap:12px;position:sticky;top:0;z-index:100">
+    <img src="img/logo.png" style="width:34px;height:34px" alt="logo">
+    <span style="font-size:18px;font-weight:800;flex:1">لوحة تحكم التطبيق</span>
+    <span id="apGlobalStatus" style="background:#2e7d32;color:#fff;font-size:11px;font-weight:700;padding:3px 10px;border-radius:20px">نشط</span>
+    <button onclick="_ap.logout()" style="background:transparent;border:1px solid #333;border-radius:10px;color:#999;padding:7px 16px;font-size:13px;font-family:'Cairo',sans-serif;cursor:pointer;transition:.2s" onmouseover="this.style.borderColor='#e53935';this.style.color='#e53935'" onmouseout="this.style.borderColor='#333';this.style.color='#999'">خروج</button>
+  </header>
+
+  <div style="max-width:860px;margin:0 auto;padding:24px 20px;display:flex;flex-direction:column;gap:22px">
+
+    <!-- بطاقة حالة التطبيق -->
+    <div style="background:#1a1a1a;border:1px solid #252525;border-radius:18px;padding:24px;overflow:hidden">
+      <div class="ap-hero is-active" id="apHero" style="border-radius:16px 16px 0 0;margin:-24px -24px 24px;padding:32px 24px 28px;text-align:center;position:relative;overflow:hidden;transition:background .6s;background:radial-gradient(ellipse at 50% 0%,rgba(46,125,50,.18) 0%,transparent 70%)">
+        <div class="ap-pulse-wrap is-active" id="apPulseWrap" style="position:relative;width:110px;height:110px;margin:0 auto 20px">
+          <div id="apPulseCore" style="width:110px;height:110px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:38px;position:relative;z-index:1;background:rgba(46,125,50,.15);border:2px solid rgba(76,175,80,.4);box-shadow:0 0 30px rgba(76,175,80,.15)">📱</div>
+        </div>
+        <div id="apHeroTitle" style="font-size:22px;font-weight:800;margin-bottom:6px">التطبيق نشط</div>
+        <div id="apHeroSub" style="font-size:13px;color:#666;line-height:1.5">جميع الفروع تعمل بشكل طبيعي</div>
+      </div>
+
+      <div id="apCdWrap" style="display:none;position:relative;width:160px;height:160px;margin:0 auto 16px">
+        <svg style="position:absolute;inset:0;transform:rotate(-90deg)" viewBox="0 0 160 160">
+          <defs><linearGradient id="apCdGrad" x1="0%" y1="0%" x2="100%" y2="0%"><stop offset="0%" stop-color="#ef5350"/><stop offset="100%" stop-color="#ff8a65"/></linearGradient></defs>
+          <circle fill="none" stroke="#1e1e1e" stroke-width="7" cx="80" cy="80" r="70"/>
+          <circle id="apCdBar" fill="none" stroke="url(#apCdGrad)" stroke-width="7" stroke-linecap="round" stroke-dasharray="439.82" stroke-dashoffset="0" cx="80" cy="80" r="70" style="transition:stroke-dashoffset 1s linear"/>
+        </svg>
+        <div style="position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px">
+          <div id="apCdDigits" style="font-size:30px;font-weight:800;color:#ef5350;letter-spacing:2px;font-variant-numeric:tabular-nums;line-height:1">00:00:00</div>
+          <div style="font-size:10px;color:#666;letter-spacing:1.5px">متبقي</div>
+        </div>
+      </div>
+
+      <div id="apStopInfoBlock" style="display:none">
+        <div style="background:#0d0d0d;border:1.5px solid #1e1e1e;border-radius:11px;padding:12px 16px;margin-bottom:12px">
+          <div style="font-size:10px;color:#555;margin-bottom:4px">سبب الإيقاف</div>
+          <div id="apStopReason" style="font-size:14px;color:#ef9a9a;font-weight:700">—</div>
+        </div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:16px">
+          <div style="background:#0d0d0d;border:1.5px solid #1e1e1e;border-radius:11px;padding:11px 14px">
+            <div style="font-size:10px;color:#555;margin-bottom:5px">⏰ بدأ الإيقاف</div>
+            <div id="apDispStart" style="font-size:13px;font-weight:700;color:#fff">—</div>
+          </div>
+          <div id="apDispEndBox" style="display:none;background:#0d0d0d;border:1.5px solid #1e1e1e;border-radius:11px;padding:11px 14px">
+            <div style="font-size:10px;color:#555;margin-bottom:5px">🏁 ينتهي في</div>
+            <div id="apDispEnd" style="font-size:13px;font-weight:700;color:#ef9a9a">—</div>
+          </div>
+        </div>
+        <button id="apResumeBtn" onclick="_ap.resumeApp()" style="width:100%;padding:15px;border:none;border-radius:13px;background:linear-gradient(135deg,#2e7d32,#1b5e20);color:#fff;font-size:16px;font-weight:800;font-family:'Cairo',sans-serif;cursor:pointer;box-shadow:0 4px 22px rgba(46,125,50,.35);transition:.25s">▶ استئناف التطبيق الآن</button>
+      </div>
+
+      <button id="apOpenStopBtn" onclick="_ap.openStopForm()" style="width:100%;padding:15px;border:none;border-radius:13px;background:linear-gradient(135deg,#d32f2f,#b71c1c);color:#fff;font-size:16px;font-weight:800;font-family:'Cairo',sans-serif;cursor:pointer;box-shadow:0 4px 22px rgba(211,47,47,.35);transition:.25s;margin-top:4px">⏸ إيقاف التطبيق</button>
+
+      <div id="apStopFormWrap" style="display:none">
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:14px">
+          <label id="apCardManual" style="display:block;border:1.5px solid #e53935;border-radius:13px;background:rgba(229,57,53,.07);cursor:pointer;overflow:hidden">
+            <input type="radio" name="apStopType" value="manual" onchange="_ap.onStopTypeChange()" checked style="display:none">
+            <div style="display:flex;flex-direction:column;align-items:center;gap:4px;padding:14px 10px;text-align:center"><span style="font-size:22px">🔒</span><span style="font-weight:700;font-size:14px;color:#fff">يدوي</span><span style="font-size:11px;color:#888">يدوياً فقط</span></div>
+          </label>
+          <label id="apCardTemp" style="display:block;border:1.5px solid #252525;border-radius:13px;background:#111;cursor:pointer;overflow:hidden">
+            <input type="radio" name="apStopType" value="temp" onchange="_ap.onStopTypeChange()" style="display:none">
+            <div style="display:flex;flex-direction:column;align-items:center;gap:4px;padding:14px 10px;text-align:center"><span style="font-size:22px">⏱</span><span style="font-weight:700;font-size:14px;color:#fff">مؤقت</span><span style="font-size:11px;color:#888">تلقائياً</span></div>
+          </label>
+        </div>
+        <div id="apPresetsWrap" style="display:none;flex-wrap:wrap;gap:8px;margin-bottom:16px">
+          <button onclick="_ap.applyPreset(15)"  style="padding:7px 16px;border-radius:20px;border:1.5px solid #2a2a2a;background:#111;color:#888;font-size:12px;font-weight:700;font-family:'Cairo',sans-serif;cursor:pointer">15 دقيقة</button>
+          <button onclick="_ap.applyPreset(30)"  style="padding:7px 16px;border-radius:20px;border:1.5px solid #2a2a2a;background:#111;color:#888;font-size:12px;font-weight:700;font-family:'Cairo',sans-serif;cursor:pointer">30 دقيقة</button>
+          <button onclick="_ap.applyPreset(60)"  style="padding:7px 16px;border-radius:20px;border:1.5px solid #2a2a2a;background:#111;color:#888;font-size:12px;font-weight:700;font-family:'Cairo',sans-serif;cursor:pointer">ساعة</button>
+          <button onclick="_ap.applyPreset(120)" style="padding:7px 16px;border-radius:20px;border:1.5px solid #2a2a2a;background:#111;color:#888;font-size:12px;font-weight:700;font-family:'Cairo',sans-serif;cursor:pointer">ساعتان</button>
+          <button onclick="_ap.applyPreset(240)" style="padding:7px 16px;border-radius:20px;border:1.5px solid #2a2a2a;background:#111;color:#888;font-size:12px;font-weight:700;font-family:'Cairo',sans-serif;cursor:pointer">4 ساعات</button>
+          <button id="apPillCustom" onclick="_ap.toggleCustomTime()" style="padding:7px 16px;border-radius:20px;border:1.5px solid #2a2a2a;background:#111;color:#888;font-size:12px;font-weight:700;font-family:'Cairo',sans-serif;cursor:pointer">مخصص ✏</button>
+        </div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:16px">
+          <div style="background:#0d0d0d;border:1.5px solid #1e1e1e;border-radius:11px;padding:11px 14px">
+            <div style="font-size:10px;color:#555;margin-bottom:5px">⏰ وقت البدء</div>
+            <input type="datetime-local" id="apStartTime" style="width:100%;background:transparent;border:none;outline:none;font-family:'Cairo',sans-serif;font-size:13px;font-weight:600;color:#81c784;color-scheme:dark;cursor:pointer">
+          </div>
+          <div id="apEndTimeBox" style="display:none;background:#0d0d0d;border:1.5px solid #1e1e1e;border-radius:11px;padding:11px 14px">
+            <div style="font-size:10px;color:#555;margin-bottom:5px">🏁 وقت الانتهاء</div>
+            <input type="datetime-local" id="apStopUntil" oninput="_ap.onStopUntilInput()" style="width:100%;background:transparent;border:none;outline:none;font-family:'Cairo',sans-serif;font-size:13px;font-weight:600;color:#ef9a9a;color-scheme:dark;cursor:pointer">
+          </div>
+        </div>
+        <div style="margin-bottom:14px">
+          <label style="font-size:12px;color:#555;display:block;margin-bottom:6px">سبب الإيقاف <span style="color:#e53935">*</span></label>
+          <textarea id="apStopReasonInput" placeholder="مثال: صيانة مجدولة للنظام..." rows="2" style="width:100%;background:#111;border:1.5px solid #252525;border-radius:11px;padding:11px 14px;color:#fff;font-size:14px;font-family:'Cairo',sans-serif;outline:none;resize:vertical;min-height:80px"></textarea>
+        </div>
+        <button id="apSaveCtrlBtn" onclick="_ap.saveControl()" style="width:100%;padding:15px;border:none;border-radius:13px;background:linear-gradient(135deg,#d32f2f,#b71c1c);color:#fff;font-size:16px;font-weight:800;font-family:'Cairo',sans-serif;cursor:pointer;box-shadow:0 4px 22px rgba(211,47,47,.35)">🔴 تأكيد الإيقاف</button>
+        <button onclick="_ap.closeStopForm()" style="width:100%;margin-top:8px;background:none;border:1.5px solid #252525;border-radius:13px;color:#666;padding:12px;font-family:'Cairo',sans-serif;font-size:14px;cursor:pointer">إلغاء</button>
+      </div>
+    </div>
+
+    <!-- بطاقة إرسال إشعار جماعي -->
+    <div style="background:#1a1a1a;border:1px solid #252525;border-radius:18px;padding:24px">
+      <div style="font-size:16px;font-weight:800;margin-bottom:18px;display:flex;align-items:center;gap:10px"><span style="font-size:20px">📣</span>إرسال إشعار جماعي</div>
+      <div style="margin-bottom:16px">
+        <label style="font-size:13px;color:#999;margin-bottom:6px;display:block">المستلمون <span style="color:#e53935">*</span></label>
+        <div style="display:flex;flex-wrap:wrap;gap:8px;margin-bottom:16px">
+          <label class="ap-chip all-chip"><input type="checkbox" onchange="_ap.onChipChange(this)" value="all">🌐 الجميع</label>
+          <label class="ap-chip"><input type="checkbox" onchange="_ap.onChipChange(this)" value="branch_employee">👤 موظف فرع</label>
+          <label class="ap-chip"><input type="checkbox" onchange="_ap.onChipChange(this)" value="branch_manager">🏪 مدير فرع</label>
+          <label class="ap-chip"><input type="checkbox" onchange="_ap.onChipChange(this)" value="area_manager">🗺️ مدير منطقة</label>
+          <label class="ap-chip"><input type="checkbox" onchange="_ap.onChipChange(this)" value="cc_employee">📞 موظف كول سنتر</label>
+          <label class="ap-chip"><input type="checkbox" onchange="_ap.onChipChange(this)" value="cc_manager">👑 مدير كول سنتر</label>
+          <label class="ap-chip"><input type="checkbox" onchange="_ap.onChipChange(this)" value="control_employee">🛡️ مدير السيطرة</label>
+          <label class="ap-chip"><input type="checkbox" onchange="_ap.onChipChange(this)" value="control_sub">🔒 موظف سيطرة</label>
+          <label class="ap-chip"><input type="checkbox" onchange="_ap.onChipChange(this)" value="media">📸 موظف ميديا</label>
+        </div>
+      </div>
+      <div style="margin-bottom:16px"><label style="font-size:13px;color:#999;margin-bottom:6px;display:block">عنوان الإشعار <span style="color:#e53935">*</span></label><input type="text" id="apNotifTitle" oninput="_ap.updateNotifPreview()" style="width:100%;background:#111;border:1.5px solid #252525;border-radius:11px;padding:11px 14px;color:#fff;font-size:14px;font-family:'Cairo',sans-serif;outline:none" placeholder="مثال: تنبيه مهم"></div>
+      <div style="margin-bottom:16px"><label style="font-size:13px;color:#999;margin-bottom:6px;display:block">نص الإشعار <span style="color:#e53935">*</span></label><textarea id="apNotifBody" oninput="_ap.updateNotifPreview()" rows="3" style="width:100%;background:#111;border:1.5px solid #252525;border-radius:11px;padding:11px 14px;color:#fff;font-size:14px;font-family:'Cairo',sans-serif;outline:none;resize:vertical;min-height:80px" placeholder="اكتب نص الرسالة هنا..."></textarea></div>
+      <div style="margin-bottom:16px">
+        <label style="font-size:13px;color:#999;margin-bottom:6px;display:block">عدد مرات الإرسال</label>
+        <div style="display:flex;align-items:center;gap:12px">
+          <button onclick="_ap.changeRepeat(-1)" style="width:36px;height:36px;border-radius:50%;border:1.5px solid #2a2a2a;background:#111;color:#fff;font-size:20px;cursor:pointer;line-height:1;flex-shrink:0">−</button>
+          <span id="apRepeatCount" style="font-size:20px;font-weight:800;min-width:32px;text-align:center">1</span>
+          <button onclick="_ap.changeRepeat(1)"  style="width:36px;height:36px;border-radius:50%;border:1.5px solid #2a2a2a;background:#111;color:#fff;font-size:20px;cursor:pointer;line-height:1;flex-shrink:0">+</button>
+          <span style="font-size:12px;color:#666">مرة</span>
+        </div>
+      </div>
+      <div id="apNotifPreview" style="display:none;background:#111;border:1px solid #252525;border-radius:12px;padding:14px 16px;margin-bottom:16px">
+        <div style="font-size:11px;color:#666;margin-bottom:8px">معاينة الإشعار</div>
+        <div style="display:flex;gap:10px;align-items:flex-start">
+          <img src="img/logo.png" style="width:32px;height:32px;border-radius:8px;flex-shrink:0">
+          <div><div id="apPreviewTitle" style="font-size:13px;font-weight:700;color:#fff"></div><div id="apPreviewBody" style="font-size:12px;color:#aaa;margin-top:3px"></div></div>
+        </div>
+      </div>
+      <button id="apSendNotifBtn" onclick="_ap.sendBroadcast()" style="width:100%;background:linear-gradient(135deg,#e53935,#c62828);color:#fff;border:none;border-radius:12px;padding:12px 24px;font-size:15px;font-weight:700;font-family:'Cairo',sans-serif;cursor:pointer">📣 إرسال الإشعار</button>
+    </div>
+
+    <!-- بطاقة نقل موظف -->
+    <div style="background:#1a1a1a;border:1px solid #252525;border-radius:18px;padding:24px">
+      <div style="font-size:16px;font-weight:800;margin-bottom:18px;display:flex;align-items:center;gap:10px"><span style="font-size:20px">🔄</span>نقل موظف إلى فرع آخر</div>
+      <div style="margin-bottom:16px"><label style="font-size:13px;color:#999;margin-bottom:6px;display:block">اختر الموظف</label><select id="apEmpSelect" onchange="_ap.onEmpChange()" style="width:100%;background:#111;border:1.5px solid #252525;border-radius:11px;padding:11px 14px;color:#fff;font-size:14px;font-family:'Cairo',sans-serif;outline:none"><option value="">— اختر الموظف —</option></select></div>
+      <div id="apEmpDetail" style="display:none;background:#111;border:1px solid #252525;border-radius:12px;padding:14px 16px;margin-bottom:16px;display:none;align-items:center;gap:12px">
+        <div style="width:38px;height:38px;background:#252525;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:16px;flex-shrink:0">👤</div>
+        <div><div id="apEmpDetailName" style="font-size:14px;font-weight:700;color:#fff">—</div><div id="apEmpDetailBranch" style="font-size:12px;color:#666;margin-top:2px">—</div></div>
+      </div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
+        <div style="margin-bottom:16px"><label style="font-size:13px;color:#999;margin-bottom:6px;display:block">المحافظة الجديدة</label><select id="apCitySelect" onchange="_ap.onCityChange()" style="width:100%;background:#111;border:1.5px solid #252525;border-radius:11px;padding:11px 14px;color:#fff;font-size:14px;font-family:'Cairo',sans-serif;outline:none"><option value="">— اختر المحافظة —</option></select></div>
+        <div style="margin-bottom:16px"><label style="font-size:13px;color:#999;margin-bottom:6px;display:block">الفرع الجديد</label><select id="apBranchSelect" onchange="_ap.updateTransferBtn()" style="width:100%;background:#111;border:1.5px solid #252525;border-radius:11px;padding:11px 14px;color:#fff;font-size:14px;font-family:'Cairo',sans-serif;outline:none"><option value="">— اختر الفرع —</option></select></div>
+      </div>
+      <div style="margin-bottom:16px"><label style="font-size:13px;color:#999;margin-bottom:6px;display:block">المسمى الوظيفي الجديد <span style="color:#666;font-size:11px">(اختياري)</span></label><select id="apTitleSelect" onchange="_ap.updateTransferBtn()" style="width:100%;background:#111;border:1.5px solid #252525;border-radius:11px;padding:11px 14px;color:#fff;font-size:14px;font-family:'Cairo',sans-serif;outline:none"><option value="">— بدون تغيير —</option><option value="موظف فرع">👤 موظف فرع</option><option value="مدير فرع">🏪 مدير فرع</option><option value="مدير منطقة">🗺️ مدير منطقة</option></select></div>
+      <div id="apTransferWarn" style="display:none;background:#1c0e0e;border:1px solid #3a1a1a;border-radius:12px;padding:14px 16px;margin-bottom:14px;font-size:13px;color:#ef9a9a">⚠️ سيتم نقل الموظف من فرعه الحالي إلى الفرع المختار</div>
+      <button id="apTransferBtn" onclick="_ap.doTransfer()" disabled style="width:100%;background:#2e7d32;color:#fff;border:none;border-radius:12px;padding:12px 24px;font-size:15px;font-weight:700;font-family:'Cairo',sans-serif;cursor:pointer;transition:.2s">🔄 تنفيذ النقل</button>
+    </div>
+
+  </div>
+  <div id="apToast" style="position:fixed;bottom:24px;left:50%;transform:translateX(-50%);padding:12px 24px;border-radius:12px;font-size:14px;font-weight:600;z-index:10001;transition:opacity .4s;pointer-events:none;opacity:0"></div>
+</div>
+
+<style>
+.ap-chip{display:inline-flex;align-items:center;gap:6px;padding:7px 14px;border-radius:20px;border:1.5px solid #2a2a2a;cursor:pointer;font-size:13px;font-weight:600;color:#999;transition:.2s;user-select:none;background:#111;font-family:'Cairo',sans-serif}
+.ap-chip:hover{border-color:#555;color:#ccc}
+.ap-chip.selected{border-color:#e53935;color:#fff;background:rgba(229,57,53,.12)}
+.ap-chip.all-chip.selected{border-color:#ff8a65;color:#ff8a65;background:rgba(255,138,101,.1)}
+.ap-chip input[type=checkbox]{display:none}
+#apPulseWrap::before,#apPulseWrap::after{content:'';position:absolute;inset:-8px;border-radius:50%;border:1.5px solid;animation:ap-pulse 2.4s ease-out infinite;opacity:0}
+#apPulseWrap.is-active::before{border-color:rgba(76,175,80,.7)}
+#apPulseWrap.is-active::after{border-color:rgba(76,175,80,.4);animation-delay:.8s}
+#apPulseWrap.is-stopped::before{border-color:rgba(229,57,53,.7)}
+#apPulseWrap.is-stopped::after{border-color:rgba(229,57,53,.4);animation-delay:.6s}
+@keyframes ap-pulse{0%{transform:scale(.85);opacity:.8}100%{transform:scale(1.5);opacity:0}}
+</style>
+
 <!-- ══ SCRIPTS (load order matters) ══ -->
 <script src="js/data.js"></script>
 <script src="js/session.js"></script>
@@ -454,6 +618,300 @@
         if (e.target === document.getElementById("profileModal")) closeProfile();
     });
 
+    /* ══ لوحة التحكم — Admin Panel Logic ══ */
+    const _AP_BRANCHES = {
+      'عمان':['الرئيسي','ماركا','الهاشمي','صويلح','الحرية','خلدا','نزال','الوحدات','مرج الحمام','وادي الرمم','المشاغل','طبربور','الرياضية','المنورة','ابو نصير','شارع المطار','الياسمين','الخريطة','اليادودة','طريق البحر الميت'],
+      'اربد':['ابو راشد','الطيارة','شارع ال30'],
+      'الزرقاء':['السعادة','شارع 36'],
+      'مادبا':['مادبا الشرقي','مادبا الغربي'],
+      'الكرك':['الكرك الثنية','الكرك الوسية'],
+      'العقبة':['الرئيسي','البيتزا','الثاني','الثالث','الرابع','الخامس','السادس','السابع','الثامن','التاسع','العاشر','الخلفي'],
+      'محافظات بفرع واحد':['المفرق','الرمثا','جرش','السلط'],
+    };
+    let _apToken = '';
+    let _apEmps  = [];
+    let _apCtrl  = { stopped: false };
+    let _apCdTimer = null, _apCdTotal = 0, _apRepeat = 1, _apToastTimer;
+
+    window._ap = {
+      open(token) {
+        _apToken = token;
+        document.getElementById('adminPanel').style.display = 'block';
+        document.getElementById('loadingScreen').style.display = 'none';
+        document.getElementById('loginPage').style.display    = 'none';
+        document.getElementById('mainApp').style.display      = 'none';
+        _ap._populateCities();
+        Promise.all([_ap._loadControl(), _ap._loadEmps()]);
+      },
+      logout() {
+        _apToken = '';
+        sessionStorage.removeItem('_shaab_admin_token');
+        document.getElementById('adminPanel').style.display = 'none';
+        document.getElementById('loginPage').style.display  = '';
+        document.getElementById('passInput').value = '';
+      },
+
+      /* ── Control ── */
+      async _loadControl() {
+        try {
+          const r = await fetch('api/admin/control', { headers: { Authorization: 'Bearer ' + _apToken } });
+          _apCtrl = await r.json();
+          _ap._renderCtrl(_apCtrl);
+        } catch { _ap._toast('تعذّر تحميل حالة التطبيق', true); }
+      },
+      _renderCtrl(d) {
+        const stopped = d.stopped === true;
+        const badge   = document.getElementById('apGlobalStatus');
+        badge.textContent      = stopped ? 'موقوف' : 'نشط';
+        badge.style.background = stopped ? '#c62828' : '#2e7d32';
+        const hero = document.getElementById('apHero');
+        const pw   = document.getElementById('apPulseWrap');
+        const pc   = document.getElementById('apPulseCore');
+        document.getElementById('apStopFormWrap').style.display = 'none';
+        if (stopped) {
+          hero.style.background = 'radial-gradient(ellipse at 50% 0%,rgba(211,47,47,.18) 0%,transparent 70%)';
+          pw.className  = 'ap-pulse-wrap is-stopped'; pc.textContent = '⏸';
+          pc.style.cssText = 'width:110px;height:110px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:38px;position:relative;z-index:1;background:rgba(211,47,47,.15);border:2px solid rgba(229,57,53,.4);box-shadow:0 0 30px rgba(229,57,53,.15)';
+          document.getElementById('apHeroTitle').textContent = 'التطبيق موقوف';
+          document.getElementById('apHeroSub').textContent   = 'تم إيقاف التطبيق على أجهزة الفروع';
+          document.getElementById('apHeroSub').style.color   = '#ef9a9a';
+          document.getElementById('apStopInfoBlock').style.display = 'block';
+          document.getElementById('apOpenStopBtn').style.display   = 'none';
+          document.getElementById('apStopReason').textContent = d.reason || '—';
+          document.getElementById('apDispStart').textContent  = _ap._fmt(d.stoppedAt) || '—';
+          const endBox = document.getElementById('apDispEndBox');
+          if (d.stopUntil) {
+            endBox.style.display = 'block';
+            document.getElementById('apDispEnd').textContent = _ap._fmt(d.stopUntil) || '—';
+            document.getElementById('apCdWrap').style.display = 'flex';
+            _ap._startCd(d.stoppedAt, d.stopUntil);
+          } else { endBox.style.display = 'none'; document.getElementById('apCdWrap').style.display = 'none'; _ap._stopCd(); }
+        } else {
+          hero.style.background = 'radial-gradient(ellipse at 50% 0%,rgba(46,125,50,.18) 0%,transparent 70%)';
+          pw.className  = 'ap-pulse-wrap is-active'; pc.textContent = '📱';
+          pc.style.cssText = 'width:110px;height:110px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:38px;position:relative;z-index:1;background:rgba(46,125,50,.15);border:2px solid rgba(76,175,80,.4);box-shadow:0 0 30px rgba(76,175,80,.15)';
+          document.getElementById('apHeroTitle').textContent = 'التطبيق نشط';
+          document.getElementById('apHeroSub').textContent   = 'جميع الفروع تعمل بشكل طبيعي';
+          document.getElementById('apHeroSub').style.color   = '#666';
+          document.getElementById('apStopInfoBlock').style.display = 'none';
+          document.getElementById('apOpenStopBtn').style.display   = 'block';
+          document.getElementById('apCdWrap').style.display = 'none'; _ap._stopCd();
+        }
+      },
+      openStopForm() {
+        document.getElementById('apStopFormWrap').style.display = 'block';
+        document.getElementById('apOpenStopBtn').style.display  = 'none';
+        const now = new Date(); const p = n => String(n).padStart(2,'0');
+        document.getElementById('apStartTime').value = `${now.getFullYear()}-${p(now.getMonth()+1)}-${p(now.getDate())}T${p(now.getHours())}:${p(now.getMinutes())}`;
+        _ap._setStopType('manual');
+        document.getElementById('apStopUntil').value = '';
+        document.getElementById('apStopReasonInput').value = '';
+        document.querySelectorAll('#apStopFormWrap button[onclick*="applyPreset"]').forEach(b => b.style.borderColor = '#2a2a2a');
+      },
+      closeStopForm() {
+        document.getElementById('apStopFormWrap').style.display = 'none';
+        document.getElementById('apOpenStopBtn').style.display  = 'block';
+      },
+      async resumeApp() {
+        const btn = document.getElementById('apResumeBtn');
+        btn.disabled = true; btn.textContent = 'جاري الاستئناف...';
+        try {
+          const r = await fetch('api/admin/control', { method:'POST', headers:{'Content-Type':'application/json',Authorization:'Bearer '+_apToken}, body: JSON.stringify({stopped:false,reason:'',stopUntil:null,stoppedAt:null}) });
+          if (!r.ok) { _ap._toast((await r.json()).error||'فشل الاستئناف',true); return; }
+          _ap._toast('✅ تم استئناف التطبيق'); await _ap._loadControl();
+        } catch { _ap._toast('تعذّر الاتصال بالسيرفر',true); }
+        finally { btn.disabled=false; btn.textContent='▶ استئناف التطبيق الآن'; }
+      },
+      _setStopType(type) {
+        const isTemp = type === 'temp';
+        document.querySelector('input[name=apStopType][value=manual]').checked = !isTemp;
+        document.querySelector('input[name=apStopType][value=temp]').checked   =  isTemp;
+        document.getElementById('apCardManual').style.borderColor = isTemp ? '#252525' : '#e53935';
+        document.getElementById('apCardManual').style.background  = isTemp ? '#111'    : 'rgba(229,57,53,.07)';
+        document.getElementById('apCardTemp').style.borderColor   = isTemp ? '#e53935' : '#252525';
+        document.getElementById('apCardTemp').style.background    = isTemp ? 'rgba(229,57,53,.07)' : '#111';
+        document.getElementById('apPresetsWrap').style.display  = isTemp ? 'flex'  : 'none';
+        document.getElementById('apEndTimeBox').style.display   = isTemp ? 'block' : 'none';
+      },
+      onStopTypeChange() {
+        const t = document.querySelector('input[name=apStopType]:checked').value;
+        _ap._setStopType(t);
+        if (t === 'manual') document.getElementById('apStopUntil').value = '';
+      },
+      applyPreset(m) {
+        _ap._setStopType('temp');
+        const end = new Date(Date.now() + m * 60000);
+        const p = n => String(n).padStart(2,'0');
+        document.getElementById('apStopUntil').value = `${end.getFullYear()}-${p(end.getMonth()+1)}-${p(end.getDate())}T${p(end.getHours())}:${p(end.getMinutes())}`;
+      },
+      toggleCustomTime() { _ap._setStopType('temp'); try { document.getElementById('apStopUntil').showPicker(); } catch{} },
+      onStopUntilInput() {},
+      async saveControl() {
+        const reason  = document.getElementById('apStopReasonInput').value.trim();
+        const type    = document.querySelector('input[name=apStopType]:checked')?.value ?? 'manual';
+        const until   = type === 'temp' ? document.getElementById('apStopUntil').value : '';
+        if (!reason)               { _ap._toast('أدخل سبب الإيقاف',true); return; }
+        if (type==='temp'&&!until) { _ap._toast('أدخل وقت انتهاء الإيقاف',true); return; }
+        const btn = document.getElementById('apSaveCtrlBtn');
+        btn.disabled=true; btn.textContent='جاري الحفظ...';
+        try {
+          const startVal = document.getElementById('apStartTime').value;
+          const r = await fetch('api/admin/control', { method:'POST', headers:{'Content-Type':'application/json',Authorization:'Bearer '+_apToken},
+            body: JSON.stringify({stopped:true,reason,stopUntil:until?new Date(until).toISOString():null,stoppedAt:startVal?new Date(startVal).toISOString():new Date().toISOString()}) });
+          if (!r.ok) { _ap._toast((await r.json()).error||'فشل الحفظ',true); return; }
+          _ap._toast('🔴 تم إيقاف التطبيق'); await _ap._loadControl();
+        } catch { _ap._toast('تعذّر الاتصال بالسيرفر',true); }
+        finally { btn.disabled=false; btn.textContent='🔴 تأكيد الإيقاف'; }
+      },
+
+      /* ── Countdown ── */
+      _startCd(startIso, endIso) {
+        _ap._stopCd();
+        const endMs = new Date(endIso).getTime();
+        const startMs = startIso ? new Date(startIso).getTime() : endMs - 3600000;
+        _apCdTotal = Math.max(endMs - startMs, 1);
+        const tick = () => {
+          const rem = endMs - Date.now();
+          if (rem <= 0) { document.getElementById('apCdDigits').textContent='00:00:00'; _ap._stopCd(); setTimeout(()=>_ap._loadControl(),2000); return; }
+          const p = n => String(n).padStart(2,'0');
+          document.getElementById('apCdDigits').textContent = `${p(Math.floor(rem/3600000))}:${p(Math.floor(rem%3600000/60000))}:${p(Math.floor(rem%60000/1000))}`;
+          document.getElementById('apCdBar').style.strokeDashoffset = String(Math.max(0,(1-rem/_apCdTotal)*439.82));
+        };
+        tick(); _apCdTimer = setInterval(tick, 1000);
+      },
+      _stopCd() { if (_apCdTimer) { clearInterval(_apCdTimer); _apCdTimer = null; } },
+
+      /* ── Employees / Transfer ── */
+      async _loadEmps() {
+        try {
+          const r = await fetch('api/storage?keys=Shaab_Employees_DB', { headers: { Authorization: 'Bearer ' + _apToken } });
+          const outer = await r.json();
+          const raw = outer['Shaab_Employees_DB'];
+          if (!raw) return;
+          _apEmps = JSON.parse(raw).filter(e => ['موظف فرع','مدير فرع','مدير منطقة'].includes(e.title));
+          const sel = document.getElementById('apEmpSelect');
+          sel.innerHTML = '<option value="">— اختر الموظف —</option>';
+          _apEmps.forEach(e => {
+            const branch = e.assignedBranch?.branch || e.assignedBranches?.[0]?.branch || '—';
+            const city   = e.assignedBranch?.city   || e.assignedBranches?.[0]?.city   || '';
+            const o = document.createElement('option');
+            o.value = e.empId; o.textContent = `${e.name} — ${e.title} — ${branch}${city?' ('+city+')':''}`;
+            sel.appendChild(o);
+          });
+        } catch { _ap._toast('تعذّر تحميل بيانات الموظفين',true); }
+      },
+      _populateCities() {
+        const sel = document.getElementById('apCitySelect');
+        Object.keys(_AP_BRANCHES).forEach(c => { const o=document.createElement('option'); o.value=c; o.textContent=c; sel.appendChild(o); });
+      },
+      onEmpChange() {
+        const id = document.getElementById('apEmpSelect').value;
+        const box = document.getElementById('apEmpDetail');
+        if (!id) { box.style.display='none'; _ap.updateTransferBtn(); return; }
+        const emp = _apEmps.find(e => e.empId === id);
+        if (!emp) return;
+        const branch = emp.assignedBranch?.branch || emp.assignedBranches?.[0]?.branch || '—';
+        const city   = emp.assignedBranch?.city   || emp.assignedBranches?.[0]?.city   || '';
+        document.getElementById('apEmpDetailName').textContent   = `${emp.name} · ${emp.title}`;
+        document.getElementById('apEmpDetailBranch').textContent = `الفرع الحالي: ${branch}${city?' — '+city:''}`;
+        box.style.display = 'flex'; _ap.updateTransferBtn();
+      },
+      onCityChange() {
+        const city = document.getElementById('apCitySelect').value;
+        const bSel = document.getElementById('apBranchSelect');
+        bSel.innerHTML = '<option value="">— اختر الفرع —</option>';
+        if (city && _AP_BRANCHES[city]) _AP_BRANCHES[city].forEach(b => { const o=document.createElement('option'); o.value=b; o.textContent=b; bSel.appendChild(o); });
+        _ap.updateTransferBtn();
+      },
+      updateTransferBtn() {
+        const ready = document.getElementById('apEmpSelect').value && document.getElementById('apBranchSelect').value;
+        document.getElementById('apTransferBtn').disabled = !ready;
+        document.getElementById('apTransferWarn').style.display = ready ? 'block' : 'none';
+      },
+      async doTransfer() {
+        const empId  = document.getElementById('apEmpSelect').value;
+        const branch = document.getElementById('apBranchSelect').value;
+        const city   = document.getElementById('apCitySelect').value;
+        const title  = document.getElementById('apTitleSelect').value;
+        if (!empId || !branch) return;
+        const emp = _apEmps.find(e => e.empId === empId);
+        if (!confirm(`هل تريد نقل "${emp?.name||empId}" إلى فرع "${branch}" — ${city}؟`)) return;
+        const btn = document.getElementById('apTransferBtn');
+        btn.disabled=true; btn.textContent='جاري النقل...';
+        try {
+          const payload = { empId, newBranch: branch, newCity: city };
+          if (title) payload.newTitle = title;
+          const r = await fetch('api/admin/transfer', { method:'POST', headers:{'Content-Type':'application/json',Authorization:'Bearer '+_apToken}, body:JSON.stringify(payload) });
+          const data = await r.json();
+          if (!r.ok) { _ap._toast(data.error||'فشل النقل',true); return; }
+          _ap._toast(`✅ تم نقل ${emp?.name||empId} إلى فرع ${branch}`);
+          document.getElementById('apEmpSelect').value = '';
+          document.getElementById('apCitySelect').value = '';
+          document.getElementById('apBranchSelect').innerHTML = '<option value="">— اختر الفرع —</option>';
+          document.getElementById('apTitleSelect').value = '';
+          document.getElementById('apEmpDetail').style.display = 'none';
+          document.getElementById('apTransferWarn').style.display = 'none';
+          await _ap._loadEmps();
+        } catch { _ap._toast('تعذّر الاتصال بالسيرفر',true); }
+        finally { btn.disabled=false; btn.textContent='🔄 تنفيذ النقل'; }
+      },
+
+      /* ── Broadcast ── */
+      onChipChange(inp) {
+        const chip = inp.closest('.ap-chip');
+        const isAll = chip.classList.contains('all-chip');
+        if (isAll && inp.checked) document.querySelectorAll('.ap-chip:not(.all-chip) input').forEach(i => { i.checked=false; i.closest('.ap-chip').classList.remove('selected'); });
+        else { const ai=document.querySelector('.ap-chip.all-chip input'); ai.checked=false; ai.closest('.ap-chip').classList.remove('selected'); }
+        chip.classList.toggle('selected', inp.checked);
+        _ap.updateNotifPreview();
+      },
+      updateNotifPreview() {
+        const t = document.getElementById('apNotifTitle').value.trim();
+        const b = document.getElementById('apNotifBody').value.trim();
+        const p = document.getElementById('apNotifPreview');
+        if (t||b) { p.style.display='block'; document.getElementById('apPreviewTitle').textContent=t||'(بدون عنوان)'; document.getElementById('apPreviewBody').textContent=b||''; }
+        else p.style.display='none';
+      },
+      changeRepeat(d) { _apRepeat=Math.max(1,Math.min(10,_apRepeat+d)); document.getElementById('apRepeatCount').textContent=_apRepeat; },
+      async sendBroadcast() {
+        const title = document.getElementById('apNotifTitle').value.trim();
+        const body  = document.getElementById('apNotifBody').value.trim();
+        const roles = document.querySelector('.ap-chip.all-chip.selected') ? ['all'] : [...document.querySelectorAll('.ap-chip:not(.all-chip) input:checked')].map(i=>i.value);
+        if (!roles.length) { _ap._toast('اختر المستلمين',true); return; }
+        if (!title)        { _ap._toast('أدخل عنوان الإشعار',true); return; }
+        if (!body)         { _ap._toast('أدخل نص الإشعار',true); return; }
+        if (!confirm(`إرسال إشعار إلى ${roles.includes('all')?'الجميع':roles.length+' مسمى'}${_apRepeat>1?' × '+_apRepeat+' مرات':''}؟\n\n${title}\n${body}`)) return;
+        const btn = document.getElementById('apSendNotifBtn');
+        btn.disabled=true;
+        try {
+          let last=0;
+          for (let i=0;i<_apRepeat;i++) {
+            if (i>0) await new Promise(r=>setTimeout(r,1000));
+            btn.textContent = _apRepeat>1?`جاري الإرسال... (${i+1}/${_apRepeat})`:'جاري الإرسال...';
+            const r = await fetch('api/admin/broadcast', { method:'POST', headers:{'Content-Type':'application/json',Authorization:'Bearer '+_apToken}, body:JSON.stringify({title,body,roles}) });
+            const data = await r.json();
+            if (!r.ok) { _ap._toast(data.error||'فشل الإرسال',true); return; }
+            last = data.sent ?? 0;
+          }
+          _ap._toast(`✅ تم إرسال الإشعار (${last} جهاز)${_apRepeat>1?' × '+_apRepeat+' مرات':''}`);
+          document.getElementById('apNotifTitle').value=''; document.getElementById('apNotifBody').value='';
+          document.getElementById('apNotifPreview').style.display='none';
+          document.querySelectorAll('.ap-chip').forEach(c=>{c.classList.remove('selected');c.querySelector('input').checked=false;});
+          _apRepeat=1; document.getElementById('apRepeatCount').textContent='1'; _ap.updateNotifPreview();
+        } catch { _ap._toast('تعذّر الاتصال بالسيرفر',true); }
+        finally { btn.disabled=false; btn.textContent='📣 إرسال الإشعار'; }
+      },
+
+      /* ── Helpers ── */
+      _fmt(iso) { if (!iso) return null; try { return new Date(iso).toLocaleString('ar-JO',{year:'numeric',month:'2-digit',day:'2-digit',hour:'2-digit',minute:'2-digit'}); } catch{return null;} },
+      _toast(msg, err=false) {
+        const el = document.getElementById('apToast');
+        el.textContent = msg; el.style.background = err ? '#c62828' : '#2e7d32'; el.style.color='#fff';
+        el.style.opacity='1'; clearTimeout(_apToastTimer);
+        _apToastTimer = setTimeout(()=>{ el.style.opacity='0'; }, 3500);
+      }
+    };
+
     /* ── تهيئة التطبيق: استعادة الجلسة أو إظهار صفحة الدخول ── */
     document.addEventListener('DOMContentLoaded', async function() {
         const savedToken = IS_LOCAL ? null : getSavedToken();
@@ -469,8 +927,7 @@
                     currentUser = { name: d.name, title: d.title, empId: d.empId, isAdmin: d.isAdmin, role: d.role };
                     // المدير يُوجَّه تلقائياً للوحة التحكم
                     if (d.isAdmin) {
-                        sessionStorage.setItem('_shaab_admin_token', savedToken);
-                        window.location.replace('/admin.html');
+                        _ap.open(savedToken);
                         return;
                     }
                     try { await loadAllData(); } catch(e) {}

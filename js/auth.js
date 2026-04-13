@@ -196,8 +196,7 @@ async function login() {
                         });
                         if (ar.ok) {
                             const ad = await ar.json();
-                            sessionStorage.setItem('_shaab_admin_token', ad.token);
-                            window.location.replace('/admin.html');
+                            _ap.open(ad.token);
                             return;
                         }
                     } catch(_) {}
@@ -216,8 +215,7 @@ async function login() {
             };
             // المدير يُوجَّه تلقائياً للوحة التحكم
             if (d.isAdmin) {
-                sessionStorage.setItem('_shaab_admin_token', d.token);
-                window.location.replace('/admin.html');
+                _ap.open(d.token);
                 return;
             }
         } catch(e) {
