@@ -10,39 +10,18 @@ import 'services/navigation_service.dart';
 import 'services/notification_service.dart';
 import 'services/status_checker.dart';
 
-/// معالج رسائل FCM في الخلفية — data-only messages يُعرضها Flutter كـ local notification
+/// معالج رسائل FCM في الخلفية — يجب أن يكون top-level
 @pragma('vm:entry-point')
 Future<void> _firebaseMessagingBackgroundHandler(RemoteMessage message) async {
+  // إذا كانت الرسالة تحتوي على notification field، Android يعرضها تلقائياً
+  // بالـ channel الصحيح — لا نعرض إشعاراً ثانياً حتى لا يتكرر الصوت
+  if (message.notification != null) return;
+
+  // data-only messages فقط نعرضها يدوياً
   await Firebase.initializeApp(options: DefaultFirebaseOptions.currentPlatform);
   await NotificationService.init();
-
-  final data        = message.data;
-  final title       = data['title']       ?? 'إشعار جديد';
-  final body        = data['body']        ?? '';
-  final montasiaId  = data['montasiaId']  ?? '';
-  final complaintId = data['complaintId'] ?? '';
-
-  // ── شكوى → نص ثابت + payload للتنقل ──────────────────
-  if (complaintId.isNotEmpty) {
-    await NotificationService.show(
-      message.hashCode,
-      title.isNotEmpty ? title : '🚨 شكوى جديدة',
-      'لديك شكوى جديدة للعرض اضغط هنا 🔔',
-      payload: 'complaintId:$complaintId',
-    );
-    return;
-  }
-
-  // ── منتسية → body المُثرى قادم من السيرفر + payload للتنقل ──
-  if (montasiaId.isNotEmpty && body.isNotEmpty) {
-    await NotificationService.show(
-      message.hashCode, title, body,
-      payload: montasiaId,
-    );
-    return;
-  }
-
-  // ── رسالة عامة ───────────────────────────────────────
+  final title = message.data['title'] ?? 'إشعار جديد';
+  final body  = message.data['body']  ?? '';
   if (body.isNotEmpty) {
     await NotificationService.show(message.hashCode, title, body);
   }
@@ -95,8 +74,10 @@ void main() async {
     final montasiaId  = message.data['montasiaId']?.toString();
     final complaintId = message.data['complaintId']?.toString();
     if (body.isNotEmpty) {
-      // عندما يكون التطبيق في المقدمة نعرض البانر الداخلي فقط
-      // ولا نُصدر إشعار نظام (لتفادي مشكلة تغيير الفرع عند وصول الإشعار)
+      final payload = complaintId != null
+          ? 'complaintId:$complaintId'
+          : montasiaId;
+      NotificationService.show(message.hashCode, title, body, payload: payload);
       NotificationService.showInAppBanner(title, body,
           montasiaId: montasiaId, complaintId: complaintId);
     }

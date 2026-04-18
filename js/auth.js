@@ -49,12 +49,12 @@ const PERMISSIONS = {
         'addC',
         'viewPrices'
     ],
-    // موظف فرع — عرض منتسيات فرعه المحدد
-    branch_employee: ['viewM'],
-    // مدير فرع — عرض منتسيات وشكاوي فرعه المحدد
-    branch_manager: ['viewM'],
-    // مدير منطقة — عرض منتسيات وشكاوي جميع فروعه
-    area_manager: ['viewM']
+    // موظف فرع — صلاحيات التطبيق فقط، لا دخول للموقع
+    branch_employee: [],
+    // مدير فرع — صلاحيات التطبيق فقط، لا دخول للموقع
+    branch_manager: [],
+    // مدير منطقة — صلاحيات التطبيق فقط، لا دخول للموقع
+    area_manager: []
 };
 
 function perm(p) {
@@ -166,6 +166,10 @@ async function login() {
             else if (emp.title === 'موظف فرع')   role = 'branch_employee';
             else if (emp.title === 'مدير فرع')    role = 'branch_manager';
             else if (emp.title === 'مدير منطقة')  role = 'area_manager';
+            if (role === 'branch_employee' || role === 'branch_manager' || role === 'area_manager') {
+                _showLoginError('هذا الحساب مخصص لتطبيق الجوال فقط');
+                return;
+            }
             currentUser = { ...emp, isAdmin:false, role };
         }
     } else {
@@ -218,6 +222,13 @@ async function login() {
             _showLoginError('خطأ في الاتصال بالسيرفر');
             return;
         }
+        // منع أدوار الجوال من الدخول عبر الويب
+        if (['branch_employee','branch_manager','area_manager'].includes(currentUser?.role)) {
+            _showLoginError('هذا الحساب مخصص لتطبيق الجوال فقط');
+            setToken(null);
+            currentUser = null;
+            return;
+        }
         // تحميل البيانات بعد الحصول على الـ token
         try { await loadAllData(); } catch(e) { /* نكمل الدخول حتى لو فشل التحميل */ }
     }
@@ -258,10 +269,6 @@ function setProfileUI() {
     const isControlSub     = currentUser.role === 'control_sub';
     const isAdmin          = currentUser.isAdmin;
     const isCCManager      = currentUser.role === 'cc_manager';
-    const isBranchEmployee = currentUser.role === 'branch_employee';
-    const isBranchManager  = currentUser.role === 'branch_manager';
-    const isAreaManager    = currentUser.role === 'area_manager';
-    const isBranchRole     = isBranchEmployee || isBranchManager || isAreaManager;
 
     // لوحة التحكم — مرئية للجميع إلا موظف السيطرة
     if (!isControlSub) {
@@ -284,17 +291,7 @@ function setProfileUI() {
         document.getElementById('tab-t')?.classList.add('hidden');
     }
 
-    if (isBranchRole) {
-        // أدوار الفروع — منتسيات الفرع فقط، وشكاوي للمدير ومدير المنطقة
-        ['tab-h','tab-i','tab-b','tab-e','tab-s','tab-f','tab-p','tab-l','tab-t'].forEach(id => document.getElementById(id)?.classList.add('hidden'));
-        document.getElementById('tab-m')?.classList.remove('hidden');
-        document.getElementById('tab-o')?.classList.remove('hidden');
-        if (isBranchManager || isAreaManager) {
-            document.getElementById('tab-c')?.classList.remove('hidden');
-        } else {
-            document.getElementById('tab-c')?.classList.add('hidden');
-        }
-    } else if (isMedia) {
+    if (isMedia) {
         // موظف الميديا يرى فقط تبويب السيطرة وقائمة الأسعار
         ['tab-m','tab-o','tab-b','tab-e','tab-s','tab-f'].forEach(id => document.getElementById(id)?.classList.add('hidden'));
         document.getElementById('tab-p')?.classList.remove('hidden');

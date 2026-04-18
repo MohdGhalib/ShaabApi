@@ -60,7 +60,6 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
   void _switchToMontasiat() {
     setState(() => _tab = 1);
     _refreshTrigger.value++;
-    NavigationService.pendingMontasiaId.value = null;
   }
 
   /// يُفحص الحالات عند استئناف التطبيق من الخلفية

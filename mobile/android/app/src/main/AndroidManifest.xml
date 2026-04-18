@@ -6,8 +6,6 @@
     <uses-permission android:name="android.permission.CAMERA"/>
     <uses-permission android:name="android.permission.READ_EXTERNAL_STORAGE" android:maxSdkVersion="32"/>
     <uses-permission android:name="android.permission.WRITE_EXTERNAL_STORAGE" android:maxSdkVersion="29"/>
-    <!-- تسجيل صوتي -->
-    <uses-permission android:name="android.permission.RECORD_AUDIO"/>
     <!-- إشعارات -->
     <uses-permission android:name="android.permission.POST_NOTIFICATIONS"/>
     <uses-permission android:name="android.permission.VIBRATE"/>
@@ -45,7 +43,7 @@
         <!-- FCM default notification channel — must match the channel created in ShaabApplication -->
         <meta-data
             android:name="com.google.firebase.messaging.default_notification_channel_id"
-            android:value="shaab_v8" />
+            android:value="shaab_v5" />
         <!-- Don't delete the meta-data below.
              This is used by the Flutter tool to generate GeneratedPluginRegistrant.java -->
         <meta-data
