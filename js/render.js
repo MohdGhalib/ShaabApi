@@ -314,9 +314,19 @@ function _renderTableO(get) {
         addedBy: get("searchAddedByO"),
         type:    get("searchTypeO")
     };
+    const _myRoleO = currentUser?.role;
+    let _branchFilterO = null;
+    if (_myRoleO === 'branch_employee' || _myRoleO === 'branch_manager') {
+        const _me = employees.find(e => e.empId === currentUser?.empId);
+        if (_me?.assignedBranch) _branchFilterO = { type:'single', branch:_me.assignedBranch.branch };
+    } else if (_myRoleO === 'area_manager') {
+        const _me = employees.find(e => e.empId === currentUser?.empId);
+        if (_me?.assignedBranches?.length) _branchFilterO = { type:'multi', branches:_me.assignedBranches.map(b=>b.branch) };
+    }
     const allRowsO = db.montasiat.filter(x =>
         !x.deleted &&
         (x.status==='قيد الانتظار' || x.status==='بانتظار الموافقة' || x.status==='قيد الاستلام') &&
+        (!_branchFilterO || (_branchFilterO.type==='single' ? x.branch===_branchFilterO.branch : _branchFilterO.branches.includes(x.branch))) &&
         (!f.city    || x.city===f.city) &&
         (!f.branch  || x.branch===f.branch) &&
         (!f.date    || x.iso.startsWith(f.date)) &&
@@ -428,6 +438,15 @@ function _renderTableC(get, isAdmin) {
     const isMedia           = currentUser?.role === 'media';
     const isControlEmployee = currentUser?.role === 'control_employee';
     const isControlSub      = currentUser?.role === 'control_sub';
+    const isBranchRoleC     = currentUser?.role === 'branch_employee' || currentUser?.role === 'branch_manager' || currentUser?.role === 'area_manager';
+    let _branchFilterC = null;
+    if (currentUser?.role === 'branch_employee' || currentUser?.role === 'branch_manager') {
+        const _me = employees.find(e => e.empId === currentUser?.empId);
+        if (_me?.assignedBranch) _branchFilterC = { type:'single', branch:_me.assignedBranch.branch };
+    } else if (currentUser?.role === 'area_manager') {
+        const _me = employees.find(e => e.empId === currentUser?.empId);
+        if (_me?.assignedBranches?.length) _branchFilterC = { type:'multi', branches:_me.assignedBranches.map(b=>b.branch) };
+    }
     const f = {
         city:   get("searchCityC"),
         branch: get("searchBranchC"),
@@ -436,6 +455,7 @@ function _renderTableC(get, isAdmin) {
     };
     const allRowsC = db.complaints.filter(x =>
         !x.deleted &&
+        (!_branchFilterC || (_branchFilterC.type==='single' ? x.branch===_branchFilterC.branch : _branchFilterC.branches.includes(x.branch))) &&
         (isControlSub ? (x.assignedToSubId === currentUser.empId && x.status === 'تمت الموافقة') :
          (isControl || isControlEmployee || isMedia) ? x.status === 'تمت الموافقة' : true) &&
         (!f.city   || x.city===f.city) &&

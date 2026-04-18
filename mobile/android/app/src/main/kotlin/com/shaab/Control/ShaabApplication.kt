@@ -1,10 +1,7 @@
 package com.shaab.Control
 
 import android.app.Application
-import android.app.NotificationChannel
 import android.app.NotificationManager
-import android.media.AudioAttributes
-import android.net.Uri
 import android.os.Build
 
 class ShaabApplication : Application() {
@@ -17,27 +14,8 @@ class ShaabApplication : Application() {
         if (Build.VERSION.SDK_INT < Build.VERSION_CODES.O) return
         val manager = getSystemService(NotificationManager::class.java) ?: return
 
-        val soundUri = Uri.parse("android.resource://$packageName/raw/consideration")
-        val audioAttr = AudioAttributes.Builder()
-            .setContentType(AudioAttributes.CONTENT_TYPE_SONIFICATION)
-            .setUsage(AudioAttributes.USAGE_NOTIFICATION)
-            .build()
-
-        // حذف القنوات القديمة لضمان تطبيق الصوت الصحيح
-        manager.deleteNotificationChannel("shaab_v2")
-        manager.deleteNotificationChannel("shaab_v3")
-        manager.deleteNotificationChannel("shaab_v4")
-
-        val channel = NotificationChannel(
-            "shaab_v5",
-            "إشعارات الشعب",
-            NotificationManager.IMPORTANCE_HIGH
-        ).apply {
-            description = "إشعارات المنتسيات والشكاوي والاستفسارات"
-            setSound(soundUri, audioAttr)
-            enableVibration(true)
-        }
-
-        manager.createNotificationChannel(channel)
+        // حذف القنوات القديمة فقط — الإنشاء يتولاه flutter_local_notifications
+        listOf("shaab_v2","shaab_v3","shaab_v4","shaab_v5","shaab_v6","shaab_v7")
+            .forEach { manager.deleteNotificationChannel(it) }
     }
 }

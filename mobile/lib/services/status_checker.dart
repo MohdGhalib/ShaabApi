@@ -71,7 +71,18 @@ class StatusChecker {
       }
 
       if (title.isNotEmpty) {
-        await NotificationService.show(notifId++, title, '$branch — $city');
+        final type    = item['type']   as String? ?? '';
+        final notes   = item['notes']  as String? ?? '';
+        final snippet = notes.length > 60 ? '${notes.substring(0, 60)}…' : notes;
+        final parts   = <String>[
+          if (type.isNotEmpty)   type,
+          '$branch — $city',
+          if (snippet.isNotEmpty) snippet,
+        ];
+        await NotificationService.show(
+          notifId++, title, parts.join('\n'),
+          payload: id,
+        );
       }
 
       newSaved[id] = status;

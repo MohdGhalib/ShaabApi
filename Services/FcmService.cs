@@ -139,23 +139,20 @@ public class FcmService
     {
         try
         {
+            // data-only: نضع title+body في data حتى يتحكم Flutter بالعرض والتنقل
+            var msgData = new Dictionary<string, string>(data ?? [])
+            {
+                ["title"] = title,
+                ["body"]  = body
+            };
+
             foreach (var batch in tokens.Chunk(500))
             {
                 var msg = new MulticastMessage
                 {
-                    Tokens       = batch.ToList(),
-                    Notification = new Notification { Title = title, Body = body },
-                    Data         = data ?? [],
-                    Android      = new AndroidConfig
-                    {
-                        Priority     = Priority.High,
-                        Notification = new AndroidNotification
-                        {
-                            ChannelId   = "shaab_v5",
-                            Sound       = "consideration",
-                            ClickAction = "FLUTTER_NOTIFICATION_CLICK",
-                        }
-                    }
+                    Tokens  = batch.ToList(),
+                    Data    = msgData,
+                    Android = new AndroidConfig { Priority = Priority.High }
                 };
                 var result = await FirebaseMessaging.DefaultInstance.SendEachForMulticastAsync(msg);
                 Console.WriteLine($"[FCM] Sent {result.SuccessCount}/{batch.Length} — title: {title}");

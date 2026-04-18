@@ -145,22 +145,31 @@ public class StorageController : ControllerBase
             // ── منتسية جديدة → كول سنتر + موظفو الفرع ──
             if (newMItems.Count > 0)
             {
+                var firstNew     = newMItems.First();
+                var firstSnippet = Snippet(firstNew.Notes);
+
                 // إشعار كول سنتر
+                var ccBody = newMItems.Count == 1
+                    ? BuildBody(firstNew.Type, firstNew.Branch, firstNew.City, firstSnippet)
+                    : $"تم إرسال {newMItems.Count} منتسيات جديدة";
                 await FcmService.SendToRolesStatic(allTokens,
                     ["cc_manager", "cc_employee"],
                     "📋 منتسية جديدة",
-                    newMItems.Count == 1 ? "تم إرسال منتسية جديدة" : $"تم إرسال {newMItems.Count} منتسيات جديدة",
-                    data: new Dictionary<string, string> { ["montasiaId"] = newMItems.First().Id.ToString(), ["type"] = "new" });
+                    ccBody,
+                    data: new Dictionary<string, string> { ["montasiaId"] = firstNew.Id.ToString(), ["type"] = "new" });
 
                 // إشعار موظفي وأبناء الفرع (تأكيد الاستلام)
                 foreach (var grp in newMItems.GroupBy(x => x.Branch).Where(g => !string.IsNullOrEmpty(g.Key)))
                 {
+                    var m = grp.First();
+                    var b = grp.Count() == 1
+                        ? BuildBody(m.Type, m.Branch, m.City, Snippet(m.Notes))
+                        : $"تم إرسال {grp.Count()} منتسيات للنظام";
                     var tokens = DbHelper.GetBranchTokens(allTokens, empJson, grp.Key);
                     if (tokens.Count > 0)
                         await FcmService.SendToTokensStatic(tokens,
-                            "✅ تم إرسال المنتسية",
-                            grp.Count() == 1 ? "تم إرسال المنتسية للنظام بنجاح" : $"تم إرسال {grp.Count()} منتسيات للنظام",
-                            data: new Dictionary<string, string> { ["montasiaId"] = grp.First().Id.ToString(), ["type"] = "new" });
+                            "✅ تم إرسال المنتسية", b,
+                            data: new Dictionary<string, string> { ["montasiaId"] = m.Id.ToString(), ["type"] = "new" });
                 }
 
                 // SSE: إشعار فوري لمستخدمي الويب (يُشغَّل الصوت من SSE handler مباشرة)
@@ -182,37 +191,46 @@ public class StorageController : ControllerBase
             {
                 foreach (var grp in approvedM.GroupBy(x => x.Branch).Where(g => !string.IsNullOrEmpty(g.Key)))
                 {
+                    var m = grp.First();
+                    var b = grp.Count() == 1
+                        ? BuildBody(m.Type, m.Branch, m.City, Snippet(m.Notes))
+                        : $"تمت الموافقة على {grp.Count()} منتسيات";
                     var tokens = DbHelper.GetBranchTokens(allTokens, empJson, grp.Key);
                     if (tokens.Count > 0)
                         await FcmService.SendToTokensStatic(tokens,
-                            "✅ تمت الموافقة على المنتسية",
-                            grp.Count() == 1 ? "تمت الموافقة على المنتسية وهي جاهزة للتسليم" : $"تمت الموافقة على {grp.Count()} منتسيات",
-                            data: new Dictionary<string, string> { ["montasiaId"] = grp.First().Id.ToString(), ["type"] = "approval" });
+                            "✅ تمت الموافقة على المنتسية", b,
+                            data: new Dictionary<string, string> { ["montasiaId"] = m.Id.ToString(), ["type"] = "approval" });
                 }
             }
 
             // ── تم التسليم → كول سنتر + موظفو الفرع + مدير الفرع ──
             if (deliveredM.Count > 0)
             {
-                var count   = deliveredM.Count;
-                var firstId = deliveredM.First().Id.ToString();
+                var count      = deliveredM.Count;
+                var firstDel   = deliveredM.First();
 
                 // إشعار كول سنتر
+                var delCcBody = count == 1
+                    ? BuildBody(firstDel.Type, firstDel.Branch, firstDel.City, Snippet(firstDel.Notes))
+                    : $"تم تسليم {count} منتسيات";
                 await FcmService.SendToRolesStatic(allTokens,
                     ["cc_manager", "cc_employee"],
                     "📦 تم تسليم منتسية",
-                    count == 1 ? "تم تسليم المنتسية" : $"تم تسليم {count} منتسيات",
-                    data: new Dictionary<string, string> { ["montasiaId"] = firstId, ["type"] = "delivered" });
+                    delCcBody,
+                    data: new Dictionary<string, string> { ["montasiaId"] = firstDel.Id.ToString(), ["type"] = "delivered" });
 
-                // إشعار موظفي الفرع ومدير الفرع (بدون مدير المنطقة)
+                // إشعار موظفي الفرع ومدير الفرع
                 foreach (var grp in deliveredM.GroupBy(x => x.Branch).Where(g => !string.IsNullOrEmpty(g.Key)))
                 {
+                    var m = grp.First();
+                    var b = grp.Count() == 1
+                        ? BuildBody(m.Type, m.Branch, m.City, Snippet(m.Notes))
+                        : $"تم تسليم {grp.Count()} منتسيات";
                     var tokens = DbHelper.GetBranchTokens(allTokens, empJson, grp.Key);
                     if (tokens.Count > 0)
                         await FcmService.SendToTokensStatic(tokens,
-                            "📦 تم تسليم المنتسية",
-                            grp.Count() == 1 ? "تم تسليم المنتسية بنجاح" : $"تم تسليم {grp.Count()} منتسيات",
-                            data: new Dictionary<string, string> { ["montasiaId"] = grp.First().Id.ToString(), ["type"] = "delivered" });
+                            "📦 تم تسليم المنتسية", b,
+                            data: new Dictionary<string, string> { ["montasiaId"] = m.Id.ToString(), ["type"] = "delivered" });
                 }
             }
 
@@ -221,7 +239,7 @@ public class StorageController : ControllerBase
                 await FcmService.SendToRolesStatic(allTokens,
                     ["cc_manager", "control_employee", "branch_manager", "area_manager"],
                     "🚨 شكوى جديدة",
-                    newC == 1 ? "تم إضافة شكوى جديدة" : $"تم إضافة {newC} شكاوي جديدة",
+                    "لديك شكوى جديدة للعرض اضغط هنا 🔔",
                     data: new Dictionary<string, string> { ["complaintId"] = newCIds.First().ToString(), ["type"] = "complaint" });
 
             // ── رد جديد من السيطرة على شكوى → كول سنتر + ميديا ──
@@ -243,6 +261,21 @@ public class StorageController : ControllerBase
         {
             Console.WriteLine($"[FCM] DetectAndNotify error: {ex.Message}");
         }
+    }
+
+    private static string Snippet(string? notes, int max = 80)
+    {
+        if (string.IsNullOrEmpty(notes)) return "";
+        return notes.Length > max ? notes.Substring(0, max) + "…" : notes;
+    }
+
+    private static string BuildBody(string type, string branch, string city, string snippet)
+    {
+        var parts = new List<string>();
+        if (!string.IsNullOrEmpty(type))   parts.Add(type);
+        if (!string.IsNullOrEmpty(branch)) parts.Add($"{branch} — {city}");
+        if (!string.IsNullOrEmpty(snippet)) parts.Add(snippet);
+        return string.Join("\n", parts);
     }
 }
 

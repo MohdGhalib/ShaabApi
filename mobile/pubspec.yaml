@@ -1,7 +1,7 @@
 name: shaab_app
 description: تطبيق الشعب - نظام المنتسيات
 publish_to: 'none'
-version: 1.0.1+30
+version: 1.0.1+32
 
 environment:
   sdk: '>=3.0.0 <4.0.0'
@@ -32,6 +32,9 @@ dependencies:
 
   # روابط خارجية
   url_launcher: ^6.3.0
+
+  # تسجيل صوتي وتحويل الكلام لنص
+  speech_to_text: ^7.0.0
 
   # واجهة
   google_fonts: ^6.2.1
