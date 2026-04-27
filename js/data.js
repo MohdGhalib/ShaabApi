@@ -656,13 +656,22 @@ function _snapshotComplaints() {
     _prevCompSnap = {};
     (db.complaints || []).forEach(c => {
         _prevCompSnap[c.id] = {
-            sub: c.assignedToSubId  || null,
-            emp: c.assignedToEmpId  || null
+            sub:    c.assignedToSubId || null,
+            emp:    c.assignedToEmpId || null,
+            status: c.status          || null
         };
     });
 }
 
-// بعد reload: كشف إذا حُوِّلت شكوى لهذا الموظف حديثاً
+// مساعد: هل موظف السيطرة مسؤول عن فرع الشكوى؟
+function _ctrlSubMatchesBranch(complaint) {
+    const emp = employees.find(e => e.empId === currentUser?.empId);
+    const ab  = emp?.assignedBranches;
+    if (!ab?.length) return false; // بلا فروع مُعيَّنة = لا تنبيه
+    return ab.some(b => b.branch === complaint.branch && b.city === complaint.city);
+}
+
+// بعد reload: كشف شكاوى جديدة أو محوَّلة لهذا الموظف
 function _checkNewAssignments() {
     if (!currentUser) return;
     const role  = currentUser.role;
@@ -670,10 +679,20 @@ function _checkNewAssignments() {
     (db.complaints || []).forEach(c => {
         if (c.deleted) return;
         const prev = _prevCompSnap[c.id];
-        if (role === 'control_employee' && c.assignedToEmpId === empId && prev?.emp !== empId)
-            _showCtrlAlert(c.id, c.notes, c.branch, c.city);
-        if (role === 'control_sub' && c.assignedToSubId === empId && prev?.sub !== empId)
-            _showCtrlAlert(c.id, c.notes, c.branch, c.city);
+        // مدير السيطرة — شكوى جديدة أو حديثاً صارت "تمت الموافقة"
+        if (role === 'control_employee') {
+            const isNew       = !prev;
+            const justApproved = prev && prev.status !== 'تمت الموافقة' && c.status === 'تمت الموافقة';
+            if ((isNew || justApproved) && c.status === 'تمت الموافقة')
+                _showCtrlAlert(c.id, c.notes, c.branch, c.city);
+        }
+        // موظف سيطرة — شكوى جديدة لفرعه أو حديثاً صارت "تمت الموافقة"
+        if (role === 'control_sub' && _ctrlSubMatchesBranch(c)) {
+            const isNew        = !prev;
+            const justApproved = prev && prev.status !== 'تمت الموافقة' && c.status === 'تمت الموافقة';
+            if (isNew || justApproved)
+                _showCtrlAlert(c.id, c.notes, c.branch, c.city);
+        }
     });
 }
 
@@ -705,11 +724,21 @@ function _initSSE() {
             _playSound();
             _showComplaintPopup(info);
         }
-        // مدير السيطرة → تنبيه مستمر بصوت لا يتوقف
+        // مدير السيطرة → تنبيه مستمر
         if (role === 'control_employee' || role === 'control') {
             let info = {};
             try { info = JSON.parse(e.data); } catch {}
             _showCtrlAlert(info.id || null, info.notes, info.branch, info.city);
+        }
+        // موظف سيطرة → تنبيه إذا كانت الشكوى لفرعه
+        if (role === 'control_sub') {
+            let info = {};
+            try { info = JSON.parse(e.data); } catch {}
+            const emp = employees.find(e2 => e2.empId === currentUser?.empId);
+            const ab  = emp?.assignedBranches;
+            if (ab?.length && ab.some(b => b.branch === info.branch && b.city === info.city)) {
+                _showCtrlAlert(info.id || null, info.notes, info.branch, info.city);
+            }
         }
     });
     es.addEventListener('new-montasia', (e) => {
