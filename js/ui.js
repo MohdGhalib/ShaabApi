@@ -387,13 +387,20 @@ function init() {
 
 function setupCitySelects() {
     const citySelects = ['mCityAdd','iCityAdd','cCityAdd','searchCityM','searchCityC','searchCityO','searchCityI','branchCitySearch','searchCityCU'];
-    let options = '';
-    for (let c in branches) options += `<option value="${c}">${c}</option>`;
+    const ctrlSubAB = (currentUser?.role === 'control_sub' && currentUser?.assignedBranches?.length)
+        ? currentUser.assignedBranches : null;
+    let allOptions = '', filteredOptions = '';
+    for (let c in branches) {
+        allOptions += `<option value="${c}">${c}</option>`;
+        if (!ctrlSubAB || ctrlSubAB.some(b => b.city === c))
+            filteredOptions += `<option value="${c}">${c}</option>`;
+    }
     citySelects.forEach(id => {
         const el = document.getElementById(id); if (!el) return;
-        el.innerHTML = (id.startsWith('search') ? '<option value="">الكل</option>' : '<option value="">اختيار المحافظة</option>') + options;
+        const isSearch = id.startsWith('search');
+        const opts = (ctrlSubAB && isSearch) ? filteredOptions : allOptions;
+        el.innerHTML = (isSearch ? '<option value="">الكل</option>' : '<option value="">اختيار المحافظة</option>') + opts;
     });
-    // خيار "غير محدد" لقائمة الاستفسارات فقط — يُضاف بعد التحميل
     setTimeout(() => toggleUnspecifiedBranch(), 0);
 }
 
@@ -403,8 +410,16 @@ function updateBranches(cityId, branchId) {
         document.getElementById(branchId).innerHTML = '<option value="غير محدد">غير محدد</option>';
         return;
     }
-    let html = cityId.includes('search') ? '<option value="">الكل</option>' : '<option value="">الفرع</option>';
-    if (city && branches[city]) branches[city].forEach(b => html += `<option value="${b}">${b}</option>`);
+    const isSearch = cityId.includes('search');
+    let html = isSearch ? '<option value="">الكل</option>' : '<option value="">الفرع</option>';
+    const ctrlSubAB = (currentUser?.role === 'control_sub' && currentUser?.assignedBranches?.length)
+        ? currentUser.assignedBranches : null;
+    if (city && branches[city]) {
+        branches[city].forEach(b => {
+            if (ctrlSubAB && isSearch && !ctrlSubAB.some(ab => ab.city === city && ab.branch === b)) return;
+            html += `<option value="${b}">${b}</option>`;
+        });
+    }
     document.getElementById(branchId).innerHTML = html;
 }
 

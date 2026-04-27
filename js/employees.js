@@ -34,6 +34,121 @@ function onEmployeeTitleChange() {
         document.getElementById('eBranchName').innerHTML = '<option value="">الفرع</option>';
         // لمدير الفرع: تحديث الفروع مع إظهار المحجوز
         cityEl.onchange = () => _updateBranchNameForBranchManager(title);
+    } else if (title === 'موظف سيطرة') {
+        single.style.display = 'none';
+        multi.style.display  = 'block';
+        const listEl = document.getElementById('eMultiBranchList');
+        if (!listEl) return;
+        const secLabel = document.querySelector('#eMultiBranchSection > label');
+        if (secLabel) secLabel.innerHTML = '🏢 الفروع المسؤول عنها <span id="_ctrlSubBranchCount" style="background:rgba(211,47,47,0.2);border:1px solid rgba(211,47,47,0.4);color:#ef9a9a;border-radius:20px;padding:1px 10px;font-size:11px;font-weight:700;margin-right:6px;">0 فرع</span>';
+
+        const _updateCount = () => {
+            const n = listEl.querySelectorAll('input[type=checkbox]:checked').length;
+            const el = document.getElementById('_ctrlSubBranchCount');
+            if (el) el.textContent = n + ' فرع';
+        };
+
+        // جمع الفروع المحجوزة لموظفي السيطرة الحاليين
+        const takenBy = {};
+        employees.forEach(e => {
+            if (e.title !== 'موظف سيطرة') return;
+            (e.assignedBranches || []).forEach(b => {
+                takenBy[b.city + '::' + b.branch] = e.name;
+            });
+        });
+
+        listEl.style.cssText = 'display:flex;flex-direction:column;gap:6px;padding:2px;';
+        listEl.innerHTML = '';
+
+        Object.entries(branches).forEach(([city, brs]) => {
+            // ── Accordion wrapper ──
+            const accordion = document.createElement('div');
+            accordion.style.cssText = 'border:1px solid rgba(255,255,255,0.08);border-radius:12px;overflow:hidden;transition:border-color .2s;';
+
+            // ── City trigger row ──
+            const trigger = document.createElement('div');
+            trigger.style.cssText = 'display:flex;align-items:center;justify-content:space-between;padding:10px 14px;background:rgba(255,255,255,0.04);cursor:pointer;user-select:none;';
+
+            const cityLeft = document.createElement('div');
+            cityLeft.style.cssText = 'display:flex;align-items:center;gap:8px;';
+            cityLeft.innerHTML = `<span style="font-size:13px;font-weight:800;color:var(--text-main);">${city}</span>
+                <span class="_cityCount" style="font-size:10px;background:rgba(255,255,255,0.07);color:rgba(255,255,255,0.4);border-radius:20px;padding:1px 8px;">0/${brs.length}</span>`;
+
+            const arrow = document.createElement('span');
+            arrow.style.cssText = 'font-size:11px;color:rgba(255,255,255,0.35);transition:transform .2s;';
+            arrow.textContent = '▼';
+
+            trigger.appendChild(cityLeft);
+            trigger.appendChild(arrow);
+
+            // ── Dropdown panel ──
+            const panel = document.createElement('div');
+            panel.style.cssText = 'display:none;border-top:1px solid rgba(255,255,255,0.07);padding:10px 12px;background:rgba(0,0,0,0.15);';
+
+            const brGrid = document.createElement('div');
+            brGrid.style.cssText = 'display:flex;flex-direction:column;gap:6px;';
+
+            brs.forEach(br => {
+                const taken = takenBy[city + '::' + br];
+                const row = document.createElement('label');
+                row.style.cssText = taken
+                    ? 'display:flex;align-items:center;gap:10px;padding:8px 12px;border-radius:9px;cursor:not-allowed;border:1px solid rgba(255,255,255,0.04);background:rgba(255,255,255,0.01);opacity:0.5;'
+                    : 'display:flex;align-items:center;gap:10px;padding:8px 12px;border-radius:9px;cursor:pointer;border:1px solid rgba(255,255,255,0.07);background:rgba(255,255,255,0.02);transition:all .15s;';
+                const cb = document.createElement('input');
+                cb.type = 'checkbox';
+                cb.value = `${city}::${br}`;
+                cb.disabled = !!taken;
+                cb.style.cssText = 'width:16px;height:16px;accent-color:#ef5350;flex-shrink:0;' + (taken ? 'cursor:not-allowed;' : 'cursor:pointer;');
+                const brName = document.createElement('span');
+                brName.style.cssText = 'font-size:13px;font-weight:600;flex:1;' + (taken ? 'color:rgba(255,255,255,0.3);' : 'color:rgba(255,255,255,0.7);');
+                brName.textContent = br;
+                cb.onchange = () => {
+                    if (cb.checked) {
+                        row.style.background = 'rgba(211,47,47,0.15)';
+                        row.style.borderColor = 'rgba(211,47,47,0.4)';
+                        brName.style.color = '#ef9a9a';
+                    } else {
+                        row.style.background = 'rgba(255,255,255,0.02)';
+                        row.style.borderColor = 'rgba(255,255,255,0.07)';
+                        brName.style.color = 'rgba(255,255,255,0.7)';
+                    }
+                    const checked = panel.querySelectorAll('input:checked').length;
+                    cityLeft.querySelector('._cityCount').textContent = checked + '/' + brs.length;
+                    if (checked > 0) {
+                        accordion.style.borderColor = 'rgba(211,47,47,0.4)';
+                        cityLeft.querySelector('._cityCount').style.cssText = 'font-size:10px;background:rgba(211,47,47,0.2);color:#ef9a9a;border-radius:20px;padding:1px 8px;';
+                    } else {
+                        accordion.style.borderColor = 'rgba(255,255,255,0.08)';
+                        cityLeft.querySelector('._cityCount').style.cssText = 'font-size:10px;background:rgba(255,255,255,0.07);color:rgba(255,255,255,0.4);border-radius:20px;padding:1px 8px;';
+                    }
+                    _updateCount();
+                };
+                row.appendChild(cb);
+                row.appendChild(brName);
+                if (taken) {
+                    const badge = document.createElement('span');
+                    badge.textContent = taken;
+                    badge.style.cssText = 'font-size:10px;padding:2px 8px;border-radius:20px;background:rgba(255,152,0,0.12);color:#ffb74d;border:1px solid rgba(255,152,0,0.25);white-space:nowrap;';
+                    row.appendChild(badge);
+                }
+                brGrid.appendChild(row);
+            });
+
+            panel.appendChild(brGrid);
+
+            // ── Toggle on click ──
+            let open = false;
+            trigger.onclick = () => {
+                open = !open;
+                panel.style.display = open ? 'block' : 'none';
+                arrow.style.transform = open ? 'rotate(180deg)' : '';
+                trigger.style.background = open ? 'rgba(255,255,255,0.07)' : 'rgba(255,255,255,0.04)';
+            };
+
+            accordion.appendChild(trigger);
+            accordion.appendChild(panel);
+            listEl.appendChild(accordion);
+        });
     } else if (title === 'مدير منطقة') {
         single.style.display = 'none';
         multi.style.display  = 'block';
@@ -112,7 +227,7 @@ async function addEmployee() {
         const city = document.getElementById('eBranchCity')?.value;
         const br   = document.getElementById('eBranchName')?.value;
         if (city && br) assignedBranch = { city, branch: br };
-    } else if (title === 'مدير منطقة') {
+    } else if (title === 'مدير منطقة' || title === 'موظف سيطرة') {
         const checked = [...(document.getElementById('eMultiBranchList')?.querySelectorAll('input[type=checkbox]:checked') || [])];
         if (checked.length) {
             assignedBranches = checked.map(cb => {

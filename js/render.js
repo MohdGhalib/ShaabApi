@@ -209,7 +209,7 @@ function resetSearch(t) {
 
 function _renderTableM(get, isAdmin) {
     const addMontasiaCard = document.getElementById('addMontasiaCard');
-    if (addMontasiaCard) addMontasiaCard.style.display = (currentUser?.role === 'control_employee') ? 'none' : '';
+    if (addMontasiaCard) addMontasiaCard.style.display = (currentUser?.role === 'control_employee' || currentUser?.role === 'control_sub') ? 'none' : '';
     const tbodyM = document.querySelector("#tableM tbody");
     if (!tbodyM) return;
 
@@ -233,6 +233,9 @@ function _renderTableM(get, isAdmin) {
         const _me = employees.find(e => e.empId === currentUser?.empId);
         if (_me?.assignedBranch) _branchFilter = { type:'single', branch:_me.assignedBranch.branch };
     } else if (_myRole === 'area_manager') {
+        const _me = employees.find(e => e.empId === currentUser?.empId);
+        if (_me?.assignedBranches?.length) _branchFilter = { type:'multi', branches:_me.assignedBranches.map(b=>b.branch) };
+    } else if (_myRole === 'control_sub') {
         const _me = employees.find(e => e.empId === currentUser?.empId);
         if (_me?.assignedBranches?.length) _branchFilter = { type:'multi', branches:_me.assignedBranches.map(b=>b.branch) };
     }
@@ -352,9 +355,11 @@ function _renderTableO(get) {
         addedBy: get("searchAddedByO"),
         type:    get("searchTypeO")
     };
+    const _ctrlSubO = currentUser?.role === 'control_sub' ? employees.find(e => e.empId === currentUser?.empId) : null;
     const allRowsO = db.montasiat.filter(x =>
         !x.deleted &&
         (x.status==='قيد الانتظار' || x.status==='بانتظار الموافقة' || x.status==='قيد الاستلام') &&
+        (!_ctrlSubO?.assignedBranches?.length || _ctrlSubO.assignedBranches.some(b => b.branch === x.branch && b.city === x.city)) &&
         (!f.city    || x.city===f.city) &&
         (!f.branch  || x.branch===f.branch) &&
         (!f.date    || x.iso.startsWith(f.date)) &&
@@ -491,8 +496,12 @@ function _renderTableC(get, isAdmin) {
     };
     const allRowsC = (db.complaints || []).filter(x =>
         !x.deleted &&
-        (isControlSub ? (x.assignedToSubId === currentUser.empId && x.status === 'تمت الموافقة') :
-         (isControl || isControlEmployee || isMedia) ? x.status === 'تمت الموافقة' : true) &&
+        (isControlSub ? (
+            x.status === 'تمت الموافقة' &&
+            (currentUser.assignedBranches?.length
+                ? currentUser.assignedBranches.some(b => b.branch === x.branch && b.city === x.city)
+                : x.assignedToSubId === currentUser.empId)
+        ) : (isControl || isControlEmployee || isMedia) ? x.status === 'تمت الموافقة' : true) &&
         (!f.city   || x.city===f.city) &&
         (!f.branch || x.branch===f.branch) &&
         (!f.date   || x.iso.startsWith(f.date)) &&
@@ -543,7 +552,8 @@ function _renderTableC(get, isAdmin) {
         const controlEmps = isControl
             ? employees.filter(e => e.title === 'مدير قسم السيطرة')
             : isControlEmployee
-                ? employees.filter(e => e.title === 'موظف سيطرة')
+                ? employees.filter(e => e.title === 'موظف سيطرة' &&
+                    (!e.assignedBranches?.length || e.assignedBranches.some(b => b.branch === x.branch && b.city === x.city)))
                 : [];
 
         const auditHtml = _buildAuditHtml(x, isControl, isControlEmployee, isControlSub, controlEmps, auditStatusBadge);
@@ -648,7 +658,11 @@ function renderControlOpen() {
         !x.deleted &&
         x.status === 'تمت الموافقة' &&
         !x.audit &&
-        (isControlSub ? x.assignedToSubId === currentUser.empId : true) &&
+        (isControlSub ? (
+            currentUser.assignedBranches?.length
+                ? currentUser.assignedBranches.some(b => b.branch === x.branch && b.city === x.city)
+                : x.assignedToSubId === currentUser.empId
+        ) : true) &&
         (!city   || x.city   === city) &&
         (!branch || x.branch === branch) &&
         (!date   || (x.iso||'').startsWith(date)) &&
@@ -668,7 +682,8 @@ function renderControlOpen() {
         const controlEmps = isControl
             ? employees.filter(e => e.title === 'مدير قسم السيطرة')
             : isControlEmployee
-                ? employees.filter(e => e.title === 'موظف سيطرة')
+                ? employees.filter(e => e.title === 'موظف سيطرة' &&
+                    (!e.assignedBranches?.length || e.assignedBranches.some(b => b.branch === x.branch && b.city === x.city)))
                 : [];
 
         const auditHtml = _buildAuditHtml(x, isControl, isControlEmployee, isControlSub, controlEmps, '');

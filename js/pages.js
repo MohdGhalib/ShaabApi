@@ -292,9 +292,9 @@ e: `
         </div>
     </div>
     <!-- اختيار الأفرع: مدير منطقة (متعدد) -->
-    <div id="eMultiBranchSection" style="display:none;margin-top:12px;padding:14px;background:var(--bg-input);border-radius:12px;border:1px solid var(--border);">
-        <label style="font-size:13px;color:var(--text-dim);display:block;margin-bottom:8px;">📍 الأفرع المسؤول عنها (يمكن تحديد أكثر من فرع)</label>
-        <div id="eMultiBranchList" style="max-height:220px;overflow-y:auto;display:grid;grid-template-columns:repeat(auto-fill,minmax(180px,1fr));gap:6px;padding:4px;"></div>
+    <div id="eMultiBranchSection" style="display:none;margin-top:14px;padding:16px;background:rgba(255,255,255,0.03);border-radius:14px;border:1px solid rgba(255,255,255,0.09);">
+        <label style="font-size:13px;color:var(--text-dim);display:flex;align-items:center;gap:8px;margin-bottom:12px;font-weight:700;">📍 الأفرع المسؤول عنها (يمكن تحديد أكثر من فرع)</label>
+        <div id="eMultiBranchList"></div>
     </div>
     <div style="margin-top:15px;">
         <button class="btn btn-main" onclick="addEmployee()">➕ إضافة الموظف</button>
@@ -334,6 +334,7 @@ f: `
             </div>
         </div>
         <button class="btn" style="background:var(--bg-input);color:var(--text-dim);align-self:end;" onclick="resetBranchSearch()">تفريغ</button>
+        <button class="btn" style="background:rgba(46,125,50,0.15);color:#81c784;border:1px solid rgba(46,125,50,0.35);align-self:end;" onclick="exportBranchEvaluation()">📸 تصدير</button>
     </div>
     <div id="branchStatsResult"></div>
 </div>`,

@@ -304,7 +304,10 @@ function setProfileUI() {
         document.getElementById('tab-c-sub')?.classList.remove('hidden');
         document.getElementById('tab-f')?.classList.remove('hidden');
     } else if (isControlSub) {
-        ['tab-m','tab-m-sub','tab-o','tab-i','tab-b','tab-e','tab-s','tab-f'].forEach(id => document.getElementById(id)?.classList.add('hidden'));
+        ['tab-i','tab-b','tab-e','tab-s','tab-f'].forEach(id => document.getElementById(id)?.classList.add('hidden'));
+        document.getElementById('tab-m')?.classList.remove('hidden');
+        document.getElementById('tab-m-sub')?.classList.remove('hidden');
+        document.getElementById('tab-o')?.classList.remove('hidden');
         document.getElementById('tab-cu')?.classList.remove('hidden');
         document.getElementById('tab-c-sub')?.classList.remove('hidden');
     } else {
