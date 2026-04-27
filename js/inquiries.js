@@ -53,6 +53,8 @@ function addInquiry() {
     document.getElementById("iType").value="";
     document.getElementById("iNotes").value="";
     document.getElementById("iNotesBox").style.display="none";
+    document.getElementById("iCityAdd").value="";
+    updateBranches("iCityAdd","iBranchAdd");
     populateLinkedInquirySelect();
     toggleUnspecifiedBranch();
 }

@@ -13,6 +13,8 @@ function addMontasia() {
     save();
     document.getElementById("mNotes").value = "";
     document.getElementById("mType").value = "";
+    document.getElementById("mCityAdd").value = "";
+    updateBranches("mCityAdd", "mBranchAdd");
 }
 
 /* ── Delivery modal ── */
