@@ -271,37 +271,71 @@ function _renderEvalDetailModal() {
     const items = _getEvalItems(_evalDetailFilter);
     const showBranchCol = !!_evalDetailFilter.region;
 
+    const typeStyle = src => {
+        if (src === 'montasia') return { bg:'rgba(46,125,50,0.18)', border:'rgba(46,125,50,0.5)', color:'#81c784', accent:'#2e7d32', label:'منتسية' };
+        if (src === 'inquiry')  return { bg:'rgba(21,101,192,0.18)', border:'rgba(21,101,192,0.5)', color:'#64b5f6', accent:'#1565c0', label:'استفسار' };
+        return                         { bg:'rgba(183,28,28,0.18)',  border:'rgba(183,28,28,0.5)',  color:'#ef9a9a', accent:'#b71c1c', label:'شكوى' };
+    };
+
     const itemsHtml = items.length
-        ? items.map(item => `
-            <div style="display:flex;align-items:flex-start;gap:10px;padding:12px 14px;background:rgba(255,255,255,0.03);border:1px solid rgba(255,255,255,0.07);border-radius:12px;">
-                <div style="flex:1;min-width:0;">
-                    <div style="display:flex;align-items:center;gap:6px;flex-wrap:wrap;margin-bottom:5px;">
-                        <span style="padding:2px 8px;border-radius:6px;font-size:11px;font-weight:700;background:rgba(211,47,47,0.15);color:#ef9a9a;">${sanitize(item.type)}</span>
-                        ${showBranchCol ? `<span style="font-size:11px;color:#64b5f6;">${sanitize(item.branch)} — ${sanitize(item.city)}</span>` : ''}
-                        ${item.time ? `<span style="font-size:10px;color:var(--text-dim);">${sanitize(item.time)}</span>` : ''}
+        ? items.map((item, idx) => {
+            const ts = typeStyle(item.src);
+            return `
+            <div style="display:flex;align-items:stretch;gap:0;border-radius:14px;overflow:hidden;border:1px solid ${ts.border};background:rgba(255,255,255,0.02);">
+                <div style="width:4px;background:${ts.accent};flex-shrink:0;"></div>
+                <div style="flex:1;padding:13px 14px;min-width:0;">
+                    <div style="display:flex;align-items:center;justify-content:space-between;gap:8px;margin-bottom:7px;">
+                        <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;">
+                            <span style="font-size:11px;font-weight:800;padding:3px 10px;border-radius:20px;background:${ts.bg};color:${ts.color};border:1px solid ${ts.border};">${ts.label}</span>
+                            ${showBranchCol ? `<span style="font-size:12px;color:#90caf9;font-weight:600;">📍 ${sanitize(item.branch)} — ${sanitize(item.city)}</span>` : ''}
+                        </div>
+                        <span style="font-size:10px;color:rgba(255,255,255,0.3);white-space:nowrap;">#${idx+1}</span>
                     </div>
-                    <div style="font-size:13px;color:var(--text-main);line-height:1.5;">${sanitize((item.notes||'').substring(0,120))}${(item.notes||'').length>120?'…':''}</div>
+                    <div style="font-size:13px;color:rgba(255,255,255,0.85);line-height:1.6;margin-bottom:${item.time?'7px':'0'};">${sanitize((item.notes||'').substring(0,140))}${(item.notes||'').length>140?'…':''}</div>
+                    ${item.time ? `<div style="font-size:11px;color:rgba(255,255,255,0.3);">🕐 ${sanitize(item.time)}</div>` : ''}
                 </div>
-                <button onclick="_undoEvalItem('${item.src}',${item.id})" style="flex-shrink:0;padding:5px 12px;font-size:12px;font-family:'Cairo';cursor:pointer;border-radius:8px;border:1px solid rgba(211,47,47,0.4);background:rgba(211,47,47,0.1);color:#ef9a9a;font-weight:700;white-space:nowrap;">↩ تراجع</button>
-            </div>`).join('')
-        : `<div style="text-align:center;padding:40px;color:var(--text-dim);">لا توجد بنود محتسبة</div>`;
+                <div style="display:flex;align-items:center;padding:0 14px;flex-shrink:0;">
+                    <button onclick="_undoEvalItem('${item.src}',${item.id})" style="padding:7px 14px;font-size:12px;font-family:'Cairo';cursor:pointer;border-radius:10px;border:1px solid rgba(239,154,154,0.4);background:rgba(183,28,28,0.15);color:#ef9a9a;font-weight:700;white-space:nowrap;transition:background .15s;" onmouseover="this.style.background='rgba(183,28,28,0.3)'" onmouseout="this.style.background='rgba(183,28,28,0.15)'">↩ تراجع</button>
+                </div>
+            </div>`; }).join('')
+        : `<div style="text-align:center;padding:50px 20px;">
+               <div style="font-size:40px;margin-bottom:12px;">✅</div>
+               <div style="color:rgba(255,255,255,0.4);font-size:14px;">لا توجد بنود محتسبة</div>
+           </div>`;
 
     const overlay = document.createElement('div');
     overlay.id = '_evalDetailModal';
-    overlay.style.cssText = 'position:fixed;inset:0;z-index:10001;background:rgba(0,0,0,0.65);backdrop-filter:blur(4px);display:flex;align-items:center;justify-content:center;padding:20px;font-family:Cairo,sans-serif;direction:rtl;';
+    overlay.style.cssText = 'position:fixed;inset:0;z-index:10001;background:rgba(0,0,0,0.75);backdrop-filter:blur(6px);display:flex;align-items:center;justify-content:center;padding:20px;font-family:Cairo,sans-serif;direction:rtl;animation:_mFadeIn .2s ease;';
     overlay.onclick = e => { if (e.target === overlay) overlay.remove(); };
 
     overlay.innerHTML = `
-        <div style="background:#111;border:1px solid rgba(255,255,255,0.12);border-radius:20px;padding:24px;max-width:580px;width:100%;max-height:80vh;display:flex;flex-direction:column;gap:14px;">
-            <div style="display:flex;align-items:center;justify-content:space-between;flex-shrink:0;">
-                <div>
-                    <div style="font-size:17px;font-weight:800;color:var(--text-main);">📋 ${sanitize(_evalDetailTitle)}</div>
-                    <div style="font-size:13px;color:var(--text-dim);margin-top:2px;">${items.length} بند محتسب</div>
+        <div style="background:linear-gradient(160deg,#1a1a2e 0%,#16213e 50%,#0f3460 100%);border:1px solid rgba(255,255,255,0.1);border-radius:24px;max-width:600px;width:100%;max-height:85vh;display:flex;flex-direction:column;overflow:hidden;box-shadow:0 24px 60px rgba(0,0,0,0.6),0 0 0 1px rgba(255,255,255,0.05);">
+
+            <!-- Header -->
+            <div style="padding:22px 24px 18px;background:rgba(255,255,255,0.04);border-bottom:1px solid rgba(255,255,255,0.08);flex-shrink:0;">
+                <div style="display:flex;align-items:center;justify-content:space-between;gap:12px;">
+                    <div style="display:flex;align-items:center;gap:12px;">
+                        <div style="width:44px;height:44px;border-radius:12px;background:linear-gradient(135deg,#d32f2f,#f44336);display:flex;align-items:center;justify-content:center;font-size:20px;flex-shrink:0;">📋</div>
+                        <div>
+                            <div style="font-size:16px;font-weight:800;color:#fff;line-height:1.2;">${sanitize(_evalDetailTitle)}</div>
+                            <div style="font-size:12px;color:rgba(255,255,255,0.45);margin-top:3px;">البنود المحتسبة في التقييم</div>
+                        </div>
+                    </div>
+                    <div style="display:flex;align-items:center;gap:10px;">
+                        <div style="background:rgba(211,47,47,0.2);border:1px solid rgba(211,47,47,0.4);border-radius:20px;padding:4px 14px;font-size:13px;font-weight:800;color:#ef9a9a;">${items.length} بند</div>
+                        <button onclick="document.getElementById('_evalDetailModal').remove()" style="width:34px;height:34px;border-radius:10px;background:rgba(255,255,255,0.07);border:1px solid rgba(255,255,255,0.12);color:rgba(255,255,255,0.5);cursor:pointer;font-size:16px;display:flex;align-items:center;justify-content:center;font-family:'Cairo';">✕</button>
+                    </div>
                 </div>
-                <button onclick="document.getElementById('_evalDetailModal').remove()" style="background:rgba(255,255,255,0.07);border:1px solid rgba(255,255,255,0.12);border-radius:8px;padding:6px 16px;color:var(--text-dim);cursor:pointer;font-family:'Cairo';font-size:13px;">✕ إغلاق</button>
             </div>
-            <div style="overflow-y:auto;display:flex;flex-direction:column;gap:8px;padding-left:2px;">
+
+            <!-- Items list -->
+            <div style="overflow-y:auto;padding:16px;display:flex;flex-direction:column;gap:10px;">
                 ${itemsHtml}
+            </div>
+
+            <!-- Footer -->
+            <div style="padding:14px 24px;background:rgba(255,255,255,0.03);border-top:1px solid rgba(255,255,255,0.07);flex-shrink:0;display:flex;justify-content:flex-end;">
+                <button onclick="document.getElementById('_evalDetailModal').remove()" style="padding:9px 24px;border-radius:12px;background:rgba(255,255,255,0.08);border:1px solid rgba(255,255,255,0.15);color:rgba(255,255,255,0.7);cursor:pointer;font-family:'Cairo';font-size:13px;font-weight:600;">إغلاق</button>
             </div>
         </div>`;
 
