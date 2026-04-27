@@ -56,6 +56,7 @@ m: `
             <th style="width:13%">أضافه</th>
             <th style="width:11%">الحالة</th>
             <th style="width:12%">الوقت</th>
+            <th style="width:9%">ملاحظات</th>
             <th style="width:13%">إجراء</th>
         </tr></thead>
         <tbody></tbody>
@@ -65,7 +66,7 @@ m: `
 
 o: `
 <div class="card">
-    <h3>📂 الطلبات قيد الانتظار</h3>
+    <h3>📂 الطلبات - لم يتم التسليم</h3>
     <div class="search-bar search-bar-o" style="margin-bottom:20px;">
         <div style="grid-column:1/-1;" class="search-section-title">🔍 خيارات البحث</div>
         <div><label>المحافظة</label><select id="searchCityO" onchange="updateBranches('searchCityO','searchBranchO');filterTable();"></select></div>
@@ -386,6 +387,30 @@ t: `
     <h2 style="margin:0 0 6px;color:var(--accent-red);">🗑️ سلة المحذوفات</h2>
     <p style="color:var(--text-dim);font-size:13px;margin:0 0 20px;">العناصر المحذوفة — تُحذف نهائياً بعد 30 يوماً</p>
     <div id="trashContainer"></div>
+</div>`,
+
+cu: `
+<div class="card">
+    <h3 style="color:var(--accent-red);">🔴 متابعات السيطرة المفتوحة</h3>
+    <p style="color:var(--text-dim);font-size:13px;margin:-10px 0 18px;">الشكاوي التي لم يتم الرد عليها من قسم السيطرة بعد</p>
+    <div class="search-bar search-bar-c" style="margin-bottom:20px;">
+        <div style="grid-column:1/-1;" class="search-section-title">🔍 خيارات البحث</div>
+        <div><label>المحافظة</label><select id="searchCityCU" onchange="updateBranches('searchCityCU','searchBranchCU');renderControlOpen();"></select></div>
+        <div><label>الفرع</label><select id="searchBranchCU" onchange="renderControlOpen()"><option value="">الكل</option></select></div>
+        <div><label>التاريخ</label><div class="date-picker-wrap" onclick="calOnSelect=renderControlOpen;openDatePicker('searchDateCU')"><span class="date-display" id="searchDateCU-display">📅 اختر التاريخ</span><input type="hidden" id="searchDateCU"></div></div>
+        <div><label>بحث بالنص</label><input type="text" id="searchTextCU" placeholder="بحث في التفاصيل..." oninput="renderControlOpen()"></div>
+        <button class="btn" style="background:var(--bg-input);color:var(--text-dim);align-self:end;" onclick="resetSearch('CU')">تفريغ</button>
+    </div>
+    <table id="tableCU">
+        <thead><tr>
+            <th style="width:18%">الفرع</th>
+            <th>التفاصيل والرد</th>
+            <th style="width:14%">أضافه</th>
+            <th style="width:16%">وقت الطلب</th>
+        </tr></thead>
+        <tbody></tbody>
+    </table>
+    <div id="paginationCU"></div>
 </div>`
 
 };

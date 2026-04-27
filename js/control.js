@@ -16,7 +16,7 @@ function addControl() {
     const invoiceValue= document.getElementById("cInvoiceValue").value.trim();
 
     const fileInput = document.getElementById("cFile");
-    const status = (currentUser?.isAdmin || currentUser?.role === 'media') ? 'تمت الموافقة' : 'بانتظار الموافقة';
+    const status = 'تمت الموافقة';
     const base = { id:Date.now(), city:c, branch:b, notes:n, audit:'', time:now(), iso:iso(),
         addedBy:currentUser.name, status, customer, linkedInqSeq: linkedSeq||null,
         callTime, noteDate, moveNumber, invoiceValue };
@@ -117,7 +117,7 @@ function saveReturnEdit(id) {
     const v = document.getElementById(`returnEdit-${id}`).value.trim();
     if (!v) return alert("يرجى كتابة التعديل");
     const item = db.complaints.find(x => x.id===id);
-    if (item) { item.notes=v; item.status='بانتظار الموافقة'; item.editedBy=currentUser.name; save(); }
+    if (item) { item.notes=v; item.status='تمت الموافقة'; item.editedBy=currentUser.name; save(); }
 }
 
 function saveAudit(id) {
@@ -444,11 +444,11 @@ function saveControlSubReply(id) {
     if (!val)       return alert("يرجى كتابة الرد");
     const item = db.complaints.find(x => x.id === id);
     if (item) {
-        item.controlSubReply         = val;
-        item.controlSubReplyStatus   = statusVal;
-        item.controlSubReplyBy       = currentUser.name;
-        item.controlSubReplyTime     = now();
-        item.controlSubReplyReturned = false;
+        item.audit                   = val;
+        item.auditStatus             = statusVal;
+        item.auditBy                 = currentUser.name;
+        item.auditTime               = now();
+        item.controlSubReplyApproved = true;
         save();
     }
 }
@@ -512,4 +512,17 @@ function saveAuditStatusEdit(id) {
         item.auditStatus = val;
         save();
     }
+}
+
+function toggleCountComplaint(id) {
+    const item    = db.complaints.find(x => x.id === id);
+    if (!item) return;
+    const role    = currentUser?.role;
+    const isAdmin = currentUser?.isAdmin;
+    if (role === 'control_employee') {
+        item.countedByControl = !item.countedByControl;
+    } else if (role === 'cc_manager' || isAdmin) {
+        item.countedByCC = !item.countedByCC;
+    }
+    save();
 }

@@ -75,7 +75,13 @@ function _buildAuditHtml(x, isControl, isControlEmployee, isControlSub, controlE
                     </div>
                 </div>`;
             }
-            return `<div class="final-audit-text">رد قسم السيطرة: ${sanitize(x.audit)} ${auditStatusBadge}</div>`;
+            return `<div class="final-audit-text">
+                <div>رد قسم السيطرة: ${sanitize(x.audit)}</div>
+                ${x.auditStatus ? `<div style="margin-top:10px;padding-top:10px;border-top:1px solid var(--border);display:flex;align-items:center;gap:10px;">
+                    <span style="font-size:12px;color:var(--text-dim);font-weight:700;">حالة الملاحظة</span>
+                    <span style="font-size:17px;font-weight:800;color:${x.auditStatus==='مكتوبة'?'#81c784':x.auditStatus==='غير مكتوبة'?'#ef9a9a':'#90caf9'};">${sanitize(x.auditStatus)}</span>
+                </div>` : ''}
+            </div>`;
         }
 
         if (isControlEmployee && x.controlSubReply && !x.controlSubReplyApproved) {
@@ -153,9 +159,15 @@ function _buildAuditHtml(x, isControl, isControlEmployee, isControlSub, controlE
     }
 
     if (x.audit) {
-        return `<div class="final-audit-text" style="display:flex;flex-wrap:wrap;align-items:center;gap:8px;justify-content:space-between;">
-            <div>رد قسم السيطرة: ${sanitize(x.audit)} ${auditStatusBadge}</div>
-            <button class="btn-notify" onclick="openNotifyModal(${x.id})">📣 تبليغ</button>
+        return `<div class="final-audit-text">
+            <div style="display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:8px;">
+                <div>رد قسم السيطرة: ${sanitize(x.audit)}</div>
+                <button class="btn-notify" onclick="openNotifyModal(${x.id})">📣 تبليغ</button>
+            </div>
+            ${x.auditStatus ? `<div style="margin-top:10px;padding-top:10px;border-top:1px solid var(--border);display:flex;align-items:center;gap:10px;">
+                <span style="font-size:12px;color:var(--text-dim);font-weight:700;">حالة الملاحظة</span>
+                <span style="font-size:17px;font-weight:800;color:${x.auditStatus==='مكتوبة'?'#81c784':x.auditStatus==='غير مكتوبة'?'#ef9a9a':'#90caf9'};">${sanitize(x.auditStatus)}</span>
+            </div>` : ''}
         </div>`;
     }
     return '';
@@ -187,6 +199,10 @@ function resetSearch(t) {
         document.getElementById('searchBranchC').innerHTML='<option value="">الكل</option>';
         clearDate('searchDateC');
         _pg.C = 1;
+    } else if (t==='CU') {
+        clear(['searchCityCU','searchTextCU']);
+        document.getElementById('searchBranchCU').innerHTML='<option value="">الكل</option>';
+        clearDate('searchDateCU');
     }
     renderAll();
 }
@@ -242,13 +258,15 @@ function _renderTableM(get, isAdmin) {
             : x.status==='بانتظار الموافقة' ? 'awaiting'
             : x.status==='قيد الاستلام'   ? 'mobile-pending'
             : x.status==='تمت الموافقة'   ? 'mob-approved'
+            : x.status==='قيد الانتظار'   ? 'not-delivered'
             : 'pending';
         let actions = '';
         if (perm('approveM') && x.status==='بانتظار الموافقة') actions += `<button class="btn-approve" onclick="approveMontasia(${x.id})">✓ موافقة</button>`;
         // الموافقة على منتسيات التطبيق (قيد الاستلام) — مدير أو موظف كول سنتر
         if ((perm('deliverM') || currentUser?.isAdmin) && x.status==='قيد الاستلام') actions += `<button class="btn-approve" onclick="approveMontasiaFromMobile(${x.id})">✓ موافقة</button>`;
         if (perm('editM'))   actions += `<button class="btn-edit-sm" onclick="startEditMontasia(${x.id})">✏️ تعديل</button>`;
-        if (perm('deliverM') && x.status==='قيد الانتظار') actions += `<button class="btn-deliver" onclick="deliver(${x.id})" style="margin:2px">تسليم</button>`;
+        const isCtrlEmpM = currentUser?.role === 'control_employee';
+        if ((perm('deliverM') || currentUser?.role==='control_employee' || currentUser?.role==='control_sub') && x.status==='قيد الانتظار') actions += `<button class="btn-deliver" onclick="deliver(${x.id})" style="margin:2px">تسليم</button>`;
         if (perm('rejectM')  && (x.status==='قيد الانتظار'||x.status==='بانتظار الموافقة'||x.status==='قيد الاستلام')) actions += `<button class="btn-reject" onclick="rejectMontasia(${x.id})">رفض</button>`;
         if (canDelete) actions += `<button class="btn-delete-sm" onclick="deleteMontasia(${x.id})">🗑</button>`;
         const editBox = perm('editM') ? `
@@ -286,12 +304,32 @@ function _renderTableM(get, isAdmin) {
             <td><b>${x.branch}</b><br><small>${x.city}</small>${mobileTag}</td>
             <td style="text-align:center;">${typeLabel}</td>
             <td><span class="text-box-cell">${sanitize(x.notes)}</span>${photoCell}${editBox}</td>
-            <td><div class="added-by" style="font-size:12px;color:var(--text-main);">📥 ${sanitize(x.addedBy||'—')}</div>${deliveredRow}${approvedByRow}</td>
+            <td><div class="added-by" style="font-size:12px;color:var(--text-main);">📥 ${sanitize(x.addedBy||'—')}</div>${approvedByRow}</td>
             <td style="vertical-align:top;">
-                <span class="status-badge ${statusClass}">${x.status}${x.status==='تم التسليم' && x.deliveredBy ? ' بواسطة '+sanitize(x.deliveredBy) : ''}</span>
+                <span class="status-badge ${statusClass}">${x.status==='قيد الانتظار' ? 'لم يتم التسليم' : x.status}${x.status==='تم التسليم' && x.deliveredBy ? ' بواسطة '+sanitize(x.deliveredBy) : ''}</span>
                 ${deliveryTimeBox}
             </td>
             <td><small>${_toLatinDigits(x.time)}</small></td>
+            <td style="text-align:center;">
+                <div style="display:flex;flex-direction:column;gap:4px;align-items:center;">
+                ${x.deliverNotes
+                    ? `<button onclick="showDeliverNotes(${x.id})"
+                        style="cursor:pointer;background:rgba(25,118,210,0.12);border:1px solid rgba(25,118,210,0.35);
+                               color:#64b5f6;border-radius:8px;padding:5px 14px;font-family:'Cairo';font-size:12px;font-weight:700;">
+                        👁 عرض</button>`
+                    : `<button disabled
+                        style="cursor:not-allowed;background:rgba(255,255,255,0.03);border:1px solid var(--border);
+                               color:var(--text-dim);border-radius:8px;padding:5px 14px;font-family:'Cairo';font-size:12px;opacity:0.4;">
+                        عرض</button>`
+                }
+                ${isCtrlEmpM && x.isLateDelivery
+                    ? (x.countedByControl
+                        ? `<div style="display:flex;gap:4px;align-items:center;"><span style="padding:4px 7px;font-size:10px;font-family:'Cairo';border-radius:7px;border:1px solid rgba(46,125,50,0.4);background:rgba(46,125,50,0.15);color:#81c784;font-weight:700;">✓ تم الاحتساب</span><button onclick="toggleCountMontasia(${x.id})" style="padding:4px 7px;font-size:10px;font-family:'Cairo';cursor:pointer;border-radius:7px;border:1px solid rgba(211,47,47,0.4);background:rgba(211,47,47,0.1);color:#ef9a9a;font-weight:700;">تراجع</button></div>`
+                        : `<button onclick="toggleCountMontasia(${x.id})" style="padding:4px 10px;font-size:10px;font-family:'Cairo';cursor:pointer;border-radius:7px;border:1px solid rgba(255,152,0,0.35);background:rgba(255,152,0,0.08);color:#ffb74d;font-weight:700;">📊 احتساب تقييم</button>`)
+                    : ''
+                }
+                </div>
+            </td>
             <td>${actions}</td>
         </tr>`;
     }).join('');
@@ -334,7 +372,7 @@ function _renderTableO(get) {
             actionBtn = `<button class="btn-approve" onclick="approveMontasia(${x.id})">✓ موافقة</button>`;
         else if (x.status==='قيد الاستلام' && (perm('deliverM') || currentUser?.isAdmin))
             actionBtn = `<button class="btn-approve" onclick="approveMontasiaFromMobile(${x.id})">✓ موافقة</button>`;
-        else if (x.status==='قيد الانتظار' && perm('deliverM'))
+        else if (x.status==='قيد الانتظار' && (perm('deliverM') || currentUser?.role==='control_employee' || currentUser?.role==='control_sub'))
             actionBtn = `<button class="btn-deliver" onclick="deliver(${x.id})">تسليم</button>`;
         const statusDot = x.status==='بانتظار الموافقة'
             ? `<span class="status-badge awaiting" style="font-size:11px;padding:2px 8px;">${x.status}</span><br>`
@@ -394,11 +432,23 @@ function _renderTableI(get) {
                 </div>
                 <button class="btn btn-main" style="width:100%;padding:7px;font-size:12px;" onclick="saveEditInquiry(${x.id})">حفظ التعديل</button>
             </div>` : '';
+        const canCountI = (currentUser?.role === 'cc_manager' || currentUser?.isAdmin) && x.type === 'شكوى';
+        const countedI  = canCountI && (() => {
+            const linked = db.complaints.find(c => !c.deleted && String(c.linkedInqSeq) === String(x.seq));
+            return linked ? !!linked.countedByCC : !!x.countedByCC;
+        })();
+        const countBtnI = canCountI
+            ? (countedI
+                ? `<div style="display:flex;gap:5px;align-items:center;margin-top:4px;"><span style="flex:1;padding:5px 8px;font-size:11px;font-family:'Cairo';border-radius:8px;border:1px solid rgba(46,125,50,0.4);background:rgba(46,125,50,0.15);color:#81c784;font-weight:700;text-align:center;">✓ تم احتساب الشكوى على الفرع</span><button onclick="toggleCountInquiry(${x.id})" style="padding:5px 8px;font-size:11px;font-family:'Cairo';cursor:pointer;border-radius:8px;border:1px solid rgba(211,47,47,0.4);background:rgba(211,47,47,0.1);color:#ef9a9a;font-weight:700;">تراجع</button></div>`
+                : `<button onclick="toggleCountInquiry(${x.id})" style="display:block;margin-top:4px;width:100%;padding:5px 10px;font-size:11px;font-family:'Cairo';cursor:pointer;border-radius:8px;border:1px solid rgba(255,152,0,0.35);background:rgba(255,152,0,0.08);color:#ffb74d;font-weight:700;">📊 احتساب شكوى</button>`)
+            : '';
+
         const actions = canManage ? `
             <td style="white-space:nowrap;">
                 <button class="btn-edit-sm" onclick="startEditInquiry(${x.id})">✏️ تعديل</button>
                 <button class="btn-delete-sm" style="margin-top:4px;" onclick="deleteInquiry(${x.id})">🗑</button>
-            </td>` : '<td></td>';
+                ${countBtnI}
+            </td>` : (canCountI ? `<td>${countBtnI}</td>` : '<td></td>');
         return `<tr>
             <td><span class="seq-badge" title="الرقم التسلسلي">#${x.seq||'—'}</span></td>
             <td><b>${x.branch}</b><br><small>${x.city}</small></td>
@@ -422,26 +472,31 @@ function _renderTableC(get, isAdmin) {
     const tbodyC = document.querySelector("#tableC tbody");
     if (!tbodyC) return;
 
+    // لا تُعيد الرسم إذا كان المستخدم يكتب في حقل داخل الجدول
+    const active = document.activeElement;
+    if (active && (active.tagName === 'TEXTAREA' || active.tagName === 'INPUT') && tbodyC.contains(active)) return;
+
     const canDeleteC = perm('deleteC');
 
     const isControl         = currentUser?.role === 'control';
     const isMedia           = currentUser?.role === 'media';
     const isControlEmployee = currentUser?.role === 'control_employee';
     const isControlSub      = currentUser?.role === 'control_sub';
+    const isCCMgrC          = currentUser?.role === 'cc_manager';
     const f = {
         city:   get("searchCityC"),
         branch: get("searchBranchC"),
         date:   get("searchDateC"),
         text:   get("searchTextC").toLowerCase()
     };
-    const allRowsC = db.complaints.filter(x =>
+    const allRowsC = (db.complaints || []).filter(x =>
         !x.deleted &&
         (isControlSub ? (x.assignedToSubId === currentUser.empId && x.status === 'تمت الموافقة') :
          (isControl || isControlEmployee || isMedia) ? x.status === 'تمت الموافقة' : true) &&
         (!f.city   || x.city===f.city) &&
         (!f.branch || x.branch===f.branch) &&
         (!f.date   || x.iso.startsWith(f.date)) &&
-        (!f.text   || x.notes.toLowerCase().includes(f.text))
+        (!f.text   || (x.notes||'').toLowerCase().includes(f.text))
     );
     if (!_pg.C) _pg.C = 1;
     const _pageC = Math.min(_pg.C, Math.max(1, Math.ceil(allRowsC.length / _PAGE_SIZE)));
@@ -461,29 +516,25 @@ function _renderTableC(get, isAdmin) {
 
         const fileLink = x.file ? `<br><a href="${x.file}" target="_blank" class="btn-attach">📎 عرض المرفق</a>` : '';
 
-        const ctStr = x.callTime ? _formatCallTime(x.callTime) : '';
-        let extraInfoHtml = '';
-        if (x.callTime || x.noteDate || x.moveNumber || x.invoiceValue) {
-            if (isControl || isControlEmployee) {
-                extraInfoHtml = `<div style="margin-top:10px;border:1px solid rgba(255,255,255,0.1);border-radius:12px;overflow:hidden;font-size:13px;">
-                    ${ctStr       ? `<div style="display:flex;border-bottom:1px solid rgba(255,255,255,0.07);"><span style="background:rgba(255,255,255,0.06);padding:9px 14px;color:var(--text-dim);font-weight:700;min-width:140px;text-align:right;">🕐 وقت تلقي الاتصال</span><span style="padding:9px 14px;color:var(--text-main);">${sanitize(ctStr)}</span></div>` : ''}
-                    ${x.noteDate  ? `<div style="display:flex;border-bottom:1px solid rgba(255,255,255,0.07);"><span style="background:rgba(255,255,255,0.06);padding:9px 14px;color:var(--text-dim);font-weight:700;min-width:140px;text-align:right;">📅 تاريخ الملاحظة</span><span style="padding:9px 14px;color:var(--text-main);">${sanitize(x.noteDate)}</span></div>` : ''}
-                    ${x.moveNumber? `<div style="display:flex;border-bottom:1px solid rgba(255,255,255,0.07);"><span style="background:rgba(255,255,255,0.06);padding:9px 14px;color:var(--text-dim);font-weight:700;min-width:140px;text-align:right;">🔢 رقم الحركة</span><span style="padding:9px 14px;color:var(--text-main);">${sanitize(x.moveNumber)}</span></div>` : ''}
-                    ${x.invoiceValue?`<div style="display:flex;"><span style="background:rgba(255,255,255,0.06);padding:9px 14px;color:var(--text-dim);font-weight:700;min-width:140px;text-align:right;">💰 قيمة الفاتورة</span><span style="padding:9px 14px;color:var(--text-main);">${sanitize(x.invoiceValue)}</span></div>` : ''}
-                </div>`;
-            } else {
-                extraInfoHtml = `<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:8px;margin-top:12px;">
-                    ${ctStr?`<div style="background:linear-gradient(135deg,rgba(21,101,192,0.18),rgba(21,101,192,0.08));border:1px solid rgba(21,101,192,0.3);border-radius:12px;padding:10px 13px;display:flex;flex-direction:column;gap:3px;"><span style="font-size:10px;color:#64b5f6;font-weight:700;letter-spacing:0.5px;">وقت الاتصال</span><span style="font-size:13px;color:var(--text-main);font-weight:600;font-family:monospace;">🕐 ${sanitize(ctStr)}</span></div>`:''}
-                    ${x.noteDate?`<div style="background:linear-gradient(135deg,rgba(46,125,50,0.18),rgba(46,125,50,0.08));border:1px solid rgba(46,125,50,0.3);border-radius:12px;padding:10px 13px;display:flex;flex-direction:column;gap:3px;"><span style="font-size:10px;color:#81c784;font-weight:700;letter-spacing:0.5px;">تاريخ الملاحظة</span><span style="font-size:13px;color:var(--text-main);font-weight:600;">📅 ${sanitize(x.noteDate)}</span></div>`:''}
-                    ${x.moveNumber?`<div style="background:linear-gradient(135deg,rgba(123,31,162,0.18),rgba(123,31,162,0.08));border:1px solid rgba(123,31,162,0.3);border-radius:12px;padding:10px 13px;display:flex;flex-direction:column;gap:3px;"><span style="font-size:10px;color:#ce93d8;font-weight:700;letter-spacing:0.5px;">رقم الحركة</span><span style="font-size:13px;color:var(--text-main);font-weight:600;">🔢 ${sanitize(x.moveNumber)}</span></div>`:''}
-                    ${x.invoiceValue?`<div style="background:linear-gradient(135deg,rgba(230,81,0,0.18),rgba(230,81,0,0.08));border:1px solid rgba(230,81,0,0.3);border-radius:12px;padding:10px 13px;display:flex;flex-direction:column;gap:3px;"><span style="font-size:10px;color:#ffb74d;font-weight:700;letter-spacing:0.5px;">قيمة الفاتورة</span><span style="font-size:13px;color:var(--text-main);font-weight:600;">💰 ${sanitize(x.invoiceValue)}</span></div>`:''}
-                </div>`;
-            }
-        }
+        const ctStr  = x.callTime ? _formatCallTime(x.callTime) : '';
+        const hasMore = !!(ctStr || x.noteDate || x.moveNumber || x.invoiceValue);
+        const _row = (label, val, last) =>
+            `<div style="display:flex;${last ? '' : 'border-bottom:1px solid rgba(255,255,255,0.07);'}">
+                <span style="background:rgba(255,255,255,0.06);padding:9px 14px;color:var(--text-dim);font-weight:700;min-width:140px;text-align:right;">${label}</span>
+                <span style="padding:9px 14px;color:var(--text-main);">${val}</span>
+            </div>`;
+        const extraInfoHtml = `<div style="margin-top:10px;border:1px solid rgba(255,255,255,0.1);border-radius:12px;overflow:hidden;font-size:13px;">
+            ${_row('📝 التفاصيل', sanitize(x.notes), !hasMore)}
+            ${ctStr        ? _row('🕐 وقت تلقي الاتصال', sanitize(ctStr),       !(x.noteDate||x.moveNumber||x.invoiceValue)) : ''}
+            ${x.noteDate   ? _row('📅 تاريخ الملاحظة',   sanitize(x.noteDate),  !(x.moveNumber||x.invoiceValue))             : ''}
+            ${x.moveNumber ? _row('🔢 رقم الحركة',        sanitize(x.moveNumber),!x.invoiceValue)                            : ''}
+            ${x.invoiceValue?_row('💰 قيمة الفاتورة',     sanitize(x.invoiceValue), true)                                    : ''}
+        </div>`;
 
         let cStatusBadge = '';
         if (x.status === 'مُرجعة للتعديل') cStatusBadge = `<span class="status-badge returned">${x.status}</span>`;
         else if (x.status !== 'تمت الموافقة') cStatusBadge = `<span class="status-badge awaiting">${x.status||'بانتظار الموافقة'}</span>`;
+        else if (!hideFromControl) cStatusBadge = `<span class="status-badge done" style="font-size:10px;">✓ أُرسلت للسيطرة</span>`;
 
         const auditStatusBadge = x.auditStatus
             ? `<span class="emp-badge" style="margin-right:6px;background:rgba(21,101,192,0.2);color:#90caf9;font-size:11px;">${sanitize(x.auditStatus)}</span>`
@@ -527,6 +578,21 @@ function _renderTableC(get, isAdmin) {
         if (perm('returnC') && x.status!=='مُرجعة للتعديل') adminActions += `<button class="btn-return" onclick="returnControl(${x.id})">↩ إرجاع</button>`;
         if (perm('deleteC'))  adminActions += `<button class="btn-delete-sm" onclick="deleteControl(${x.id})">🗑</button>`;
 
+        // زر احتساب شكوى — مدير السيطرة
+        if (isControlEmployee) {
+            const counted = !!x.countedByControl;
+            adminActions += counted
+                ? `<div style="display:flex;gap:5px;align-items:center;margin-top:6px;"><span style="flex:1;padding:5px 8px;font-size:11px;font-family:'Cairo';border-radius:8px;border:1px solid rgba(46,125,50,0.4);background:rgba(46,125,50,0.15);color:#81c784;font-weight:700;text-align:center;">✓ تم احتساب الشكوى على الفرع</span><button onclick="toggleCountComplaint(${x.id})" style="padding:5px 8px;font-size:11px;font-family:'Cairo';cursor:pointer;border-radius:8px;border:1px solid rgba(211,47,47,0.4);background:rgba(211,47,47,0.1);color:#ef9a9a;font-weight:700;">تراجع</button></div>`
+                : `<button onclick="toggleCountComplaint(${x.id})" style="display:block;margin-top:6px;width:100%;padding:5px 10px;font-size:11px;font-family:'Cairo';cursor:pointer;border-radius:8px;border:1px solid rgba(255,152,0,0.35);background:rgba(255,152,0,0.08);color:#ffb74d;font-weight:700;">📊 احتساب شكوى</button>`;
+        }
+        // زر احتساب شكوى — مدير الكول سنتر والمدير
+        if (isCCMgrC || isAdmin) {
+            const counted = !!x.countedByCC;
+            adminActions += counted
+                ? `<div style="display:flex;gap:5px;align-items:center;margin-top:6px;"><span style="flex:1;padding:5px 8px;font-size:11px;font-family:'Cairo';border-radius:8px;border:1px solid rgba(46,125,50,0.4);background:rgba(46,125,50,0.15);color:#81c784;font-weight:700;text-align:center;">✓ تم احتساب الشكوى على الفرع</span><button onclick="toggleCountComplaint(${x.id})" style="padding:5px 8px;font-size:11px;font-family:'Cairo';cursor:pointer;border-radius:8px;border:1px solid rgba(211,47,47,0.4);background:rgba(211,47,47,0.1);color:#ef9a9a;font-weight:700;">تراجع</button></div>`
+                : `<button onclick="toggleCountComplaint(${x.id})" style="display:block;margin-top:6px;width:100%;padding:5px 10px;font-size:11px;font-family:'Cairo';cursor:pointer;border-radius:8px;border:1px solid rgba(255,152,0,0.35);background:rgba(255,152,0,0.08);color:#ffb74d;font-weight:700;">📊 احتساب شكوى</button>`;
+        }
+
         const adminEditBox = perm('editC') ? `
             <div class="inline-edit-box" id="cedit-${x.id}" style="display:none;margin-top:10px;">
                 <textarea id="ceditText-${x.id}" rows="2" style="margin-bottom:8px;">${sanitize(x.notes)}</textarea>
@@ -536,7 +602,6 @@ function _renderTableC(get, isAdmin) {
         return `<tr data-id="${x.id}">
             <td><b>${x.branch}</b><br><small>${x.city}</small><br>${cStatusBadge}</td>
             <td>
-                <span class="text-box-cell">${sanitize(x.notes)}</span>
                 ${extraInfoHtml}${custHtml}${linkHtml}${fileLink}${auditHtml}${followupHtml}${returnEditBox}${adminEditBox}
             </td>
             <td><small style="color:var(--text-main)">📥 ${sanitize(x.addedBy||'—')}</small></td>
@@ -556,6 +621,78 @@ function renderAll() {
     _renderTableO(get);
     _renderTableI(get);
     _renderTableC(get, isAdmin);
+    renderControlOpen();
     if (typeof _updateBadges === 'function') _updateBadges();
     if (typeof _checkNotifications === 'function') _checkNotifications();
+}
+
+function renderControlOpen() {
+    const tbody = document.querySelector('#tableCU tbody');
+    if (!tbody) return;
+
+    // لا تُعيد الرسم إذا كان المستخدم يكتب في حقل داخل الجدول
+    const active = document.activeElement;
+    if (active && (active.tagName === 'TEXTAREA' || active.tagName === 'INPUT') && tbody.contains(active)) return;
+
+    const get  = (id) => { const el = document.getElementById(id); return el ? el.value : ''; };
+    const city   = get('searchCityCU');
+    const branch = get('searchBranchCU');
+    const date   = get('searchDateCU');
+    const text   = get('searchTextCU').toLowerCase();
+
+    const isControl         = currentUser?.role === 'control';
+    const isControlEmployee = currentUser?.role === 'control_employee';
+    const isControlSub      = currentUser?.role === 'control_sub';
+
+    const rows = (db.complaints || []).filter(x =>
+        !x.deleted &&
+        x.status === 'تمت الموافقة' &&
+        !x.audit &&
+        (isControlSub ? x.assignedToSubId === currentUser.empId : true) &&
+        (!city   || x.city   === city) &&
+        (!branch || x.branch === branch) &&
+        (!date   || (x.iso||'').startsWith(date)) &&
+        (!text   || (x.notes||'').toLowerCase().includes(text))
+    );
+
+    if (!rows.length) {
+        tbody.innerHTML = `<tr><td colspan="4" style="color:var(--text-dim);padding:28px;text-align:center;">✅ لا توجد متابعات مفتوحة</td></tr>`;
+        const bar = document.getElementById('paginationCU');
+        if (bar) bar.innerHTML = '';
+        return;
+    }
+
+    tbody.innerHTML = rows.map(x => {
+        const ctStr = x.callTime ? _formatCallTime(x.callTime) : '';
+
+        const controlEmps = isControl
+            ? employees.filter(e => e.title === 'مدير قسم السيطرة')
+            : isControlEmployee
+                ? employees.filter(e => e.title === 'موظف سيطرة')
+                : [];
+
+        const auditHtml = _buildAuditHtml(x, isControl, isControlEmployee, isControlSub, controlEmps, '');
+
+        return `<tr data-id="${x.id}">
+            <td><b>${sanitize(x.branch)}</b><br><small>${sanitize(x.city)}</small></td>
+            <td>
+                <div style="border:1px solid rgba(255,255,255,0.1);border-radius:10px;overflow:hidden;font-size:13px;margin-bottom:${auditHtml?'10px':'0'};">
+                    <div style="display:flex;${ctStr?'border-bottom:1px solid rgba(255,255,255,0.07);':''}">
+                        <span style="background:rgba(255,255,255,0.06);padding:8px 12px;color:var(--text-dim);font-weight:700;min-width:110px;text-align:right;">📝 التفاصيل</span>
+                        <span style="padding:8px 12px;color:var(--text-main);">${sanitize(x.notes)}</span>
+                    </div>
+                    ${ctStr ? `<div style="display:flex;">
+                        <span style="background:rgba(255,255,255,0.06);padding:8px 12px;color:var(--text-dim);font-weight:700;min-width:110px;text-align:right;">🕐 وقت الاتصال</span>
+                        <span style="padding:8px 12px;color:var(--text-main);">${sanitize(ctStr)}</span>
+                    </div>` : ''}
+                </div>
+                ${auditHtml}
+            </td>
+            <td><small>${sanitize(x.addedBy||'—')}</small></td>
+            <td><small>${_toLatinDigits(x.time)}</small></td>
+        </tr>`;
+    }).join('');
+
+    const bar = document.getElementById('paginationCU');
+    if (bar) bar.innerHTML = _paginationBar('CU', rows.length, 1);
 }

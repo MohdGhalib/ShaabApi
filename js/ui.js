@@ -265,35 +265,36 @@ function toggleTabE() {
 
 function toggleTabM() {
     const grpM = document.getElementById('nav-group-m');
-    const isOpen = grpM && grpM.classList.contains('open');
-    if (isOpen) {
-        // القائمة مفتوحة → أغلقها فقط بدون تغيير التبويب
-        grpM.classList.remove('open');
-        const tabM = document.getElementById('tab-m');
-        if (tabM) { tabM.classList.remove('group-active'); tabM.classList.add('active'); }
-    } else {
-        // القائمة مغلقة → افتح وانتقل للتبويب
-        switchTab('m');
-    }
+    if (grpM) grpM.classList.toggle('open');
+}
+
+function toggleTabC() {
+    const grpC = document.getElementById('nav-group-c');
+    if (grpC) grpC.classList.toggle('open');
 }
 
 function switchTab(t) {
-    ['m','o','i','c','b','e','s','f','p','h','l','t'].forEach(id => {
+    // تحديد الـ active لجميع التبويبات العادية
+    ['o','i','cu','b','e','s','f','p','h','l','t'].forEach(id => {
         const btn = document.getElementById(`tab-${id}`);
         if (btn) btn.classList.toggle('active', t === id);
-        // القائمة الفرعية: nav-sub-item تأخذ .active بدل .nav-item
-        if (btn && btn.classList.contains('nav-sub-item')) {
-            btn.classList.toggle('active', t === id);
-        }
     });
 
-    // فتح/إغلاق القائمة الفرعية لنظام المنتسيات
+    // tab-m-sub: active عند 'm' — tab-m الأب: group-active عند 'm' أو 'o'
+    document.getElementById('tab-m-sub')?.classList.toggle('active', t === 'm');
+    const tabM = document.getElementById('tab-m');
+    if (tabM) { tabM.classList.remove('active'); tabM.classList.toggle('group-active', t === 'm' || t === 'o'); }
+
+    // tab-c-sub: active عند 'c' — tab-c الأب: group-active عند 'c' أو 'cu'
+    document.getElementById('tab-c-sub')?.classList.toggle('active', t === 'c');
+    const tabC = document.getElementById('tab-c');
+    if (tabC) { tabC.classList.remove('active'); tabC.classList.toggle('group-active', t === 'c' || t === 'cu'); }
+
+    // فتح/إغلاق القوائم الفرعية
     const grpM = document.getElementById('nav-group-m');
     if (grpM) grpM.classList.toggle('open', t === 'm' || t === 'o');
-
-    // تمييز زر الأب عند تفعيل إحدى فروع المنتسيات
-    const tabM = document.getElementById('tab-m');
-    if (tabM) tabM.classList.toggle('group-active', t === 'o');
+    const grpC = document.getElementById('nav-group-c');
+    if (grpC) grpC.classList.toggle('open', t === 'c' || t === 'cu');
 
     // فتح/إغلاق مجموعة الموظفين
     const grpE = document.getElementById('nav-group-e');
@@ -303,9 +304,8 @@ function switchTab(t) {
 
     // تسجيل وقت المشاهدة وإخفاء الشارة عند فتح التبويب
     _activeTab = t;
-    if (['m','o','c','i'].includes(t)) {
-        // 'o' (انتظار المنتسيات) يُعدّ مشاهدةً لتبويب 'm'
-        _markTabSeen(t === 'o' ? 'm' : t);
+    if (['m','o','c','cu','i'].includes(t)) {
+        _markTabSeen(t === 'o' ? 'm' : t === 'cu' ? 'c' : t);
     }
     const badge = document.getElementById(`badge-${t}`);
     if (badge) { badge.textContent = ''; badge.style.display = 'none'; }
@@ -335,6 +335,9 @@ function switchTab(t) {
         return;
     } else if (t === 't') {
         if (typeof renderTrash === 'function') renderTrash();
+        return;
+    } else if (t === 'cu') {
+        if (typeof renderControlOpen === 'function') renderControlOpen();
         return;
     } else {
         populateEmployeeDropdowns();
@@ -383,7 +386,7 @@ function init() {
 }
 
 function setupCitySelects() {
-    const citySelects = ['mCityAdd','iCityAdd','cCityAdd','searchCityM','searchCityC','searchCityO','searchCityI','branchCitySearch'];
+    const citySelects = ['mCityAdd','iCityAdd','cCityAdd','searchCityM','searchCityC','searchCityO','searchCityI','branchCitySearch','searchCityCU'];
     let options = '';
     for (let c in branches) options += `<option value="${c}">${c}</option>`;
     citySelects.forEach(id => {
@@ -406,14 +409,26 @@ function updateBranches(cityId, branchId) {
 }
 
 function populateEmployeeDropdowns() {
-    const nonMediaEmps = employees.filter(e => e.title !== 'موظف ميديا' && e.title !== 'مدير قسم السيطرة' && e.title !== 'موظف سيطرة');
-    ['searchAddedByM','searchDeliveredByM','searchAddedByO'].forEach(id => {
+    const nonMediaEmps  = employees.filter(e => e.title !== 'موظف ميديا' && e.title !== 'مدير قسم السيطرة' && e.title !== 'موظف سيطرة');
+    const deliveryEmps  = employees.filter(e => e.title !== 'موظف ميديا');
+
+    // موظف الاستلام (إضافة) — بدون ميديا وبدون السيطرة
+    ['searchAddedByM','searchAddedByO'].forEach(id => {
         const el = document.getElementById(id); if (!el) return;
         const cur = el.value;
         el.innerHTML = '<option value="">الكل</option><option value="المدير">المدير</option>';
         nonMediaEmps.forEach(e => el.innerHTML += `<option value="${sanitize(e.name)}">${sanitize(e.name)}</option>`);
         if (cur) el.value = cur;
     });
+
+    // موظف التسليم — يشمل مدير قسم السيطرة وموظفي السيطرة
+    const delivEl = document.getElementById('searchDeliveredByM');
+    if (delivEl) {
+        const cur = delivEl.value;
+        delivEl.innerHTML = '<option value="">الكل</option><option value="المدير">المدير</option>';
+        deliveryEmps.forEach(e => delivEl.innerHTML += `<option value="${sanitize(e.name)}">${sanitize(e.name)}</option>`);
+        if (cur) delivEl.value = cur;
+    }
     // بحث الاستفسارات: مسؤول الكول سنتر وموظف الكول سنتر وموظف الميديا فقط
     const inqEl = document.getElementById('searchAddedByI');
     if (inqEl) {

@@ -1,71 +1,31 @@
 /* ══════════════════════════════════════════════════════
    MISSING ITEMS — CRUD with 5-second confirm overlay
 ══════════════════════════════════════════════════════ */
-let _pendingMontasia = null;
-let _confirmTimer    = null;
-
 function addMontasia() {
     const c = document.getElementById("mCityAdd").value;
     const b = document.getElementById("mBranchAdd").value;
     const n = document.getElementById("mNotes").value.trim();
     const t = document.getElementById("mType").value;
     if (!c||!b||!n||!t) return alert("يرجى إكمال البيانات");
-
-    _pendingMontasia = { c, b, n, t };
-    _showMontasiaConfirm();
-}
-
-function _showMontasiaConfirm() {
-    let seconds = 5;
-    document.getElementById("confirmCountdown").textContent = seconds;
-    document.getElementById("confirmPreview").innerHTML =
-        `<b style="color:var(--text-main)">${sanitize(_pendingMontasia.b)}</b> &nbsp;—&nbsp; <span>${sanitize(_pendingMontasia.c)}</span>
-         <span style="margin-right:8px;padding:2px 8px;border-radius:6px;font-size:12px;background:rgba(255,255,255,0.08);color:var(--text-dim);">${sanitize(_pendingMontasia.t)}</span>
-         <div style="font-size:13px;color:var(--text-dim);margin-top:6px;">${sanitize(_pendingMontasia.n)}</div>`;
-    document.getElementById("montasiaConfirmOverlay").classList.remove("hidden");
-
-    _confirmTimer = setInterval(() => {
-        seconds--;
-        const el = document.getElementById("confirmCountdown");
-        el.textContent = seconds;
-        el.classList.toggle("countdown-urgent", seconds <= 2);
-        if (seconds <= 0) {
-            clearInterval(_confirmTimer);
-            _confirmTimer = null;
-            _commitMontasia();
-        }
-    }, 1000);
-}
-
-function cancelMontasia() {
-    clearInterval(_confirmTimer);
-    _confirmTimer    = null;
-    _pendingMontasia = null;
-    document.getElementById("montasiaConfirmOverlay").classList.add("hidden");
-}
-
-function _commitMontasia() {
-    document.getElementById("montasiaConfirmOverlay").classList.add("hidden");
-    if (!_pendingMontasia) return;
-    const { c, b, n, t } = _pendingMontasia;
-    _pendingMontasia = null;
     db.montasiat.unshift({ id:Date.now(), city:c, branch:b, notes:n, type:t, time:now(), iso:iso(),
         status:'قيد الانتظار', dt:'', addedBy:currentUser.name, deliveredBy:'' });
+    if (typeof _skipMontasiaNotif !== 'undefined') _skipMontasiaNotif = true;
     save();
-    // الباك-إند يُطلق new-montasia SSE تلقائياً عند الحفظ لجميع المستخدمين
     document.getElementById("mNotes").value = "";
     document.getElementById("mType").value = "";
 }
 
 /* ── Delivery modal ── */
-let _deliverId   = null;
-let _deliverType = 'same';
+let _deliverId       = null;
+let _deliverType     = 'same';
+let _deliverTimeMode = 'now';
 
 function deliver(id) {
     const item = db.montasiat.find(x => x.id===id);
     if (!item) return;
-    _deliverId   = id;
-    _deliverType = 'same';
+    _deliverId       = id;
+    _deliverType     = 'same';
+    _deliverTimeMode = 'now';
 
     // معلومات المنتسية
     document.getElementById("deliveryItemInfo").innerHTML =
@@ -74,6 +34,7 @@ function deliver(id) {
 
     // إعادة ضبط الخيارات
     selectDeliveryType('same');
+    selectDeliveryTimeMode('now');
 
     // تعبئة قائمة المحافظات
     const cityEl = document.getElementById("deliverCitySelect");
@@ -82,7 +43,27 @@ function deliver(id) {
     cityEl.innerHTML = opts;
     document.getElementById("deliverBranchSelect").innerHTML = '<option value="">اختر الفرع</option>';
 
+    // تفريغ حقول الوقت السابق
+    const prevDate = document.getElementById('deliverPrevDate');
+    const prevDisp = document.getElementById('deliverPrevDate-display');
+    const prevTime = document.getElementById('deliverPrevTime');
+    const prevNote = document.getElementById('deliverPrevNotes');
+    if (prevDate) prevDate.value = '';
+    if (prevDisp) { prevDisp.textContent = '📅 اختر التاريخ'; prevDisp.classList.remove('selected'); }
+    if (prevTime) prevTime.value = '';
+    if (prevNote) prevNote.value = '';
+
     document.getElementById("deliveryModal").classList.remove("hidden");
+}
+
+function selectDeliveryTimeMode(mode) {
+    _deliverTimeMode = mode;
+    const nowCard    = document.getElementById('deliverNowCard');
+    const prevCard   = document.getElementById('deliverPrevCard');
+    const prevFields = document.getElementById('deliverPrevFields');
+    if (nowCard)  { nowCard.style.borderColor  = mode==='now'      ? 'var(--accent-red)' : ''; nowCard.style.background  = mode==='now'      ? 'var(--soft-red)' : ''; }
+    if (prevCard) { prevCard.style.borderColor = mode==='previous' ? 'var(--accent-red)' : ''; prevCard.style.background = mode==='previous' ? 'var(--soft-red)' : ''; }
+    if (prevFields) prevFields.style.display = mode==='previous' ? 'block' : 'none';
 }
 
 function selectDeliveryType(type) {
@@ -110,8 +91,22 @@ function confirmDeliver() {
         item.deliveryBranch = branch;
     }
 
+    if (_deliverTimeMode === 'previous') {
+        const dateVal = document.getElementById('deliverPrevDate')?.value;
+        const timeVal = document.getElementById('deliverPrevTime')?.value;
+        if (!dateVal) return alert("يرجى تحديد تاريخ التسليم");
+        if (!timeVal) return alert("يرجى تحديد وقت التسليم");
+        // تنسيق: YYYY/MM/DD — HH:MM
+        const [y,m,d] = dateVal.split('-');
+        item.dt = `${y}/${m}/${d} — ${timeVal}`;
+        const notesVal = document.getElementById('deliverPrevNotes')?.value.trim();
+        if (notesVal) item.deliverNotes = notesVal;
+        item.isLateDelivery = true;
+    } else {
+        item.dt = now();
+    }
+
     item.status      = 'تم التسليم';
-    item.dt          = now();
     item.deliveredBy = currentUser.name;
     save();
     cancelDeliver();
@@ -158,6 +153,38 @@ function confirmDeliverDirect(id) {
     item.dt          = now();
     item.deliveredBy = currentUser.name;
     save();
+}
+
+function showDeliverNotes(id) {
+    const item = db.montasiat.find(x => x.id === id);
+    if (!item || !item.deliverNotes) return;
+
+    const overlay = document.createElement('div');
+    overlay.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.72);z-index:9999;display:flex;align-items:center;justify-content:center;backdrop-filter:blur(4px);';
+    overlay.innerHTML = `
+        <div style="background:var(--bg-card);border:1px solid var(--border);border-radius:24px;
+                    padding:36px 32px;width:420px;max-width:92vw;box-shadow:0 30px 60px rgba(0,0,0,0.5);">
+            <div style="font-size:28px;text-align:center;margin-bottom:10px;">📝</div>
+            <h3 style="margin:0 0 6px;color:var(--accent-red);text-align:center;">ملاحظات التسليم</h3>
+            <div style="font-size:13px;color:var(--text-dim);text-align:center;margin-bottom:20px;">
+                ${sanitize(item.branch)} — ${sanitize(item.city)}
+                ${item.dt ? `<br><span style="color:var(--text-main);font-weight:700;">⏰ ${typeof _toLatinDigits==='function'?_toLatinDigits(item.dt):item.dt}</span>` : ''}
+            </div>
+            <div style="background:var(--bg-input);border:1px solid var(--border);border-radius:14px;
+                        padding:16px;font-size:14px;color:var(--text-main);line-height:1.8;text-align:right;">
+                ${sanitize(item.deliverNotes)}
+            </div>
+            <button onclick="this.closest('.snModal').remove()"
+                style="width:100%;margin-top:20px;padding:12px;border:1px solid var(--border);
+                       border-radius:12px;background:var(--bg-input);color:var(--text-dim);
+                       font-family:'Cairo';font-size:14px;cursor:pointer;">
+                إغلاق
+            </button>
+        </div>
+    `;
+    overlay.classList.add('snModal');
+    overlay.addEventListener('click', e => { if (e.target === overlay) overlay.remove(); });
+    document.body.appendChild(overlay);
 }
 
 function rejectMontasia(id) {
@@ -299,4 +326,12 @@ function confirmImportMontasia() {
 function cancelImportMontasia() {
     _importMontasiaData = [];
     document.getElementById('importMontasiaModal').classList.add('hidden');
+}
+
+function toggleCountMontasia(id) {
+    const item = db.montasiat.find(x => x.id === id);
+    if (!item) return;
+    item.countedByControl = !item.countedByControl;
+    save();
+    renderAll();
 }

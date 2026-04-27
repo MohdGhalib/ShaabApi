@@ -5,14 +5,14 @@ let calTarget=null, calMode='month', calYear=new Date().getFullYear(), calMonth=
 const calMonths=['يناير','فبراير','مارس','أبريل','مايو','يونيو','يوليو','أغسطس','سبتمبر','أكتوبر','نوفمبر','ديسمبر'];
 const calDayNames=['أحد','اثنين','ثلاثاء','أربعاء','خميس','جمعة','سبت'];
 
-function openDatePicker(fieldId) {
+function openDatePicker(fieldId, defaultMode) {
     closeDatePicker(); calTarget=fieldId;
     const cur=document.getElementById(fieldId).value;
     const today=new Date();
     calYear  = cur ? parseInt(cur.split('-')[0]) : today.getFullYear();
     calMonth = cur && cur.split('-')[1] ? parseInt(cur.split('-')[1])-1 : today.getMonth();
     calYearPage = Math.floor((calYear-2020)/12);
-    if (!cur) calMode='month'; else if (cur.length===4) calMode='year'; else if (cur.length===7) calMode='month'; else calMode='day';
+    if (!cur) calMode = defaultMode || 'month'; else if (cur.length===4) calMode='year'; else if (cur.length===7) calMode='month'; else calMode='day';
 
     const wrap=document.getElementById(fieldId+'-display').parentElement;
     const rect=wrap.getBoundingClientRect();

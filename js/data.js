@@ -51,6 +51,7 @@ function _playSound() {
 
 /* ── إشعارات المتصفح ── */
 let _prevCounts = { montasiat: -1, complaints: -1, auditedC: -1, controlC: -1 };
+let _skipMontasiaNotif = false;
 
 function _checkNotifications() {
     if (!currentUser) return;
@@ -71,10 +72,11 @@ function _checkNotifications() {
         // منتسية جديدة → كول سنتر + ميديا
         // عند SSE نشط: الإشعار يأتي من new-montasia مباشرة (أفضل للصوت)
         // عند انقطاع SSE: polling يتولى الإشعار هنا
-        if (isCcOrMedia && pendingM > _prevCounts.montasiat && !_sseActive) {
+        if (isCcOrMedia && pendingM > _prevCounts.montasiat && !_sseActive && !_skipMontasiaNotif) {
             _playSound();
             _showMontasiaPopup({ branch: '', city: '', type: '', notes: '' });
         }
+        _skipMontasiaNotif = false;
         // رد جديد على شكوى (audit) → كول سنتر + ميديا
         if (isCcOrMedia && auditedC > _prevCounts.auditedC) {
             _playSound();
@@ -486,7 +488,7 @@ function _toLatinDigits(str) {
 function _fmtTime(date) {
     const d = date instanceof Date ? date : new Date(date);
     const h = d.getHours(), m = d.getMinutes(), s = d.getSeconds();
-    const ampm = h >= 12 ? 'م' : 'ص';
+    const ampm = h >= 12 ? 'PM' : 'AM';
     const h12  = h % 12 || 12;
     return `${h12}:${String(m).padStart(2,'0')}:${String(s).padStart(2,'0')} ${ampm}`;
 }
@@ -515,6 +517,166 @@ function fmtDuration(sec) {
     return [h,m,s].map(v => String(v).padStart(2,'0')).join(':');
 }
 
+/* ══════════════════════════════════════════════════════
+   تنبيه السيطرة — صوت مستمر لا يتوقف إلا بالضغط
+══════════════════════════════════════════════════════ */
+let _ctrlAlertAudio  = null;
+let _ctrlTitleFlash  = null;
+let _prevCompSnap    = {};
+
+function _startCtrlSound() {
+    try {
+        if (!_ctrlAlertAudio) {
+            _ctrlAlertAudio = new Audio('audio/consideration.mp3');
+            _ctrlAlertAudio.loop = true;
+        }
+        _ctrlAlertAudio.currentTime = 0;
+        _ctrlAlertAudio.play().catch(() => {});
+    } catch(e) {}
+}
+
+function _stopCtrlSound() {
+    try { if (_ctrlAlertAudio) { _ctrlAlertAudio.pause(); _ctrlAlertAudio.currentTime = 0; } } catch(e) {}
+}
+
+function _startTitleFlash(msg) {
+    const orig = document.title;
+    let on = true;
+    _ctrlTitleFlash = setInterval(() => {
+        document.title = on ? `🚨 ${msg}` : orig;
+        on = !on;
+    }, 700);
+}
+
+function _stopTitleFlash() {
+    if (_ctrlTitleFlash) { clearInterval(_ctrlTitleFlash); _ctrlTitleFlash = null; }
+    document.title = 'محامص الشعب';
+}
+
+function _closeCtrlAlert() {
+    _stopCtrlSound();
+    _stopTitleFlash();
+    const el = document.getElementById('_ctrlAlertOverlay');
+    if (el) el.remove();
+}
+
+function _showCtrlAlert(complaintId, notes, branch, city) {
+    _closeCtrlAlert();
+    _startCtrlSound();
+    _startTitleFlash('متابعة جديدة على السيطرة');
+
+    // محاولة إحضار النافذة للأمام
+    try { window.focus(); } catch(e) {}
+
+    // إشعار نظام التشغيل لجلب الانتباه عند التصغير
+    if (typeof Notification !== 'undefined' && Notification.permission === 'granted') {
+        try {
+            const n = new Notification('🚨 متابعة جديدة على السيطرة', {
+                body: `${branch||''}${city?' — '+city:''}\n${(notes||'').substring(0,80)}`,
+                requireInteraction: true
+            });
+            n.onclick = () => { window.focus(); n.close(); };
+        } catch(e) {}
+    } else if (typeof Notification !== 'undefined' && Notification.permission === 'default') {
+        Notification.requestPermission();
+    }
+
+    if (!document.getElementById('_ctrlAlertStyle')) {
+        const s = document.createElement('style');
+        s.id = '_ctrlAlertStyle';
+        s.textContent = `
+        #_ctrlAlertOverlay {
+            position:fixed;inset:0;z-index:9999999;
+            background:rgba(0,0,0,0.88);backdrop-filter:blur(7px);
+            display:flex;align-items:center;justify-content:center;
+        }
+        #_ctrlAlertBox {
+            background:#180303;border:2px solid #d32f2f;border-radius:24px;
+            padding:36px 32px;width:400px;max-width:92vw;text-align:center;
+            animation:_ctrlPulse 1.4s ease-in-out infinite;
+        }
+        @keyframes _ctrlPulse {
+            0%,100%{box-shadow:0 0 40px rgba(211,47,47,.5),0 20px 60px rgba(0,0,0,.8);}
+            50%    {box-shadow:0 0 80px rgba(211,47,47,.95),0 20px 60px rgba(0,0,0,.8);}
+        }
+        #_ctrlAlertViewBtn {
+            width:100%;padding:15px;border:none;border-radius:14px;
+            background:#d32f2f;color:#fff;font-family:'Cairo';font-size:16px;
+            font-weight:800;cursor:pointer;transition:0.2s;margin-top:8px;
+        }
+        #_ctrlAlertViewBtn:hover{background:#b71c1c;transform:scale(0.98);}
+        `;
+        document.head.appendChild(s);
+    }
+
+    const safeNotes  = sanitize((notes ||'').substring(0,100));
+    const safeBranch = sanitize(branch||'');
+    const safeCity   = sanitize(city  ||'');
+    const overlay    = document.createElement('div');
+    overlay.id       = '_ctrlAlertOverlay';
+    overlay.innerHTML = `
+        <div id="_ctrlAlertBox">
+            <div style="font-size:50px;margin-bottom:10px;">🚨</div>
+            <div style="font-size:18px;font-weight:800;color:#ef5350;margin-bottom:6px;">
+                متابعة جديدة على نظام السيطرة
+            </div>
+            <div style="font-size:13px;color:rgba(255,255,255,.55);margin-bottom:18px;">
+                يرجى المراجعة الفورية
+            </div>
+            ${safeBranch ? `
+            <div style="background:rgba(255,255,255,.06);border-radius:12px;padding:12px 16px;margin-bottom:16px;">
+                <div style="font-size:14px;font-weight:700;color:#fff;">
+                    📍 ${safeBranch}${safeCity?' — '+safeCity:''}
+                </div>
+                ${safeNotes?`<div style="font-size:12px;color:rgba(255,255,255,.55);margin-top:6px;">${safeNotes}${(notes||'').length>100?'…':''}</div>`:''}
+            </div>` : ''}
+            <button id="_ctrlAlertViewBtn" onclick="_ctrlAlertView(${complaintId||'null'})">
+                👁 عرض الملاحظة
+            </button>
+        </div>
+    `;
+    document.body.appendChild(overlay);
+}
+
+function _ctrlAlertView(complaintId) {
+    _closeCtrlAlert();
+    if (typeof switchTab === 'function') {
+        switchTab('c');
+        if (complaintId) {
+            setTimeout(() => {
+                const row = document.querySelector(`tr[data-id="${complaintId}"]`);
+                if (row) row.scrollIntoView({ behavior:'smooth', block:'center' });
+            }, 450);
+        }
+    }
+}
+
+// لقطة حالة الشكاوي قبل كل reload لكشف التحويلات الجديدة
+function _snapshotComplaints() {
+    _prevCompSnap = {};
+    (db.complaints || []).forEach(c => {
+        _prevCompSnap[c.id] = {
+            sub: c.assignedToSubId  || null,
+            emp: c.assignedToEmpId  || null
+        };
+    });
+}
+
+// بعد reload: كشف إذا حُوِّلت شكوى لهذا الموظف حديثاً
+function _checkNewAssignments() {
+    if (!currentUser) return;
+    const role  = currentUser.role;
+    const empId = currentUser.empId;
+    (db.complaints || []).forEach(c => {
+        if (c.deleted) return;
+        const prev = _prevCompSnap[c.id];
+        if (role === 'control_employee' && c.assignedToEmpId === empId && prev?.emp !== empId)
+            _showCtrlAlert(c.id, c.notes, c.branch, c.city);
+        if (role === 'control_sub' && c.assignedToSubId === empId && prev?.sub !== empId)
+            _showCtrlAlert(c.id, c.notes, c.branch, c.city);
+    });
+}
+
 /* ── SSE: اتصال فوري بالسيرفر لاستقبال التحديثات ── */
 let _sseActive = false;
 
@@ -524,38 +686,38 @@ function _initSSE() {
     const es = new EventSource(`/api/sse?token=${encodeURIComponent(_token)}`);
     es.addEventListener('connected', () => {
         _sseActive = true;
-        _syncDelay = 120_000; // SSE يتولى التحديث — نبطئ الـ polling
+        _syncDelay = 120_000;
     });
     es.addEventListener('reload', async () => {
-        // إذا كان هناك حفظ جارٍ، ننتظر حتى ينتهي لتجنب تحميل بيانات قديمة
         if (_isSaving) {
             await new Promise(r => { const id = setInterval(() => { if (!_isSaving) { clearInterval(id); r(); } }, 200); });
         }
-        try { await loadAllData(); renderAll(); } catch(e) { /* صامت */ }
+        _snapshotComplaints();
+        try { await loadAllData(); renderAll(); _checkNewAssignments(); } catch(e) {}
     });
     es.addEventListener('new-complaint', (e) => {
         const role    = currentUser?.role;
         const isAdmin = currentUser?.isAdmin;
-        // كول سنتر + ميديا → popup + صوت
+        // كول سنتر + ميديا + أدمن → popup + صوت عادي
         if (isAdmin || role === 'cc_manager' || role === 'media') {
             let info = {};
             try { info = JSON.parse(e.data); } catch {}
             _playSound();
             _showComplaintPopup(info);
         }
-        // قسم السيطرة → صوت فقط
-        if (role === 'control_employee' || role === 'control_sub' || role === 'control') {
-            _playSound();
+        // مدير السيطرة → تنبيه مستمر بصوت لا يتوقف
+        if (role === 'control_employee' || role === 'control') {
+            let info = {};
+            try { info = JSON.parse(e.data); } catch {}
+            _showCtrlAlert(info.id || null, info.notes, info.branch, info.city);
         }
     });
     es.addEventListener('new-montasia', (e) => {
         const role    = currentUser?.role;
         const isAdmin = currentUser?.isAdmin;
-        // كول سنتر + ميديا + أدمن → popup + صوت
         if (isAdmin || role === 'cc_manager' || role === 'media') {
             let info = {};
             try { info = JSON.parse(e.data); } catch {}
-            // لا نُظهر popup لمن أضاف المنتسية بنفسه
             if (info.addedBy && info.addedBy === currentUser?.name) return;
             _playSound();
             _showMontasiaPopup(info);
@@ -564,9 +726,8 @@ function _initSSE() {
     es.addEventListener('heartbeat', () => { /* keep-alive */ });
     es.onerror = () => {
         _sseActive = false;
-        _syncDelay = 20_000; // عودة للـ polling العادي عند انقطاع SSE
+        _syncDelay = 20_000;
         es.close();
-        // إعادة الاتصال بعد 10 ثوانٍ
         setTimeout(_initSSE, 10_000);
     };
 }
@@ -656,7 +817,7 @@ function _showMontasiaPopup(info) {
         <div id="_mPopupBox">
             <div style="text-align:center;margin-bottom:12px;">
                 <div class="_mIcon">📋</div>
-                <div class="_mTitle">منتسية جديدة قيد الانتظار</div>
+                <div class="_mTitle">منتسية جديدة - لم يتم التسليم</div>
                 <div class="_mSub">وردت للتو — تتطلب مراجعتك</div>
             </div>
             <div class="_mCard">

@@ -100,7 +100,8 @@ function renderBranches() {
     const searchCity   = document.getElementById('branchCitySearch')?.value   || '';
     const searchBranch = document.getElementById('branchBranchSearch')?.value || '';
 
-    // تجميع الشكاوى من المصدرين
+    // تجميع الشكاوى المحتسَبة فقط (عبر زر "احتساب شكوى") — كل دور يرى إحصائياته المستقلة
+    const isControlEmpStats = currentUser?.role === 'control_employee';
     const counts = {};
     const addCount = x => {
         if (searchDate   && !x.iso.startsWith(searchDate))  return;
@@ -109,8 +110,19 @@ function renderBranches() {
         const key = `${x.branch}||${x.city}`;
         counts[key] = (counts[key] || 0) + 1;
     };
-    db.inquiries.filter(x => !x.deleted && x.type === 'شكوى').forEach(addCount);
-    db.complaints.filter(x => !x.deleted && !x.linkedInqSeq).forEach(addCount);
+
+    if (isControlEmpStats) {
+        // مدير قسم السيطرة: شكاوي + منتسيات محتسبة بـ countedByControl
+        db.complaints.filter(x => !x.deleted && x.countedByControl).forEach(addCount);
+        (db.montasiat || []).filter(x => !x.deleted && x.countedByControl).forEach(addCount);
+    } else {
+        // مدير الكول سنتر / المدير: استفسارات + شكاوي محتسبة بـ countedByCC
+        db.inquiries.filter(x =>
+            !x.deleted && x.type === 'شكوى' && x.countedByCC &&
+            !db.complaints.some(c => !c.deleted && String(c.linkedInqSeq) === String(x.seq))
+        ).forEach(addCount);
+        db.complaints.filter(x => !x.deleted && x.countedByCC).forEach(addCount);
+    }
 
     const allData = Object.entries(counts).map(([key, count]) => {
         const [branch, city] = key.split('||');
@@ -157,7 +169,10 @@ function renderBranches() {
         html += `
         <div style="margin-bottom:24px;border:1px solid ${style.headerBorder};border-radius:18px;overflow:hidden;">
             <div style="background:${style.header};border-bottom:1px solid ${style.headerBorder};padding:14px 20px;display:flex;align-items:center;justify-content:space-between;">
-                <span style="font-weight:800;font-size:16px;color:${style.headerColor};">قسم ${region}</span>
+                <div style="display:flex;align-items:center;gap:10px;">
+                    <span style="font-weight:800;font-size:16px;color:${style.headerColor};">قسم ${region}</span>
+                    <button onclick="showRegionDetail('${region}')" style="padding:3px 12px;font-size:11px;font-family:'Cairo';cursor:pointer;border-radius:8px;border:1px solid ${style.headerBorder};background:${style.header};color:${style.headerColor};font-weight:700;">👁 عرض</button>
+                </div>
                 <div style="display:flex;gap:16px;align-items:center;">
                     <span style="font-size:12px;color:var(--text-dim);">${regionData.length} فرع</span>
                     <span style="background:${style.header};border:1px solid ${style.headerBorder};color:${style.headerColor};padding:3px 14px;border-radius:20px;font-size:13px;font-weight:800;">${regionTotal} شكوى</span>
@@ -175,9 +190,10 @@ function renderBranches() {
             <div style="background:rgba(255,255,255,0.03);border:1px solid var(--border);border-radius:12px;padding:13px 16px;">
                 <div style="display:flex;align-items:center;gap:12px;margin-bottom:8px;">
                     <span style="background:${rankBg};color:${rankColor};border-radius:7px;padding:3px 9px;font-size:11px;font-weight:800;min-width:30px;text-align:center;">#${rank}</span>
-                    <div style="flex:1;">
+                    <div style="flex:1;display:flex;align-items:center;gap:8px;flex-wrap:wrap;">
                         <span style="font-weight:700;font-size:14px;color:var(--text-main);">${x.branch}</span>
-                        <span style="color:var(--text-dim);font-size:11px;margin-right:6px;">— ${x.city}</span>
+                        <span style="color:var(--text-dim);font-size:11px;">— ${x.city}</span>
+                        <button onclick="showBranchDetail('${x.branch.replace(/'/g,'\\\'').replace(/"/g,'&quot;')}','${x.city.replace(/'/g,'\\\'').replace(/"/g,'&quot;')}')" style="padding:2px 10px;font-size:10px;font-family:'Cairo';cursor:pointer;border-radius:7px;border:1px solid ${style.headerBorder};background:${style.header};color:${style.headerColor};font-weight:700;">👁 عرض</button>
                     </div>
                     <div>
                         <span style="font-size:17px;font-weight:800;color:${style.headerColor};">${x.count}</span>
@@ -205,5 +221,97 @@ function resetBranchSearch() {
     setDatePickerValue('branchDate', '');
     const disp = document.getElementById('branchDate-display');
     if (disp) { disp.textContent = '📅 الكل'; disp.classList.remove('selected'); }
+    renderBranches();
+}
+
+/* ══════════════════════════════════════════════════════
+   EVAL DETAIL MODAL — عرض تفاصيل القسم أو الفرع
+══════════════════════════════════════════════════════ */
+let _evalDetailFilter = null;
+let _evalDetailTitle  = '';
+
+function showRegionDetail(region) {
+    _evalDetailFilter = { region };
+    _evalDetailTitle  = `قسم ${region}`;
+    _renderEvalDetailModal();
+}
+
+function showBranchDetail(branch, city) {
+    _evalDetailFilter = { branch, city };
+    _evalDetailTitle  = `${branch} — ${city}`;
+    _renderEvalDetailModal();
+}
+
+function _getEvalItems(filter) {
+    const isCtrl = currentUser?.role === 'control_employee';
+    const match  = x => filter.branch
+        ? (x.branch === filter.branch && x.city === filter.city)
+        : getBranchRegion(x.branch) === filter.region;
+
+    const items = [];
+    if (isCtrl) {
+        (db.complaints || []).filter(x => !x.deleted && x.countedByControl && match(x))
+            .forEach(x => items.push({ type:'شكوى', id:x.id, notes:x.notes, branch:x.branch, city:x.city, src:'complaint', time:x.time||'' }));
+        (db.montasiat || []).filter(x => !x.deleted && x.countedByControl && match(x))
+            .forEach(x => items.push({ type:'منتسية', id:x.id, notes:x.notes||x.type||'', branch:x.branch, city:x.city, src:'montasia', time:x.time||'' }));
+    } else {
+        (db.inquiries || []).filter(x => !x.deleted && x.type==='شكوى' && x.countedByCC && match(x)
+            && !(db.complaints||[]).some(c => !c.deleted && String(c.linkedInqSeq)===String(x.seq)))
+            .forEach(x => items.push({ type:'شكوى (استفسار)', id:x.id, notes:x.notes, branch:x.branch, city:x.city, src:'inquiry', time:x.time||'' }));
+        (db.complaints || []).filter(x => !x.deleted && x.countedByCC && match(x))
+            .forEach(x => items.push({ type:'شكوى', id:x.id, notes:x.notes, branch:x.branch, city:x.city, src:'complaint', time:x.time||'' }));
+    }
+    return items;
+}
+
+function _renderEvalDetailModal() {
+    const old = document.getElementById('_evalDetailModal');
+    if (old) old.remove();
+
+    const items = _getEvalItems(_evalDetailFilter);
+    const showBranchCol = !!_evalDetailFilter.region;
+
+    const itemsHtml = items.length
+        ? items.map(item => `
+            <div style="display:flex;align-items:flex-start;gap:10px;padding:12px 14px;background:rgba(255,255,255,0.03);border:1px solid rgba(255,255,255,0.07);border-radius:12px;">
+                <div style="flex:1;min-width:0;">
+                    <div style="display:flex;align-items:center;gap:6px;flex-wrap:wrap;margin-bottom:5px;">
+                        <span style="padding:2px 8px;border-radius:6px;font-size:11px;font-weight:700;background:rgba(211,47,47,0.15);color:#ef9a9a;">${sanitize(item.type)}</span>
+                        ${showBranchCol ? `<span style="font-size:11px;color:#64b5f6;">${sanitize(item.branch)} — ${sanitize(item.city)}</span>` : ''}
+                        ${item.time ? `<span style="font-size:10px;color:var(--text-dim);">${sanitize(item.time)}</span>` : ''}
+                    </div>
+                    <div style="font-size:13px;color:var(--text-main);line-height:1.5;">${sanitize((item.notes||'').substring(0,120))}${(item.notes||'').length>120?'…':''}</div>
+                </div>
+                <button onclick="_undoEvalItem('${item.src}',${item.id})" style="flex-shrink:0;padding:5px 12px;font-size:12px;font-family:'Cairo';cursor:pointer;border-radius:8px;border:1px solid rgba(211,47,47,0.4);background:rgba(211,47,47,0.1);color:#ef9a9a;font-weight:700;white-space:nowrap;">↩ تراجع</button>
+            </div>`).join('')
+        : `<div style="text-align:center;padding:40px;color:var(--text-dim);">لا توجد بنود محتسبة</div>`;
+
+    const overlay = document.createElement('div');
+    overlay.id = '_evalDetailModal';
+    overlay.style.cssText = 'position:fixed;inset:0;z-index:10001;background:rgba(0,0,0,0.65);backdrop-filter:blur(4px);display:flex;align-items:center;justify-content:center;padding:20px;font-family:Cairo,sans-serif;direction:rtl;';
+    overlay.onclick = e => { if (e.target === overlay) overlay.remove(); };
+
+    overlay.innerHTML = `
+        <div style="background:#111;border:1px solid rgba(255,255,255,0.12);border-radius:20px;padding:24px;max-width:580px;width:100%;max-height:80vh;display:flex;flex-direction:column;gap:14px;">
+            <div style="display:flex;align-items:center;justify-content:space-between;flex-shrink:0;">
+                <div>
+                    <div style="font-size:17px;font-weight:800;color:var(--text-main);">📋 ${sanitize(_evalDetailTitle)}</div>
+                    <div style="font-size:13px;color:var(--text-dim);margin-top:2px;">${items.length} بند محتسب</div>
+                </div>
+                <button onclick="document.getElementById('_evalDetailModal').remove()" style="background:rgba(255,255,255,0.07);border:1px solid rgba(255,255,255,0.12);border-radius:8px;padding:6px 16px;color:var(--text-dim);cursor:pointer;font-family:'Cairo';font-size:13px;">✕ إغلاق</button>
+            </div>
+            <div style="overflow-y:auto;display:flex;flex-direction:column;gap:8px;padding-left:2px;">
+                ${itemsHtml}
+            </div>
+        </div>`;
+
+    document.body.appendChild(overlay);
+}
+
+function _undoEvalItem(src, id) {
+    if (src === 'complaint')  { if (typeof toggleCountComplaint  === 'function') toggleCountComplaint(id);  }
+    else if (src === 'inquiry') { if (typeof toggleCountInquiry  === 'function') toggleCountInquiry(id);    }
+    else if (src === 'montasia'){ if (typeof toggleCountMontasia === 'function') toggleCountMontasia(id);   }
+    _renderEvalDetailModal();
     renderBranches();
 }

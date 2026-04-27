@@ -292,18 +292,21 @@ function setProfileUI() {
     }
 
     if (isMedia) {
-        // موظف الميديا يرى فقط تبويب السيطرة وقائمة الأسعار
-        ['tab-m','tab-o','tab-b','tab-e','tab-s','tab-f'].forEach(id => document.getElementById(id)?.classList.add('hidden'));
+        ['tab-m','tab-m-sub','tab-o','tab-b','tab-e','tab-s','tab-f','tab-cu','tab-c-sub'].forEach(id => document.getElementById(id)?.classList.add('hidden'));
         document.getElementById('tab-p')?.classList.remove('hidden');
     } else if (isControlEmployee) {
-        // مدير قسم السيطرة يرى تبويب السيطرة + المنتسيات (اطلاع فقط) + إضافة موظف
-        ['tab-i','tab-b','tab-s','tab-f'].forEach(id => document.getElementById(id)?.classList.add('hidden'));
+        ['tab-i','tab-b','tab-s'].forEach(id => document.getElementById(id)?.classList.add('hidden'));
         document.getElementById('tab-m').classList.remove('hidden');
+        document.getElementById('tab-m-sub')?.classList.remove('hidden');
         document.getElementById('tab-o').classList.remove('hidden');
         document.getElementById('tab-e').classList.remove('hidden');
+        document.getElementById('tab-cu')?.classList.remove('hidden');
+        document.getElementById('tab-c-sub')?.classList.remove('hidden');
+        document.getElementById('tab-f')?.classList.remove('hidden');
     } else if (isControlSub) {
-        // موظف السيطرة يرى تبويب السيطرة فقط
-        ['tab-m','tab-o','tab-i','tab-b','tab-e','tab-s','tab-f'].forEach(id => document.getElementById(id)?.classList.add('hidden'));
+        ['tab-m','tab-m-sub','tab-o','tab-i','tab-b','tab-e','tab-s','tab-f'].forEach(id => document.getElementById(id)?.classList.add('hidden'));
+        document.getElementById('tab-cu')?.classList.remove('hidden');
+        document.getElementById('tab-c-sub')?.classList.remove('hidden');
     } else {
         if (perm('viewI'))        document.getElementById("tab-i").classList.remove("hidden");
         if (!perm('viewBreak'))   document.getElementById("tab-b").classList.add("hidden");
@@ -311,6 +314,9 @@ function setProfileUI() {
         if (perm('viewStats'))    document.getElementById("tab-s").classList.remove("hidden");
         if (perm('viewBranches')) document.getElementById("tab-f").classList.remove("hidden");
         if (perm('viewPrices'))   document.getElementById("tab-p")?.classList.remove("hidden");
+        document.getElementById('tab-m-sub')?.classList.remove('hidden');
+        document.getElementById('tab-c-sub')?.classList.remove('hidden');
+        if (isAdmin || isCCManager) document.getElementById('tab-cu')?.classList.remove('hidden');
     }
 
     // إظهار مجموعة الموظفين إذا كان أي عنصر فرعي مرئياً

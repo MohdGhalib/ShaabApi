@@ -108,3 +108,20 @@ function jumpToInquiry(seq) {
         });
     }, 200);
 }
+
+function toggleCountInquiry(id) {
+    const inq = db.inquiries.find(x => x.id === id);
+    if (!inq || inq.type !== 'شكوى') return;
+    const role    = currentUser?.role;
+    const isAdmin = currentUser?.isAdmin;
+    if (role !== 'cc_manager' && !isAdmin) return;
+
+    // إذا الاستفسار مرتبط بشكوى في السيطرة → احتسب على الشكوى لا على الاستفسار
+    const linked = db.complaints.find(c => !c.deleted && String(c.linkedInqSeq) === String(inq.seq));
+    if (linked) {
+        linked.countedByCC = !linked.countedByCC;
+    } else {
+        inq.countedByCC = !inq.countedByCC;
+    }
+    save();
+}

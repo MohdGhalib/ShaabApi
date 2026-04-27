@@ -16,7 +16,7 @@
         })();
     </script>
     <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="css/styles.css">
+    <link rel="stylesheet" href="css/styles.css?v=23">
     <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
 </head>
@@ -137,13 +137,30 @@
                     <span class="nav-chevron" id="chevron-m">❯</span>
                 </button>
                 <div class="nav-sub" id="sub-m">
+                    <button class="nav-sub-item" id="tab-m-sub" onclick="switchTab('m')">
+                        <span class="nav-sub-dot"></span>📋 المنتسيات
+                    </button>
                     <button class="nav-sub-item" id="tab-o" onclick="switchTab('o')">
                         <span class="nav-sub-dot"></span>📂 منتسيات مفتوحة
                     </button>
                 </div>
             </div>
             <button class="nav-item hidden" id="tab-i" onclick="switchTab('i')" style="position:relative;">💬 الاستفسارات<span class="nav-badge" id="badge-i" style="display:none;"></span></button>
-            <button class="nav-item" id="tab-c" onclick="switchTab('c')" style="position:relative;">🚨 متابعات السيطرة<span class="nav-badge" id="badge-c" style="display:none;"></span></button>
+            <div class="nav-group" id="nav-group-c">
+                <button class="nav-item" id="tab-c" onclick="toggleTabC()" style="position:relative;">
+                    🚨 متابعات السيطرة
+                    <span class="nav-badge" id="badge-c" style="display:none;"></span>
+                    <span class="nav-chevron" id="chevron-c">❯</span>
+                </button>
+                <div class="nav-sub" id="sub-c">
+                    <button class="nav-sub-item" id="tab-c-sub" onclick="switchTab('c')">
+                        <span class="nav-sub-dot"></span>🚨 نظام السيطرة
+                    </button>
+                    <button class="nav-sub-item hidden" id="tab-cu" onclick="switchTab('cu')">
+                        <span class="nav-sub-dot"></span>🔴 متابعات مفتوحة
+                    </button>
+                </div>
+            </div>
             <div class="nav-group hidden" id="nav-group-e">
                 <button class="nav-item" id="tab-emp-group" onclick="toggleTabE()" style="position:relative;">
                     👥 نظام الموظفين
@@ -298,20 +315,46 @@
             </div>
         </div>
 
+        <!-- ── اختيار وقت التسليم ── -->
+        <div style="margin-bottom:20px;">
+            <label style="font-size:13px;color:var(--text-dim);display:block;margin-bottom:10px;font-weight:700;">⏰ وقت التسليم</label>
+            <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px;">
+                <div class="break-btn-card" id="deliverNowCard" onclick="selectDeliveryTimeMode('now')" style="border-color:var(--accent-red);background:var(--soft-red);">
+                    <span class="break-icon">⚡</span>
+                    تسليم الآن
+                </div>
+                <div class="break-btn-card" id="deliverPrevCard" onclick="selectDeliveryTimeMode('previous')">
+                    <span class="break-icon">🕐</span>
+                    تسليم بوقت سابق
+                </div>
+            </div>
+        </div>
+
+        <!-- ── حقول الوقت السابق ── -->
+        <div id="deliverPrevFields" style="display:none;margin-bottom:20px;background:rgba(255,255,255,0.03);border:1px solid var(--border);border-radius:14px;padding:16px;">
+            <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:12px;">
+                <div>
+                    <label style="font-size:12px;color:var(--text-dim);display:block;margin-bottom:6px;">📅 تاريخ التسليم</label>
+                    <div class="date-picker-wrap" onclick="openDatePicker('deliverPrevDate','day')">
+                        <span class="date-display" id="deliverPrevDate-display">📅 اختر التاريخ</span>
+                        <input type="hidden" id="deliverPrevDate">
+                    </div>
+                </div>
+                <div>
+                    <label style="font-size:12px;color:var(--text-dim);display:block;margin-bottom:6px;">🕐 وقت التسليم</label>
+                    <input type="time" id="deliverPrevTime" style="padding:10px;">
+                </div>
+            </div>
+            <div>
+                <label style="font-size:12px;color:var(--text-dim);display:block;margin-bottom:6px;">📝 ملاحظات</label>
+                <textarea id="deliverPrevNotes" rows="2" placeholder="ملاحظات التسليم (اختياري)..."></textarea>
+            </div>
+        </div>
+
         <button class="btn btn-main" style="width:100%;padding:14px;font-size:15px;" onclick="confirmDeliver()">✅ تأكيد التسليم</button>
     </div>
 </div>
 
-<!-- ══ MONTASIA CONFIRM OVERLAY ══ -->
-<div class="break-blur-overlay hidden" id="montasiaConfirmOverlay">
-    <div class="timer-card" style="max-width:460px;width:90%;">
-        <div class="timer-label">⏳ جارٍ الحفظ...</div>
-        <div id="confirmPreview" style="font-size:14px;color:var(--text-dim);margin-bottom:20px;line-height:1.8;background:rgba(255,255,255,0.04);padding:12px 18px;border-radius:14px;border:1px solid var(--border);"></div>
-        <div class="timer-display" id="confirmCountdown">5</div>
-        <div class="timer-status">سيتم الحفظ تلقائياً عند الوصول للصفر</div>
-        <button class="btn-stop-timer" style="background:rgba(255,255,255,0.08);border:1px solid var(--border);" onclick="cancelMontasia()">↩ تراجع وعدم الإرسال</button>
-    </div>
-</div>
 
 <!-- ══ DELETE CONFIRM MODAL (عام لجميع عمليات الحذف) ══ -->
 <div class="modal-overlay hidden" id="deleteConfirmModal" onclick="if(event.target===this)cancelDeleteAction()">
@@ -595,24 +638,24 @@
 </style>
 
 <!-- ══ SCRIPTS (load order matters) ══ -->
-<script src="js/data.js"></script>
-<script src="js/session.js"></script>
-<script src="js/clock.js"></script>
-<script src="js/auth.js"></script>
-<script src="js/render.js"></script>
-<script src="js/pages.js"></script>
-<script src="js/ui.js"></script>
-<script src="js/missing-items.js"></script>
-<script src="js/inquiries.js"></script>
-<script src="js/control.js"></script>
-<script src="js/employees.js"></script>
-<script src="js/breaks.js"></script>
-<script src="js/stats.js"></script>
-<script src="js/datepicker.js"></script>
-<script src="js/prices.js"></script>
-<script src="js/dashboard.js"></script>
-<script src="js/audit.js"></script>
-<script src="js/trash.js"></script>
+<script src="js/data.js?v=25"></script>
+<script src="js/session.js?v=23"></script>
+<script src="js/clock.js?v=23"></script>
+<script src="js/auth.js?v=23"></script>
+<script src="js/render.js?v=26"></script>
+<script src="js/pages.js?v=23"></script>
+<script src="js/ui.js?v=24"></script>
+<script src="js/missing-items.js?v=25"></script>
+<script src="js/inquiries.js?v=23"></script>
+<script src="js/control.js?v=24"></script>
+<script src="js/employees.js?v=23"></script>
+<script src="js/breaks.js?v=23"></script>
+<script src="js/stats.js?v=23"></script>
+<script src="js/datepicker.js?v=24"></script>
+<script src="js/prices.js?v=23"></script>
+<script src="js/dashboard.js?v=23"></script>
+<script src="js/audit.js?v=23"></script>
+<script src="js/trash.js?v=23"></script>
 <script>
     document.addEventListener("click", function(e) {
         if (e.target === document.getElementById("profileModal")) closeProfile();
