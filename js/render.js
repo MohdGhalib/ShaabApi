@@ -281,7 +281,7 @@ function _renderTableM(get, isAdmin) {
             ? `<div class="added-by" style="color:#64b5f6;">🔀 سُلِّم لـ: ${sanitize(x.deliveryBranch)} — ${sanitize(x.deliveryCity)}</div>` : '';
         const deliveredRow = x.deliveredBy
             ? `<div class="added-by">📦 سلّمه: ${sanitize(x.deliveredBy)}</div>${deliveryBranchNote}` : '';
-        const deliveryTimeBox = x.dt
+        const deliveryTimeBox = x.dt && x.status !== 'قيد الانتظار'
             ? `<div style="display:inline-flex;align-items:center;gap:5px;margin-top:6px;
                            padding:4px 9px;border-radius:8px;
                            background:rgba(46,125,50,0.12);border:1px solid rgba(46,125,50,0.3);">
