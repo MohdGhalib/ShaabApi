@@ -438,7 +438,7 @@ comp: `
         <h4 style="margin:0 0 16px;color:var(--text-main);">➕ تسجيل تعويض جديد</h4>
 
         <div style="margin-bottom:16px;padding:14px;background:rgba(21,101,192,0.08);border:1px solid rgba(21,101,192,0.25);border-radius:12px;">
-            <label style="display:block;margin-bottom:8px;font-size:13px;font-weight:700;color:#64b5f6;">🔗 ربط بشكوى سيطرة مالية</label>
+            <label style="display:block;margin-bottom:8px;font-size:13px;font-weight:700;color:#64b5f6;">🔗 ربط بشكوى سيطرة مالية <span style="color:#ef5350;font-size:11px;">(إجباري)</span></label>
             <select id="compLinkedComplaint" style="width:100%;" onchange="onCompComplaintSelect()"></select>
             <div style="font-size:11px;color:var(--text-dim);margin-top:6px;">عند الاختيار يُملأ الفرع والنص تلقائياً</div>
         </div>

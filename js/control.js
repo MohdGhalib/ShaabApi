@@ -587,7 +587,7 @@ function _populateCompComplaintSelect() {
                                 .map(x => x.linkedComplaintId)
     );
     const eligible = (db.complaints || []).filter(x => !x.deleted && x.type === 'مالية' && !linked.has(x.id));
-    sel.innerHTML = '<option value="">— بدون ربط —</option>' +
+    sel.innerHTML = '<option value="">— اختر شكوى سيطرة مالية (إجباري) —</option>' +
         eligible.map(x =>
             `<option value="${x.id}">[${x.iso||''}] ${sanitize(x.branch)} — ${sanitize(x.city)} | ${sanitize((x.notes||'').substring(0,50))}</option>`
         ).join('');
@@ -604,6 +604,7 @@ function addCompensation() {
     const adminNote = document.getElementById('compAdminNote')?.value.trim() || '';
 
     if (!city || !branch || !notes || !emp || !amount) return alert('يرجى إكمال جميع الحقول');
+    if (!cid) return alert('يرجى ربط شكوى سيطرة مالية بالتعويض');
 
     if (cid) {
         const alreadyLinked = (db.compensations || []).some(x => !x.deleted && x.linkedComplaintId == cid);
