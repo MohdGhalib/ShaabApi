@@ -329,6 +329,11 @@ function confirmImportMontasia() {
         var s = String(val);
         var sm = s.match(/^(\d{4})-(\d{2})-(\d{2})/);
         if (sm && parseInt(sm[1]) > 2000) return sm[1]+'-'+sm[2]+'-'+sm[3];
+        // تنسيق D/M/YYYY أو DD/MM/YYYY (نص من Excel)
+        var sm2 = s.match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})/);
+        if (sm2 && parseInt(sm2[3]) > 2000) {
+            return sm2[3]+'-'+String(parseInt(sm2[2])).padStart(2,'0')+'-'+String(parseInt(sm2[1])).padStart(2,'0');
+        }
         return null;
     }
     function _extractTime(val) {
@@ -383,11 +388,6 @@ function confirmImportMontasia() {
         });
     });
     _importMontasiaData = [];
-    // debug مؤقت
-    if (db.montasiat.length > 0) {
-        var _s = db.montasiat[0];
-        alert('تم الحفظ في الذاكرة:\ntime=' + _s.time + '\niso=' + _s.iso);
-    }
     save();
     document.getElementById('importMontasiaModal').classList.add('hidden');
 }
