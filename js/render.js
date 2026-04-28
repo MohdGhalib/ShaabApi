@@ -601,12 +601,18 @@ function _renderTableC(get, isAdmin) {
         if (perm('returnC') && x.status!=='مُرجعة للتعديل') adminActions += `<button class="btn-return" onclick="returnControl(${x.id})">↩ إرجاع</button>`;
         if (perm('deleteC'))  adminActions += `<button class="btn-delete-sm" onclick="deleteControl(${x.id})">🗑</button>`;
 
-        // زر احتساب شكوى — مدير السيطرة
+        // زر احتساب شكوى — مدير السيطرة (محجوب على شكاوي الكول سنتر والميديا)
         if (isControlEmployee) {
-            const counted = !!x.countedByControl;
-            adminActions += counted
-                ? `<div style="display:flex;gap:5px;align-items:center;margin-top:6px;"><span style="flex:1;padding:5px 8px;font-size:11px;font-family:'Cairo';border-radius:8px;border:1px solid rgba(46,125,50,0.4);background:rgba(46,125,50,0.15);color:#81c784;font-weight:700;text-align:center;">✓ تم احتساب الشكوى على الفرع</span><button onclick="toggleCountComplaint(${x.id})" style="padding:5px 8px;font-size:11px;font-family:'Cairo';cursor:pointer;border-radius:8px;border:1px solid rgba(211,47,47,0.4);background:rgba(211,47,47,0.1);color:#ef9a9a;font-weight:700;">تراجع</button></div>`
-                : `<button onclick="toggleCountComplaint(${x.id})" style="display:block;margin-top:6px;width:100%;padding:5px 10px;font-size:11px;font-family:'Cairo';cursor:pointer;border-radius:8px;border:1px solid rgba(255,152,0,0.35);background:rgba(255,152,0,0.08);color:#ffb74d;font-weight:700;">📊 احتساب شكوى</button>`;
+            const _addedByEmp   = employees.find(e => e.name === x.addedBy);
+            const _addedByTitle = _addedByEmp?.title || '';
+            const _blockedTitles = ['مدير الكول سنتر','موظف كول سنتر','موظف ميديا'];
+            const _canCount     = !_blockedTitles.includes(_addedByTitle);
+            if (_canCount) {
+                const counted = !!x.countedByControl;
+                adminActions += counted
+                    ? `<div style="display:flex;gap:5px;align-items:center;margin-top:6px;"><span style="flex:1;padding:5px 8px;font-size:11px;font-family:'Cairo';border-radius:8px;border:1px solid rgba(46,125,50,0.4);background:rgba(46,125,50,0.15);color:#81c784;font-weight:700;text-align:center;">✓ تم احتساب الشكوى على الفرع</span><button onclick="toggleCountComplaint(${x.id})" style="padding:5px 8px;font-size:11px;font-family:'Cairo';cursor:pointer;border-radius:8px;border:1px solid rgba(211,47,47,0.4);background:rgba(211,47,47,0.1);color:#ef9a9a;font-weight:700;">تراجع</button></div>`
+                    : `<button onclick="toggleCountComplaint(${x.id})" style="display:block;margin-top:6px;width:100%;padding:5px 10px;font-size:11px;font-family:'Cairo';cursor:pointer;border-radius:8px;border:1px solid rgba(255,152,0,0.35);background:rgba(255,152,0,0.08);color:#ffb74d;font-weight:700;">📊 احتساب شكوى</button>`;
+            }
         }
         // زر احتساب شكوى — مدير الكول سنتر والمدير
         if (isCCMgrC || isAdmin) {

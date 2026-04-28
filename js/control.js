@@ -527,6 +527,9 @@ function toggleCountComplaint(id) {
     const role    = currentUser?.role;
     const isAdmin = currentUser?.isAdmin;
     if (role === 'control_employee') {
+        const _addedByEmp = employees.find(e => e.name === item.addedBy);
+        const _blocked = ['مدير الكول سنتر','موظف كول سنتر','موظف ميديا'].includes(_addedByEmp?.title);
+        if (_blocked) return;
         item.countedByControl = !item.countedByControl;
     } else if (role === 'cc_manager' || isAdmin) {
         item.countedByCC = !item.countedByCC;
