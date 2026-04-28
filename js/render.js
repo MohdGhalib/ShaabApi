@@ -675,11 +675,13 @@ function renderControlOpen() {
     const isControl         = currentUser?.role === 'control';
     const isControlEmployee = currentUser?.role === 'control_employee';
     const isControlSub      = currentUser?.role === 'control_sub';
+    const isMediaCU         = currentUser?.role === 'media';
 
     const rows = (db.complaints || []).filter(x =>
         !x.deleted &&
         x.status === 'تمت الموافقة' &&
         !x.audit &&
+        (isMediaCU ? x.addedBy === currentUser.name : true) &&
         (isControlSub ? (
             currentUser.assignedBranches?.length
                 ? currentUser.assignedBranches.some(b => b.branch === x.branch && b.city === x.city)
