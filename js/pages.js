@@ -208,18 +208,38 @@ c: `
         <span id="cFileLabel" style="font-size:13px;color:var(--text-dim);">لم يُختر ملف</span>
     </div>
     <textarea id="cNotes" placeholder="نص الملاحظة الواردة من السيطرة..." rows="3"></textarea>
-    <div style="margin-top:14px;">
-        <label style="font-size:13px;color:var(--text-dim);display:block;margin-bottom:6px;">🏷️ نوع الشكوى</label>
-        <div style="display:flex;gap:10px;">
-            <label style="display:flex;align-items:center;gap:7px;cursor:pointer;padding:8px 18px;border-radius:10px;border:1px solid var(--border);background:var(--bg-input);flex:1;justify-content:center;">
-                <input type="radio" name="cComplaintType" id="cTypeOther" value="أخرى" checked style="accent-color:#64b5f6;">
-                <span style="font-weight:700;">أخرى</span>
+    <div style="margin-top:16px;">
+        <label style="font-size:12px;font-weight:700;color:var(--text-dim);letter-spacing:0.5px;display:block;margin-bottom:10px;">🏷️ نوع الشكوى</label>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;">
+            <label for="cTypeOther" style="cursor:pointer;position:relative;">
+                <input type="radio" name="cComplaintType" id="cTypeOther" value="أخرى" checked
+                    style="position:absolute;opacity:0;width:0;height:0;"
+                    onchange="document.getElementById('cTypeLabelOther').setAttribute('data-checked','1');document.getElementById('cTypeLabelFin').removeAttribute('data-checked');">
+                <div id="cTypeLabelOther" data-checked="1"
+                    style="display:flex;flex-direction:column;align-items:center;gap:6px;padding:14px 10px;border-radius:14px;border:2px solid rgba(100,181,246,0.5);background:rgba(100,181,246,0.1);transition:all 0.2s;user-select:none;"
+                    onclick="document.getElementById('cTypeOther').checked=true;this.setAttribute('data-checked','1');document.getElementById('cTypeLabelFin').removeAttribute('data-checked');">
+                    <span style="font-size:22px;">📋</span>
+                    <span style="font-weight:800;font-size:14px;color:#90caf9;">أخرى</span>
+                    <span style="font-size:10px;color:var(--text-dim);">شكوى عامة</span>
+                </div>
             </label>
-            <label style="display:flex;align-items:center;gap:7px;cursor:pointer;padding:8px 18px;border-radius:10px;border:1px solid rgba(198,40,40,0.4);background:rgba(198,40,40,0.07);flex:1;justify-content:center;">
-                <input type="radio" name="cComplaintType" id="cTypeFinancial" value="مالية" style="accent-color:#ef5350;">
-                <span style="font-weight:700;color:#ef9a9a;">💰 مالية</span>
+            <label for="cTypeFinancial" style="cursor:pointer;position:relative;">
+                <input type="radio" name="cComplaintType" id="cTypeFinancial" value="مالية"
+                    style="position:absolute;opacity:0;width:0;height:0;"
+                    onchange="document.getElementById('cTypeLabelFin').setAttribute('data-checked','1');document.getElementById('cTypeLabelOther').removeAttribute('data-checked');">
+                <div id="cTypeLabelFin"
+                    style="display:flex;flex-direction:column;align-items:center;gap:6px;padding:14px 10px;border-radius:14px;border:2px solid rgba(198,40,40,0.3);background:rgba(198,40,40,0.06);transition:all 0.2s;user-select:none;"
+                    onclick="document.getElementById('cTypeFinancial').checked=true;this.setAttribute('data-checked','1');document.getElementById('cTypeLabelOther').removeAttribute('data-checked');">
+                    <span style="font-size:22px;">💰</span>
+                    <span style="font-weight:800;font-size:14px;color:#ef9a9a;">مالية</span>
+                    <span style="font-size:10px;color:var(--text-dim);">تستوجب تعويض</span>
+                </div>
             </label>
         </div>
+        <style>
+            #cTypeLabelOther[data-checked] { border-color:#42a5f5 !important; background:rgba(66,165,245,0.18) !important; box-shadow:0 0 0 3px rgba(66,165,245,0.15); }
+            #cTypeLabelFin[data-checked]   { border-color:#ef5350 !important; background:rgba(239,83,80,0.18)  !important; box-shadow:0 0 0 3px rgba(239,83,80,0.15);  }
+        </style>
     </div>
     <button class="btn btn-main" style="margin-top:15px" onclick="addControl()">إرسال الشكوى</button>
 </div>
