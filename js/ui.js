@@ -399,7 +399,7 @@ function init() {
 }
 
 function setupCitySelects() {
-    const citySelects = ['mCityAdd','iCityAdd','cCityAdd','searchCityM','searchCityC','searchCityO','searchCityI','branchCitySearch','searchCityCU','compCity','compSearchCity','mnCity'];
+    const citySelects = ['mCityAdd','iCityAdd','cCityAdd','searchCityM','searchCityC','searchCityO','searchCityI','branchCitySearch','searchCityCU','compCity','compSearchCity','mnCity','mnSearchCity'];
     const ctrlSubAB = (currentUser?.role === 'control_sub' && currentUser?.assignedBranches?.length)
         ? currentUser.assignedBranches : null;
     let allOptions = '', filteredOptions = '';

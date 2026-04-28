@@ -513,6 +513,16 @@ mn: `
 
     <hr style="border-color:rgba(255,255,255,0.07);margin:22px 0;">
 
+    <div class="search-bar search-bar-c" style="margin-bottom:16px;">
+        <div style="grid-column:1/-1;" class="search-section-title">🔍 خيارات البحث</div>
+        <div><label>المحافظة</label><select id="mnSearchCity" onchange="updateBranches('mnSearchCity','mnSearchBranch');renderMediaNotes();"></select></div>
+        <div><label>الفرع</label><select id="mnSearchBranch" onchange="renderMediaNotes()"><option value="">الكل</option></select></div>
+        <div><label>التاريخ</label><div class="date-picker-wrap" onclick="calOnSelect=renderMediaNotes;openDatePicker('mnSearchDate')"><span class="date-display" id="mnSearchDate-display">📅 الكل</span><input type="hidden" id="mnSearchDate"></div></div>
+        <div><label>الهاتف / النص</label><input type="text" id="mnSearchText" placeholder="بحث..." oninput="renderMediaNotes()"></div>
+        <div><label>الحالة</label><select id="mnSearchStatus" onchange="renderMediaNotes()"><option value="">الكل</option><option value="مرتبطة">🔗 مرتبطة بسيطرة</option><option value="بانتظار">⏳ بانتظار الربط</option></select></div>
+        <button class="btn" style="background:var(--bg-input);color:var(--text-dim);align-self:end;" onclick="document.getElementById('mnSearchCity').value='';document.getElementById('mnSearchBranch').innerHTML='<option value=\\'\\'>الكل</option>';document.getElementById('mnSearchText').value='';document.getElementById('mnSearchDate').value='';document.getElementById('mnSearchDate-display').textContent='📅 الكل';document.getElementById('mnSearchStatus').value='';renderMediaNotes();">تفريغ</button>
+    </div>
+
     <table id="tableMN">
         <thead><tr>
             <th style="width:6%">#</th>

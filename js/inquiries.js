@@ -1,4 +1,4 @@
-/* ══════════════════════════════════════════════════════
+﻿/* ══════════════════════════════════════════════════════
    INQUIRIES — CRUD operations
 ══════════════════════════════════════════════════════ */
 function toggleInquiryNotes() {
@@ -159,9 +159,26 @@ function renderMediaNotes() {
     const tbody = document.querySelector('#tableMN tbody');
     if (!tbody) return;
 
-    const myNotes = (db.inquiries || []).filter(x =>
-        !x.deleted && x.type === 'شكوى' && x.addedBy === currentUser?.name
-    );
+    const get = id => { const el = document.getElementById(id); return el ? el.value : ''; };
+    const fCity   = get('mnSearchCity');
+    const fBranch = get('mnSearchBranch');
+    const fDate   = get('mnSearchDate');
+    const fText   = get('mnSearchText').toLowerCase();
+    const fStatus = get('mnSearchStatus');
+
+    const myNotes = (db.inquiries || []).filter(x => {
+        if (x.deleted || x.type !== 'شكوى' || x.addedBy !== currentUser?.name) return false;
+        if (fCity   && x.city   !== fCity)   return false;
+        if (fBranch && x.branch !== fBranch) return false;
+        if (fDate   && !(x.iso||'').startsWith(fDate)) return false;
+        if (fText   && !(x.phone||'').includes(fText) && !(x.notes||'').toLowerCase().includes(fText)) return false;
+        if (fStatus) {
+            const isLinked = (db.complaints||[]).some(c => !c.deleted && String(c.linkedInqSeq) === String(x.seq));
+            if (fStatus === 'مرتبطة' && !isLinked) return false;
+            if (fStatus === 'بانتظار' && isLinked)  return false;
+        }
+        return true;
+    });
 
     if (!myNotes.length) {
         tbody.innerHTML = '<tr><td colspan="6" style="text-align:center;color:var(--text-dim);padding:28px;">لا توجد ملاحظات مسجلة</td></tr>';
