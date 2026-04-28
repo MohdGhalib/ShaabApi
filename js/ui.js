@@ -504,40 +504,49 @@ function onLinkedInquiryChange() {
     const preview = document.getElementById('linkedInqPreview');
     const previewText = document.getElementById('linkedInqPreviewText');
 
+    const _lockStyle   = 'opacity:0.65;cursor:not-allowed;background:rgba(255,255,255,0.04);';
+    const _unlockStyle = '';
+
     if (!seqVal) {
         preview.style.display = 'none';
-        // إعادة تفعيل جميع الحقول وتفريغها
         const cityEl   = document.getElementById('cCityAdd');
         const branchEl = document.getElementById('cBranchAdd');
         const phoneEl  = document.getElementById('cCustomerPhone');
         const notesEl  = document.getElementById('cNotes');
-        if (cityEl)   { cityEl.disabled   = false; cityEl.value   = ''; }
-        if (branchEl) { branchEl.disabled = false; branchEl.innerHTML = '<option value="">الفرع</option>'; }
-        if (phoneEl)  { phoneEl.readOnly  = false; phoneEl.value  = ''; }
-        if (notesEl)  { notesEl.readOnly  = false; notesEl.value  = ''; }
+        if (cityEl)   { cityEl.disabled  = false; cityEl.value   = ''; cityEl.style.cssText   = _unlockStyle; }
+        if (branchEl) { branchEl.disabled= false; branchEl.innerHTML = '<option value="">الفرع</option>'; branchEl.style.cssText = _unlockStyle; }
+        if (phoneEl)  { phoneEl.readOnly = false; phoneEl.value  = ''; phoneEl.style.cssText  = _unlockStyle; }
+        if (notesEl)  { notesEl.readOnly = false; notesEl.value  = ''; notesEl.style.cssText  = _unlockStyle; }
         return;
     }
 
     const inq = db.inquiries.find(x => String(x.seq) === String(seqVal));
     if (!inq) return;
 
-    // تعبئة المحافظة والفرع وجعلهما غير قابلَين للتعديل
+    // تعبئة المحافظة والفرع وتأمينهما
     const cityEl   = document.getElementById('cCityAdd');
     const branchEl = document.getElementById('cBranchAdd');
     if (cityEl) {
         cityEl.value = inq.city || '';
         cityEl.disabled = true;
+        cityEl.style.cssText = _lockStyle;
         updateBranches('cCityAdd', 'cBranchAdd');
-        setTimeout(() => { if (branchEl) { branchEl.value = inq.branch || ''; branchEl.disabled = true; } }, 0);
+        setTimeout(() => {
+            if (branchEl) {
+                branchEl.value = inq.branch || '';
+                branchEl.disabled = true;
+                branchEl.style.cssText = _lockStyle;
+            }
+        }, 0);
     }
 
-    // تعبئة رقم الهاتف وجعله غير قابل للتعديل
+    // تعبئة رقم الهاتف وتأمينه
     const phoneEl = document.getElementById('cCustomerPhone');
-    if (phoneEl) { phoneEl.value = inq.phone || ''; phoneEl.readOnly = true; }
+    if (phoneEl) { phoneEl.value = inq.phone || ''; phoneEl.readOnly = true; phoneEl.style.cssText = _lockStyle; }
 
-    // تعبئة نص الشكوى وجعله غير قابل للتعديل
+    // تعبئة نص الشكوى وتأمينه
     const notesEl = document.getElementById('cNotes');
-    if (notesEl) { notesEl.value = inq.notes || ''; notesEl.readOnly = true; }
+    if (notesEl) { notesEl.value = inq.notes || ''; notesEl.readOnly = true; notesEl.style.cssText = _lockStyle; }
 
     preview.style.display = 'block';
     previewText.textContent = `مرتبط بالاستفسار #${inq.seq} — ${inq.branch} — ${inq.phone}${inq.notes ? ' — ' + inq.notes.substring(0,40) : ''}`;

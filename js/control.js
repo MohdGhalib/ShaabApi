@@ -57,6 +57,10 @@ function addControl() {
 
 
 function resetControlForm() {
+    // رفع التأمين عن الحقول المرتبطة باستفسار
+    ['cCityAdd','cBranchAdd'].forEach(id => { const el=document.getElementById(id); if(el){el.disabled=false;el.style.cssText='';} });
+    ['cCustomerPhone','cNotes'].forEach(id => { const el=document.getElementById(id); if(el){el.readOnly=false;el.style.cssText='';} });
+
     document.getElementById("cNotes").value = "";
     document.getElementById("cFile").value  = "";
     document.getElementById("cCityAdd").value = "";
