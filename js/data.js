@@ -50,7 +50,7 @@ function _playSound() {
 }
 
 /* ── إشعارات المتصفح ── */
-let _prevCounts = { montasiat: -1, complaints: -1, auditedC: -1, controlC: -1 };
+let _prevCounts = { montasiat: -1, complaints: -1, auditedC: -1, controlC: -1, myAuditedC: -1 };
 let _skipMontasiaNotif = false;
 
 function _checkNotifications() {
@@ -64,9 +64,13 @@ function _checkNotifications() {
 
     // ── عدادات ──
     // نحسب كل المنتسيات غير المحذوفة (أي حالة) لكشف الجديد فور إرساله من أي مصدر
-    const pendingM  = (db.montasiat  || []).filter(x => !x.deleted).length;
-    const auditedC  = (db.complaints || []).filter(x => !x.deleted && x.audit).length;
-    const controlC  = (db.complaints || []).filter(x => !x.deleted).length;
+    const pendingM    = (db.montasiat  || []).filter(x => !x.deleted).length;
+    const auditedC    = (db.complaints || []).filter(x => !x.deleted && x.audit).length;
+    const controlC    = (db.complaints || []).filter(x => !x.deleted).length;
+    // عدد ردود السيطرة على شكاوي الميديا الحالي تحديداً
+    const myAuditedC  = role === 'media'
+        ? (db.complaints || []).filter(x => !x.deleted && x.audit && x.addedBy === currentUser.name).length
+        : -1;
 
     if (_prevCounts.montasiat >= 0) {
         // منتسية جديدة → كول سنتر + ميديا
@@ -77,11 +81,14 @@ function _checkNotifications() {
             _showMontasiaPopup({ branch: '', city: '', type: '', notes: '' });
         }
         _skipMontasiaNotif = false;
-        // رد جديد على شكوى (audit) → كول سنتر + ميديا
-        if (isCcOrMedia && auditedC > _prevCounts.auditedC) {
+        // رد جديد على شكوى (audit) → كول سنتر + أدمن: أي رد / ميديا: ردود على شكاويه هو فقط
+        const _auditTriggered = role === 'media'
+            ? (myAuditedC > _prevCounts.myAuditedC && _prevCounts.myAuditedC >= 0)
+            : (isCcOrMedia && auditedC > _prevCounts.auditedC);
+        if (_auditTriggered) {
             _playSound();
             if (Notification.permission === 'granted')
-                new Notification('محامص الشعب', { body: `تم الرد على شكوى`, icon: 'img/logo.png' });
+                new Notification('محامص الشعب', { body: role === 'media' ? 'تم الرد على شكواك في قسم السيطرة' : 'تم الرد على شكوى', icon: 'img/logo.png' });
         }
         // شكوى جديدة → قسم السيطرة
         if (isControlRole && controlC > _prevCounts.controlC) {
@@ -94,9 +101,10 @@ function _checkNotifications() {
     // طلب إذن المتصفح إن لم يُمنح
     if (Notification.permission === 'default') Notification.requestPermission().catch(() => {});
 
-    _prevCounts.montasiat = pendingM;
-    _prevCounts.auditedC  = auditedC;
-    _prevCounts.controlC  = controlC;
+    _prevCounts.montasiat  = pendingM;
+    _prevCounts.auditedC   = auditedC;
+    _prevCounts.controlC   = controlC;
+    if (role === 'media') _prevCounts.myAuditedC = myAuditedC;
 }
 
 const DEFAULT_PRICE_LIST = [
@@ -719,11 +727,12 @@ function _initSSE() {
         const role    = currentUser?.role;
         const isAdmin = currentUser?.isAdmin;
         // كول سنتر + ميديا + أدمن → popup + صوت عادي
+        // الميديا: لا إشعار إذا كان هو من أضاف الشكوى
         if (isAdmin || role === 'cc_manager' || role === 'media') {
             let info = {};
             try { info = JSON.parse(e.data); } catch {}
-            _playSound();
-            _showComplaintPopup(info);
+            if (role === 'media' && info.addedBy === currentUser?.name) { /* تجاهل — أنت من أضفتها */ }
+            else { _playSound(); _showComplaintPopup(info); }
         }
         // مدير السيطرة → تنبيه مستمر
         if (role === 'control_employee' || role === 'control') {
