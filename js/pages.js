@@ -424,7 +424,7 @@ comp: `
         </div>
         <div style="margin-bottom:16px;">
             <label style="display:block;margin-bottom:6px;font-size:13px;color:var(--text-dim);">🔗 ربط بشكوى سيطرة (اختياري)</label>
-            <select id="compLinkedComplaint" style="width:100%;"></select>
+            <select id="compLinkedComplaint" style="width:100%;" onchange="onCompComplaintSelect()"></select>
         </div>
         <button class="btn" style="background:#2e7d32;color:#fff;" onclick="addCompensation()">💾 حفظ التعويض</button>
     </div>

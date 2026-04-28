@@ -536,6 +536,15 @@ function toggleCountComplaint(id) {
    COMPENSATIONS — تعويض الفروع بناء على شكاوي السيطرة
 ══════════════════════════════════════════════════════ */
 
+function onCompComplaintSelect() {
+    const cid     = document.getElementById('compLinkedComplaint')?.value;
+    const notesEl = document.getElementById('compNotes');
+    if (!notesEl) return;
+    if (!cid) { notesEl.value = ''; return; }
+    const complaint = (db.complaints || []).find(c => c.id === Number(cid));
+    if (complaint) notesEl.value = complaint.notes || '';
+}
+
 function _populateCompComplaintSelect() {
     const sel = document.getElementById('compLinkedComplaint');
     if (!sel) return;
