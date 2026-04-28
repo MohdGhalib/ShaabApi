@@ -383,6 +383,11 @@ function confirmImportMontasia() {
         });
     });
     _importMontasiaData = [];
+    // debug مؤقت
+    if (db.montasiat.length > 0) {
+        var _s = db.montasiat[0];
+        alert('تم الحفظ في الذاكرة:\ntime=' + _s.time + '\niso=' + _s.iso);
+    }
     save();
     document.getElementById('importMontasiaModal').classList.add('hidden');
 }
