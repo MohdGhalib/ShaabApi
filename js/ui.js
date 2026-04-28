@@ -364,11 +364,7 @@ function switchTab(t) {
         if (el) el.style.display = perm(p) ? '' : 'none';
     });
 
-    // إخفاء ربط الاستفسار عند موظف الميديا
-    if (t === 'c' && currentUser?.role === 'media') {
-        const linkRow = document.getElementById('cLinkedInquiryRow');
-        if (linkRow) linkRow.style.display = 'none';
-    }
+    // الميديا: يظهر ربط الاستفسار لكن مقيّد بملاحظاته فقط (يُعالَج في populateLinkedInquirySelect)
 
     // تهيئة حقول الوقت عند فتح تبويب السيطرة
     if (t === 'c') {
@@ -483,9 +479,14 @@ function populateLinkedInquirySelect() {
     );
     // إعادة الحجز: مسؤول الكول سنتر والمدير فقط
     const canReclaim = currentUser?.role === 'cc_manager' || currentUser?.isAdmin;
-    // حجز الجديد: مسؤول الكول سنتر وموظف الكول سنتر والمدير
-    const canClaim   = canReclaim || currentUser?.role === 'cc_employee';
-    const complaints = db.inquiries.filter(x => !x.deleted && x.type === 'شكوى');
+    // حجز الجديد: مسؤول الكول سنتر وموظف الكول سنتر والمدير وموظف الميديا
+    const isMediaLink = currentUser?.role === 'media';
+    const canClaim    = canReclaim || currentUser?.role === 'cc_employee' || isMediaLink;
+    // الميديا يرى فقط ملاحظاته هو
+    const complaints = db.inquiries.filter(x =>
+        !x.deleted && x.type === 'شكوى' &&
+        (!isMediaLink || x.addedBy === currentUser.name)
+    );
     complaints.forEach(x => {
         const seqStr     = String(x.seq);
         const isReserved = reservedSeqs.has(seqStr);
