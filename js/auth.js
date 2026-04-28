@@ -44,7 +44,7 @@ const PERMISSIONS = {
     // مدير قسم السيطرة (مضاف من مدير/كول سنتر) — رد كامل + اطلاع على المنتسيات
     control_employee: [
         'auditC', 'addEmp', 'viewM',
-        'addComp','viewComp','deleteComp'
+        'viewComp'
     ],
     // مدير قسم السيطرة داخلي (مضاف من مسؤول السيطرة) — رد بدون حالة ملاحظة
     control_sub: [],

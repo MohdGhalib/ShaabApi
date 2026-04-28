@@ -343,6 +343,10 @@ function switchTab(t) {
         setupCitySelects();
         if (typeof _populateCompComplaintSelect === 'function') _populateCompComplaintSelect();
         if (typeof renderCompensations === 'function') renderCompensations();
+        const addCompCard = document.getElementById('addCompCard');
+        if (addCompCard) addCompCard.style.display = perm('addComp') ? '' : 'none';
+        const compHr = document.querySelector('#page-container hr');
+        if (compHr && !perm('addComp')) compHr.style.display = 'none';
         return;
     } else {
         populateEmployeeDropdowns();
