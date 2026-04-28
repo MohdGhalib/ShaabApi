@@ -275,7 +275,7 @@ function toggleTabC() {
 
 function switchTab(t) {
     // تحديد الـ active لجميع التبويبات العادية
-    ['o','i','cu','comp','b','e','s','f','p','h','l','t'].forEach(id => {
+    ['o','i','cu','comp','mn','b','e','s','f','p','h','l','t'].forEach(id => {
         const btn = document.getElementById(`tab-${id}`);
         if (btn) btn.classList.toggle('active', t === id);
     });
@@ -288,13 +288,13 @@ function switchTab(t) {
     // tab-c-sub: active عند 'c' — tab-c الأب: group-active عند 'c' أو 'cu' أو 'comp'
     document.getElementById('tab-c-sub')?.classList.toggle('active', t === 'c');
     const tabC = document.getElementById('tab-c');
-    if (tabC) { tabC.classList.remove('active'); tabC.classList.toggle('group-active', t === 'c' || t === 'cu' || t === 'comp'); }
+    if (tabC) { tabC.classList.remove('active'); tabC.classList.toggle('group-active', t === 'c' || t === 'cu' || t === 'comp' || t === 'mn'); }
 
     // فتح/إغلاق القوائم الفرعية
     const grpM = document.getElementById('nav-group-m');
     if (grpM) grpM.classList.toggle('open', t === 'm' || t === 'o');
     const grpC = document.getElementById('nav-group-c');
-    if (grpC) grpC.classList.toggle('open', t === 'c' || t === 'cu' || t === 'comp');
+    if (grpC) grpC.classList.toggle('open', t === 'c' || t === 'cu' || t === 'comp' || t === 'mn');
 
     // فتح/إغلاق مجموعة الموظفين
     const grpE = document.getElementById('nav-group-e');
@@ -304,8 +304,8 @@ function switchTab(t) {
 
     // تسجيل وقت المشاهدة وإخفاء الشارة عند فتح التبويب
     _activeTab = t;
-    if (['m','o','c','cu','comp','i'].includes(t)) {
-        _markTabSeen(t === 'o' ? 'm' : (t === 'cu' || t === 'comp') ? 'c' : t);
+    if (['m','o','c','cu','comp','mn','i'].includes(t)) {
+        _markTabSeen(t === 'o' ? 'm' : (t === 'cu' || t === 'comp' || t === 'mn') ? 'c' : t);
     }
     const badge = document.getElementById(`badge-${t}`);
     if (badge) { badge.textContent = ''; badge.style.display = 'none'; }
@@ -347,6 +347,10 @@ function switchTab(t) {
         if (addCompCard) addCompCard.style.display = perm('addComp') ? '' : 'none';
         const compHr = document.querySelector('#page-container hr');
         if (compHr && !perm('addComp')) compHr.style.display = 'none';
+        return;
+    } else if (t === 'mn') {
+        setupCitySelects();
+        if (typeof renderMediaNotes === 'function') renderMediaNotes();
         return;
     } else {
         populateEmployeeDropdowns();
@@ -396,7 +400,7 @@ function init() {
 }
 
 function setupCitySelects() {
-    const citySelects = ['mCityAdd','iCityAdd','cCityAdd','searchCityM','searchCityC','searchCityO','searchCityI','branchCitySearch','searchCityCU','compCity','compSearchCity'];
+    const citySelects = ['mCityAdd','iCityAdd','cCityAdd','searchCityM','searchCityC','searchCityO','searchCityI','branchCitySearch','searchCityCU','compCity','compSearchCity','mnCity'];
     const ctrlSubAB = (currentUser?.role === 'control_sub' && currentUser?.assignedBranches?.length)
         ? currentUser.assignedBranches : null;
     let allOptions = '', filteredOptions = '';

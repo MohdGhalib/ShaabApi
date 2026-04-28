@@ -488,6 +488,43 @@ comp: `
     </table>
 </div>`,
 
+mn: `
+<div class="card">
+    <h3 style="color:#ce93d8;">📝 ملاحظات الزبائن</h3>
+    <p style="color:var(--text-dim);font-size:13px;margin:-10px 0 18px;">تسجيل شكاوي الزبائن وربطها بنظام السيطرة</p>
+
+    <div id="addMnCard">
+        <h4 style="margin:0 0 14px;color:var(--text-main);">➕ تسجيل ملاحظة جديدة</h4>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-bottom:14px;">
+            <div><label style="font-size:13px;color:var(--text-dim);display:block;margin-bottom:5px;">المحافظة</label><select id="mnCity" onchange="updateBranches('mnCity','mnBranch')"><option value="">اختر المحافظة</option></select></div>
+            <div><label style="font-size:13px;color:var(--text-dim);display:block;margin-bottom:5px;">الفرع</label><select id="mnBranch"><option value="">اختر الفرع</option></select></div>
+        </div>
+        <div style="margin-bottom:14px;">
+            <label style="font-size:13px;color:var(--text-dim);display:block;margin-bottom:5px;">رقم هاتف الزبون</label>
+            <input type="text" id="mnPhone" placeholder="07xxxxxxxx">
+        </div>
+        <div style="margin-bottom:16px;">
+            <label style="font-size:13px;color:var(--text-dim);display:block;margin-bottom:5px;">نص الملاحظة / الشكوى</label>
+            <textarea id="mnNotes" rows="3" placeholder="اكتب تفاصيل شكوى الزبون..." style="width:100%;box-sizing:border-box;padding:10px;border-radius:8px;border:1px solid var(--border);background:var(--bg-input);color:var(--text-main);font-family:Cairo;font-size:14px;resize:vertical;"></textarea>
+        </div>
+        <button class="btn" style="background:#7b1fa2;color:#fff;" onclick="addMediaNote()">💾 حفظ الملاحظة</button>
+    </div>
+
+    <hr style="border-color:rgba(255,255,255,0.07);margin:22px 0;">
+
+    <table id="tableMN">
+        <thead><tr>
+            <th style="width:6%">#</th>
+            <th style="width:16%">الفرع</th>
+            <th style="width:14%">الهاتف</th>
+            <th>الملاحظة</th>
+            <th style="width:14%">الحالة</th>
+            <th style="width:16%">الوقت</th>
+        </tr></thead>
+        <tbody></tbody>
+    </table>
+</div>`,
+
 cu: `
 <div class="card">
     <h3 style="color:var(--accent-red);">🔴 متابعات السيطرة المفتوحة</h3>

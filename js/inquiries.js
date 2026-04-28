@@ -127,3 +127,59 @@ function toggleCountInquiry(id) {
     }
     save();
 }
+
+/* ══════════════════════════════════════════════════════
+   MEDIA NOTES — ملاحظات الزبائن (شكاوي الميديا)
+══════════════════════════════════════════════════════ */
+function addMediaNote() {
+    const city   = document.getElementById('mnCity')?.value   || '';
+    const branch = document.getElementById('mnBranch')?.value || '';
+    const phone  = document.getElementById('mnPhone')?.value.trim()  || '';
+    const notes  = document.getElementById('mnNotes')?.value.trim()  || '';
+
+    if (!city || !branch || !phone || !notes) return alert('يرجى إكمال جميع الحقول');
+
+    if (!db.inquiriesnqSeq) db.inquiriesnqSeq = 1;
+    db.inquiries.unshift({
+        id: Date.now(), seq: db.inquiriesnqSeq++,
+        city, branch, phone, type: 'شكوى', notes,
+        time: now(), iso: iso(), addedBy: currentUser.name
+    });
+    save();
+
+    document.getElementById('mnPhone').value = '';
+    document.getElementById('mnNotes').value = '';
+    document.getElementById('mnCity').value  = '';
+    updateBranches('mnCity', 'mnBranch');
+    populateLinkedInquirySelect();
+    renderMediaNotes();
+}
+
+function renderMediaNotes() {
+    const tbody = document.querySelector('#tableMN tbody');
+    if (!tbody) return;
+
+    const myNotes = (db.inquiries || []).filter(x =>
+        !x.deleted && x.type === 'شكوى' && x.addedBy === currentUser?.name
+    );
+
+    if (!myNotes.length) {
+        tbody.innerHTML = '<tr><td colspan="6" style="text-align:center;color:var(--text-dim);padding:28px;">لا توجد ملاحظات مسجلة</td></tr>';
+        return;
+    }
+
+    tbody.innerHTML = myNotes.map(x => {
+        const linked = (db.complaints || []).find(c => !c.deleted && String(c.linkedInqSeq) === String(x.seq));
+        const statusBadge = linked
+            ? `<span style="padding:3px 10px;border-radius:8px;font-size:11px;font-weight:700;background:rgba(46,125,50,0.18);color:#81c784;">🔗 مرتبطة بسيطرة</span>`
+            : `<span style="padding:3px 10px;border-radius:8px;font-size:11px;font-weight:700;background:rgba(255,152,0,0.15);color:#ffb74d;">⏳ بانتظار الربط</span>`;
+        return `<tr>
+            <td><span class="seq-badge" style="font-size:12px;font-weight:700;">#${x.seq}</span></td>
+            <td><b>${sanitize(x.branch)}</b><br><small>${sanitize(x.city)}</small></td>
+            <td>${sanitize(x.phone)}</td>
+            <td>${sanitize(x.notes)}</td>
+            <td>${statusBadge}</td>
+            <td><small>${_toLatinDigits ? _toLatinDigits(x.time) : x.time}</small></td>
+        </tr>`;
+    }).join('');
+}
