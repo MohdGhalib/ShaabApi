@@ -7,7 +7,7 @@ function addMontasia() {
     const n = document.getElementById("mNotes").value.trim();
     const t = document.getElementById("mType").value;
     const be = (document.getElementById("mBranchEmp")?.value||'').trim();
-    if (!c||!b||!n||!t) return alert("يرجى إكمال البيانات");
+    if (!c||!b||!n||!t||!be) return alert("يرجى إكمال البيانات");
     db.montasiat.unshift({ id:Date.now(), city:c, branch:b, notes:n, type:t, branchEmp:be, time:now(), iso:iso(),
         status:'قيد الانتظار', dt:'', addedBy:currentUser.name, deliveredBy:'' });
     if (typeof _skipMontasiaNotif !== 'undefined') _skipMontasiaNotif = true;

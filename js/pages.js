@@ -17,7 +17,7 @@ m: `
             <option value="نقدي">نقدي</option>
             <option value="أخرى">أخرى</option>
         </select>
-        <input id="mBranchEmp" type="text" placeholder="اسم موظف الفرع (اختياري)">
+        <input id="mBranchEmp" type="text" placeholder="اسم موظف الفرع *">
     </div>
     <textarea id="mNotes" placeholder="تفاصيل المنتسية..." rows="3"></textarea>
     <button class="btn btn-main" style="margin-top:15px" onclick="addMontasia()">حفظ البيانات</button>
