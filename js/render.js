@@ -304,7 +304,7 @@ function _renderTableM(get, isAdmin) {
         const approvedByRow = x.approvedBy
             ? `<div class="added-by">✓ وافق: ${sanitize(x.approvedBy)}</div>` : '';
         return `<tr data-id="${x.id}">
-            <td><b>${x.branch}</b>${x.branchEmp?`<br><span style="font-size:11px;color:var(--text-dim);">👤 ${sanitize(x.branchEmp)}</span>`:''}${mobileTag}</td>
+            <td><b>${x.branch}</b>${x.branchEmp?`<br><span style="font-size:80%;color:var(--text-dim);">👤 ${sanitize(x.branchEmp)}</span>`:''}${mobileTag}</td>
             <td style="text-align:center;">${typeLabel}</td>
             <td><span class="text-box-cell">${sanitize(x.notes)}</span>${photoCell}${editBox}</td>
             <td><div class="added-by" style="font-size:12px;color:var(--text-main);">📥 ${sanitize(x.addedBy||'—')}</div>${approvedByRow}</td>
