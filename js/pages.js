@@ -427,9 +427,16 @@ comp: `
             <div><label style="font-size:13px;color:var(--text-dim);display:block;margin-bottom:5px;">اسم الموظف</label><input type="text" id="compEmployeeName" placeholder="اسم موظف الفرع"></div>
             <div><label style="font-size:13px;color:var(--text-dim);display:block;margin-bottom:5px;">💰 المبلغ المالي (د.أ)</label><input type="number" id="compAmount" placeholder="0.00" min="0" step="0.01"></div>
         </div>
-        <div style="margin-bottom:16px;">
+        <div style="margin-bottom:14px;">
             <label style="display:block;margin-bottom:6px;font-size:13px;color:var(--text-dim);">الملاحظة</label>
             <textarea id="compNotes" rows="3" placeholder="تفاصيل التعويض..." style="width:100%;box-sizing:border-box;padding:10px;border-radius:8px;border:1px solid var(--border);background:var(--bg-input);color:var(--text-main);font-family:Cairo;font-size:14px;resize:vertical;"></textarea>
+        </div>
+        <div style="margin-bottom:16px;padding:14px;background:rgba(245,158,11,0.07);border:1px solid rgba(245,158,11,0.3);border-radius:12px;">
+            <label style="display:flex;align-items:center;gap:7px;margin-bottom:8px;font-size:13px;font-weight:700;color:#fbbf24;">
+                ✏️ ملاحظة المسؤول
+                <span style="font-size:11px;font-weight:400;color:var(--text-dim);">(قابلة للتعديل دائماً)</span>
+            </label>
+            <textarea id="compAdminNote" rows="2" placeholder="أضف ملاحظتك هنا..." style="width:100%;box-sizing:border-box;padding:10px;border-radius:8px;border:1px solid rgba(245,158,11,0.3);background:rgba(245,158,11,0.05);color:var(--text-main);font-family:Cairo;font-size:14px;resize:vertical;"></textarea>
         </div>
         <button class="btn" style="background:#2e7d32;color:#fff;" onclick="addCompensation()">💾 حفظ التعويض</button>
     </div>

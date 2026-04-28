@@ -598,7 +598,8 @@ function addCompensation() {
     const notes  = document.getElementById('compNotes')?.value.trim() || '';
     const emp    = document.getElementById('compEmployeeName')?.value.trim() || '';
     const amount = document.getElementById('compAmount')?.value.trim() || '';
-    const cid    = document.getElementById('compLinkedComplaint')?.value || '';
+    const cid       = document.getElementById('compLinkedComplaint')?.value || '';
+    const adminNote = document.getElementById('compAdminNote')?.value.trim() || '';
 
     if (!city || !branch || !notes || !emp || !amount) return alert('يرجى إكمال جميع الحقول');
 
@@ -614,6 +615,7 @@ function addCompensation() {
         employeeName: emp,
         amount,
         linkedComplaintId: cid ? Number(cid) : null,
+        adminNote,
         addedBy: currentUser.name,
         time: now(),
         iso: iso()
@@ -621,6 +623,7 @@ function addCompensation() {
     save();
 
     document.getElementById('compNotes').value        = '';
+    document.getElementById('compAdminNote').value     = '';
     document.getElementById('compEmployeeName').value = '';
     document.getElementById('compAmount').value       = '';
     document.getElementById('compCity').value         = '';
@@ -679,9 +682,12 @@ function renderCompensations() {
         const linkedBadge = linked
             ? `<div onclick="jumpToComplaint(${linked.id})" style="margin-top:6px;font-size:11px;background:rgba(21,101,192,0.15);color:#64b5f6;padding:4px 10px;border-radius:6px;display:inline-block;cursor:pointer;border:1px solid rgba(21,101,192,0.3);" title="انتقل لشكوى السيطرة">🔗 شكوى: ${sanitize(linked.branch)} — ${sanitize((linked.notes||'').substring(0,40))} ↗</div>`
             : '';
+        const adminNoteBadge = x.adminNote
+            ? `<div style="margin-top:8px;padding:8px 12px;border-radius:8px;border:1px solid rgba(245,158,11,0.35);background:rgba(245,158,11,0.08);"><span style="font-size:11px;font-weight:700;color:#fbbf24;display:block;margin-bottom:3px;">✏️ ملاحظة المسؤول</span><span style="font-size:13px;color:var(--text-main);">${sanitize(x.adminNote)}</span></div>`
+            : '';
         return `<tr>
             <td><b>${sanitize(x.branch)}</b><br><small>${sanitize(x.city)}</small></td>
-            <td>${sanitize(x.notes)}${linkedBadge}</td>
+            <td>${sanitize(x.notes)}${linkedBadge}${adminNoteBadge}</td>
             <td>${sanitize(x.employeeName)}</td>
             <td style="font-weight:700;color:#81c784;">${sanitize(x.amount)} د.أ</td>
             <td><small>${sanitize(x.addedBy)}</small><br><small style="color:var(--text-dim);">${sanitize(x.time)}</small></td>
