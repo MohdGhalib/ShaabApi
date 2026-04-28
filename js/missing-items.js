@@ -328,8 +328,13 @@ function confirmImportMontasia() {
         return null;
     }
     _importMontasiaData.forEach((r, i) => {
-        const rawDate = r['وقت الإضافة'] || r['التاريخ'] || r['تاريخ الإضافة'] || r['تاريخ'] || r['Date'] || r['date'] || '';
-        const parsed  = _parseImportDate(rawDate);
+        // جرّب كل أعمدة التاريخ بالترتيب وخذ أول نتيجة صحيحة
+        var _dateCols = ['التاريخ','وقت الإضافة','تاريخ الإضافة','تاريخ','Date','date'];
+        var parsed = null;
+        for (var _dc = 0; _dc < _dateCols.length; _dc++) {
+            var _dv = r[_dateCols[_dc]];
+            if (_dv !== undefined && _dv !== '') { parsed = _parseImportDate(_dv); if (parsed) break; }
+        }
         db.montasiat.unshift({
             id:          base + i,
             city:        String(r['المحافظة']).trim(),
@@ -340,7 +345,7 @@ function confirmImportMontasia() {
             iso:         parsed ? parsed.iso  : iso(),
             addedBy:     (String(r['أضافه'] || r['اضافه'] || r['الموظف'] || '').trim()) || currentUser.name,
             deliveredBy: String(r['سلّمه'] || r['سلمه'] || '').trim() || '',
-            dt:          '',
+            dt:          (function(){ var dv=r['التاريخ_1']||r['وقت التسليم']||''; if(!dv)return ''; var dd=null; if(dv instanceof Date&&!isNaN(dv)&&dv.getFullYear()>2000){var y2=dv.getFullYear(),mo2=String(dv.getMonth()+1).padStart(2,'0'),d2=String(dv.getDate()).padStart(2,'0');dd=d2+'/'+(dv.getMonth()+1)+'/'+y2+'، 00:00';} if(!dd){var s2=String(dv),m3=s2.match(/^(\d{4})-(\d{2})-(\d{2})/);if(m3&&parseInt(m3[1])>2000)dd=m3[3]+'/'+parseInt(m3[2])+'/'+m3[1]+'، 00:00';} return dd||''; })(),
         });
     });
     _importMontasiaData = [];
