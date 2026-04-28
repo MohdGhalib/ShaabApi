@@ -255,6 +255,7 @@ c: `
     <div><label>نص الشكوى</label><input type="text" id="searchTextC" placeholder="بحث..." oninput="filterTable()"></div>
     <div><label>نوع الشكوى</label><select id="searchTypeC" onchange="filterTable()"><option value="">الكل</option><option value="مالية">💰 مالية</option><option value="أخرى">أخرى</option></select></div>
     <div><label>الحالة المالية</label><select id="searchFinStatusC" onchange="filterTable()"><option value="">الكل</option><option value="مفتوحة">🔴 مفتوحة (غير محجوزة)</option><option value="مغلقة">🟢 مغلقة (محجوزة)</option></select></div>
+    <div><label>اسم الموظف</label><input type="text" id="searchAddedByC" placeholder="بحث باسم الموظف..." oninput="filterTable()"></div>
     <button class="btn" style="background:var(--bg-input);color:var(--text-dim);align-self:end;" onclick="resetSearch('C')">تفريغ</button>
 </div>
 <div class="card">

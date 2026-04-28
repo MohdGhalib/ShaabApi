@@ -195,7 +195,7 @@ function resetSearch(t) {
         clearDate('searchDateI');
         _pg.I = 1;
     } else if (t==='C') {
-        clear(['searchCityC','searchTextC','searchTypeC','searchFinStatusC']);
+        clear(['searchCityC','searchTextC','searchTypeC','searchFinStatusC','searchAddedByC']);
         document.getElementById('searchBranchC').innerHTML='<option value="">الكل</option>';
         clearDate('searchDateC');
         _pg.C = 1;
@@ -498,7 +498,8 @@ function _renderTableC(get, isAdmin) {
         date:      get("searchDateC"),
         text:      get("searchTextC").toLowerCase(),
         type:      get("searchTypeC"),
-        finStatus: get("searchFinStatusC")
+        finStatus: get("searchFinStatusC"),
+        addedBy:   get("searchAddedByC").toLowerCase()
     };
     const allRowsC = (db.complaints || []).filter(x =>
         !x.deleted &&
@@ -513,6 +514,7 @@ function _renderTableC(get, isAdmin) {
         (!f.date      || x.iso.startsWith(f.date)) &&
         (!f.text      || (x.notes||'').toLowerCase().includes(f.text)) &&
         (!f.type      || (x.type||'أخرى') === f.type) &&
+        (!f.addedBy   || (x.addedBy||'').toLowerCase().includes(f.addedBy)) &&
         (!f.finStatus || (
             f.finStatus === 'مفتوحة' ? (x.type === 'مالية' && !linkedCompIds.has(x.id)) :
             f.finStatus === 'مغلقة'  ? (x.type === 'مالية' && linkedCompIds.has(x.id))  : true
