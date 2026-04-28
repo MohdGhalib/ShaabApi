@@ -623,15 +623,15 @@ function _renderTableC(get, isAdmin) {
         const isFinancial = x.type === 'مالية';
         const isLinked    = linkedCompIds.has(x.id);
         const barColor    = isFinancial ? (isLinked ? '#2e7d32' : '#c62828') : '';
-        const tdBarStyle  = barColor
-            ? `border-right:5px solid ${barColor};box-shadow:inset -5px 0 0 ${barColor};`
+        const finBar      = barColor
+            ? `<span style="position:absolute;top:0;right:0;bottom:0;width:6px;background:${barColor};border-radius:0 4px 4px 0;"></span>`
             : '';
         const typeBadge   = isFinancial
             ? `<span style="display:inline-block;margin-top:4px;font-size:10px;padding:2px 7px;border-radius:6px;font-weight:700;background:${isLinked ? 'rgba(46,125,50,0.18)' : 'rgba(198,40,40,0.15)'};color:${isLinked ? '#81c784' : '#ef9a9a'};">💰 مالية${isLinked ? ' ✓' : ''}</span>`
             : '';
 
         return `<tr data-id="${x.id}">
-            <td style="${tdBarStyle}"><b>${x.branch}</b><br><small>${x.city}</small><br>${cStatusBadge}${typeBadge}</td>
+            <td style="position:relative;padding-right:${barColor ? '14px' : ''}">${finBar}<b>${x.branch}</b><br><small>${x.city}</small><br>${cStatusBadge}${typeBadge}</td>
             <td>
                 ${extraInfoHtml}${custHtml}${linkHtml}${fileLink}${auditHtml}${followupHtml}${returnEditBox}${adminEditBox}
             </td>
