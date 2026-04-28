@@ -1,4 +1,4 @@
-/* ══════════════════════════════════════════════════════
+﻿/* ══════════════════════════════════════════════════════
    MISSING ITEMS — CRUD with 5-second confirm overlay
 ══════════════════════════════════════════════════════ */
 function addMontasia() {
@@ -274,7 +274,7 @@ function importMontasiat(input) {
     reader.onload = e => {
         input.value = '';
         try {
-            const wb   = XLSX.read(e.target.result, { type: 'binary' });
+            const wb   = XLSX.read(e.target.result, { type: 'binary', cellDates: true });
             const ws   = wb.Sheets[wb.SheetNames[0]];
             const rows = XLSX.utils.sheet_to_json(ws, { defval: '' });
             _importMontasiaData = rows.filter(r =>
@@ -306,15 +306,38 @@ function importMontasiat(input) {
 
 function confirmImportMontasia() {
     const base = Date.now();
+    // مساعد: استخراج تاريخ ISO من قيمة Excel (Date object أو نص أو serial)
+    function _parseImportDate(val) {
+        if (!val) return null;
+        if (val instanceof Date && !isNaN(val)) {
+            var y  = val.getFullYear();
+            var mo = String(val.getMonth()+1).padStart(2,'0');
+            var d  = String(val.getDate()).padStart(2,'0');
+            var hh = String(val.getHours()).padStart(2,'0');
+            var mm = String(val.getMinutes()).padStart(2,'0');
+            return { iso: y+'-'+mo+'-'+d, time: d+'/'+(val.getMonth()+1)+'/'+y+'، '+hh+':'+mm };
+        }
+        var s  = String(val).trim();
+        var m1 = s.match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})/);
+        if (m1) {
+            var isoStr = m1[3]+'-'+m1[2].padStart(2,'0')+'-'+m1[1].padStart(2,'0');
+            return { iso: isoStr, time: s };
+        }
+        var m2 = s.match(/^(\d{4})-(\d{2})-(\d{2})/);
+        if (m2) return { iso: s.substring(0,10), time: s };
+        return null;
+    }
     _importMontasiaData.forEach((r, i) => {
+        const rawDate = r['وقت الإضافة'] || r['التاريخ'] || r['تاريخ الإضافة'] || '';
+        const parsed  = _parseImportDate(rawDate);
         db.montasiat.unshift({
             id:          base + i,
             city:        String(r['المحافظة']).trim(),
             branch:      String(r['الفرع']).trim(),
             notes:       String(r['التفاصيل']).trim(),
             status:      String(r['الحالة']||'').trim() || 'قيد الانتظار',
-            time:        now(),
-            iso:         iso(),
+            time:        parsed ? parsed.time : now(),
+            iso:         parsed ? parsed.iso  : iso(),
             addedBy:     currentUser.name,
             deliveredBy: '',
             dt:          '',
