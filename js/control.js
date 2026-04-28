@@ -533,6 +533,7 @@ function toggleCountComplaint(id) {
         item.countedByControl = !item.countedByControl;
     } else if (role === 'cc_manager' || isAdmin) {
         item.countedByCC = !item.countedByCC;
+        item.countedByCCSource = item.countedByCC ? 'control' : null;
     }
     save();
 }

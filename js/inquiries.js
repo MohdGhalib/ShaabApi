@@ -122,8 +122,10 @@ function toggleCountInquiry(id) {
     const linked = db.complaints.find(c => !c.deleted && String(c.linkedInqSeq) === String(inq.seq));
     if (linked) {
         linked.countedByCC = !linked.countedByCC;
+        linked.countedByCCSource = linked.countedByCC ? 'inquiry' : null;
     } else {
         inq.countedByCC = !inq.countedByCC;
+        inq.countedByCCSource = inq.countedByCC ? 'inquiry' : null;
     }
     save();
 }
