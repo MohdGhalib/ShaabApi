@@ -338,8 +338,8 @@ function confirmImportMontasia() {
             status:      String(r['الحالة']||'').trim() || 'قيد الانتظار',
             time:        parsed ? parsed.time : now(),
             iso:         parsed ? parsed.iso  : iso(),
-            addedBy:     currentUser.name,
-            deliveredBy: '',
+            addedBy:     (String(r['أضافه'] || r['اضافه'] || r['الموظف'] || '').trim()) || currentUser.name,
+            deliveredBy: String(r['سلّمه'] || r['سلمه'] || '').trim() || '',
             dt:          '',
         });
     });
