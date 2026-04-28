@@ -224,13 +224,6 @@ function saveEditMontasia(id) {
     if (item) { item.notes=newText; item.editedBy=currentUser.name; save(); }
 }
 
-function deleteAllMontasiat() {
-    if (!confirm('هل أنت متأكد من حذف جميع المدخلات؟')) return;
-    db.montasiat = [];
-    save();
-    renderAll();
-}
-
 /* ══ تصدير / استيراد Excel ══ */
 function exportMontasiat() {
     const get = id => { const el = document.getElementById(id); return el ? el.value : ''; };
