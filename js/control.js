@@ -8,9 +8,7 @@ function addControl() {
     const custPhone   = document.getElementById("cCustomerPhone").value.trim();
     const linkedSeq   = document.getElementById("cLinkedInquiry").value;
     const customer    = custPhone ? { phone:custPhone } : null;
-    const cCallDate   = document.getElementById("cCallDate").value;
-    const cCallTimeV  = document.getElementById("cCallTimeOnly").value;
-    const callTime    = cCallDate ? (cCallTimeV ? `${cCallDate}T${cCallTimeV}` : cCallDate) : '';
+    const callTime    = new Date().toISOString().slice(0, 16);
     const noteDate    = document.getElementById("cNoteDate").value;
     const moveNumber  = document.getElementById("cMoveNumber").value.trim();
     const invoiceValue= document.getElementById("cInvoiceValue").value.trim();
