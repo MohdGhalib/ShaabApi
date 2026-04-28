@@ -309,22 +309,30 @@ function confirmImportMontasia() {
     // استخراج التاريخ (YYYY-MM-DD) من Date object أو نص ISO
     function _extractIsoDate(val) {
         if (!val) return null;
-        if (val instanceof Date && !isNaN(val) && val.getFullYear() > 2000) {
-            return val.getFullYear()+'-'+String(val.getMonth()+1).padStart(2,'0')+'-'+String(val.getDate()).padStart(2,'0');
+        if (val instanceof Date && !isNaN(val) && val.getUTCFullYear() > 2000) {
+            return val.getUTCFullYear()+'-'+String(val.getUTCMonth()+1).padStart(2,'0')+'-'+String(val.getUTCDate()).padStart(2,'0');
+        }
+        if (typeof val === 'number' && val >= 1) {
+            var d = new Date(Math.floor(val - 25569) * 86400000);
+            if (d.getUTCFullYear() > 2000) {
+                return d.getUTCFullYear()+'-'+String(d.getUTCMonth()+1).padStart(2,'0')+'-'+String(d.getUTCDate()).padStart(2,'0');
+            }
         }
         var s = String(val);
         var m = s.match(/^(\d{4})-(\d{2})-(\d{2})/);
         if (m && parseInt(m[1]) > 2000) return m[1]+'-'+m[2]+'-'+m[3];
         return null;
     }
-    // استخراج الوقت HH:MM من Date object أو رقم عشري (Excel fraction) أو نص
+    // استخراج الوقت HH:MM من Date object أو رقم عشري (Excel fraction 0-1) أو رقم كامل (serial مع وقت) أو نص
     function _extractTime(val) {
         if (!val && val !== 0) return null;
         if (val instanceof Date && !isNaN(val)) {
             return String(val.getUTCHours()).padStart(2,'0')+':'+String(val.getUTCMinutes()).padStart(2,'0');
         }
-        if (typeof val === 'number' && val >= 0 && val < 1) {
-            var totalMin = Math.round(val * 1440);
+        if (typeof val === 'number') {
+            var frac = val - Math.floor(val);
+            if (frac < 0) frac += 1;
+            var totalMin = Math.round(frac * 1440);
             return String(Math.floor(totalMin/60)).padStart(2,'0')+':'+String(totalMin%60).padStart(2,'0');
         }
         if (typeof val === 'string') {
