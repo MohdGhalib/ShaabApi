@@ -502,6 +502,16 @@ function _fmtTime(date) {
     return `${h12}:${String(m).padStart(2,'0')}:${String(s).padStart(2,'0')} ${ampm}`;
 }
 
+function _timeToAmPm(str) {
+    if (!str) return str;
+    if (/\b(AM|PM)\b/i.test(str)) return str;
+    return str.replace(/(\d{1,2}):(\d{2})(?::(\d{2}))?(\s|$|،)/, (_, h, m, _s, tail) => {
+        h = parseInt(h);
+        const ampm = h >= 12 ? 'PM' : 'AM';
+        const h12  = h % 12 || 12;
+        return `${h12}:${m} ${ampm}${tail}`;
+    });
+}
 function now() {
     const d = new Date();
     return `${d.getDate()}/${d.getMonth()+1}/${d.getFullYear()}، ${_fmtTime(d)}`;

@@ -355,7 +355,9 @@ function confirmImportMontasia() {
         if (!isoDate) return null;
         var parts = isoDate.split('-');
         var timeStr = _extractTime(timeVal) || '00:00';
-        var display = parseInt(parts[2])+'/'+(parseInt(parts[1]))+'/'+parts[0]+'، '+timeStr;
+        var _h=parseInt(timeStr.split(':')[0]||0), _m=(timeStr.split(':')[1]||'00');
+        var _ampm=_h>=12?'PM':'AM', _h12=_h%12||12;
+        var display = parseInt(parts[2])+'/'+(parseInt(parts[1]))+'/'+parts[0]+'، '+_h12+':'+_m+' '+_ampm;
         return { iso: isoDate, time: display };
     }
 

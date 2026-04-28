@@ -285,7 +285,7 @@ function _renderTableM(get, isAdmin) {
             ? `<div style="display:inline-flex;align-items:center;gap:5px;margin-top:6px;
                            padding:4px 9px;border-radius:8px;
                            background:rgba(46,125,50,0.12);border:1px solid rgba(46,125,50,0.3);">
-                   <span style="font-size:11px;color:#a5d6a7;font-family:monospace;">⏱ ${_toLatinDigits(x.dt)}</span>
+                   <span style="font-size:11px;color:#a5d6a7;font-family:monospace;">⏱ ${_toLatinDigits(_timeToAmPm(x.dt))}</span>
                </div>`
             : '';
         const typeLabel = x.type==='نقدي'
@@ -312,7 +312,7 @@ function _renderTableM(get, isAdmin) {
                 <span class="status-badge ${statusClass}">${x.status==='قيد الانتظار' ? 'لم يتم التسليم' : x.status}${x.status==='تم التسليم' && x.deliveredBy ? ' بواسطة '+sanitize(x.deliveredBy) : ''}</span>
                 ${deliveryTimeBox}
             </td>
-            <td><small>${_toLatinDigits(x.time)}</small></td>
+            <td><small>${_toLatinDigits(_timeToAmPm(x.time))}</small></td>
             <td style="text-align:center;">
                 <div style="display:flex;flex-direction:column;gap:4px;align-items:center;">
                 ${x.deliverNotes
@@ -387,7 +387,7 @@ function _renderTableO(get) {
             <td><b>${x.branch}</b><br><small>${x.city}</small></td>
             <td><span class="text-box-cell">${sanitize(x.notes)}</span></td>
             <td><small style="color:var(--text-main)">📥 ${sanitize(x.addedBy||'—')}</small></td>
-            <td>${statusDot}<small>${_toLatinDigits(x.time)}</small></td>
+            <td>${statusDot}<small>${_toLatinDigits(_timeToAmPm(x.time))}</small></td>
             <td>${actionBtn}</td>
         </tr>`;
     }).join('') || `<tr><td colspan="5" style="color:var(--text-dim);padding:20px;">لا توجد نتائج</td></tr>`;
