@@ -384,7 +384,7 @@ function init() {
     if (!perm('viewBreak'))   document.getElementById('tab-b').classList.add('hidden');
     const role = currentUser?.role;
     let _startTab;
-    if (role === 'media' || role === 'control_employee' || role === 'control_sub') {
+    if (role === 'media' || role === 'control' || role === 'control_employee' || role === 'control_sub') {
         _startTab = 'c';
     } else if (currentUser?.isAdmin || role === 'cc_manager') {
         _startTab = 'h';

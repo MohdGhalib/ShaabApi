@@ -38,7 +38,7 @@ const PERMISSIONS = {
     ],
     // مسؤول قسم السيطرة — رد + إضافة موظفين خاصين
     control: [
-        'auditC', 'addControlEmp',
+        'addC', 'auditC', 'addControlEmp',
         'addComp','viewComp','deleteComp'
     ],
     // مدير قسم السيطرة (مضاف من مدير/كول سنتر) — رد كامل + اطلاع على المنتسيات
@@ -325,6 +325,7 @@ function setProfileUI() {
         document.getElementById('tab-m-sub')?.classList.remove('hidden');
         document.getElementById('tab-c-sub')?.classList.remove('hidden');
         if (isAdmin || isCCManager) document.getElementById('tab-cu')?.classList.remove('hidden');
+        if (perm('viewComp')) document.getElementById('tab-comp')?.classList.remove('hidden');
     }
 
     // إظهار مجموعة الموظفين إذا كان أي عنصر فرعي مرئياً
