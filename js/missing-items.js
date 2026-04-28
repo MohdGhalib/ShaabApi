@@ -309,7 +309,7 @@ function confirmImportMontasia() {
     // مساعد: استخراج تاريخ ISO من قيمة Excel (Date object أو نص أو serial)
     function _parseImportDate(val) {
         if (!val) return null;
-        if (val instanceof Date && !isNaN(val)) {
+        if (val instanceof Date && !isNaN(val) && val.getFullYear() > 2000) {
             var y  = val.getFullYear();
             var mo = String(val.getMonth()+1).padStart(2,'0');
             var d  = String(val.getDate()).padStart(2,'0');
@@ -328,7 +328,7 @@ function confirmImportMontasia() {
         return null;
     }
     _importMontasiaData.forEach((r, i) => {
-        const rawDate = r['وقت الإضافة'] || r['التاريخ'] || r['تاريخ الإضافة'] || '';
+        const rawDate = r['وقت الإضافة'] || r['التاريخ'] || r['تاريخ الإضافة'] || r['تاريخ'] || r['Date'] || r['date'] || '';
         const parsed  = _parseImportDate(rawDate);
         db.montasiat.unshift({
             id:          base + i,
