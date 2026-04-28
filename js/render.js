@@ -1,4 +1,4 @@
-/* ══════════════════════════════════════════════════════
+﻿/* ══════════════════════════════════════════════════════
    RENDER — Filter & render all tables
 ══════════════════════════════════════════════════════ */
 function filterTable() {
@@ -195,7 +195,7 @@ function resetSearch(t) {
         clearDate('searchDateI');
         _pg.I = 1;
     } else if (t==='C') {
-        clear(['searchCityC','searchTextC']);
+        clear(['searchCityC','searchTextC','searchTypeC','searchFinStatusC']);
         document.getElementById('searchBranchC').innerHTML='<option value="">الكل</option>';
         clearDate('searchDateC');
         _pg.C = 1;
@@ -488,11 +488,17 @@ function _renderTableC(get, isAdmin) {
     const isControlEmployee = currentUser?.role === 'control_employee';
     const isControlSub      = currentUser?.role === 'control_sub';
     const isCCMgrC          = currentUser?.role === 'cc_manager';
+    const linkedCompIds = new Set(
+        (db.compensations || []).filter(x => !x.deleted && x.linkedComplaintId)
+                               .map(x => x.linkedComplaintId)
+    );
     const f = {
-        city:   get("searchCityC"),
-        branch: get("searchBranchC"),
-        date:   get("searchDateC"),
-        text:   get("searchTextC").toLowerCase()
+        city:      get("searchCityC"),
+        branch:    get("searchBranchC"),
+        date:      get("searchDateC"),
+        text:      get("searchTextC").toLowerCase(),
+        type:      get("searchTypeC"),
+        finStatus: get("searchFinStatusC")
     };
     const allRowsC = (db.complaints || []).filter(x =>
         !x.deleted &&
@@ -502,10 +508,15 @@ function _renderTableC(get, isAdmin) {
                 ? currentUser.assignedBranches.some(b => b.branch === x.branch && b.city === x.city)
                 : x.assignedToSubId === currentUser.empId)
         ) : (isControl || isControlEmployee || isMedia) ? x.status === 'تمت الموافقة' : true) &&
-        (!f.city   || x.city===f.city) &&
-        (!f.branch || x.branch===f.branch) &&
-        (!f.date   || x.iso.startsWith(f.date)) &&
-        (!f.text   || (x.notes||'').toLowerCase().includes(f.text))
+        (!f.city      || x.city===f.city) &&
+        (!f.branch    || x.branch===f.branch) &&
+        (!f.date      || x.iso.startsWith(f.date)) &&
+        (!f.text      || (x.notes||'').toLowerCase().includes(f.text)) &&
+        (!f.type      || (x.type||'أخرى') === f.type) &&
+        (!f.finStatus || (
+            f.finStatus === 'مفتوحة' ? (x.type === 'مالية' && !linkedCompIds.has(x.id)) :
+            f.finStatus === 'مغلقة'  ? (x.type === 'مالية' && linkedCompIds.has(x.id))  : true
+        ))
     );
     if (!_pg.C) _pg.C = 1;
     const _pageC = Math.min(_pg.C, Math.max(1, Math.ceil(allRowsC.length / _PAGE_SIZE)));
@@ -609,8 +620,16 @@ function _renderTableC(get, isAdmin) {
                 <button class="btn-main btn" style="width:100%;padding:8px;font-size:12px;" onclick="saveEditControl(${x.id})">حفظ التعديل</button>
             </div>` : '';
 
-        return `<tr data-id="${x.id}">
-            <td><b>${x.branch}</b><br><small>${x.city}</small><br>${cStatusBadge}</td>
+        const isFinancial = x.type === 'مالية';
+        const isLinked    = linkedCompIds.has(x.id);
+        const barColor    = isFinancial ? (isLinked ? '#2e7d32' : '#c62828') : '';
+        const barStyle    = barColor ? `border-right:5px solid ${barColor};` : '';
+        const typeBadge   = isFinancial
+            ? `<span style="display:inline-block;margin-top:4px;font-size:10px;padding:2px 7px;border-radius:6px;font-weight:700;background:rgba(198,40,40,0.15);color:#ef9a9a;">💰 مالية</span>`
+            : '';
+
+        return `<tr data-id="${x.id}" style="${barStyle}">
+            <td><b>${x.branch}</b><br><small>${x.city}</small><br>${cStatusBadge}${typeBadge}</td>
             <td>
                 ${extraInfoHtml}${custHtml}${linkHtml}${fileLink}${auditHtml}${followupHtml}${returnEditBox}${adminEditBox}
             </td>
@@ -632,6 +651,7 @@ function renderAll() {
     _renderTableI(get);
     _renderTableC(get, isAdmin);
     renderControlOpen();
+    if (typeof renderCompensations === 'function') renderCompensations();
     if (typeof _updateBadges === 'function') _updateBadges();
     if (typeof _checkNotifications === 'function') _checkNotifications();
 }

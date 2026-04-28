@@ -208,6 +208,19 @@ c: `
         <span id="cFileLabel" style="font-size:13px;color:var(--text-dim);">لم يُختر ملف</span>
     </div>
     <textarea id="cNotes" placeholder="نص الملاحظة الواردة من السيطرة..." rows="3"></textarea>
+    <div style="margin-top:14px;">
+        <label style="font-size:13px;color:var(--text-dim);display:block;margin-bottom:6px;">🏷️ نوع الشكوى</label>
+        <div style="display:flex;gap:10px;">
+            <label style="display:flex;align-items:center;gap:7px;cursor:pointer;padding:8px 18px;border-radius:10px;border:1px solid var(--border);background:var(--bg-input);flex:1;justify-content:center;">
+                <input type="radio" name="cComplaintType" id="cTypeOther" value="أخرى" checked style="accent-color:#64b5f6;">
+                <span style="font-weight:700;">أخرى</span>
+            </label>
+            <label style="display:flex;align-items:center;gap:7px;cursor:pointer;padding:8px 18px;border-radius:10px;border:1px solid rgba(198,40,40,0.4);background:rgba(198,40,40,0.07);flex:1;justify-content:center;">
+                <input type="radio" name="cComplaintType" id="cTypeFinancial" value="مالية" style="accent-color:#ef5350;">
+                <span style="font-weight:700;color:#ef9a9a;">💰 مالية</span>
+            </label>
+        </div>
+    </div>
     <button class="btn btn-main" style="margin-top:15px" onclick="addControl()">إرسال الشكوى</button>
 </div>
 <div class="search-bar search-bar-c">
@@ -216,6 +229,8 @@ c: `
     <div><label>الفرع</label><select id="searchBranchC" onchange="filterTable()"><option value="">الكل</option></select></div>
     <div><label>التاريخ</label><div class="date-picker-wrap" onclick="openDatePicker('searchDateC')"><span class="date-display" id="searchDateC-display">📅 اختر التاريخ</span><input type="hidden" id="searchDateC"></div></div>
     <div><label>نص الشكوى</label><input type="text" id="searchTextC" placeholder="بحث..." oninput="filterTable()"></div>
+    <div><label>نوع الشكوى</label><select id="searchTypeC" onchange="filterTable()"><option value="">الكل</option><option value="مالية">💰 مالية</option><option value="أخرى">أخرى</option></select></div>
+    <div><label>الحالة المالية</label><select id="searchFinStatusC" onchange="filterTable()"><option value="">الكل</option><option value="مفتوحة">🔴 مفتوحة (غير محجوزة)</option><option value="مغلقة">🟢 مغلقة (محجوزة)</option></select></div>
     <button class="btn" style="background:var(--bg-input);color:var(--text-dim);align-self:end;" onclick="resetSearch('C')">تفريغ</button>
 </div>
 <div class="card">
@@ -388,6 +403,53 @@ t: `
     <h2 style="margin:0 0 6px;color:var(--accent-red);">🗑️ سلة المحذوفات</h2>
     <p style="color:var(--text-dim);font-size:13px;margin:0 0 20px;">العناصر المحذوفة — تُحذف نهائياً بعد 30 يوماً</p>
     <div id="trashContainer"></div>
+</div>`,
+
+comp: `
+<div class="card">
+    <h3 style="color:#81c784;">💰 تعويض الفروع</h3>
+    <p style="color:var(--text-dim);font-size:13px;margin:-10px 0 18px;">تسجيل تعويضات الفروع بناءً على شكاوي السيطرة</p>
+
+    <div id="addCompCard">
+        <h4 style="margin:0 0 16px;color:var(--text-main);">➕ تسجيل تعويض جديد</h4>
+        <div class="search-bar search-bar-c" style="margin-bottom:14px;">
+            <div><label>المحافظة</label><select id="compCity" onchange="updateBranches('compCity','compBranch')"><option value="">اختر المحافظة</option></select></div>
+            <div><label>الفرع</label><select id="compBranch"><option value="">اختر الفرع</option></select></div>
+            <div><label>اسم الموظف</label><input type="text" id="compEmployeeName" placeholder="اسم موظف الفرع"></div>
+            <div><label>القيمة المالية (د.أ)</label><input type="number" id="compAmount" placeholder="0.00" min="0" step="0.01"></div>
+        </div>
+        <div style="margin-bottom:12px;">
+            <label style="display:block;margin-bottom:6px;font-size:13px;color:var(--text-dim);">الملاحظة</label>
+            <textarea id="compNotes" rows="3" placeholder="تفاصيل التعويض..." style="width:100%;box-sizing:border-box;padding:10px;border-radius:8px;border:1px solid var(--border);background:var(--bg-input);color:var(--text-main);font-family:Cairo;font-size:14px;resize:vertical;"></textarea>
+        </div>
+        <div style="margin-bottom:16px;">
+            <label style="display:block;margin-bottom:6px;font-size:13px;color:var(--text-dim);">🔗 ربط بشكوى سيطرة (اختياري)</label>
+            <select id="compLinkedComplaint" style="width:100%;"></select>
+        </div>
+        <button class="btn" style="background:#2e7d32;color:#fff;" onclick="addCompensation()">💾 حفظ التعويض</button>
+    </div>
+
+    <hr style="border-color:rgba(255,255,255,0.07);margin:24px 0;">
+
+    <div class="search-bar search-bar-c" style="margin-bottom:16px;">
+        <div style="grid-column:1/-1;" class="search-section-title">🔍 خيارات البحث</div>
+        <div><label>المحافظة</label><select id="compSearchCity" onchange="updateBranches('compSearchCity','compSearchBranch');renderCompensations();"></select></div>
+        <div><label>الفرع</label><select id="compSearchBranch" onchange="renderCompensations()"><option value="">الكل</option></select></div>
+        <div><label>التاريخ</label><div class="date-picker-wrap" onclick="calOnSelect=renderCompensations;openDatePicker('compSearchDate')"><span class="date-display" id="compSearchDate-display">📅 الكل</span><input type="hidden" id="compSearchDate"></div></div>
+        <button class="btn" style="background:var(--bg-input);color:var(--text-dim);align-self:end;" onclick="document.getElementById('compSearchCity').value='';document.getElementById('compSearchBranch').innerHTML='<option value=\\'\\'>الكل</option>';document.getElementById('compSearchDate').value='';document.getElementById('compSearchDate-display').textContent='📅 الكل';renderCompensations();">تفريغ</button>
+    </div>
+
+    <table id="tableComp">
+        <thead><tr>
+            <th style="width:15%">الفرع</th>
+            <th>الملاحظة / الربط</th>
+            <th style="width:14%">الموظف</th>
+            <th style="width:11%">القيمة</th>
+            <th style="width:16%">أضافه / الوقت</th>
+            <th style="width:6%"></th>
+        </tr></thead>
+        <tbody></tbody>
+    </table>
 </div>`,
 
 cu: `

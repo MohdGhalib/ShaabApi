@@ -16,7 +16,8 @@ const PERMISSIONS = {
         'addI','viewI',
         'addC','editC','approveC','returnC','deleteC','auditC',
         'addEmp','viewStats','viewBreak','viewLinkBadge','viewBranches',
-        'viewPrices','editPrices'
+        'viewPrices','editPrices',
+        'addComp','viewComp','deleteComp'
     ],
     // مدير الكول سنتر
     cc_manager: [
@@ -24,7 +25,8 @@ const PERMISSIONS = {
         'addI','viewI',
         'addC','editC','approveC','returnC','deleteC',
         'addEmp','viewStats','viewBreak','viewLinkBadge','viewBranches',
-        'viewPrices','editPrices'
+        'viewPrices','editPrices',
+        'viewComp'
     ],
     // موظف كول سنتر
     cc_employee: [
@@ -36,11 +38,13 @@ const PERMISSIONS = {
     ],
     // مسؤول قسم السيطرة — رد + إضافة موظفين خاصين
     control: [
-        'auditC', 'addControlEmp'
+        'auditC', 'addControlEmp',
+        'addComp','viewComp','deleteComp'
     ],
     // مدير قسم السيطرة (مضاف من مدير/كول سنتر) — رد كامل + اطلاع على المنتسيات
     control_employee: [
-        'auditC', 'addEmp', 'viewM'
+        'auditC', 'addEmp', 'viewM',
+        'addComp','viewComp','deleteComp'
     ],
     // مدير قسم السيطرة داخلي (مضاف من مسؤول السيطرة) — رد بدون حالة ملاحظة
     control_sub: [],
@@ -292,7 +296,7 @@ function setProfileUI() {
     }
 
     if (isMedia) {
-        ['tab-m','tab-m-sub','tab-o','tab-b','tab-e','tab-s','tab-f','tab-cu','tab-c-sub'].forEach(id => document.getElementById(id)?.classList.add('hidden'));
+        ['tab-m','tab-m-sub','tab-o','tab-b','tab-e','tab-s','tab-f','tab-cu','tab-comp','tab-c-sub'].forEach(id => document.getElementById(id)?.classList.add('hidden'));
         document.getElementById('tab-p')?.classList.remove('hidden');
     } else if (isControlEmployee) {
         ['tab-i','tab-b','tab-s'].forEach(id => document.getElementById(id)?.classList.add('hidden'));
@@ -301,6 +305,7 @@ function setProfileUI() {
         document.getElementById('tab-o').classList.remove('hidden');
         document.getElementById('tab-e').classList.remove('hidden');
         document.getElementById('tab-cu')?.classList.remove('hidden');
+        document.getElementById('tab-comp')?.classList.remove('hidden');
         document.getElementById('tab-c-sub')?.classList.remove('hidden');
         document.getElementById('tab-f')?.classList.remove('hidden');
     } else if (isControlSub) {

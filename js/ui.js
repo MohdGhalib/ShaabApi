@@ -275,7 +275,7 @@ function toggleTabC() {
 
 function switchTab(t) {
     // تحديد الـ active لجميع التبويبات العادية
-    ['o','i','cu','b','e','s','f','p','h','l','t'].forEach(id => {
+    ['o','i','cu','comp','b','e','s','f','p','h','l','t'].forEach(id => {
         const btn = document.getElementById(`tab-${id}`);
         if (btn) btn.classList.toggle('active', t === id);
     });
@@ -285,16 +285,16 @@ function switchTab(t) {
     const tabM = document.getElementById('tab-m');
     if (tabM) { tabM.classList.remove('active'); tabM.classList.toggle('group-active', t === 'm' || t === 'o'); }
 
-    // tab-c-sub: active عند 'c' — tab-c الأب: group-active عند 'c' أو 'cu'
+    // tab-c-sub: active عند 'c' — tab-c الأب: group-active عند 'c' أو 'cu' أو 'comp'
     document.getElementById('tab-c-sub')?.classList.toggle('active', t === 'c');
     const tabC = document.getElementById('tab-c');
-    if (tabC) { tabC.classList.remove('active'); tabC.classList.toggle('group-active', t === 'c' || t === 'cu'); }
+    if (tabC) { tabC.classList.remove('active'); tabC.classList.toggle('group-active', t === 'c' || t === 'cu' || t === 'comp'); }
 
     // فتح/إغلاق القوائم الفرعية
     const grpM = document.getElementById('nav-group-m');
     if (grpM) grpM.classList.toggle('open', t === 'm' || t === 'o');
     const grpC = document.getElementById('nav-group-c');
-    if (grpC) grpC.classList.toggle('open', t === 'c' || t === 'cu');
+    if (grpC) grpC.classList.toggle('open', t === 'c' || t === 'cu' || t === 'comp');
 
     // فتح/إغلاق مجموعة الموظفين
     const grpE = document.getElementById('nav-group-e');
@@ -304,8 +304,8 @@ function switchTab(t) {
 
     // تسجيل وقت المشاهدة وإخفاء الشارة عند فتح التبويب
     _activeTab = t;
-    if (['m','o','c','cu','i'].includes(t)) {
-        _markTabSeen(t === 'o' ? 'm' : t === 'cu' ? 'c' : t);
+    if (['m','o','c','cu','comp','i'].includes(t)) {
+        _markTabSeen(t === 'o' ? 'm' : (t === 'cu' || t === 'comp') ? 'c' : t);
     }
     const badge = document.getElementById(`badge-${t}`);
     if (badge) { badge.textContent = ''; badge.style.display = 'none'; }
@@ -339,6 +339,11 @@ function switchTab(t) {
     } else if (t === 'cu') {
         if (typeof renderControlOpen === 'function') renderControlOpen();
         return;
+    } else if (t === 'comp') {
+        setupCitySelects();
+        if (typeof _populateCompComplaintSelect === 'function') _populateCompComplaintSelect();
+        if (typeof renderCompensations === 'function') renderCompensations();
+        return;
     } else {
         populateEmployeeDropdowns();
         renderAll();
@@ -370,6 +375,7 @@ function switchTab(t) {
 function init() {
     if (perm('viewStats'))    document.getElementById('tab-s').classList.remove('hidden');
     if (perm('viewBranches')) document.getElementById('tab-f').classList.remove('hidden');
+    if (perm('viewComp'))     document.getElementById('tab-comp').classList.remove('hidden');
     if (!perm('addEmp'))      document.getElementById('tab-e').classList.add('hidden');
     if (!perm('viewBreak'))   document.getElementById('tab-b').classList.add('hidden');
     const role = currentUser?.role;
@@ -386,7 +392,7 @@ function init() {
 }
 
 function setupCitySelects() {
-    const citySelects = ['mCityAdd','iCityAdd','cCityAdd','searchCityM','searchCityC','searchCityO','searchCityI','branchCitySearch','searchCityCU'];
+    const citySelects = ['mCityAdd','iCityAdd','cCityAdd','searchCityM','searchCityC','searchCityO','searchCityI','branchCitySearch','searchCityCU','compCity','compSearchCity'];
     const ctrlSubAB = (currentUser?.role === 'control_sub' && currentUser?.assignedBranches?.length)
         ? currentUser.assignedBranches : null;
     let allOptions = '', filteredOptions = '';

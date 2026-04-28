@@ -1,4 +1,4 @@
-/* ══════════════════════════════════════════════════════
+﻿/* ══════════════════════════════════════════════════════
    CONTROL — Complaints CRUD with manager approval
 ══════════════════════════════════════════════════════ */
 function addControl() {
@@ -16,10 +16,12 @@ function addControl() {
     const invoiceValue= document.getElementById("cInvoiceValue").value.trim();
 
     const fileInput = document.getElementById("cFile");
+    const _typeEl   = document.querySelector('input[name="cComplaintType"]:checked');
+    const cType     = _typeEl ? _typeEl.value : 'أخرى';
     const status = 'تمت الموافقة';
     const base = { id:Date.now(), city:c, branch:b, notes:n, audit:'', time:now(), iso:iso(),
         addedBy:currentUser.name, status, customer, linkedInqSeq: linkedSeq||null,
-        callTime, noteDate, moveNumber, invoiceValue };
+        callTime, noteDate, moveNumber, invoiceValue, type: cType };
 
     const _notifyComplaint = () => {
         if (!IS_LOCAL && (currentUser?.role === 'cc_employee' || currentUser?.role === 'media')) {
@@ -72,6 +74,7 @@ function resetControlForm() {
     const preview = document.getElementById('linkedInqPreview');
     if (preview) preview.style.display = 'none';
     populateLinkedInquirySelect();
+    const _typeOther = document.getElementById('cTypeOther'); if (_typeOther) _typeOther.checked = true;
 }
 
 function approveControl(id) {
@@ -527,4 +530,121 @@ function toggleCountComplaint(id) {
         item.countedByCC = !item.countedByCC;
     }
     save();
+}
+
+/* ══════════════════════════════════════════════════════
+   COMPENSATIONS — تعويض الفروع بناء على شكاوي السيطرة
+══════════════════════════════════════════════════════ */
+
+function _populateCompComplaintSelect() {
+    const sel = document.getElementById('compLinkedComplaint');
+    if (!sel) return;
+    const linked = new Set(
+        (db.compensations || []).filter(x => !x.deleted && x.linkedComplaintId)
+                                .map(x => x.linkedComplaintId)
+    );
+    const eligible = (db.complaints || []).filter(x => !x.deleted && x.type === 'مالية' && !linked.has(x.id));
+    sel.innerHTML = '<option value="">— بدون ربط —</option>' +
+        eligible.map(x =>
+            `<option value="${x.id}">[${x.iso||''}] ${sanitize(x.branch)} — ${sanitize(x.city)} | ${sanitize((x.notes||'').substring(0,50))}</option>`
+        ).join('');
+}
+
+function addCompensation() {
+    if (!perm('addComp') && !currentUser?.isAdmin) return;
+    const city   = document.getElementById('compCity')?.value || '';
+    const branch = document.getElementById('compBranch')?.value || '';
+    const notes  = document.getElementById('compNotes')?.value.trim() || '';
+    const emp    = document.getElementById('compEmployeeName')?.value.trim() || '';
+    const amount = document.getElementById('compAmount')?.value.trim() || '';
+    const cid    = document.getElementById('compLinkedComplaint')?.value || '';
+
+    if (!city || !branch || !notes || !emp || !amount) return alert('يرجى إكمال جميع الحقول');
+
+    if (cid) {
+        const alreadyLinked = (db.compensations || []).some(x => !x.deleted && x.linkedComplaintId == cid);
+        if (alreadyLinked) return alert('هذه الشكوى مرتبطة بتعويض آخر مسبقاً');
+    }
+
+    if (!db.compensations) db.compensations = [];
+    db.compensations.unshift({
+        id: Date.now(),
+        city, branch, notes,
+        employeeName: emp,
+        amount,
+        linkedComplaintId: cid ? Number(cid) : null,
+        addedBy: currentUser.name,
+        time: now(),
+        iso: iso()
+    });
+    save();
+
+    document.getElementById('compNotes').value        = '';
+    document.getElementById('compEmployeeName').value = '';
+    document.getElementById('compAmount').value       = '';
+    document.getElementById('compCity').value         = '';
+    updateBranches('compCity', 'compBranch');
+    _populateCompComplaintSelect();
+    renderCompensations();
+}
+
+function deleteCompensation(id) {
+    if (!perm('deleteComp') && !currentUser?.isAdmin) return;
+    const item = (db.compensations || []).find(x => x.id === id);
+    if (!item) return;
+    showDeleteConfirm(
+        `<div style="font-weight:700;color:var(--text-main);margin-bottom:4px;">${sanitize(item.branch)} &nbsp;—&nbsp; ${sanitize(item.city)}</div>
+         <div style="color:var(--text-dim);">الموظف: ${sanitize(item.employeeName)} &nbsp;|&nbsp; القيمة: ${sanitize(item.amount)} د.أ</div>`,
+        () => {
+            item.deleted      = true;
+            item.deletedBy    = currentUser.name;
+            item.deletedAtTs  = Date.now();
+            save();
+            renderCompensations();
+            _populateCompComplaintSelect();
+        }
+    );
+}
+
+function renderCompensations() {
+    const tbody = document.querySelector('#tableComp tbody');
+    if (!tbody) return;
+
+    const active = document.activeElement;
+    if (active && (active.tagName === 'TEXTAREA' || active.tagName === 'INPUT') && tbody.contains(active)) return;
+
+    const city   = document.getElementById('compSearchCity')?.value   || '';
+    const branch = document.getElementById('compSearchBranch')?.value || '';
+    const date   = document.getElementById('compSearchDate')?.value   || '';
+
+    const rows = (db.compensations || []).filter(x =>
+        !x.deleted &&
+        (!city   || x.city   === city)   &&
+        (!branch || x.branch === branch) &&
+        (!date   || (x.iso  || '').startsWith(date))
+    );
+
+    if (!rows.length) {
+        tbody.innerHTML = '<tr><td colspan="6" style="text-align:center;color:var(--text-dim);padding:28px;">لا توجد تعويضات مسجلة</td></tr>';
+        return;
+    }
+
+    const canDelete = perm('deleteComp') || currentUser?.isAdmin;
+
+    tbody.innerHTML = rows.map(x => {
+        const linked = x.linkedComplaintId
+            ? (db.complaints || []).find(c => c.id === x.linkedComplaintId)
+            : null;
+        const linkedBadge = linked
+            ? `<div style="margin-top:6px;font-size:11px;background:rgba(21,101,192,0.12);color:#64b5f6;padding:3px 8px;border-radius:6px;display:inline-block;">🔗 شكوى: ${sanitize(linked.branch)} — ${sanitize((linked.notes||'').substring(0,40))}</div>`
+            : '';
+        return `<tr>
+            <td><b>${sanitize(x.branch)}</b><br><small>${sanitize(x.city)}</small></td>
+            <td>${sanitize(x.notes)}${linkedBadge}</td>
+            <td>${sanitize(x.employeeName)}</td>
+            <td style="font-weight:700;color:#81c784;">${sanitize(x.amount)} د.أ</td>
+            <td><small>${sanitize(x.addedBy)}</small><br><small style="color:var(--text-dim);">${sanitize(x.time)}</small></td>
+            <td>${canDelete ? `<button class="btn-delete-sm" onclick="deleteCompensation(${x.id})">🗑</button>` : '—'}</td>
+        </tr>`;
+    }).join('');
 }
