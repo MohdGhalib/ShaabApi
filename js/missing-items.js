@@ -6,13 +6,15 @@ function addMontasia() {
     const b = document.getElementById("mBranchAdd").value;
     const n = document.getElementById("mNotes").value.trim();
     const t = document.getElementById("mType").value;
+    const be = (document.getElementById("mBranchEmp")?.value||'').trim();
     if (!c||!b||!n||!t) return alert("يرجى إكمال البيانات");
-    db.montasiat.unshift({ id:Date.now(), city:c, branch:b, notes:n, type:t, time:now(), iso:iso(),
+    db.montasiat.unshift({ id:Date.now(), city:c, branch:b, notes:n, type:t, branchEmp:be, time:now(), iso:iso(),
         status:'قيد الانتظار', dt:'', addedBy:currentUser.name, deliveredBy:'' });
     if (typeof _skipMontasiaNotif !== 'undefined') _skipMontasiaNotif = true;
     save();
     document.getElementById("mNotes").value = "";
     document.getElementById("mType").value = "";
+    const beEl = document.getElementById("mBranchEmp"); if (beEl) beEl.value = "";
     document.getElementById("mCityAdd").value = "";
     updateBranches("mCityAdd", "mBranchAdd");
 }
@@ -250,13 +252,14 @@ function exportMontasiat() {
     const rows = filtered.map(x => ({
         'المحافظة':    x.city          || '',
         'الفرع':       x.branch        || '',
-        'النوع':       x.type          || '',
-        'التفاصيل':    x.notes         || '',
-        'الحالة':      x.status        || '',
-        'وقت الإضافة': _toLatinDigits(x.time || ''),
-        'وقت التسليم': _toLatinDigits(x.dt   || ''),
-        'أضافه':       x.addedBy       || '',
-        'سلّمه':       x.deliveredBy   || '',
+        'النوع':           x.type          || '',
+        'موظف الفرع':     x.branchEmp     || '',
+        'التفاصيل':        x.notes         || '',
+        'الحالة':          x.status        || '',
+        'وقت الإضافة':    _toLatinDigits(x.time || ''),
+        'وقت التسليم':    _toLatinDigits(x.dt   || ''),
+        'أضافه':           x.addedBy       || '',
+        'سلّمه':           x.deliveredBy   || '',
     }));
     const ws = XLSX.utils.json_to_sheet(rows);
     const wb = XLSX.utils.book_new();
@@ -375,6 +378,7 @@ function confirmImportMontasia() {
             status:      String(r['الحالة']||'').trim() || 'قيد الانتظار',
             time:        parsed   ? parsed.time   : now(),
             iso:         parsed   ? parsed.iso    : iso(),
+            branchEmp:   String(r['موظف الفرع'] || '').trim(),
             addedBy:     (String(r['أضافه'] || r['اضافه'] || r['الموظف'] || '').trim()) || currentUser.name,
             deliveredBy: String(r['سلّمه'] || r['سلمه'] || '').trim() || '',
             dt:          dtParsed ? dtParsed.time : '',

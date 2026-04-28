@@ -11,11 +11,14 @@ m: `
         <select id="mCityAdd" onchange="updateBranches('mCityAdd','mBranchAdd')"></select>
         <select id="mBranchAdd"></select>
     </div>
-    <select id="mType" style="margin-bottom:15px;">
-        <option value="">-- نوع المنتسية --</option>
-        <option value="نقدي">نقدي</option>
-        <option value="أخرى">أخرى</option>
-    </select>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:15px;margin-bottom:15px;">
+        <select id="mType">
+            <option value="">-- نوع المنتسية --</option>
+            <option value="نقدي">نقدي</option>
+            <option value="أخرى">أخرى</option>
+        </select>
+        <input id="mBranchEmp" type="text" placeholder="اسم موظف الفرع (اختياري)">
+    </div>
     <textarea id="mNotes" placeholder="تفاصيل المنتسية..." rows="3"></textarea>
     <button class="btn btn-main" style="margin-top:15px" onclick="addMontasia()">حفظ البيانات</button>
 </div>
