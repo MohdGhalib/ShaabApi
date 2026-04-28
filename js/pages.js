@@ -412,19 +412,24 @@ comp: `
 
     <div id="addCompCard">
         <h4 style="margin:0 0 16px;color:var(--text-main);">➕ تسجيل تعويض جديد</h4>
-        <div class="search-bar search-bar-c" style="margin-bottom:14px;">
-            <div><label>المحافظة</label><select id="compCity" onchange="updateBranches('compCity','compBranch')"><option value="">اختر المحافظة</option></select></div>
-            <div><label>الفرع</label><select id="compBranch"><option value="">اختر الفرع</option></select></div>
-            <div><label>اسم الموظف</label><input type="text" id="compEmployeeName" placeholder="اسم موظف الفرع"></div>
-            <div><label>القيمة المالية (د.أ)</label><input type="number" id="compAmount" placeholder="0.00" min="0" step="0.01"></div>
+
+        <div style="margin-bottom:16px;padding:14px;background:rgba(21,101,192,0.08);border:1px solid rgba(21,101,192,0.25);border-radius:12px;">
+            <label style="display:block;margin-bottom:8px;font-size:13px;font-weight:700;color:#64b5f6;">🔗 ربط بشكوى سيطرة مالية</label>
+            <select id="compLinkedComplaint" style="width:100%;" onchange="onCompComplaintSelect()"></select>
+            <div style="font-size:11px;color:var(--text-dim);margin-top:6px;">عند الاختيار يُملأ الفرع والنص تلقائياً</div>
         </div>
-        <div style="margin-bottom:12px;">
-            <label style="display:block;margin-bottom:6px;font-size:13px;color:var(--text-dim);">الملاحظة</label>
-            <textarea id="compNotes" rows="3" placeholder="تفاصيل التعويض..." style="width:100%;box-sizing:border-box;padding:10px;border-radius:8px;border:1px solid var(--border);background:var(--bg-input);color:var(--text-main);font-family:Cairo;font-size:14px;resize:vertical;"></textarea>
+
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-bottom:14px;">
+            <div><label style="font-size:13px;color:var(--text-dim);display:block;margin-bottom:5px;">المحافظة</label><select id="compCity" onchange="updateBranches('compCity','compBranch')"><option value="">اختر المحافظة</option></select></div>
+            <div><label style="font-size:13px;color:var(--text-dim);display:block;margin-bottom:5px;">الفرع</label><select id="compBranch"><option value="">اختر الفرع</option></select></div>
+        </div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-bottom:14px;">
+            <div><label style="font-size:13px;color:var(--text-dim);display:block;margin-bottom:5px;">اسم الموظف</label><input type="text" id="compEmployeeName" placeholder="اسم موظف الفرع"></div>
+            <div><label style="font-size:13px;color:var(--text-dim);display:block;margin-bottom:5px;">💰 المبلغ المالي (د.أ)</label><input type="number" id="compAmount" placeholder="0.00" min="0" step="0.01"></div>
         </div>
         <div style="margin-bottom:16px;">
-            <label style="display:block;margin-bottom:6px;font-size:13px;color:var(--text-dim);">🔗 ربط بشكوى سيطرة (اختياري)</label>
-            <select id="compLinkedComplaint" style="width:100%;" onchange="onCompComplaintSelect()"></select>
+            <label style="display:block;margin-bottom:6px;font-size:13px;color:var(--text-dim);">الملاحظة</label>
+            <textarea id="compNotes" rows="3" placeholder="تفاصيل التعويض..." style="width:100%;box-sizing:border-box;padding:10px;border-radius:8px;border:1px solid var(--border);background:var(--bg-input);color:var(--text-main);font-family:Cairo;font-size:14px;resize:vertical;"></textarea>
         </div>
         <button class="btn" style="background:#2e7d32;color:#fff;" onclick="addCompensation()">💾 حفظ التعويض</button>
     </div>

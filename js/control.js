@@ -537,12 +537,24 @@ function toggleCountComplaint(id) {
 ══════════════════════════════════════════════════════ */
 
 function onCompComplaintSelect() {
-    const cid     = document.getElementById('compLinkedComplaint')?.value;
-    const notesEl = document.getElementById('compNotes');
-    if (!notesEl) return;
-    if (!cid) { notesEl.value = ''; return; }
+    const cid = document.getElementById('compLinkedComplaint')?.value;
+    if (!cid) {
+        const n = document.getElementById('compNotes'); if (n) n.value = '';
+        return;
+    }
     const complaint = (db.complaints || []).find(c => c.id === Number(cid));
-    if (complaint) notesEl.value = complaint.notes || '';
+    if (!complaint) return;
+    // ملء المحافظة والفرع
+    const cityEl = document.getElementById('compCity');
+    if (cityEl && complaint.city) {
+        cityEl.value = complaint.city;
+        updateBranches('compCity', 'compBranch');
+        const branchEl = document.getElementById('compBranch');
+        if (branchEl && complaint.branch) branchEl.value = complaint.branch;
+    }
+    // ملء نص الشكوى
+    const notesEl = document.getElementById('compNotes');
+    if (notesEl) notesEl.value = complaint.notes || '';
 }
 
 function _populateCompComplaintSelect() {
