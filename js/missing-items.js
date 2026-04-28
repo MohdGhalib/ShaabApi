@@ -358,6 +358,13 @@ function confirmImportMontasia() {
         return { iso: isoDate, time: display };
     }
 
+    // تشخيص مؤقت - سيُحذف لاحقاً
+    if (_importMontasiaData.length > 0) {
+        var _r0 = _importMontasiaData[0];
+        var _keys = Object.keys(_r0).join(' | ');
+        var _dv = _r0['التاريخ']; var _tv = _r0['وقت الإضافة'];
+        alert('أعمدة الصف الأول:\n' + _keys + '\n\nالتاريخ: [' + typeof _dv + '] ' + _dv + '\nوقت الإضافة: [' + typeof _tv + '] ' + _tv);
+    }
     _importMontasiaData.forEach((r, i) => {
         // دمج التاريخ من 'التاريخ' + الوقت من 'وقت الإضافة'
         var parsed = _buildDateTime(r['التاريخ'] || r['تاريخ الإضافة'] || r['تاريخ'], r['وقت الإضافة']);
