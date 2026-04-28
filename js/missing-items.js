@@ -358,9 +358,14 @@ function confirmImportMontasia() {
         return { iso: isoDate, time: display };
     }
 
-_importMontasiaData.forEach((r, i) => {
+    _importMontasiaData.forEach((r, i) => {
+        var _dv = r['التاريخ'] || r['تاريخ الإضافة'] || r['تاريخ'];
+        var _tv = r['وقت الإضافة'];
+        if (i === 0) {
+            alert('isDateObj(dv)='+_isDateObj(_dv)+' | isoDate='+_extractIsoDate(_dv)+' | time='+_extractTime(_tv));
+        }
         // دمج التاريخ من 'التاريخ' + الوقت من 'وقت الإضافة'
-        var parsed = _buildDateTime(r['التاريخ'] || r['تاريخ الإضافة'] || r['تاريخ'], r['وقت الإضافة']);
+        var parsed = _buildDateTime(_dv, _tv);
         if (!parsed) {
             // احتياطي: أي عمود تاريخ صالح
             var fallback = r['التاريخ']||r['وقت الإضافة']||r['تاريخ الإضافة']||r['تاريخ']||'';
