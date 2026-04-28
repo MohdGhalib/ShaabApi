@@ -366,11 +366,3 @@ function toggleCountMontasia(id) {
     renderAll();
 }
 
-function deleteAllMontasiat() {
-    const total = (db.montasiat || []).filter(x => !x.deleted).length;
-    if (!confirm('⚠️ سيتم حذف جميع المنتسيات (' + total + ' مدخلة).\nهل أنت متأكد؟')) return;
-    const ts = Date.now();
-    (db.montasiat || []).forEach(x => { x.deleted = true; x.deletedBy = 'bulk-delete'; x.deletedAtTs = ts; });
-    save();
-    alert('✅ تم حذف ' + total + ' مدخلة بنجاح.');
-}
