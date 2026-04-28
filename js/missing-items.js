@@ -306,46 +306,56 @@ function importMontasiat(input) {
 
 function confirmImportMontasia() {
     const base = Date.now();
-    // مساعد: استخراج تاريخ ISO من قيمة Excel (Date object أو نص أو serial)
-    function _parseImportDate(val) {
+    // استخراج التاريخ (YYYY-MM-DD) من Date object أو نص ISO
+    function _extractIsoDate(val) {
         if (!val) return null;
         if (val instanceof Date && !isNaN(val) && val.getFullYear() > 2000) {
-            var y  = val.getFullYear();
-            var mo = String(val.getMonth()+1).padStart(2,'0');
-            var d  = String(val.getDate()).padStart(2,'0');
-            var hh = String(val.getHours()).padStart(2,'0');
-            var mm = String(val.getMinutes()).padStart(2,'0');
-            return { iso: y+'-'+mo+'-'+d, time: d+'/'+(val.getMonth()+1)+'/'+y+'، '+hh+':'+mm };
+            return val.getFullYear()+'-'+String(val.getMonth()+1).padStart(2,'0')+'-'+String(val.getDate()).padStart(2,'0');
         }
-        var s  = String(val).trim();
-        var m1 = s.match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})/);
-        if (m1) {
-            var isoStr = m1[3]+'-'+m1[2].padStart(2,'0')+'-'+m1[1].padStart(2,'0');
-            return { iso: isoStr, time: s };
-        }
-        var m2 = s.match(/^(\d{4})-(\d{2})-(\d{2})/);
-        if (m2) return { iso: s.substring(0,10), time: s };
+        var s = String(val);
+        var m = s.match(/^(\d{4})-(\d{2})-(\d{2})/);
+        if (m && parseInt(m[1]) > 2000) return m[1]+'-'+m[2]+'-'+m[3];
         return null;
     }
-    _importMontasiaData.forEach((r, i) => {
-        // جرّب كل أعمدة التاريخ بالترتيب وخذ أول نتيجة صحيحة
-        var _dateCols = ['التاريخ','وقت الإضافة','تاريخ الإضافة','تاريخ','Date','date'];
-        var parsed = null;
-        for (var _dc = 0; _dc < _dateCols.length; _dc++) {
-            var _dv = r[_dateCols[_dc]];
-            if (_dv !== undefined && _dv !== '') { parsed = _parseImportDate(_dv); if (parsed) break; }
+    // استخراج الوقت HH:MM من Date object (تخزينه بـ UTC في xlsx)
+    function _extractTime(val) {
+        if (val instanceof Date && !isNaN(val)) {
+            return String(val.getUTCHours()).padStart(2,'0')+':'+String(val.getUTCMinutes()).padStart(2,'0');
         }
+        return null;
+    }
+    // دمج تاريخ من عمود + وقت من عمود آخر
+    function _buildDateTime(dateVal, timeVal) {
+        var isoDate = _extractIsoDate(dateVal);
+        if (!isoDate) return null;
+        var parts = isoDate.split('-');
+        var timeStr = _extractTime(timeVal) || '00:00';
+        var display = parseInt(parts[2])+'/'+(parseInt(parts[1]))+'/'+parts[0]+'، '+timeStr;
+        return { iso: isoDate, time: display };
+    }
+
+    _importMontasiaData.forEach((r, i) => {
+        // دمج التاريخ من 'التاريخ' + الوقت من 'وقت الإضافة'
+        var parsed = _buildDateTime(r['التاريخ'] || r['تاريخ الإضافة'] || r['تاريخ'], r['وقت الإضافة']);
+        if (!parsed) {
+            // احتياطي: أي عمود تاريخ صالح
+            var fallback = r['التاريخ']||r['وقت الإضافة']||r['تاريخ الإضافة']||r['تاريخ']||'';
+            var fi = _extractIsoDate(fallback);
+            if (fi) { var fp=fi.split('-'); parsed={iso:fi,time:parseInt(fp[2])+'/'+(parseInt(fp[1]))+'/'+fp[0]+'، 00:00'}; }
+        }
+        // دمج تاريخ التسليم + وقت التسليم
+        var dtParsed = _buildDateTime(r['التاريخ_1'] || r['تاريخ التسليم'], r['وقت التسليم']);
         db.montasiat.unshift({
             id:          base + i,
             city:        String(r['المحافظة']).trim(),
             branch:      String(r['الفرع']).trim(),
             notes:       String(r['التفاصيل']).trim(),
             status:      String(r['الحالة']||'').trim() || 'قيد الانتظار',
-            time:        parsed ? parsed.time : now(),
-            iso:         parsed ? parsed.iso  : iso(),
+            time:        parsed   ? parsed.time   : now(),
+            iso:         parsed   ? parsed.iso    : iso(),
             addedBy:     (String(r['أضافه'] || r['اضافه'] || r['الموظف'] || '').trim()) || currentUser.name,
             deliveredBy: String(r['سلّمه'] || r['سلمه'] || '').trim() || '',
-            dt:          (function(){ var dv=r['التاريخ_1']||r['وقت التسليم']||''; if(!dv)return ''; var dd=null; if(dv instanceof Date&&!isNaN(dv)&&dv.getFullYear()>2000){var y2=dv.getFullYear(),mo2=String(dv.getMonth()+1).padStart(2,'0'),d2=String(dv.getDate()).padStart(2,'0');dd=d2+'/'+(dv.getMonth()+1)+'/'+y2+'، 00:00';} if(!dd){var s2=String(dv),m3=s2.match(/^(\d{4})-(\d{2})-(\d{2})/);if(m3&&parseInt(m3[1])>2000)dd=m3[3]+'/'+parseInt(m3[2])+'/'+m3[1]+'، 00:00';} return dd||''; })(),
+            dt:          dtParsed ? dtParsed.time : '',
         });
     });
     _importMontasiaData = [];
