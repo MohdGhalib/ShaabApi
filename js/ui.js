@@ -373,6 +373,9 @@ function switchTab(t) {
         setDatePickerValue('cCallDate', iso());
         const _tEl = document.getElementById('cCallTimeOnly'); if (_tEl) _tEl.value = `${_hh}:${_mm}`;
         setDatePickerValue('cNoteDate', iso());
+        // الميديا: إخفاء فلتر الموظف لأنهم يرون شكاويهم فقط تلقائياً
+        const addedByRow = document.getElementById('searchAddedByC')?.closest('div');
+        if (addedByRow) addedByRow.style.display = currentUser?.role === 'media' ? 'none' : '';
     }
 }
 
@@ -466,6 +469,19 @@ function populateEmployeeDropdowns() {
         inqEl.innerHTML = '<option value="">الكل</option><option value="المدير">المدير</option>';
         inqEmps.forEach(e => inqEl.innerHTML += `<option value="${sanitize(e.name)}">${sanitize(e.name)}</option>`);
         if (cur) inqEl.value = cur;
+    }
+    // بحث السيطرة: مدير الكول سنتر + موظف كول سنتر + موظف ميديا
+    const ctrlEl = document.getElementById('searchAddedByC');
+    if (ctrlEl) {
+        const cur = ctrlEl.value;
+        const ctrlEmps = employees.filter(e =>
+            e.title === 'مدير الكول سنتر' ||
+            e.title === 'موظف كول سنتر'   ||
+            e.title === 'موظف ميديا'
+        );
+        ctrlEl.innerHTML = '<option value="">الكل</option><option value="المدير">المدير</option>';
+        ctrlEmps.forEach(e => ctrlEl.innerHTML += `<option value="${sanitize(e.name)}">${sanitize(e.name)}</option>`);
+        if (cur) ctrlEl.value = cur;
     }
     populateLinkedInquirySelect();
 }

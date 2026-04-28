@@ -499,7 +499,7 @@ function _renderTableC(get, isAdmin) {
         text:      get("searchTextC").toLowerCase(),
         type:      get("searchTypeC"),
         finStatus: get("searchFinStatusC"),
-        addedBy:   get("searchAddedByC").toLowerCase()
+        addedBy:   get("searchAddedByC")
     };
     const allRowsC = (db.complaints || []).filter(x =>
         !x.deleted &&
@@ -514,7 +514,7 @@ function _renderTableC(get, isAdmin) {
         (!f.date      || x.iso.startsWith(f.date)) &&
         (!f.text      || (x.notes||'').toLowerCase().includes(f.text)) &&
         (!f.type      || (x.type||'أخرى') === f.type) &&
-        (!f.addedBy   || (x.addedBy||'').toLowerCase().includes(f.addedBy)) &&
+        (isMedia ? x.addedBy === currentUser?.name : (!f.addedBy || x.addedBy === f.addedBy)) &&
         (!f.finStatus || (
             f.finStatus === 'مفتوحة' ? (x.type === 'مالية' && !linkedCompIds.has(x.id)) :
             f.finStatus === 'مغلقة'  ? (x.type === 'مالية' && linkedCompIds.has(x.id))  : true
