@@ -317,10 +317,19 @@ function confirmImportMontasia() {
         if (m && parseInt(m[1]) > 2000) return m[1]+'-'+m[2]+'-'+m[3];
         return null;
     }
-    // استخراج الوقت HH:MM من Date object (تخزينه بـ UTC في xlsx)
+    // استخراج الوقت HH:MM من Date object أو رقم عشري (Excel fraction) أو نص
     function _extractTime(val) {
+        if (!val && val !== 0) return null;
         if (val instanceof Date && !isNaN(val)) {
             return String(val.getUTCHours()).padStart(2,'0')+':'+String(val.getUTCMinutes()).padStart(2,'0');
+        }
+        if (typeof val === 'number' && val >= 0 && val < 1) {
+            var totalMin = Math.round(val * 1440);
+            return String(Math.floor(totalMin/60)).padStart(2,'0')+':'+String(totalMin%60).padStart(2,'0');
+        }
+        if (typeof val === 'string') {
+            var m = val.match(/(\d{1,2}):(\d{2})/);
+            if (m) return String(parseInt(m[1])).padStart(2,'0')+':'+m[2];
         }
         return null;
     }
