@@ -337,12 +337,92 @@ function _renderEvalDetailModal() {
             </div>
 
             <!-- Footer -->
-            <div style="padding:14px 24px;background:rgba(255,255,255,0.03);border-top:1px solid rgba(255,255,255,0.07);flex-shrink:0;display:flex;justify-content:flex-end;">
+            <div style="padding:14px 24px;background:rgba(255,255,255,0.03);border-top:1px solid rgba(255,255,255,0.07);flex-shrink:0;display:flex;justify-content:space-between;align-items:center;gap:10px;">
+                <button onclick="_exportEvalDetailPDF()" style="padding:9px 20px;border-radius:12px;background:linear-gradient(135deg,rgba(211,47,47,0.2),rgba(183,28,28,0.15));border:1px solid rgba(211,47,47,0.4);color:#ef9a9a;cursor:pointer;font-family:'Cairo';font-size:13px;font-weight:700;display:flex;align-items:center;gap:7px;">📄 تصدير PDF</button>
                 <button onclick="document.getElementById('_evalDetailModal').remove()" style="padding:9px 24px;border-radius:12px;background:rgba(255,255,255,0.08);border:1px solid rgba(255,255,255,0.15);color:rgba(255,255,255,0.7);cursor:pointer;font-family:'Cairo';font-size:13px;font-weight:600;">إغلاق</button>
             </div>
         </div>`;
 
     document.body.appendChild(overlay);
+}
+
+function _exportEvalDetailPDF() {
+    const items = _getEvalItems(_evalDetailFilter);
+    const showBranchCol = !!_evalDetailFilter.region;
+    const title = _evalDetailTitle;
+    const dateStr = new Date().toLocaleDateString('ar-EG');
+
+    const typeLabel = s => s==='montasia'?'منتسية':s==='inquiry'?'استفسار':'شكوى';
+    const typeColor = s => s==='montasia'?'#2e7d32':s==='inquiry'?'#1565c0':'#b71c1c';
+
+    const branchHeader = showBranchCol ? '<th>الفرع</th>' : '';
+    const rows = items.map((item, idx) => `
+        <tr>
+            <td style="text-align:center;color:#888;font-size:11px;">${idx+1}</td>
+            <td style="text-align:center;">
+                <span style="background:${typeColor(item.src)};color:#fff;padding:2px 10px;border-radius:12px;font-size:11px;font-weight:700;">${typeLabel(item.src)}</span>
+            </td>
+            ${showBranchCol ? `<td style="font-weight:600;color:#1565c0;">${(item.branch||'')+(item.city?' — '+item.city:'')}</td>` : ''}
+            <td style="line-height:1.6;">${(item.notes||'').substring(0,250)}${(item.notes||'').length>250?'…':''}</td>
+            <td style="text-align:center;font-size:11px;color:#888;white-space:nowrap;">${item.time||'—'}</td>
+        </tr>`).join('');
+
+    const html = `<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<title>تقييم الفروع — ${title}</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700;900&display=swap');
+  *{box-sizing:border-box;margin:0;padding:0;}
+  body{font-family:'Cairo',Arial,sans-serif;direction:rtl;background:#fff;color:#1a1a1a;padding:32px;}
+  .header{text-align:center;margin-bottom:28px;padding-bottom:18px;border-bottom:3px solid #c62828;}
+  .logo{font-size:28px;margin-bottom:6px;}
+  h1{font-size:20px;font-weight:900;color:#c62828;margin-bottom:4px;}
+  .sub{font-size:12px;color:#888;}
+  .badge{display:inline-block;background:#c62828;color:#fff;border-radius:20px;padding:3px 16px;font-size:12px;font-weight:700;margin-top:8px;}
+  table{width:100%;border-collapse:collapse;margin-top:4px;}
+  thead tr{background:#c62828;}
+  th{color:#fff;padding:10px 12px;font-size:12px;font-weight:700;text-align:right;}
+  th:first-child{text-align:center;width:36px;}
+  td{padding:9px 12px;font-size:12px;border-bottom:1px solid #f0f0f0;vertical-align:top;}
+  tr:nth-child(even) td{background:#fdf5f5;}
+  .footer{text-align:center;margin-top:24px;font-size:11px;color:#bbb;border-top:1px solid #eee;padding-top:12px;}
+  @media print{
+    body{padding:15px;}
+    button{display:none!important;}
+    @page{margin:1.5cm;}
+  }
+</style>
+</head>
+<body>
+<div class="header">
+  <div class="logo">📋</div>
+  <h1>${title}</h1>
+  <div class="sub">البنود المحتسبة في التقييم &nbsp;|&nbsp; ${dateStr}</div>
+  <span class="badge">${items.length} بند</span>
+</div>
+${items.length ? `
+<table>
+  <thead>
+    <tr>
+      <th>#</th>
+      <th style="width:70px;">النوع</th>
+      ${branchHeader}
+      <th>التفاصيل</th>
+      <th style="width:110px;text-align:center;">الوقت</th>
+    </tr>
+  </thead>
+  <tbody>${rows}</tbody>
+</table>` : '<div style="text-align:center;padding:50px;color:#aaa;font-size:16px;">✅ لا توجد بنود محتسبة</div>'}
+<div class="footer">محامص الشعب — تقرير تقييم الفروع</div>
+<script>window.onload=()=>window.print();<\/script>
+</body></html>`;
+
+    const w = window.open('', '_blank');
+    if (!w) { alert('يرجى السماح بفتح النوافذ المنبثقة'); return; }
+    w.document.write(html);
+    w.document.close();
 }
 
 function _undoEvalItem(src, id) {
