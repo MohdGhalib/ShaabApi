@@ -297,7 +297,8 @@ function setProfileUI() {
     }
 
     if (isMedia) {
-        ['tab-m','tab-m-sub','tab-o','tab-b','tab-e','tab-s','tab-f','tab-cu','tab-comp','tab-c-sub'].forEach(id => document.getElementById(id)?.classList.add('hidden'));
+        ['tab-m','tab-m-sub','tab-o','tab-b','tab-e','tab-s','tab-f','tab-cu','tab-comp'].forEach(id => document.getElementById(id)?.classList.add('hidden'));
+        document.getElementById('tab-c-sub')?.classList.remove('hidden');
         document.getElementById('tab-p')?.classList.remove('hidden');
     } else if (isControlEmployee) {
         ['tab-i','tab-b','tab-s'].forEach(id => document.getElementById(id)?.classList.add('hidden'));
