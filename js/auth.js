@@ -26,7 +26,7 @@ const PERMISSIONS = {
         'addC','editC','approveC','returnC','deleteC',
         'addEmp','viewStats','viewBreak','viewLinkBadge','viewBranches',
         'viewPrices','editPrices',
-        'viewComp'
+        'addComp','viewComp','deleteComp'
     ],
     // موظف كول سنتر
     cc_employee: [
@@ -34,7 +34,8 @@ const PERMISSIONS = {
         'addI','viewI',
         'addC',
         'viewBreak','viewLinkBadge',
-        'viewPrices'
+        'viewPrices',
+        'addComp','viewComp'
     ],
     // مسؤول قسم السيطرة — رد + إضافة موظفين خاصين
     control: [
@@ -44,7 +45,7 @@ const PERMISSIONS = {
     // مدير قسم السيطرة (مضاف من مدير/كول سنتر) — رد كامل + اطلاع على المنتسيات
     control_employee: [
         'auditC', 'addEmp', 'viewM',
-        'viewComp'
+        'addComp','viewComp','deleteComp'
     ],
     // مدير قسم السيطرة داخلي (مضاف من مسؤول السيطرة) — رد بدون حالة ملاحظة
     control_sub: [],
