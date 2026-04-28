@@ -536,9 +536,27 @@ function toggleCountComplaint(id) {
    COMPENSATIONS — تعويض الفروع بناء على شكاوي السيطرة
 ══════════════════════════════════════════════════════ */
 
+function _setCompFieldsLocked(locked) {
+    const cityEl   = document.getElementById('compCity');
+    const branchEl = document.getElementById('compBranch');
+    const notesEl  = document.getElementById('compNotes');
+    [cityEl, branchEl].forEach(el => {
+        if (!el) return;
+        el.disabled = locked;
+        el.style.opacity = locked ? '0.6' : '';
+        el.style.cursor  = locked ? 'not-allowed' : '';
+    });
+    if (notesEl) {
+        notesEl.readOnly = locked;
+        notesEl.style.opacity = locked ? '0.6' : '';
+        notesEl.style.cursor  = locked ? 'not-allowed' : '';
+    }
+}
+
 function onCompComplaintSelect() {
     const cid = document.getElementById('compLinkedComplaint')?.value;
     if (!cid) {
+        _setCompFieldsLocked(false);
         const n = document.getElementById('compNotes'); if (n) n.value = '';
         return;
     }
@@ -555,6 +573,8 @@ function onCompComplaintSelect() {
     // ملء نص الشكوى
     const notesEl = document.getElementById('compNotes');
     if (notesEl) notesEl.value = complaint.notes || '';
+    // تأمين الحقول
+    _setCompFieldsLocked(true);
 }
 
 function _populateCompComplaintSelect() {
@@ -657,7 +677,7 @@ function renderCompensations() {
             ? (db.complaints || []).find(c => c.id === x.linkedComplaintId)
             : null;
         const linkedBadge = linked
-            ? `<div style="margin-top:6px;font-size:11px;background:rgba(21,101,192,0.12);color:#64b5f6;padding:3px 8px;border-radius:6px;display:inline-block;">🔗 شكوى: ${sanitize(linked.branch)} — ${sanitize((linked.notes||'').substring(0,40))}</div>`
+            ? `<div onclick="jumpToComplaint(${linked.id})" style="margin-top:6px;font-size:11px;background:rgba(21,101,192,0.15);color:#64b5f6;padding:4px 10px;border-radius:6px;display:inline-block;cursor:pointer;border:1px solid rgba(21,101,192,0.3);" title="انتقل لشكوى السيطرة">🔗 شكوى: ${sanitize(linked.branch)} — ${sanitize((linked.notes||'').substring(0,40))} ↗</div>`
             : '';
         return `<tr>
             <td><b>${sanitize(x.branch)}</b><br><small>${sanitize(x.city)}</small></td>
@@ -668,4 +688,16 @@ function renderCompensations() {
             <td>${canDelete ? `<button class="btn-delete-sm" onclick="deleteCompensation(${x.id})">🗑</button>` : '—'}</td>
         </tr>`;
     }).join('');
+}
+
+function jumpToComplaint(id) {
+    switchTab('c');
+    setTimeout(() => {
+        const row = document.querySelector(`#tableC tbody tr[data-id="${id}"]`);
+        if (!row) return;
+        row.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        row.style.transition = 'outline 0s, box-shadow 0.3s';
+        row.style.boxShadow  = 'inset 0 0 0 3px #2e7d32';
+        setTimeout(() => { row.style.boxShadow = ''; }, 2500);
+    }, 300);
 }
