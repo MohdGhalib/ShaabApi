@@ -218,7 +218,7 @@ c: `
                 <div id="cTypeLabelOther" data-checked="1"
                     style="position:relative;display:flex;flex-direction:column;align-items:center;gap:6px;padding:14px 10px;border-radius:14px;border:2px solid rgba(100,181,246,0.5);background:rgba(100,181,246,0.1);transition:all 0.2s;user-select:none;"
                     onclick="document.getElementById('cTypeOther').checked=true;this.setAttribute('data-checked','1');document.getElementById('cTypeLabelFin').removeAttribute('data-checked');">
-                    <span id="checkOther" style="position:absolute;top:6px;left:10px;font-size:20px;font-weight:900;color:#4caf50;line-height:1;display:none;">✓</span>
+                    <span id="checkOther" style="position:absolute;top:7px;left:9px;width:28px;height:28px;background:#fff;border-radius:6px;display:none;align-items:center;justify-content:center;box-shadow:0 1px 4px rgba(0,0,0,0.15);"><span style="font-size:22px;font-weight:900;color:#2e7d32;line-height:1;">✓</span></span>
                     <span style="font-size:22px;">📋</span>
                     <span style="font-weight:800;font-size:14px;color:#90caf9;">أخرى</span>
                     <span style="font-size:10px;color:var(--text-dim);">شكوى عامة</span>
@@ -231,7 +231,7 @@ c: `
                 <div id="cTypeLabelFin"
                     style="position:relative;display:flex;flex-direction:column;align-items:center;gap:6px;padding:14px 10px;border-radius:14px;border:2px solid rgba(198,40,40,0.3);background:rgba(198,40,40,0.06);transition:all 0.2s;user-select:none;"
                     onclick="document.getElementById('cTypeFinancial').checked=true;this.setAttribute('data-checked','1');document.getElementById('cTypeLabelOther').removeAttribute('data-checked');">
-                    <span id="checkFin" style="position:absolute;top:6px;left:10px;font-size:20px;font-weight:900;color:#4caf50;line-height:1;display:none;">✓</span>
+                    <span id="checkFin" style="position:absolute;top:7px;left:9px;width:28px;height:28px;background:#fff;border-radius:6px;display:none;align-items:center;justify-content:center;box-shadow:0 1px 4px rgba(0,0,0,0.15);"><span style="font-size:22px;font-weight:900;color:#2e7d32;line-height:1;">✓</span></span>
                     <span style="font-size:22px;">💰</span>
                     <span style="font-weight:800;font-size:14px;color:#ef9a9a;">مالية</span>
                     <span style="font-size:10px;color:var(--text-dim);">تستوجب تعويض</span>
@@ -241,8 +241,8 @@ c: `
         <style>
             #cTypeLabelOther[data-checked] { border-color:#42a5f5 !important; background:rgba(66,165,245,0.18) !important; box-shadow:0 0 0 3px rgba(66,165,245,0.15); }
             #cTypeLabelFin[data-checked]   { border-color:#ef5350 !important; background:rgba(239,83,80,0.18)  !important; box-shadow:0 0 0 3px rgba(239,83,80,0.15);  }
-            #cTypeLabelOther[data-checked] #checkOther { display:block !important; }
-            #cTypeLabelFin[data-checked]   #checkFin   { display:block !important; }
+            #cTypeLabelOther[data-checked] #checkOther { display:flex !important; }
+            #cTypeLabelFin[data-checked]   #checkFin   { display:flex !important; }
         </style>
     </div>
     <button class="btn btn-main" style="margin-top:15px" onclick="addControl()">إرسال الشكوى</button>
