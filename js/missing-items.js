@@ -314,9 +314,10 @@ function importMontasiat(input) {
 function confirmImportMontasia() {
     const base = Date.now();
     // استخراج التاريخ (YYYY-MM-DD) من Date object أو نص ISO
+    function _isDateObj(v) { return v && typeof v.getTime === 'function' && !isNaN(v.getTime()); }
     function _extractIsoDate(val) {
         if (!val) return null;
-        if (val instanceof Date && !isNaN(val) && val.getUTCFullYear() > 2000) {
+        if (_isDateObj(val) && val.getUTCFullYear() > 2000) {
             return val.getUTCFullYear()+'-'+String(val.getUTCMonth()+1).padStart(2,'0')+'-'+String(val.getUTCDate()).padStart(2,'0');
         }
         if (typeof val === 'number' && val >= 1) {
@@ -326,14 +327,13 @@ function confirmImportMontasia() {
             }
         }
         var s = String(val);
-        var m = s.match(/^(\d{4})-(\d{2})-(\d{2})/);
-        if (m && parseInt(m[1]) > 2000) return m[1]+'-'+m[2]+'-'+m[3];
+        var sm = s.match(/^(\d{4})-(\d{2})-(\d{2})/);
+        if (sm && parseInt(sm[1]) > 2000) return sm[1]+'-'+sm[2]+'-'+sm[3];
         return null;
     }
-    // استخراج الوقت HH:MM من Date object أو رقم عشري (Excel fraction 0-1) أو رقم كامل (serial مع وقت) أو نص
     function _extractTime(val) {
         if (!val && val !== 0) return null;
-        if (val instanceof Date && !isNaN(val)) {
+        if (_isDateObj(val)) {
             return String(val.getUTCHours()).padStart(2,'0')+':'+String(val.getUTCMinutes()).padStart(2,'0');
         }
         if (typeof val === 'number') {
@@ -343,8 +343,8 @@ function confirmImportMontasia() {
             return String(Math.floor(totalMin/60)).padStart(2,'0')+':'+String(totalMin%60).padStart(2,'0');
         }
         if (typeof val === 'string') {
-            var m = val.match(/(\d{1,2}):(\d{2})/);
-            if (m) return String(parseInt(m[1])).padStart(2,'0')+':'+m[2];
+            var tm = val.match(/(\d{1,2}):(\d{2})/);
+            if (tm) return String(parseInt(tm[1])).padStart(2,'0')+':'+tm[2];
         }
         return null;
     }
@@ -358,14 +358,7 @@ function confirmImportMontasia() {
         return { iso: isoDate, time: display };
     }
 
-    // تشخيص مؤقت - سيُحذف لاحقاً
-    if (_importMontasiaData.length > 0) {
-        var _r0 = _importMontasiaData[0];
-        var _keys = Object.keys(_r0).join(' | ');
-        var _dv = _r0['التاريخ']; var _tv = _r0['وقت الإضافة'];
-        alert('أعمدة الصف الأول:\n' + _keys + '\n\nالتاريخ: [' + typeof _dv + '] ' + _dv + '\nوقت الإضافة: [' + typeof _tv + '] ' + _tv);
-    }
-    _importMontasiaData.forEach((r, i) => {
+_importMontasiaData.forEach((r, i) => {
         // دمج التاريخ من 'التاريخ' + الوقت من 'وقت الإضافة'
         var parsed = _buildDateTime(r['التاريخ'] || r['تاريخ الإضافة'] || r['تاريخ'], r['وقت الإضافة']);
         if (!parsed) {
