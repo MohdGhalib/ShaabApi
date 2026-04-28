@@ -159,7 +159,7 @@ function renderBranches() {
     </div>`;
 
     // عرض كل قسم
-    const regionOrder = ['الشرقية','الجنوبية','الغربية','المحافظات','أخرى'];
+    const regionOrder = ['الشرقية','الجنوبية','الغربية','المحافظات','فروع العقبة','أخرى'];
     regionOrder.forEach(region => {
         const regionData = allData.filter(x => x.region === region).sort((a,b) => b.count - a.count);
         if (!regionData.length) return;
@@ -420,7 +420,7 @@ function exportBranchEvaluation() {
     // أضف جميع فروع REGION_MAP بعدد صفر لضمان ظهور كل الأقسام دائماً
     const existingKeys = new Set(allData.map(x=>`${x.branch}||${x.city}`));
     const _cityOf = br => { for (const [c,brs] of Object.entries(branches)) if (brs.includes(br)) return c; return ''; };
-    ['الشرقية','الجنوبية','الغربية','المحافظات'].forEach(region => {
+    ['الشرقية','الجنوبية','الغربية','المحافظات','فروع العقبة'].forEach(region => {
         (REGION_MAP[region]||[]).forEach(brName => {
             const city = _cityOf(brName);
             const key  = `${brName}||${city}`;
@@ -428,7 +428,7 @@ function exportBranchEvaluation() {
         });
     });
 
-    const regionOrder = ['الشرقية','الجنوبية','الغربية','المحافظات','أخرى'];
+    const regionOrder = ['الشرقية','الجنوبية','الغربية','المحافظات','فروع العقبة','أخرى'];
     const selections = {};
     regionOrder.forEach(region => {
         const rd = allData.filter(x=>x.region===region).sort((a,b)=>b.count-a.count);
