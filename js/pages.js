@@ -55,13 +55,12 @@ m: `
 <div class="card">
     <table id="tableM">
         <thead><tr>
-            <th style="width:13%">الفرع</th>
+            <th style="width:14%">الفرع</th>
             <th style="width:8%">النوع</th>
             <th>التفاصيل</th>
-            <th style="width:13%">أضافه</th>
             <th style="width:11%">الحالة</th>
-            <th style="width:12%">وقت التبليغ</th>
-            <th style="width:14%">وقت التسليم</th>
+            <th style="width:15%">وقت التبليغ</th>
+            <th style="width:17%">وقت التسليم</th>
             <th style="width:13%">إجراء</th>
         </tr></thead>
         <tbody></tbody>

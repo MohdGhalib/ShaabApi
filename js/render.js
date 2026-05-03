@@ -306,20 +306,25 @@ function _renderTableM(get, isAdmin) {
             <td><b>${x.branch}</b>${x.branchEmp?`<br><span style="font-size:13px;color:var(--text-dim);font-weight:700;">👤 ${sanitize(x.branchEmp)}</span>`:''}${mobileTag}</td>
             <td style="text-align:center;">${typeLabel}</td>
             <td><span class="text-box-cell">${sanitize(x.notes)}</span>${photoCell}${editBox}</td>
-            <td><div class="added-by" style="font-size:12px;color:var(--text-main);">📥 ${sanitize(x.addedBy||'—')}</div>${approvedByRow}</td>
-            <td style="vertical-align:top;">
-                ${x.status==='تم التسليم' && x.deliveredBy
-                    ? `<span style="font-weight:700;color:var(--text-main);">${sanitize(x.deliveredBy)}</span>`
-                    : `<span class="status-badge ${statusClass}">${x.status==='قيد الانتظار' ? 'لم يتم التسليم' : x.status}</span>`
-                }
+            <td style="vertical-align:top;text-align:center;">
+                <span class="status-badge ${statusClass}">${x.status==='قيد الانتظار' ? 'لم يتم التسليم' : (x.status==='تم التسليم' ? 'تم التسليم' : x.status)}</span>
             </td>
-            <td><small>${_toLatinDigits(_timeToAmPm(x.time))}</small>${x.addLateReason ? `<br><button onclick="showAddLateNote(${x.id})" style="margin-top:4px;cursor:pointer;background:rgba(255,152,0,0.12);border:1px solid rgba(255,152,0,0.35);color:#ffb74d;border-radius:7px;padding:3px 10px;font-family:'Cairo';font-size:11px;font-weight:700;">👁 عرض</button>` : ''}</td>
             <td style="text-align:center;vertical-align:top;">
-                <div style="display:flex;flex-direction:column;gap:5px;align-items:center;">
+                <div style="display:flex;flex-direction:column;gap:4px;align-items:center;">
+                    <span style="font-weight:700;color:var(--text-main);font-size:13px;">${sanitize(x.addedBy||'—')}</span>
+                    <small style="color:var(--text-dim);">${_toLatinDigits(_timeToAmPm(x.time))}</small>
+                    ${x.addLateReason
+                        ? `<button onclick="showAddLateNote(${x.id})" style="cursor:pointer;background:rgba(255,152,0,0.12);border:1px solid rgba(255,152,0,0.35);color:#ffb74d;border-radius:7px;padding:3px 10px;font-family:'Cairo';font-size:11px;font-weight:700;">👁 عرض</button>`
+                        : ''
+                    }
+                    ${approvedByRow}
+                </div>
+            </td>
+            <td style="text-align:center;vertical-align:top;">
+                <div style="display:flex;flex-direction:column;gap:4px;align-items:center;">
                 ${x.dt && x.status !== 'قيد الانتظار'
-                    ? `<div style="display:inline-flex;align-items:center;gap:5px;padding:4px 9px;border-radius:8px;background:rgba(46,125,50,0.12);border:1px solid rgba(46,125,50,0.3);">
-                           <span style="font-size:11px;color:#a5d6a7;font-family:monospace;">⏱ ${_toLatinDigits(_timeToAmPm(x.dt))}</span>
-                       </div>
+                    ? `<span style="font-weight:700;color:var(--text-main);font-size:13px;">${sanitize(x.deliveredBy||'—')}</span>
+                       <small style="color:#a5d6a7;font-family:monospace;">⏱ ${_toLatinDigits(_timeToAmPm(x.dt))}</small>
                        ${x.deliveryBranch && x.deliveryBranch !== x.branch
                            ? `<div style="font-size:12px;color:var(--accent-red);font-weight:700;">تم التسليم بفرع ${sanitize(x.deliveryBranch)}</div>`
                            : `<div style="font-size:12px;color:var(--text-dim);">تم التسليم بنفس الفرع</div>`
