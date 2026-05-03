@@ -564,13 +564,31 @@ function _renderTableI(get) {
                 <button class="btn-delete-sm" style="margin-top:4px;" onclick="deleteInquiry(${x.id})">🗑</button>
                 ${countBtnI}
             </td>` : (canCountI ? `<td>${countBtnI}</td>` : '<td></td>');
+        // بادج نوع الشكوى الفرعي + بيانات الشكوى المالية إن وُجدت
+        const _ctMap = {
+            'مالية':     { icon:'💰', bg:'rgba(198,40,40,0.15)',  color:'#ef9a9a' },
+            'سوء تعامل': { icon:'⚠️', bg:'rgba(255,152,0,0.15)',  color:'#ffb74d' },
+            'جودة صنف':  { icon:'🔧', bg:'rgba(21,101,192,0.15)', color:'#64b5f6' }
+        };
+        const _ctStyle = _ctMap[x.complaintType];
+        const ctBadge = _ctStyle
+            ? `<span style="display:inline-block;margin-right:6px;font-size:10px;padding:2px 7px;border-radius:6px;font-weight:700;background:${_ctStyle.bg};color:${_ctStyle.color};">${_ctStyle.icon} ${x.complaintType}</span>`
+            : '';
+        const finFieldsHtml = (x.complaintType === 'مالية' && (x.invoiceValue || x.moveNumber || x.noteDate || x.file))
+            ? `<div style="margin-top:6px;padding:8px 10px;border-radius:8px;background:rgba(198,40,40,0.06);border:1px dashed rgba(239,83,80,0.3);font-size:11px;color:var(--text-dim);display:flex;flex-wrap:wrap;gap:8px;">
+                ${x.invoiceValue ? `<span>💰 ${sanitize(x.invoiceValue)}</span>` : ''}
+                ${x.moveNumber   ? `<span>🔢 ${sanitize(x.moveNumber)}</span>` : ''}
+                ${x.noteDate     ? `<span>📅 ${sanitize(x.noteDate)}</span>` : ''}
+                ${x.file         ? `<a href="${x.file}" target="_blank" class="btn-attach" style="padding:2px 8px;font-size:11px;">📎 الفاتورة</a>` : ''}
+              </div>` : '';
         return `<tr>
             <td><span class="seq-badge" title="الرقم التسلسلي">#${x.seq||'—'}</span></td>
             <td><b>${x.branch}</b><br><small>${x.city}</small></td>
             <td>${sanitize(x.phone)}</td>
             <td>
-                <span class="emp-badge">${x.type||'—'}</span>
+                <span class="emp-badge">${x.type||'—'}</span>${ctBadge}
                 ${x.notes?`<br><span class="text-box-cell" style="font-size:13px;color:var(--text-dim)">${sanitize(x.notes)}</span>`:''}
+                ${finFieldsHtml}
                 ${editBox}
             </td>
             <td><small style="color:var(--text-main)">${sanitize(x.addedBy||'—')}</small></td>
@@ -752,8 +770,14 @@ function _renderTableC(get, isAdmin) {
         const finBar      = barColor
             ? `<span style="position:absolute;top:0;right:0;bottom:0;width:6px;background:${barColor};border-radius:0 4px 4px 0;"></span>`
             : '';
-        const typeBadge   = isFinancial
-            ? `<span style="display:inline-block;margin-top:4px;font-size:10px;padding:2px 7px;border-radius:6px;font-weight:700;background:${isLinked ? 'rgba(46,125,50,0.18)' : 'rgba(198,40,40,0.15)'};color:${isLinked ? '#81c784' : '#ef9a9a'};">💰 مالية${isLinked ? ' ✓' : ''}</span>`
+        const _typeStyles = {
+            'مالية':       { icon:'💰', bg:isLinked ? 'rgba(46,125,50,0.18)' : 'rgba(198,40,40,0.15)', color:isLinked ? '#81c784' : '#ef9a9a' },
+            'سوء تعامل':   { icon:'⚠️', bg:'rgba(255,152,0,0.15)',  color:'#ffb74d' },
+            'جودة صنف':    { icon:'🔧', bg:'rgba(21,101,192,0.15)', color:'#64b5f6' }
+        };
+        const _ts = _typeStyles[x.type];
+        const typeBadge = _ts
+            ? `<span style="display:inline-block;margin-top:4px;font-size:10px;padding:2px 7px;border-radius:6px;font-weight:700;background:${_ts.bg};color:${_ts.color};">${_ts.icon} ${x.type}${isFinancial && isLinked ? ' ✓' : ''}</span>`
             : '';
 
         return `<tr data-id="${x.id}">

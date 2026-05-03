@@ -150,6 +150,45 @@ i: `
             <option value="أخرى">أخرى</option>
         </select>
     </div>
+    <div id="iComplaintTypeBox" style="display:none;margin-bottom:15px;">
+        <label style="font-size:13px;color:var(--text-dim);display:block;margin-bottom:5px;">🏷️ نوع الشكوى</label>
+        <select id="iComplaintType" onchange="toggleComplaintFinancialBox()">
+            <option value="">— اختر نوع الشكوى —</option>
+            <option value="جودة صنف">جودة صنف</option>
+            <option value="مالية">💰 مالية</option>
+            <option value="سوء تعامل">سوء تعامل</option>
+        </select>
+    </div>
+    <div id="iFinancialBox" style="display:none;margin-bottom:15px;background:rgba(198,40,40,0.05);border:1px dashed rgba(239,83,80,0.35);border-radius:12px;padding:14px;">
+        <div style="font-size:13px;color:#ef9a9a;font-weight:700;margin-bottom:10px;">💰 بيانات الشكوى المالية</div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:12px;">
+            <div>
+                <label style="font-size:12px;color:var(--text-dim);display:block;margin-bottom:5px;">📅 تاريخ الملاحظة</label>
+                <div class="date-picker-wrap" onclick="openDatePicker('iNoteDate')">
+                    <span class="date-display" id="iNoteDate-display">📅 اختر التاريخ</span>
+                    <input type="hidden" id="iNoteDate">
+                </div>
+            </div>
+            <div>
+                <label style="font-size:12px;color:var(--text-dim);display:block;margin-bottom:5px;">🔢 رقم الحركة</label>
+                <input type="text" id="iMoveNumber" placeholder="رقم الحركة">
+            </div>
+        </div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;align-items:end;">
+            <div>
+                <label style="font-size:12px;color:var(--text-dim);display:block;margin-bottom:5px;">💰 قيمة الفاتورة</label>
+                <input type="text" id="iInvoiceValue" placeholder="قيمة الفاتورة">
+            </div>
+            <div>
+                <label style="font-size:12px;color:var(--text-dim);display:block;margin-bottom:5px;">📎 إرفاق فاتورة</label>
+                <input type="file" id="iFile" style="display:none;" onchange="(function(i){var d=document.getElementById('iFileLabel');if(d)d.textContent=i.files[0]?i.files[0].name:'لم يُختر ملف';})(this)">
+                <div style="display:flex;align-items:center;gap:8px;">
+                    <button type="button" class="btn" style="padding:6px 14px;font-size:12px;background:var(--bg-input);color:var(--text-main);border:1px solid var(--border);border-radius:8px;white-space:nowrap;" onclick="document.getElementById('iFile').click()">📎 اختر ملف</button>
+                    <span id="iFileLabel" style="font-size:12px;color:var(--text-dim);">لم يُختر ملف</span>
+                </div>
+            </div>
+        </div>
+    </div>
     <div id="iNotesBox" style="display:none;margin-bottom:15px;">
         <label style="font-size:13px;color:var(--text-dim);display:block;margin-bottom:5px;">التفاصيل</label>
         <textarea id="iNotes" placeholder="اكتب التفاصيل هنا..." rows="3"></textarea>
@@ -249,42 +288,8 @@ c: `
         <span id="cFileLabel" style="font-size:13px;color:var(--text-dim);">لم يُختر ملف</span>
     </div>
     <textarea id="cNotes" placeholder="نص الملاحظة الواردة من السيطرة..." rows="3"></textarea>
-    <div style="margin-top:16px;">
-        <label style="font-size:12px;font-weight:700;color:var(--text-dim);letter-spacing:0.5px;display:block;margin-bottom:10px;">🏷️ نوع الشكوى</label>
-        <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;">
-            <label for="cTypeOther" style="cursor:pointer;position:relative;">
-                <input type="radio" name="cComplaintType" id="cTypeOther" value="أخرى" checked
-                    style="position:absolute;opacity:0;width:0;height:0;"
-                    onchange="document.getElementById('cTypeLabelOther').setAttribute('data-checked','1');document.getElementById('cTypeLabelFin').removeAttribute('data-checked');">
-                <div id="cTypeLabelOther" data-checked="1"
-                    style="position:relative;display:flex;flex-direction:column;align-items:center;gap:6px;padding:14px 10px;border-radius:14px;border:2px solid rgba(100,181,246,0.5);background:rgba(100,181,246,0.1);transition:all 0.2s;user-select:none;"
-                    onclick="document.getElementById('cTypeOther').checked=true;this.setAttribute('data-checked','1');document.getElementById('cTypeLabelFin').removeAttribute('data-checked');">
-                    <span id="checkOther" style="position:absolute;top:7px;left:9px;width:28px;height:28px;background:#fff;border-radius:6px;display:none;align-items:center;justify-content:center;box-shadow:0 1px 4px rgba(0,0,0,0.15);"><span style="font-size:22px;font-weight:900;color:#2e7d32;line-height:1;">✓</span></span>
-                    <span style="font-size:22px;">📋</span>
-                    <span style="font-weight:800;font-size:14px;color:#90caf9;">أخرى</span>
-                    <span style="font-size:10px;color:var(--text-dim);">شكوى عامة</span>
-                </div>
-            </label>
-            <label for="cTypeFinancial" style="cursor:pointer;position:relative;">
-                <input type="radio" name="cComplaintType" id="cTypeFinancial" value="مالية"
-                    style="position:absolute;opacity:0;width:0;height:0;"
-                    onchange="document.getElementById('cTypeLabelFin').setAttribute('data-checked','1');document.getElementById('cTypeLabelOther').removeAttribute('data-checked');">
-                <div id="cTypeLabelFin"
-                    style="position:relative;display:flex;flex-direction:column;align-items:center;gap:6px;padding:14px 10px;border-radius:14px;border:2px solid rgba(198,40,40,0.3);background:rgba(198,40,40,0.06);transition:all 0.2s;user-select:none;"
-                    onclick="document.getElementById('cTypeFinancial').checked=true;this.setAttribute('data-checked','1');document.getElementById('cTypeLabelOther').removeAttribute('data-checked');">
-                    <span id="checkFin" style="position:absolute;top:7px;left:9px;width:28px;height:28px;background:#fff;border-radius:6px;display:none;align-items:center;justify-content:center;box-shadow:0 1px 4px rgba(0,0,0,0.15);"><span style="font-size:22px;font-weight:900;color:#2e7d32;line-height:1;">✓</span></span>
-                    <span style="font-size:22px;">💰</span>
-                    <span style="font-weight:800;font-size:14px;color:#ef9a9a;">مالية</span>
-                    <span style="font-size:10px;color:var(--text-dim);">تستوجب تعويض</span>
-                </div>
-            </label>
-        </div>
-        <style>
-            #cTypeLabelOther[data-checked] { border-color:#42a5f5 !important; background:rgba(66,165,245,0.18) !important; box-shadow:0 0 0 3px rgba(66,165,245,0.15); }
-            #cTypeLabelFin[data-checked]   { border-color:#ef5350 !important; background:rgba(239,83,80,0.18)  !important; box-shadow:0 0 0 3px rgba(239,83,80,0.15);  }
-            #cTypeLabelOther[data-checked] #checkOther { display:flex !important; }
-            #cTypeLabelFin[data-checked]   #checkFin   { display:flex !important; }
-        </style>
+    <div id="cInferredTypeBadge" style="display:none;margin-top:14px;padding:10px 14px;border-radius:12px;background:rgba(156,39,176,0.10);border:1px solid rgba(156,39,176,0.35);font-size:13px;color:#ce93d8;font-weight:700;text-align:center;">
+        🏷️ نوع الشكوى (من الاستفسار): <span id="cInferredTypeText"></span>
     </div>
     <button class="btn btn-main" style="margin-top:15px" onclick="addControl()">إرسال الشكوى</button>
 </div>
@@ -295,7 +300,7 @@ c: `
     <div><label>الفرع</label><select id="searchBranchC" onchange="filterTable()"><option value="">الكل</option></select></div>
     <div><label>التاريخ</label><div class="date-picker-wrap" onclick="openDatePicker('searchDateC')"><span class="date-display" id="searchDateC-display">📅 اختر التاريخ</span><input type="hidden" id="searchDateC"></div></div>
     <div><label>نص الشكوى</label><input type="text" id="searchTextC" placeholder="بحث..." oninput="filterTable()"></div>
-    <div><label>نوع الشكوى</label><select id="searchTypeC" onchange="filterTable()"><option value="">الكل</option><option value="مالية">💰 مالية</option><option value="أخرى">أخرى</option></select></div>
+    <div><label>نوع الشكوى</label><select id="searchTypeC" onchange="filterTable()"><option value="">الكل</option><option value="جودة صنف">جودة صنف</option><option value="مالية">💰 مالية</option><option value="سوء تعامل">سوء تعامل</option><option value="أخرى">أخرى</option></select></div>
     <div><label>الحالة المالية</label><select id="searchFinStatusC" onchange="filterTable()"><option value="">الكل</option><option value="مفتوحة">🔴 مفتوحة (غير محجوزة)</option><option value="مغلقة">🟢 مغلقة (محجوزة)</option></select></div>
     <div><label>اسم الموظف</label><select id="searchAddedByC" onchange="filterTable()"><option value="">الكل</option></select></div>
     <button class="btn" style="background:var(--bg-input);color:var(--text-dim);align-self:end;" onclick="resetSearch('C')">تفريغ</button>

@@ -576,8 +576,10 @@ function populateLinkedInquirySelect() {
     const isMediaLink = currentUser?.role === 'media';
     const canClaim    = canReclaim || currentUser?.role === 'cc_employee' || isMediaLink;
     // الميديا يرى فقط ملاحظاته هو
+    // الربط بالسيطرة مسموح فقط لشكاوى نوعها مالية أو سوء تعامل (أو القديمة بدون نوع — للتوافق الخلفي)
+    const _linkableCT = (ctv) => !ctv || ctv === 'مالية' || ctv === 'سوء تعامل';
     const complaints = db.inquiries.filter(x =>
-        !x.deleted && x.type === 'شكوى' &&
+        !x.deleted && x.type === 'شكوى' && _linkableCT(x.complaintType) &&
         (!isMediaLink || x.addedBy === currentUser.name)
     );
     complaints.forEach(x => {
@@ -602,8 +604,17 @@ function onLinkedInquiryChange() {
     const preview = document.getElementById('linkedInqPreview');
     const previewText = document.getElementById('linkedInqPreviewText');
 
-    const _lockStyle   = 'opacity:0.65;cursor:not-allowed;background:rgba(255,255,255,0.04);';
-    const _unlockStyle = '';
+    const _lockStyle      = 'opacity:0.65;cursor:not-allowed;background:rgba(255,255,255,0.04);';
+    const _lockWrapStyle  = 'opacity:0.65;cursor:not-allowed;pointer-events:none;';
+    const _unlockStyle    = '';
+    const _setLocked = (id, locked, isInput=true) => {
+        const el = document.getElementById(id); if (!el) return;
+        if (isInput) el.readOnly = locked; else el.disabled = locked;
+        el.style.cssText = locked ? _lockStyle : _unlockStyle;
+    };
+
+    const _typeBadge = document.getElementById('cInferredTypeBadge');
+    const _typeText  = document.getElementById('cInferredTypeText');
 
     if (!seqVal) {
         preview.style.display = 'none';
@@ -615,6 +626,17 @@ function onLinkedInquiryChange() {
         if (branchEl) { branchEl.disabled= false; branchEl.innerHTML = '<option value="">الفرع</option>'; branchEl.style.cssText = _unlockStyle; }
         if (phoneEl)  { phoneEl.readOnly = false; phoneEl.value  = ''; phoneEl.style.cssText  = _unlockStyle; }
         if (notesEl)  { notesEl.readOnly = false; notesEl.value  = ''; notesEl.style.cssText  = _unlockStyle; }
+        // فك قفل الحقول المالية + إخفاء بادج النوع + مسح المرفق المنقول
+        ['cMoveNumber','cInvoiceValue','cCallTimeOnly'].forEach(id => _setLocked(id, false));
+        const _cd = document.getElementById('cCallDate'); if (_cd) _cd.value = '';
+        const _cdDisp = document.getElementById('cCallDate-display'); if (_cdDisp) { _cdDisp.textContent = '📅 اختر التاريخ'; _cdDisp.classList.remove('selected'); }
+        const _nd = document.getElementById('cNoteDate'); if (_nd) _nd.value = '';
+        const _ndDisp = document.getElementById('cNoteDate-display'); if (_ndDisp) { _ndDisp.textContent = '📅 اختر التاريخ'; _ndDisp.classList.remove('selected'); }
+        const _wrapCD = document.getElementById('cCallDate-display')?.closest('.date-picker-wrap');  if (_wrapCD) _wrapCD.style.cssText = _unlockStyle;
+        const _wrapND = document.getElementById('cNoteDate-display')?.closest('.date-picker-wrap');  if (_wrapND) _wrapND.style.cssText = _unlockStyle;
+        if (_typeBadge) _typeBadge.style.display = 'none';
+        const _lblImp = document.getElementById('cFileLabel'); if (_lblImp) _lblImp.textContent = 'لم يُختر ملف';
+        document.getElementById('cFile').dataset.inheritedFile = '';
         return;
     }
 
@@ -646,6 +668,56 @@ function onLinkedInquiryChange() {
     const notesEl = document.getElementById('cNotes');
     if (notesEl) { notesEl.value = inq.notes || ''; notesEl.readOnly = true; notesEl.style.cssText = _lockStyle; }
 
+    // تعبئة وقت تلقي الاتصال (وقت إضافة الاستفسار) وتأمينه
+    if (inq.iso) {
+        try {
+            const d = new Date(inq.iso);
+            const _datePart = `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
+            const _timePart = `${String(d.getHours()).padStart(2,'0')}:${String(d.getMinutes()).padStart(2,'0')}`;
+            if (typeof setDatePickerValue === 'function') setDatePickerValue('cCallDate', _datePart);
+            else { const _cd = document.getElementById('cCallDate'); if (_cd) _cd.value = _datePart; }
+            const _t = document.getElementById('cCallTimeOnly'); if (_t) _t.value = _timePart;
+        } catch(e) {}
+    }
+    const _wrapCD = document.getElementById('cCallDate-display')?.closest('.date-picker-wrap');
+    if (_wrapCD) _wrapCD.style.cssText = _lockWrapStyle;
+    _setLocked('cCallTimeOnly', true);
+
+    // تعبئة الحقول المالية (إن وجدت) وتأمينها — تظهر فقط عند نوع "مالية"
+    const isFin = (inq.complaintType === 'مالية');
+    const _ndEl = document.getElementById('cNoteDate');
+    if (_ndEl && inq.noteDate) {
+        if (typeof setDatePickerValue === 'function') setDatePickerValue('cNoteDate', inq.noteDate);
+        else _ndEl.value = inq.noteDate;
+    } else if (_ndEl) {
+        _ndEl.value = '';
+        const _ndDisp = document.getElementById('cNoteDate-display'); if (_ndDisp) { _ndDisp.textContent = '📅 اختر التاريخ'; _ndDisp.classList.remove('selected'); }
+    }
+    const _wrapND = document.getElementById('cNoteDate-display')?.closest('.date-picker-wrap');
+    if (_wrapND) _wrapND.style.cssText = isFin ? _lockWrapStyle : _unlockStyle;
+    const _mn = document.getElementById('cMoveNumber');
+    if (_mn) { _mn.value = inq.moveNumber || ''; _mn.readOnly = isFin; _mn.style.cssText = isFin ? _lockStyle : _unlockStyle; }
+    const _iv = document.getElementById('cInvoiceValue');
+    if (_iv) { _iv.value = inq.invoiceValue || ''; _iv.readOnly = isFin; _iv.style.cssText = isFin ? _lockStyle : _unlockStyle; }
+
+    // عرض بادج نوع الشكوى المستنبط
+    if (_typeBadge && _typeText) {
+        const _ct = inq.complaintType || 'أخرى';
+        _typeText.textContent = _ct;
+        _typeBadge.style.display = '';
+    }
+
+    // نقل المرفق من الاستفسار إلى الشكوى (إن وُجد)
+    const _fileInputEl = document.getElementById('cFile');
+    const _lbl = document.getElementById('cFileLabel');
+    if (inq.file) {
+        if (_fileInputEl) _fileInputEl.dataset.inheritedFile = inq.file;
+        if (_lbl) _lbl.textContent = '📎 مرفق من الاستفسار (سيُنقل تلقائياً)';
+    } else {
+        if (_fileInputEl) _fileInputEl.dataset.inheritedFile = '';
+        if (_lbl) _lbl.textContent = 'لم يُختر ملف';
+    }
+
     preview.style.display = 'block';
-    previewText.textContent = `مرتبط بالاستفسار #${inq.seq} — ${inq.branch} — ${inq.phone}${inq.notes ? ' — ' + inq.notes.substring(0,40) : ''}`;
+    previewText.textContent = `مرتبط بالاستفسار #${inq.seq} — ${inq.branch} — ${inq.phone}${inq.notes ? ' — ' + inq.notes.substring(0,40) : ''}${inq.complaintType ? ' — ' + inq.complaintType : ''}`;
 }

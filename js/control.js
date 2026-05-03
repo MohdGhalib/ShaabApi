@@ -9,14 +9,35 @@ function addControl() {
     const custPhone   = document.getElementById("cCustomerPhone").value.trim();
     const linkedSeq   = document.getElementById("cLinkedInquiry").value;
     const customer    = custPhone ? { phone:custPhone } : null;
-    const callTime    = new Date().toISOString().slice(0, 16);
-    const noteDate    = document.getElementById("cNoteDate").value;
-    const moveNumber  = document.getElementById("cMoveNumber").value.trim();
-    const invoiceValue= document.getElementById("cInvoiceValue").value.trim();
+
+    // إن كانت الشكوى مرتبطة باستفسار: نسحب وقت المكالمة + النوع + الحقول المالية + المرفق من الاستفسار
+    const linkedInq = linkedSeq ? db.inquiries.find(x => String(x.seq) === String(linkedSeq)) : null;
+
+    let callTime;
+    if (linkedInq && linkedInq.iso) {
+        callTime = linkedInq.iso.slice(0, 16);
+    } else {
+        // قراءة من الحقول إن لم يكن هناك ربط
+        const _cd = document.getElementById("cCallDate")?.value || '';
+        const _ct = document.getElementById("cCallTimeOnly")?.value || '';
+        callTime = (_cd && _ct) ? `${_cd}T${_ct}` : new Date().toISOString().slice(0, 16);
+    }
+    const noteDate    = (linkedInq && linkedInq.complaintType === 'مالية' && linkedInq.noteDate)
+                          ? linkedInq.noteDate
+                          : (document.getElementById("cNoteDate")?.value || '');
+    const moveNumber  = (linkedInq && linkedInq.complaintType === 'مالية' && linkedInq.moveNumber)
+                          ? linkedInq.moveNumber
+                          : (document.getElementById("cMoveNumber")?.value.trim() || '');
+    const invoiceValue= (linkedInq && linkedInq.complaintType === 'مالية' && linkedInq.invoiceValue)
+                          ? linkedInq.invoiceValue
+                          : (document.getElementById("cInvoiceValue")?.value.trim() || '');
+
+    // النوع: من الاستفسار حصراً عند الربط؛ بدون ربط = 'أخرى'
+    const cType = linkedInq ? (linkedInq.complaintType || 'أخرى') : 'أخرى';
 
     const fileInput = document.getElementById("cFile");
-    const _typeEl   = document.querySelector('input[name="cComplaintType"]:checked');
-    const cType     = _typeEl ? _typeEl.value : 'أخرى';
+    const inheritedFile = fileInput?.dataset?.inheritedFile || '';
+
     const status = 'تمت الموافقة';
     const base = { id:Date.now(), country: co || _countryForCity(c), city:c, branch:b, notes:n, audit:'', time:now(), iso:iso(),
         addedBy:currentUser.name, status, customer, linkedInqSeq: linkedSeq||null,
@@ -46,6 +67,12 @@ function addControl() {
             resetControlForm();
         };
         reader.readAsDataURL(fileInput.files[0]);
+    } else if (inheritedFile) {
+        // نقل المرفق المحجوز من الاستفسار المرتبط
+        db.complaints.unshift({ ...base, file: inheritedFile });
+        save();
+        _notifyComplaint();
+        resetControlForm();
     } else {
         db.complaints.unshift({ ...base, file:null });
         save();
@@ -79,7 +106,8 @@ function resetControlForm() {
     const preview = document.getElementById('linkedInqPreview');
     if (preview) preview.style.display = 'none';
     populateLinkedInquirySelect();
-    const _typeOther = document.getElementById('cTypeOther'); if (_typeOther) _typeOther.checked = true;
+    const _badge = document.getElementById('cInferredTypeBadge'); if (_badge) _badge.style.display = 'none';
+    const _fileEl = document.getElementById('cFile'); if (_fileEl) _fileEl.dataset.inheritedFile = '';
 }
 
 function approveControl(id) {

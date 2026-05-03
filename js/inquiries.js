@@ -4,6 +4,27 @@
 function toggleInquiryNotes() {
     const t = document.getElementById("iType").value;
     document.getElementById("iNotesBox").style.display = (t==="شكوى"||t==="أخرى") ? "block" : "none";
+    const ctBox = document.getElementById("iComplaintTypeBox");
+    if (ctBox) ctBox.style.display = (t === "شكوى") ? "block" : "none";
+    if (t !== "شكوى") {
+        const ctSel = document.getElementById("iComplaintType");
+        if (ctSel) ctSel.value = "";
+        toggleComplaintFinancialBox();
+    }
+}
+
+function toggleComplaintFinancialBox() {
+    const ct = document.getElementById("iComplaintType")?.value || '';
+    const fin = document.getElementById("iFinancialBox");
+    if (fin) fin.style.display = (ct === "مالية") ? "block" : "none";
+    if (ct !== "مالية") {
+        // تنظيف الحقول لو الصندوق أُخفي
+        ['iMoveNumber','iInvoiceValue','iNoteDate'].forEach(id => { const el=document.getElementById(id); if(el) el.value=''; });
+        const _f = document.getElementById('iFile'); if (_f) _f.value = '';
+        const _l = document.getElementById('iFileLabel'); if (_l) _l.textContent = 'لم يُختر ملف';
+        const _disp = document.getElementById('iNoteDate-display');
+        if (_disp) { _disp.textContent = '📅 اختر التاريخ'; _disp.classList.remove('selected'); }
+    }
 }
 
 function toggleUnspecifiedBranch() {
@@ -45,22 +66,59 @@ function addInquiry() {
     const b = c === 'غير محدد' ? 'غير محدد' : branchEl.value;
     const needsNotes = (t==="شكوى"||t==="أخرى");
     const n = needsNotes ? document.getElementById("iNotes").value.trim() : "";
+    const ct = (t === "شكوى") ? (document.getElementById("iComplaintType")?.value || '') : '';
     if (!c||!b||!p||!t) return alert("يرجى إكمال البيانات");
     if (needsNotes&&!n) return alert("يرجى كتابة التفاصيل");
+    if (t === "شكوى" && !ct) return alert("يرجى تحديد نوع الشكوى");
+    let invoiceValue='', moveNumber='', noteDate='';
+    let fileInput = null;
+    if (ct === "مالية") {
+        invoiceValue = document.getElementById("iInvoiceValue")?.value.trim() || '';
+        moveNumber   = document.getElementById("iMoveNumber")?.value.trim()   || '';
+        noteDate     = document.getElementById("iNoteDate")?.value            || '';
+        fileInput    = document.getElementById("iFile");
+    }
+
     if (!db.inquiriesnqSeq) db.inquiriesnqSeq = 1;
-    db.inquiries.unshift({ id:Date.now(), seq:db.inquiriesnqSeq++, country: co || _countryForCity(c), city:c, branch:b, phone:p, type:t, notes:n,
-        time:now(), iso:iso(), addedBy:currentUser.name });
-    save();
-    document.getElementById("iPhone").value="";
-    document.getElementById("iType").value="";
-    document.getElementById("iNotes").value="";
-    document.getElementById("iNotesBox").style.display="none";
-    if (ctryEl) ctryEl.value = "";
-    document.getElementById("iCityAdd").value="";
-    if (typeof updateCities === 'function') updateCities("iCountryAdd","iCityAdd","iBranchAdd");
-    else updateBranches("iCityAdd","iBranchAdd");
-    populateLinkedInquirySelect();
-    toggleUnspecifiedBranch();
+    const baseRec = {
+        id: Date.now(), seq: db.inquiriesnqSeq++,
+        country: co || _countryForCity(c), city:c, branch:b, phone:p,
+        type:t, notes:n,
+        complaintType: ct || null,
+        invoiceValue: invoiceValue || '',
+        moveNumber:   moveNumber   || '',
+        noteDate:     noteDate     || '',
+        time: now(), iso: iso(), addedBy: currentUser.name
+    };
+
+    const _afterSave = () => {
+        save();
+        document.getElementById("iPhone").value="";
+        document.getElementById("iType").value="";
+        document.getElementById("iNotes").value="";
+        document.getElementById("iNotesBox").style.display="none";
+        const _ctSel = document.getElementById("iComplaintType"); if (_ctSel) _ctSel.value = "";
+        const _ctBox = document.getElementById("iComplaintTypeBox"); if (_ctBox) _ctBox.style.display = "none";
+        toggleComplaintFinancialBox();
+        if (ctryEl) ctryEl.value = "";
+        document.getElementById("iCityAdd").value="";
+        if (typeof updateCities === 'function') updateCities("iCountryAdd","iCityAdd","iBranchAdd");
+        else updateBranches("iCityAdd","iBranchAdd");
+        populateLinkedInquirySelect();
+        toggleUnspecifiedBranch();
+    };
+
+    if (fileInput && fileInput.files && fileInput.files[0]) {
+        const reader = new FileReader();
+        reader.onload = e => {
+            db.inquiries.unshift({ ...baseRec, file: e.target.result });
+            _afterSave();
+        };
+        reader.readAsDataURL(fileInput.files[0]);
+    } else {
+        db.inquiries.unshift({ ...baseRec, file: null });
+        _afterSave();
+    }
 }
 
 
