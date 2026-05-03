@@ -422,8 +422,10 @@ function setupCitySelects() {
 
 function updateBranches(cityId, branchId) {
     const city = document.getElementById(cityId).value;
+    const branchEl = document.getElementById(branchId);
     if (city === 'غير محدد') {
-        document.getElementById(branchId).innerHTML = '<option value="غير محدد">غير محدد</option>';
+        branchEl.innerHTML = '<option value="غير محدد">غير محدد</option>';
+        if (branchEl) branchEl.disabled = false;
         return;
     }
     const isSearch = cityId.includes('search');
@@ -436,8 +438,22 @@ function updateBranches(cityId, branchId) {
             html += `<option value="${b}">${b}</option>`;
         });
     }
-    document.getElementById(branchId).innerHTML = html;
+    branchEl.innerHTML = html;
+    // إقفال الفرع حتى اختيار المحافظة
+    branchEl.disabled = !city;
 }
+
+/* ── خريطة ربط دولة ↔ محافظة/فرع ── */
+const _COUNTRY_LINKAGE = {
+    'mCountryAdd':          { cityId:'mCityAdd',          branchId:'mBranchAdd'         },
+    'iCountryAdd':          { cityId:'iCityAdd',          branchId:'iBranchAdd'         },
+    'cCountryAdd':          { cityId:'cCityAdd',          branchId:'cBranchAdd'         },
+    'searchCountryM':       { cityId:'searchCityM',       branchId:'searchBranchM'      },
+    'searchCountryC':       { cityId:'searchCityC',       branchId:'searchBranchC'      },
+    'searchCountryO':       { cityId:'searchCityO',       branchId:'searchBranchO'      },
+    'searchCountryI':       { cityId:'searchCityI',       branchId:'searchBranchI'      },
+    'deliverCountrySelect': { cityId:'deliverCitySelect', branchId:'deliverBranchSelect' }
+};
 
 /* ── ربط دولة → مدن: ينظّف قائمة المدن ويحدّث label المستوى الثاني ── */
 function updateCities(countryId, cityId, branchId) {
@@ -456,27 +472,36 @@ function updateCities(countryId, cityId, branchId) {
     let html = isSearch ? '<option value="">الكل</option>' : `<option value="">اختيار ${regionLabel}</option>`;
     if (country && COUNTRIES_DATA[country]) {
         for (const r in COUNTRIES_DATA[country].regions) html += `<option value="${r}">${r}</option>`;
-    } else {
-        for (const r in branches) html += `<option value="${r}">${r}</option>`;
     }
     ciEl.innerHTML = html;
+    // إقفال المحافظة حتى اختيار الدولة
+    ciEl.disabled = !country;
 
     if (branchId) {
         const bEl = document.getElementById(branchId);
-        if (bEl) bEl.innerHTML = isSearch ? '<option value="">الكل</option>' : '<option value="">الفرع</option>';
+        if (bEl) {
+            bEl.innerHTML = isSearch ? '<option value="">الكل</option>' : '<option value="">الفرع</option>';
+            // الفرع يبقى مقفلاً ما دام لا توجد دولة (وبالتبعية لا توجد محافظة)
+            bEl.disabled = true;
+        }
     }
 }
 
-/* ── تعبئة قوائم الدول ── */
+/* ── تعبئة قوائم الدول + قفل المحافظات/الفروع المرتبطة ابتدائياً ── */
 function setupCountrySelects() {
-    const countrySelects = ['mCountryAdd','iCountryAdd','cCountryAdd','searchCountryM','searchCountryC','searchCountryO','searchCountryI','deliverCountrySelect'];
     let allOptions = '';
     for (const c in COUNTRIES_DATA) allOptions += `<option value="${c}">${c}</option>`;
-    countrySelects.forEach(id => {
-        const el = document.getElementById(id); if (!el) return;
+    for (const id in _COUNTRY_LINKAGE) {
+        const el = document.getElementById(id); if (!el) continue;
         const isSearch = id.startsWith('search') || id === 'deliverCountrySelect';
         el.innerHTML = (isSearch ? '<option value="">الكل</option>' : '<option value="">اختيار الدولة</option>') + allOptions;
-    });
+        // قفل المحافظة والفرع حتى تُختار الدولة
+        const link = _COUNTRY_LINKAGE[id];
+        const ciEl = document.getElementById(link.cityId);
+        const bEl  = document.getElementById(link.branchId);
+        if (ciEl) { ciEl.innerHTML = isSearch ? '<option value="">الكل</option>' : '<option value="">اختيار المحافظة</option>'; ciEl.disabled = true; }
+        if (bEl)  { bEl.innerHTML  = isSearch ? '<option value="">الكل</option>' : '<option value="">الفرع</option>';        bEl.disabled  = true; }
+    }
 }
 
 function populateEmployeeDropdowns() {
