@@ -110,7 +110,7 @@ i: `
             <option value="استفسار عن سعر منتج">استفسار عن سعر منتج</option>
             <option value="توظيف">توظيف</option>
             <option value="طلبية">طلبية</option>
-            <option value="تحويل لمول الشعب">تحويل لمول الشعب</option>
+            <option value="تحويل لمولات او بوابة الشعب">تحويل لمولات او بوابة الشعب</option>
             <option value="أخرى">أخرى</option>
         </select>
     </div>
@@ -133,7 +133,7 @@ i: `
             <option value="استفسار عن سعر منتج">استفسار عن سعر منتج</option>
             <option value="توظيف">توظيف</option>
             <option value="طلبية">طلبية</option>
-            <option value="تحويل لمول الشعب">تحويل لمول الشعب</option>
+            <option value="تحويل لمولات او بوابة الشعب">تحويل لمولات او بوابة الشعب</option>
             <option value="أخرى">أخرى</option>
         </select>
     </div>

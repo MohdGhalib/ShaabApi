@@ -1,6 +1,9 @@
 ﻿/* ══════════════════════════════════════════════════════
    MISSING ITEMS — CRUD with 5-second confirm overlay
 ══════════════════════════════════════════════════════ */
+/* ── حالة نافذة وقت تسجيل المنتسية ── */
+let _addMTimeMode = 'now';
+
 function addMontasia() {
     const c = document.getElementById("mCityAdd").value;
     const b = document.getElementById("mBranchAdd").value;
@@ -8,8 +11,66 @@ function addMontasia() {
     const t = document.getElementById("mType").value;
     const be = (document.getElementById("mBranchEmp")?.value||'').trim();
     if (!c||!b||!n||!t||!be) return alert("يرجى إكمال البيانات");
-    db.montasiat.unshift({ id:Date.now(), city:c, branch:b, notes:n, type:t, branchEmp:be, time:now(), iso:iso(),
-        status:'قيد الانتظار', dt:'', addedBy:currentUser.name, deliveredBy:'' });
+
+    // فتح نافذة اختيار وقت التسجيل
+    _addMTimeMode = 'now';
+    selectAddMTimeMode('now');
+    const prevDate = document.getElementById('addMPrevDate');
+    const prevDisp = document.getElementById('addMPrevDate-display');
+    const prevTime = document.getElementById('addMPrevTime');
+    const prevReason = document.getElementById('addMPrevReason');
+    if (prevDate) prevDate.value = '';
+    if (prevDisp) { prevDisp.textContent = '📅 اختر التاريخ'; prevDisp.classList.remove('selected'); }
+    if (prevTime) prevTime.value = '';
+    if (prevReason) prevReason.value = '';
+    document.getElementById("addMontasiaTimeModal").classList.remove("hidden");
+}
+
+function selectAddMTimeMode(mode) {
+    _addMTimeMode = mode;
+    const nowCard    = document.getElementById('addMNowCard');
+    const prevCard   = document.getElementById('addMPrevCard');
+    const prevFields = document.getElementById('addMPrevFields');
+    if (nowCard)  { nowCard.style.borderColor  = mode==='now'      ? 'var(--accent-red)' : ''; nowCard.style.background  = mode==='now'      ? 'var(--soft-red)' : ''; }
+    if (prevCard) { prevCard.style.borderColor = mode==='previous' ? 'var(--accent-red)' : ''; prevCard.style.background = mode==='previous' ? 'var(--soft-red)' : ''; }
+    if (prevFields) prevFields.style.display = mode==='previous' ? 'block' : 'none';
+}
+
+function cancelAddMontasia() {
+    document.getElementById("addMontasiaTimeModal").classList.add("hidden");
+}
+
+function confirmAddMontasia() {
+    const c = document.getElementById("mCityAdd").value;
+    const b = document.getElementById("mBranchAdd").value;
+    const n = document.getElementById("mNotes").value.trim();
+    const t = document.getElementById("mType").value;
+    const be = (document.getElementById("mBranchEmp")?.value||'').trim();
+    if (!c||!b||!n||!t||!be) return alert("يرجى إكمال البيانات");
+
+    const rec = { id:Date.now(), city:c, branch:b, notes:n, type:t, branchEmp:be, time:now(), iso:iso(),
+        status:'قيد الانتظار', dt:'', addedBy:currentUser.name, deliveredBy:'' };
+
+    if (_addMTimeMode === 'previous') {
+        const dateVal = document.getElementById('addMPrevDate')?.value;
+        const timeVal = document.getElementById('addMPrevTime')?.value;
+        const reasonVal = (document.getElementById('addMPrevReason')?.value||'').trim();
+        if (!dateVal) return alert("يرجى تحديد تاريخ التسجيل السابق");
+        if (!timeVal) return alert("يرجى تحديد وقت التسجيل السابق");
+        if (!reasonVal) return alert("يرجى كتابة سبب التسجيل بوقت سابق");
+        const [y,m,d] = dateVal.split('-');
+        const _h = parseInt(timeVal.split(':')[0]||0);
+        const _m = (timeVal.split(':')[1]||'00');
+        const _ampm = _h>=12?'PM':'AM';
+        const _h12 = _h%12||12;
+        rec.time = `${parseInt(d)}/${parseInt(m)}/${y}، ${_h12}:${_m} ${_ampm}`;
+        rec.iso  = `${y}-${m}-${d}`;
+        rec.addLateReason   = reasonVal;
+        rec.addLateNotedAt  = now();
+        rec.isLateAdd       = true;
+    }
+
+    db.montasiat.unshift(rec);
     if (typeof _skipMontasiaNotif !== 'undefined') _skipMontasiaNotif = true;
     save();
     document.getElementById("mNotes").value = "";
@@ -17,6 +78,39 @@ function addMontasia() {
     const beEl = document.getElementById("mBranchEmp"); if (beEl) beEl.value = "";
     document.getElementById("mCityAdd").value = "";
     updateBranches("mCityAdd", "mBranchAdd");
+    cancelAddMontasia();
+}
+
+function showAddLateNote(id) {
+    const item = db.montasiat.find(x => x.id === id);
+    if (!item || !item.addLateReason) return;
+
+    const overlay = document.createElement('div');
+    overlay.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.72);z-index:9999;display:flex;align-items:center;justify-content:center;backdrop-filter:blur(4px);';
+    overlay.innerHTML = `
+        <div style="background:var(--bg-card);border:1px solid var(--border);border-radius:24px;
+                    padding:36px 32px;width:420px;max-width:92vw;box-shadow:0 30px 60px rgba(0,0,0,0.5);">
+            <div style="font-size:28px;text-align:center;margin-bottom:10px;">📝</div>
+            <h3 style="margin:0 0 6px;color:var(--accent-red);text-align:center;">سبب التسجيل بوقت سابق</h3>
+            <div style="font-size:13px;color:var(--text-dim);text-align:center;margin-bottom:20px;">
+                ${sanitize(item.branch)} — ${sanitize(item.city)}
+                ${item.addLateNotedAt ? `<br><span style="color:var(--text-main);font-weight:700;">⏰ وقت تسجيل الملاحظة: ${typeof _toLatinDigits==='function'?_toLatinDigits(item.addLateNotedAt):item.addLateNotedAt}</span>` : ''}
+            </div>
+            <div style="background:var(--bg-input);border:1px solid var(--border);border-radius:14px;
+                        padding:16px;font-size:14px;color:var(--text-main);line-height:1.8;text-align:right;">
+                ${sanitize(item.addLateReason)}
+            </div>
+            <button onclick="this.closest('.snModal').remove()"
+                style="width:100%;margin-top:20px;padding:12px;border:1px solid var(--border);
+                       border-radius:12px;background:var(--bg-input);color:var(--text-dim);
+                       font-family:'Cairo';font-size:14px;cursor:pointer;">
+                إغلاق
+            </button>
+        </div>
+    `;
+    overlay.classList.add('snModal');
+    overlay.addEventListener('click', e => { if (e.target === overlay) overlay.remove(); });
+    document.body.appendChild(overlay);
 }
 
 /* ── Delivery modal ── */
@@ -104,7 +198,10 @@ function confirmDeliver() {
         const [y,m,d] = dateVal.split('-');
         item.dt = `${y}/${m}/${d} — ${timeVal}`;
         const notesVal = document.getElementById('deliverPrevNotes')?.value.trim();
-        if (notesVal) item.deliverNotes = notesVal;
+        if (notesVal) {
+            item.deliverNotes      = notesVal;
+            item.deliverNotesAddedAt = now();
+        }
         item.isLateDelivery = true;
     } else {
         item.dt = now();
@@ -172,7 +269,7 @@ function showDeliverNotes(id) {
             <h3 style="margin:0 0 6px;color:var(--accent-red);text-align:center;">ملاحظات التسليم</h3>
             <div style="font-size:13px;color:var(--text-dim);text-align:center;margin-bottom:20px;">
                 ${sanitize(item.branch)} — ${sanitize(item.city)}
-                ${item.dt ? `<br><span style="color:var(--text-main);font-weight:700;">⏰ ${typeof _toLatinDigits==='function'?_toLatinDigits(item.dt):item.dt}</span>` : ''}
+                ${item.deliverNotesAddedAt ? `<br><span style="color:var(--text-main);font-weight:700;">⏰ وقت تسجيل الملاحظة: ${typeof _toLatinDigits==='function'?_toLatinDigits(item.deliverNotesAddedAt):item.deliverNotesAddedAt}</span>` : ''}
             </div>
             <div style="background:var(--bg-input);border:1px solid var(--border);border-radius:14px;
                         padding:16px;font-size:14px;color:var(--text-main);line-height:1.8;text-align:right;">

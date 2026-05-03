@@ -312,7 +312,7 @@ function _renderTableM(get, isAdmin) {
                 <span class="status-badge ${statusClass}">${x.status==='قيد الانتظار' ? 'لم يتم التسليم' : x.status}${x.status==='تم التسليم' && x.deliveredBy ? ' بواسطة '+sanitize(x.deliveredBy) : ''}</span>
                 ${deliveryTimeBox}
             </td>
-            <td><small>${_toLatinDigits(_timeToAmPm(x.time))}</small></td>
+            <td><small>${_toLatinDigits(_timeToAmPm(x.time))}</small>${x.addLateReason ? `<br><button onclick="showAddLateNote(${x.id})" style="margin-top:4px;cursor:pointer;background:rgba(255,152,0,0.12);border:1px solid rgba(255,152,0,0.35);color:#ffb74d;border-radius:7px;padding:3px 10px;font-family:'Cairo';font-size:11px;font-weight:700;">👁 عرض</button>` : ''}</td>
             <td style="text-align:center;">
                 <div style="display:flex;flex-direction:column;gap:4px;align-items:center;">
                 ${x.deliverNotes

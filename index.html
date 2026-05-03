@@ -362,6 +362,55 @@
 </div>
 
 
+<!-- ══ ADD MONTASIA TIME MODAL ══ -->
+<div class="modal-overlay hidden" id="addMontasiaTimeModal">
+    <div class="modal-box" style="width:480px;max-width:95vw;">
+        <button class="modal-close" onclick="cancelAddMontasia()">✕</button>
+        <div style="font-size:28px;margin-bottom:12px;">📋</div>
+        <h3 style="margin:0 0 6px;color:var(--accent-red);">تسجيل المنتسية</h3>
+        <div style="font-size:13px;color:var(--text-dim);margin-bottom:24px;">اختر وقت تسجيل المنتسية</div>
+
+        <!-- ── اختيار وقت التسجيل ── -->
+        <div style="margin-bottom:20px;">
+            <label style="font-size:13px;color:var(--text-dim);display:block;margin-bottom:10px;font-weight:700;">⏰ وقت التسجيل</label>
+            <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px;">
+                <div class="break-btn-card" id="addMNowCard" onclick="selectAddMTimeMode('now')" style="border-color:var(--accent-red);background:var(--soft-red);">
+                    <span class="break-icon">⚡</span>
+                    تسجيل الآن
+                </div>
+                <div class="break-btn-card" id="addMPrevCard" onclick="selectAddMTimeMode('previous')">
+                    <span class="break-icon">🕐</span>
+                    تسجيل بوقت سابق
+                </div>
+            </div>
+        </div>
+
+        <!-- ── حقول الوقت السابق ── -->
+        <div id="addMPrevFields" style="display:none;margin-bottom:20px;background:rgba(255,255,255,0.03);border:1px solid var(--border);border-radius:14px;padding:16px;">
+            <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:12px;">
+                <div>
+                    <label style="font-size:12px;color:var(--text-dim);display:block;margin-bottom:6px;">📅 تاريخ التسجيل</label>
+                    <div class="date-picker-wrap" onclick="openDatePicker('addMPrevDate','day')">
+                        <span class="date-display" id="addMPrevDate-display">📅 اختر التاريخ</span>
+                        <input type="hidden" id="addMPrevDate">
+                    </div>
+                </div>
+                <div>
+                    <label style="font-size:12px;color:var(--text-dim);display:block;margin-bottom:6px;">🕐 وقت التسجيل</label>
+                    <input type="time" id="addMPrevTime" style="padding:10px;">
+                </div>
+            </div>
+            <div>
+                <label style="font-size:12px;color:var(--text-dim);display:block;margin-bottom:6px;">📝 سبب التسجيل بوقت سابق *</label>
+                <textarea id="addMPrevReason" rows="2" placeholder="اكتب سبب التسجيل بوقت سابق..."></textarea>
+            </div>
+        </div>
+
+        <button class="btn btn-main" style="width:100%;padding:14px;font-size:15px;" onclick="confirmAddMontasia()">✅ تأكيد التسجيل</button>
+    </div>
+</div>
+
+
 <!-- ══ DELETE CONFIRM MODAL (عام لجميع عمليات الحذف) ══ -->
 <div class="modal-overlay hidden" id="deleteConfirmModal" onclick="if(event.target===this)cancelDeleteAction()">
     <div class="modal-box" style="width:420px;max-width:92vw;text-align:right;">
