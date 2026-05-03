@@ -262,7 +262,7 @@ c: `
             </div>
         </div>
     </div>
-    <div style="display:grid;grid-template-columns:1fr 1fr;gap:15px;margin-bottom:15px;">
+    <div id="cFinancialFieldsRow" style="display:none;grid-template-columns:1fr 1fr;gap:15px;margin-bottom:15px;">
         <div>
             <label style="font-size:13px;color:var(--text-dim);display:block;margin-bottom:5px;">🔢 رقم الحركة</label>
             <input type="text" id="cMoveNumber" placeholder="رقم الحركة">

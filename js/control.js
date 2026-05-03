@@ -14,8 +14,12 @@ function addControl() {
     const linkedInq = linkedSeq ? db.inquiries.find(x => String(x.seq) === String(linkedSeq)) : null;
 
     let callTime;
-    if (linkedInq && linkedInq.iso) {
-        callTime = linkedInq.iso.slice(0, 16);
+    if (linkedInq) {
+        // وقت تلقي الاتصال = وقت إضافة الاستفسار الفعلي (inq.id = Date.now())
+        const _ts = linkedInq.id || (linkedInq.iso ? Date.parse(linkedInq.iso) : Date.now());
+        const d = new Date(_ts);
+        const pad = n => String(n).padStart(2,'0');
+        callTime = `${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
     } else {
         // قراءة من الحقول إن لم يكن هناك ربط
         const _cd = document.getElementById("cCallDate")?.value || '';

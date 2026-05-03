@@ -626,8 +626,12 @@ function onLinkedInquiryChange() {
         if (branchEl) { branchEl.disabled= false; branchEl.innerHTML = '<option value="">الفرع</option>'; branchEl.style.cssText = _unlockStyle; }
         if (phoneEl)  { phoneEl.readOnly = false; phoneEl.value  = ''; phoneEl.style.cssText  = _unlockStyle; }
         if (notesEl)  { notesEl.readOnly = false; notesEl.value  = ''; notesEl.style.cssText  = _unlockStyle; }
-        // فك قفل الحقول المالية + إخفاء بادج النوع + مسح المرفق المنقول
+        // فك قفل الحقول المالية + إخفاء صفها + إخفاء بادج النوع + مسح المرفق المنقول
         ['cMoveNumber','cInvoiceValue','cCallTimeOnly'].forEach(id => _setLocked(id, false));
+        const _finRow = document.getElementById('cFinancialFieldsRow');
+        if (_finRow) _finRow.style.display = 'none';
+        const _mnEl = document.getElementById('cMoveNumber'); if (_mnEl) _mnEl.value = '';
+        const _ivEl = document.getElementById('cInvoiceValue'); if (_ivEl) _ivEl.value = '';
         const _cd = document.getElementById('cCallDate'); if (_cd) _cd.value = '';
         const _cdDisp = document.getElementById('cCallDate-display'); if (_cdDisp) { _cdDisp.textContent = '📅 اختر التاريخ'; _cdDisp.classList.remove('selected'); }
         const _nd = document.getElementById('cNoteDate'); if (_nd) _nd.value = '';
@@ -668,17 +672,17 @@ function onLinkedInquiryChange() {
     const notesEl = document.getElementById('cNotes');
     if (notesEl) { notesEl.value = inq.notes || ''; notesEl.readOnly = true; notesEl.style.cssText = _lockStyle; }
 
-    // تعبئة وقت تلقي الاتصال (وقت إضافة الاستفسار) وتأمينه
-    if (inq.iso) {
-        try {
-            const d = new Date(inq.iso);
-            const _datePart = `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
-            const _timePart = `${String(d.getHours()).padStart(2,'0')}:${String(d.getMinutes()).padStart(2,'0')}`;
-            if (typeof setDatePickerValue === 'function') setDatePickerValue('cCallDate', _datePart);
-            else { const _cd = document.getElementById('cCallDate'); if (_cd) _cd.value = _datePart; }
-            const _t = document.getElementById('cCallTimeOnly'); if (_t) _t.value = _timePart;
-        } catch(e) {}
-    }
+    // تعبئة وقت تلقي الاتصال (وقت إضافة الاستفسار الفعلي) وتأمينه
+    // ملاحظة: inq.iso = تاريخ فقط؛ نستخدم inq.id (Date.now() عند الإضافة) للوقت الدقيق
+    try {
+        const _ts = inq.id || (inq.iso ? Date.parse(inq.iso) : Date.now());
+        const d = new Date(_ts);
+        const _datePart = `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
+        const _timePart = `${String(d.getHours()).padStart(2,'0')}:${String(d.getMinutes()).padStart(2,'0')}`;
+        if (typeof setDatePickerValue === 'function') setDatePickerValue('cCallDate', _datePart);
+        else { const _cd = document.getElementById('cCallDate'); if (_cd) _cd.value = _datePart; }
+        const _t = document.getElementById('cCallTimeOnly'); if (_t) _t.value = _timePart;
+    } catch(e) {}
     const _wrapCD = document.getElementById('cCallDate-display')?.closest('.date-picker-wrap');
     if (_wrapCD) _wrapCD.style.cssText = _lockWrapStyle;
     _setLocked('cCallTimeOnly', true);
@@ -695,10 +699,21 @@ function onLinkedInquiryChange() {
     }
     const _wrapND = document.getElementById('cNoteDate-display')?.closest('.date-picker-wrap');
     if (_wrapND) _wrapND.style.cssText = isFin ? _lockWrapStyle : _unlockStyle;
+    // إظهار/إخفاء صف "رقم الحركة + قيمة الفاتورة" حسب نوع الشكوى
+    const _finRow = document.getElementById('cFinancialFieldsRow');
+    if (_finRow) _finRow.style.display = isFin ? 'grid' : 'none';
     const _mn = document.getElementById('cMoveNumber');
-    if (_mn) { _mn.value = inq.moveNumber || ''; _mn.readOnly = isFin; _mn.style.cssText = isFin ? _lockStyle : _unlockStyle; }
+    if (_mn) {
+        _mn.value = isFin ? (inq.moveNumber || '') : '';
+        _mn.readOnly = isFin;
+        _mn.style.cssText = isFin ? _lockStyle : _unlockStyle;
+    }
     const _iv = document.getElementById('cInvoiceValue');
-    if (_iv) { _iv.value = inq.invoiceValue || ''; _iv.readOnly = isFin; _iv.style.cssText = isFin ? _lockStyle : _unlockStyle; }
+    if (_iv) {
+        _iv.value = isFin ? (inq.invoiceValue || '') : '';
+        _iv.readOnly = isFin;
+        _iv.style.cssText = isFin ? _lockStyle : _unlockStyle;
+    }
 
     // عرض بادج نوع الشكوى المستنبط
     if (_typeBadge && _typeText) {
