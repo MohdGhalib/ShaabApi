@@ -60,8 +60,8 @@ m: `
             <th>التفاصيل</th>
             <th style="width:13%">أضافه</th>
             <th style="width:11%">الحالة</th>
-            <th style="width:12%">الوقت</th>
-            <th style="width:9%">ملاحظات</th>
+            <th style="width:12%">وقت التبليغ</th>
+            <th style="width:14%">وقت التسليم</th>
             <th style="width:13%">إجراء</th>
         </tr></thead>
         <tbody></tbody>
