@@ -21,7 +21,10 @@ m: `
         <input id="mBranchEmp" type="text" placeholder="اسم موظف الفرع *">
     </div>
     <textarea id="mNotes" placeholder="تفاصيل المنتسية..." rows="3"></textarea>
-    <button class="btn btn-main" style="margin-top:15px" onclick="addMontasia()">حفظ البيانات</button>
+    <div style="display:flex;gap:10px;margin-top:15px;flex-wrap:wrap;">
+        <button class="btn btn-main" onclick="addMontasia()">حفظ البيانات</button>
+        <button class="btn" onclick="openBulkMontasiat()" style="background:linear-gradient(135deg,rgba(21,101,192,0.18),rgba(21,101,192,0.08));border:1px solid rgba(21,101,192,0.5);color:#64b5f6;font-family:'Cairo';font-weight:700;">📋 إدخال منتسيات جماعية</button>
+    </div>
 </div>
 <div class="search-bar search-bar-m">
     <div style="grid-column:1/-1;" class="search-section-title">🔍 خيارات البحث</div>
