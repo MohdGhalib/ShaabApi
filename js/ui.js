@@ -618,10 +618,12 @@ function onLinkedInquiryChange() {
 
     if (!seqVal) {
         preview.style.display = 'none';
+        const countryEl= document.getElementById('cCountryAdd');
         const cityEl   = document.getElementById('cCityAdd');
         const branchEl = document.getElementById('cBranchAdd');
         const phoneEl  = document.getElementById('cCustomerPhone');
         const notesEl  = document.getElementById('cNotes');
+        if (countryEl){ countryEl.disabled = false; countryEl.value = ''; countryEl.style.cssText = _unlockStyle; }
         if (cityEl)   { cityEl.disabled  = false; cityEl.value   = ''; cityEl.style.cssText   = _unlockStyle; }
         if (branchEl) { branchEl.disabled= false; branchEl.innerHTML = '<option value="">الفرع</option>'; branchEl.style.cssText = _unlockStyle; }
         if (phoneEl)  { phoneEl.readOnly = false; phoneEl.value  = ''; phoneEl.style.cssText  = _unlockStyle; }
@@ -646,6 +648,16 @@ function onLinkedInquiryChange() {
 
     const inq = db.inquiries.find(x => String(x.seq) === String(seqVal));
     if (!inq) return;
+
+    // تعبئة الدولة وتأمينها
+    const countryEl = document.getElementById('cCountryAdd');
+    const inqCountry = inq.country || (typeof _countryForCity === 'function' ? _countryForCity(inq.city) : '');
+    if (countryEl) {
+        countryEl.value = inqCountry || '';
+        if (typeof updateCities === 'function') updateCities('cCountryAdd','cCityAdd','cBranchAdd');
+        countryEl.disabled = true;
+        countryEl.style.cssText = _lockStyle;
+    }
 
     // تعبئة المحافظة والفرع وتأمينهما
     const cityEl   = document.getElementById('cCityAdd');

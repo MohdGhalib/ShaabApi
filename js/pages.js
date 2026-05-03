@@ -180,7 +180,7 @@ i: `
                 <input type="text" id="iInvoiceValue" placeholder="قيمة الفاتورة">
             </div>
             <div>
-                <label style="font-size:12px;color:var(--text-dim);display:block;margin-bottom:5px;">📎 إرفاق فاتورة</label>
+                <label style="font-size:12px;color:var(--text-dim);display:block;margin-bottom:5px;">📎 إرفاق فاتورة <span style="color:#ce93d8;font-size:10px;">(اختياري)</span></label>
                 <input type="file" id="iFile" style="display:none;" onchange="(function(i){var d=document.getElementById('iFileLabel');if(d)d.textContent=i.files[0]?i.files[0].name:'لم يُختر ملف';})(this)">
                 <div style="display:flex;align-items:center;gap:8px;">
                     <button type="button" class="btn" style="padding:6px 14px;font-size:12px;background:var(--bg-input);color:var(--text-main);border:1px solid var(--border);border-radius:8px;white-space:nowrap;" onclick="document.getElementById('iFile').click()">📎 اختر ملف</button>
