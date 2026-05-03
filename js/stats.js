@@ -105,7 +105,13 @@ function renderBranches() {
     // تجميع الشكاوى المحتسَبة فقط (عبر زر "احتساب شكوى") — كل دور يرى إحصائياته المستقلة
     const isControlEmpStats = currentUser?.role === 'control_employee';
     const counts = {};
+    // تقييم الفروع: محصور بالأردن فقط (يستثني السجلات للدول الأخرى)
+    const _isJordan = (x) => {
+        const ctry = x.country || (typeof _countryForCity === 'function' ? _countryForCity(x.city) : 'الأردن');
+        return ctry === 'الأردن';
+    };
     const addCount = x => {
+        if (!_isJordan(x))                                   return;
         if (searchDate   && !x.iso.startsWith(searchDate))  return;
         if (searchCity   && x.city   !== searchCity)         return;
         if (searchBranch && x.branch !== searchBranch)       return;

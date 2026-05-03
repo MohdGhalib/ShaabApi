@@ -411,10 +411,17 @@ function setupCitySelects() {
         if (!ctrlSubAB || ctrlSubAB.some(b => b.city === c))
             filteredOptions += `<option value="${c}">${c}</option>`;
     }
+    // تقييم الفروع: محافظات الأردن فقط
+    let jordanOnlyOptions = '';
+    if (typeof COUNTRIES_DATA !== 'undefined' && COUNTRIES_DATA["الأردن"]) {
+        for (const r in COUNTRIES_DATA["الأردن"].regions) jordanOnlyOptions += `<option value="${r}">${r}</option>`;
+    }
     citySelects.forEach(id => {
         const el = document.getElementById(id); if (!el) return;
         const isSearch = id.startsWith('search');
-        const opts = (ctrlSubAB && isSearch) ? filteredOptions : allOptions;
+        let opts;
+        if (id === 'branchCitySearch') opts = jordanOnlyOptions;
+        else opts = (ctrlSubAB && isSearch) ? filteredOptions : allOptions;
         el.innerHTML = (isSearch ? '<option value="">الكل</option>' : '<option value="">اختيار المحافظة</option>') + opts;
     });
     setTimeout(() => toggleUnspecifiedBranch(), 0);
@@ -445,14 +452,17 @@ function updateBranches(cityId, branchId) {
 
 /* ── خريطة ربط دولة ↔ محافظة/فرع ── */
 const _COUNTRY_LINKAGE = {
-    'mCountryAdd':          { cityId:'mCityAdd',          branchId:'mBranchAdd'         },
-    'iCountryAdd':          { cityId:'iCityAdd',          branchId:'iBranchAdd'         },
-    'cCountryAdd':          { cityId:'cCityAdd',          branchId:'cBranchAdd'         },
-    'searchCountryM':       { cityId:'searchCityM',       branchId:'searchBranchM'      },
-    'searchCountryC':       { cityId:'searchCityC',       branchId:'searchBranchC'      },
-    'searchCountryO':       { cityId:'searchCityO',       branchId:'searchBranchO'      },
-    'searchCountryI':       { cityId:'searchCityI',       branchId:'searchBranchI'      },
-    'deliverCountrySelect': { cityId:'deliverCitySelect', branchId:'deliverBranchSelect' }
+    'mCountryAdd':           { cityId:'mCityAdd',          branchId:'mBranchAdd',         isSearch:false },
+    'iCountryAdd':           { cityId:'iCityAdd',          branchId:'iBranchAdd',         isSearch:false },
+    'cCountryAdd':           { cityId:'cCityAdd',          branchId:'cBranchAdd',         isSearch:false },
+    'compCountry':           { cityId:'compCity',          branchId:'compBranch',         isSearch:false },
+    'searchCountryM':        { cityId:'searchCityM',       branchId:'searchBranchM',      isSearch:true  },
+    'searchCountryC':        { cityId:'searchCityC',       branchId:'searchBranchC',      isSearch:true  },
+    'searchCountryO':        { cityId:'searchCityO',       branchId:'searchBranchO',      isSearch:true  },
+    'searchCountryI':        { cityId:'searchCityI',       branchId:'searchBranchI',      isSearch:true  },
+    'searchCountryCU':       { cityId:'searchCityCU',      branchId:'searchBranchCU',     isSearch:true  },
+    'searchCountryComp':     { cityId:'compSearchCity',    branchId:'compSearchBranch',   isSearch:true  },
+    'deliverCountrySelect':  { cityId:'deliverCitySelect', branchId:'deliverBranchSelect',isSearch:true  }
 };
 
 /* ── ربط دولة → مدن: ينظّف قائمة المدن ويحدّث label المستوى الثاني ── */
@@ -493,10 +503,9 @@ function setupCountrySelects() {
     for (const c in COUNTRIES_DATA) allOptions += `<option value="${c}">${c}</option>`;
     for (const id in _COUNTRY_LINKAGE) {
         const el = document.getElementById(id); if (!el) continue;
-        const isSearch = id.startsWith('search') || id === 'deliverCountrySelect';
-        el.innerHTML = (isSearch ? '<option value="">الكل</option>' : '<option value="">اختيار الدولة</option>') + allOptions;
-        // قفل المحافظة والفرع حتى تُختار الدولة
         const link = _COUNTRY_LINKAGE[id];
+        const isSearch = !!link.isSearch;
+        el.innerHTML = (isSearch ? '<option value="">الكل</option>' : '<option value="">اختيار الدولة</option>') + allOptions;
         const ciEl = document.getElementById(link.cityId);
         const bEl  = document.getElementById(link.branchId);
         if (ciEl) { ciEl.innerHTML = isSearch ? '<option value="">الكل</option>' : '<option value="">اختيار المحافظة</option>'; ciEl.disabled = true; }

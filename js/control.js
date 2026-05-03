@@ -602,6 +602,7 @@ function _populateCompComplaintSelect() {
 
 function addCompensation() {
     if (!perm('addComp') && !currentUser?.isAdmin) return;
+    const country= document.getElementById('compCountry')?.value || '';
     const city   = document.getElementById('compCity')?.value || '';
     const branch = document.getElementById('compBranch')?.value || '';
     const notes  = document.getElementById('compNotes')?.value.trim() || '';
@@ -621,6 +622,7 @@ function addCompensation() {
     if (!db.compensations) db.compensations = [];
     db.compensations.unshift({
         id: Date.now(),
+        country: country || _countryForCity(city),
         city, branch, notes,
         employeeName: emp,
         amount,
@@ -636,8 +638,10 @@ function addCompensation() {
     document.getElementById('compAdminNote').value     = '';
     document.getElementById('compEmployeeName').value = '';
     document.getElementById('compAmount').value       = '';
+    const _cco = document.getElementById('compCountry'); if (_cco) _cco.value = '';
     document.getElementById('compCity').value         = '';
-    updateBranches('compCity', 'compBranch');
+    if (typeof updateCities === 'function') updateCities('compCountry','compCity','compBranch');
+    else updateBranches('compCity', 'compBranch');
     _populateCompComplaintSelect();
     renderCompensations();
 }
@@ -667,12 +671,14 @@ function renderCompensations() {
     const active = document.activeElement;
     if (active && (active.tagName === 'TEXTAREA' || active.tagName === 'INPUT') && tbody.contains(active)) return;
 
+    const country= document.getElementById('searchCountryComp')?.value|| '';
     const city   = document.getElementById('compSearchCity')?.value   || '';
     const branch = document.getElementById('compSearchBranch')?.value || '';
     const date   = document.getElementById('compSearchDate')?.value   || '';
 
     const rows = (db.compensations || []).filter(x =>
         !x.deleted &&
+        (!country|| (x.country || _countryForCity(x.city)) === country) &&
         (!city   || x.city   === city)   &&
         (!branch || x.branch === branch) &&
         (!date   || (x.iso  || '').startsWith(date))

@@ -204,8 +204,9 @@ function resetSearch(t) {
         clearDate('searchDateC');
         _pg.C = 1;
     } else if (t==='CU') {
-        clear(['searchCityCU','searchTextCU']);
-        document.getElementById('searchBranchCU').innerHTML='<option value="">الكل</option>';
+        clear(['searchCountryCU','searchCityCU','searchTextCU']);
+        if (typeof updateCities === 'function') updateCities('searchCountryCU','searchCityCU','searchBranchCU');
+        else document.getElementById('searchBranchCU').innerHTML='<option value="">الكل</option>';
         clearDate('searchDateCU');
     }
     renderAll();
@@ -702,6 +703,7 @@ function renderControlOpen() {
     if (active && (active.tagName === 'TEXTAREA' || active.tagName === 'INPUT') && tbody.contains(active)) return;
 
     const get  = (id) => { const el = document.getElementById(id); return el ? el.value : ''; };
+    const country= get('searchCountryCU');
     const city   = get('searchCityCU');
     const branch = get('searchBranchCU');
     const date   = get('searchDateCU');
@@ -722,6 +724,7 @@ function renderControlOpen() {
                 ? currentUser.assignedBranches.some(b => b.branch === x.branch && b.city === x.city)
                 : x.assignedToSubId === currentUser.empId
         ) : true) &&
+        (!country || (x.country || _countryForCity(x.city)) === country) &&
         (!city   || x.city   === city) &&
         (!branch || x.branch === branch) &&
         (!date   || (x.iso||'').startsWith(date)) &&

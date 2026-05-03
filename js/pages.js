@@ -455,8 +455,9 @@ comp: `
             <div style="font-size:11px;color:var(--text-dim);margin-top:6px;">عند الاختيار يُملأ الفرع والنص تلقائياً</div>
         </div>
 
-        <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-bottom:14px;">
-            <div><label style="font-size:13px;color:var(--text-dim);display:block;margin-bottom:5px;">المحافظة</label><select id="compCity" onchange="updateBranches('compCity','compBranch')"><option value="">اختر المحافظة</option></select></div>
+        <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:14px;margin-bottom:14px;">
+            <div><label style="font-size:13px;color:var(--text-dim);display:block;margin-bottom:5px;">الدولة</label><select id="compCountry" onchange="updateCities('compCountry','compCity','compBranch')"><option value="">اختيار الدولة</option></select></div>
+            <div><label style="font-size:13px;color:var(--text-dim);display:block;margin-bottom:5px;" data-region-label-for="compCity">المحافظة</label><select id="compCity" onchange="updateBranches('compCity','compBranch')"><option value="">اختر المحافظة</option></select></div>
             <div><label style="font-size:13px;color:var(--text-dim);display:block;margin-bottom:5px;">الفرع</label><select id="compBranch"><option value="">اختر الفرع</option></select></div>
         </div>
         <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-bottom:14px;">
@@ -481,10 +482,11 @@ comp: `
 
     <div class="search-bar search-bar-c" style="margin-bottom:16px;">
         <div style="grid-column:1/-1;" class="search-section-title">🔍 خيارات البحث</div>
-        <div><label>المحافظة</label><select id="compSearchCity" onchange="updateBranches('compSearchCity','compSearchBranch');renderCompensations();"></select></div>
+        <div><label>الدولة</label><select id="searchCountryComp" onchange="updateCities('searchCountryComp','compSearchCity','compSearchBranch');renderCompensations();"></select></div>
+        <div><label data-region-label-for="compSearchCity">المحافظة</label><select id="compSearchCity" onchange="updateBranches('compSearchCity','compSearchBranch');renderCompensations();"></select></div>
         <div><label>الفرع</label><select id="compSearchBranch" onchange="renderCompensations()"><option value="">الكل</option></select></div>
         <div><label>التاريخ</label><div class="date-picker-wrap" onclick="calOnSelect=renderCompensations;openDatePicker('compSearchDate')"><span class="date-display" id="compSearchDate-display">📅 الكل</span><input type="hidden" id="compSearchDate"></div></div>
-        <button class="btn" style="background:var(--bg-input);color:var(--text-dim);align-self:end;" onclick="document.getElementById('compSearchCity').value='';document.getElementById('compSearchBranch').innerHTML='<option value=\\'\\'>الكل</option>';document.getElementById('compSearchDate').value='';document.getElementById('compSearchDate-display').textContent='📅 الكل';renderCompensations();">تفريغ</button>
+        <button class="btn" style="background:var(--bg-input);color:var(--text-dim);align-self:end;" onclick="document.getElementById('searchCountryComp').value='';if(typeof updateCities==='function')updateCities('searchCountryComp','compSearchCity','compSearchBranch');document.getElementById('compSearchDate').value='';document.getElementById('compSearchDate-display').textContent='📅 الكل';renderCompensations();">تفريغ</button>
     </div>
 
     <table id="tableComp">
@@ -553,7 +555,8 @@ cu: `
     <p style="color:var(--text-dim);font-size:13px;margin:-10px 0 18px;">الشكاوي التي لم يتم الرد عليها من قسم السيطرة بعد</p>
     <div class="search-bar search-bar-c" style="margin-bottom:20px;">
         <div style="grid-column:1/-1;" class="search-section-title">🔍 خيارات البحث</div>
-        <div><label>المحافظة</label><select id="searchCityCU" onchange="updateBranches('searchCityCU','searchBranchCU');renderControlOpen();"></select></div>
+        <div><label>الدولة</label><select id="searchCountryCU" onchange="updateCities('searchCountryCU','searchCityCU','searchBranchCU');renderControlOpen();"></select></div>
+        <div><label data-region-label-for="searchCityCU">المحافظة</label><select id="searchCityCU" onchange="updateBranches('searchCityCU','searchBranchCU');renderControlOpen();"></select></div>
         <div><label>الفرع</label><select id="searchBranchCU" onchange="renderControlOpen()"><option value="">الكل</option></select></div>
         <div><label>التاريخ</label><div class="date-picker-wrap" onclick="calOnSelect=renderControlOpen;openDatePicker('searchDateCU')"><span class="date-display" id="searchDateCU-display">📅 اختر التاريخ</span><input type="hidden" id="searchDateCU"></div></div>
         <div><label>بحث بالنص</label><input type="text" id="searchTextCU" placeholder="بحث في التفاصيل..." oninput="renderControlOpen()"></div>
