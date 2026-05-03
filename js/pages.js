@@ -42,7 +42,7 @@ m: `
     <div style="grid-column:1/-1;" class="search-section-title">🛡️ فلاتر مدير قسم السيطرة</div>
     <div>
         <label>قسم الفرع</label>
-        <select id="searchSectionM" onchange="filterTable()">
+        <select id="searchSectionM" onchange="_onSectionChangeM()">
             <option value="">— كل الأقسام —</option>
             <option value="الشرقية">قسم الشرقية</option>
             <option value="الجنوبية">قسم الجنوبية</option>
@@ -52,15 +52,15 @@ m: `
             <option value="الفروع الدولية">الفروع الدولية</option>
         </select>
     </div>
-    <div style="grid-column:1/-1;">
+    <div id="mSectionBranchWrap" style="grid-column:1/-1;display:none;">
         <label style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px;">
-            <span>محافظات الأردن (تحديد متعدد بـ ✓)</span>
+            <span>فروع <span id="mSectionBranchTitle" style="color:#ce93d8;font-weight:700;"></span> (تحديد متعدد بـ ✓)</span>
             <span style="font-size:11px;">
-                <a href="javascript:void(0)" onclick="_toggleAllProvincesM(true)" style="color:#64b5f6;text-decoration:none;margin-left:10px;">✓ تحديد الكل</a>
-                <a href="javascript:void(0)" onclick="_toggleAllProvincesM(false)" style="color:#ef9a9a;text-decoration:none;">✗ إلغاء</a>
+                <a href="javascript:void(0)" onclick="_toggleAllSectionBranchesM(true)" style="color:#64b5f6;text-decoration:none;margin-left:10px;">✓ تحديد الكل</a>
+                <a href="javascript:void(0)" onclick="_toggleAllSectionBranchesM(false)" style="color:#ef9a9a;text-decoration:none;">✗ إلغاء</a>
             </span>
         </label>
-        <div id="mProvincePicker" style="display:flex;flex-wrap:wrap;gap:8px;padding:10px;background:var(--bg-input);border:1px solid var(--border);border-radius:8px;"></div>
+        <div id="mSectionBranchPicker" style="display:flex;flex-wrap:wrap;gap:8px;padding:10px;background:var(--bg-input);border:1px solid var(--border);border-radius:8px;max-height:180px;overflow-y:auto;"></div>
     </div>
 </div>
 <div id="mExportImportBar" style="display:none;margin-bottom:16px;">
