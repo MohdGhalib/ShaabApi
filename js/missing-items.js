@@ -503,6 +503,24 @@ function cancelImportMontasia() {
     document.getElementById('importMontasiaModal').classList.add('hidden');
 }
 
+/* ── حذف كل المنتسيات (مدير الكول سنتر فقط) ── */
+function deleteAllMontasiat() {
+    if (currentUser?.role !== 'cc_manager') return;
+    const total = (db.montasiat || []).filter(x => !x.deleted).length;
+    if (!total) return alert('لا توجد منتسيات لحذفها');
+    showDeleteConfirm(
+        `<div style="font-weight:700;color:var(--accent-red);margin-bottom:6px;">⚠️ حذف كل المدخلات بشكل كامل</div>
+         <div style="color:var(--text-main);">سيتم حذف <b>${total}</b> منتسية نهائياً ولا يمكن استرجاعها.</div>
+         <div style="margin-top:8px;font-size:12px;color:var(--text-dim);">قام بالطلب: ${sanitize(currentUser?.name || '—')}</div>`,
+        () => {
+            db.montasiat = [];
+            if (typeof _logAudit === 'function') _logAudit('deleteAllMontasiat', '—', `حذف كامل لـ ${total} منتسية`);
+            save();
+            renderAll();
+        }
+    );
+}
+
 function toggleCountMontasia(id) {
     const item = db.montasiat.find(x => x.id === id);
     if (!item) return;

@@ -219,8 +219,11 @@ function _renderTableM(get, isAdmin) {
     if (!tbodyM) return;
 
     const canDelete = perm('deleteM');
+    const isCCMgrM  = currentUser?.role === 'cc_manager';
     const mBar = document.getElementById('mExportImportBar');
-    if (mBar) mBar.style.display = canDelete ? '' : 'none';
+    if (mBar) mBar.style.display = (canDelete || isCCMgrM) ? '' : 'none';
+    const btnDelAll = document.getElementById('btnDeleteAllMontasiat');
+    if (btnDelAll) btnDelAll.style.display = isCCMgrM ? 'flex' : 'none';
 
     const f = {
         country:     get("searchCountryM"),

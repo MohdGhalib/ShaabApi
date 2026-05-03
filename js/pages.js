@@ -50,6 +50,9 @@ m: `
             <input type="file" accept=".xlsx,.xls" style="display:none;" onchange="importMontasiat(this)">
         </label>
         <span style="font-size:12px;color:var(--text-dim);">الأعمدة المطلوبة عند الاستيراد: المحافظة، الفرع، التفاصيل</span>
+        <button id="btnDeleteAllMontasiat" onclick="deleteAllMontasiat()" style="display:none;align-items:center;gap:7px;background:linear-gradient(135deg,rgba(211,47,47,0.18),rgba(211,47,47,0.08));border:1px solid rgba(211,47,47,0.5);border-radius:10px;padding:9px 18px;cursor:pointer;color:#ef9a9a;font-family:'Cairo';font-size:13px;font-weight:700;margin-right:auto;">
+            🗑️ حذف كل المدخلات
+        </button>
     </div>
 </div>
 <div class="card">
