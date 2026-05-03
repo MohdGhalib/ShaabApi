@@ -180,10 +180,13 @@ function resetSearch(t) {
         const disp=document.getElementById(fieldId+'-display'); if(disp){ disp.textContent='📅 اختر التاريخ'; disp.classList.remove('selected'); }
     };
     if (t==='M') {
-        clear(['searchCountryM','searchCityM','searchTextM','searchAddedByM','searchDeliveredByM','searchTypeM']);
+        clear(['searchCountryM','searchCityM','searchTextM','searchAddedByM','searchDeliveredByM','searchTypeM','searchSectionM']);
         if (typeof updateCities === 'function') updateCities('searchCountryM','searchCityM','searchBranchM');
         else document.getElementById('searchBranchM').innerHTML='<option value="">الكل</option>';
         clearDate('searchDateM');
+        // تفريغ تحديد المحافظات المتعددة لمدير قسم السيطرة
+        const _ppM = document.getElementById('mProvincePicker');
+        if (_ppM) _ppM.querySelectorAll('input[type="checkbox"]').forEach(cb => { cb.checked = false; });
         _pg.M = 1;
     } else if (t==='O') {
         clear(['searchCountryO','searchCityO','searchTextO','searchAddedByO','searchTypeO']);
@@ -212,6 +215,44 @@ function resetSearch(t) {
     renderAll();
 }
 
+/* ── أدوات فلاتر مدير قسم السيطرة لشاشة المنتسيات ── */
+function _populateProvincePickerM() {
+    const box = document.getElementById('mProvincePicker');
+    if (!box || box.dataset.populated === '1') return;
+    const provinces = (typeof COUNTRIES_DATA !== 'undefined' && COUNTRIES_DATA["الأردن"])
+        ? Object.keys(COUNTRIES_DATA["الأردن"].regions)
+        : ["عمان","اربد","الزرقاء","مادبا","الكرك","العقبة","محافظات بفرع واحد"];
+    box.innerHTML = provinces.map(p => `
+        <label style="display:inline-flex;align-items:center;gap:6px;cursor:pointer;background:var(--bg-card);border:1px solid var(--border);border-radius:6px;padding:6px 12px;font-size:13px;color:var(--text);">
+            <input type="checkbox" value="${p}" onchange="filterTable()" style="cursor:pointer;accent-color:#9c27b0;">
+            <span>${p}</span>
+        </label>`).join('');
+    box.dataset.populated = '1';
+}
+function _getSelectedProvincesM() {
+    const box = document.getElementById('mProvincePicker');
+    if (!box) return [];
+    return Array.from(box.querySelectorAll('input[type="checkbox"]:checked')).map(cb => cb.value);
+}
+function _toggleAllProvincesM(check) {
+    _populateProvincePickerM();
+    const box = document.getElementById('mProvincePicker');
+    if (!box) return;
+    box.querySelectorAll('input[type="checkbox"]').forEach(cb => { cb.checked = !!check; });
+    if (typeof filterTable === 'function') filterTable();
+}
+/* تطابق صف المنتسية مع قسم الفرع المختار (يشمل خيار الفروع الدولية) */
+function _matchesSectionM(x, section) {
+    if (!section) return true;
+    if (section === 'الفروع الدولية') {
+        const country = x.country || (typeof _countryForCity === 'function' ? _countryForCity(x.city) : 'الأردن');
+        return country !== 'الأردن';
+    }
+    const map = (typeof REGION_MAP !== 'undefined') ? REGION_MAP : null;
+    if (!map || !map[section]) return true;
+    return map[section].includes(x.branch);
+}
+
 function _renderTableM(get, isAdmin) {
     const addMontasiaCard = document.getElementById('addMontasiaCard');
     if (addMontasiaCard) addMontasiaCard.style.display = (currentUser?.role === 'control_employee' || currentUser?.role === 'control_sub') ? 'none' : '';
@@ -220,10 +261,24 @@ function _renderTableM(get, isAdmin) {
 
     const canDelete = perm('deleteM');
     const isCCMgrM  = currentUser?.role === 'cc_manager';
+    const isCtrlMgrM = currentUser?.role === 'control_employee';
     const mBar = document.getElementById('mExportImportBar');
-    if (mBar) mBar.style.display = (canDelete || isCCMgrM) ? '' : 'none';
+    if (mBar) mBar.style.display = (canDelete || isCCMgrM || isCtrlMgrM) ? '' : 'none';
     const btnDelAll = document.getElementById('btnDeleteAllMontasiat');
     if (btnDelAll) btnDelAll.style.display = isCCMgrM ? 'flex' : 'none';
+    // مدير قسم السيطرة: يرى زر التصدير فقط (لا استيراد ولا حذف)
+    const lblImp  = document.getElementById('lblImportMontasiat');
+    const hintImp = document.getElementById('hintImportMontasiat');
+    if (lblImp)  lblImp.style.display  = (canDelete || isCCMgrM) ? 'flex'  : 'none';
+    if (hintImp) hintImp.style.display = (canDelete || isCCMgrM) ? ''      : 'none';
+
+    // ── فلاتر مدير قسم السيطرة (متعدد المحافظات + قسم الفرع)
+    const ctrlFiltersBox = document.getElementById('mCtrlMgrFilters');
+    if (ctrlFiltersBox) ctrlFiltersBox.style.display = isCtrlMgrM ? '' : 'none';
+    if (isCtrlMgrM) _populateProvincePickerM();
+
+    const selectedProvincesM = isCtrlMgrM ? _getSelectedProvincesM() : [];
+    const selectedSectionM   = isCtrlMgrM ? (get("searchSectionM") || '') : '';
 
     const f = {
         country:     get("searchCountryM"),
@@ -259,7 +314,9 @@ function _renderTableM(get, isAdmin) {
         (!f.text        || x.notes.toLowerCase().includes(f.text)) &&
         (!f.addedBy     || (x.addedBy||'').includes(f.addedBy)) &&
         (!f.deliveredBy || (x.deliveredBy||'').includes(f.deliveredBy)) &&
-        (!f.type        || (x.type||'')=== f.type)
+        (!f.type        || (x.type||'')=== f.type) &&
+        (!selectedProvincesM.length || selectedProvincesM.includes(x.city)) &&
+        _matchesSectionM(x, selectedSectionM)
     );
     if (!_pg.M) _pg.M = 1;
     const _pageM = Math.min(_pg.M, Math.max(1, Math.ceil(allRows.length / _PAGE_SIZE)));

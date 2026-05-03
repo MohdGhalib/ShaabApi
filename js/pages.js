@@ -38,21 +38,46 @@ m: `
     <div><label>نوع المنتسية</label><select id="searchTypeM" onchange="filterTable()"><option value="">الكل</option><option value="نقدي">نقدي</option><option value="أخرى">أخرى</option></select></div>
     <button class="btn" style="background:var(--bg-input);color:var(--text-dim);align-self:end;" onclick="resetSearch('M')">تفريغ</button>
 </div>
+<div id="mCtrlMgrFilters" class="search-bar search-bar-m" style="display:none;margin-bottom:18px;background:linear-gradient(135deg,rgba(106,27,154,0.10),rgba(21,101,192,0.06));border:1px dashed rgba(156,39,176,0.40);">
+    <div style="grid-column:1/-1;" class="search-section-title">🛡️ فلاتر مدير قسم السيطرة</div>
+    <div>
+        <label>قسم الفرع</label>
+        <select id="searchSectionM" onchange="filterTable()">
+            <option value="">— كل الأقسام —</option>
+            <option value="الشرقية">قسم الشرقية</option>
+            <option value="الجنوبية">قسم الجنوبية</option>
+            <option value="الغربية">قسم الغربية</option>
+            <option value="المحافظات">قسم المحافظات</option>
+            <option value="فروع العقبة">قسم فروع العقبة</option>
+            <option value="الفروع الدولية">الفروع الدولية</option>
+        </select>
+    </div>
+    <div style="grid-column:1/-1;">
+        <label style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px;">
+            <span>محافظات الأردن (تحديد متعدد بـ ✓)</span>
+            <span style="font-size:11px;">
+                <a href="javascript:void(0)" onclick="_toggleAllProvincesM(true)" style="color:#64b5f6;text-decoration:none;margin-left:10px;">✓ تحديد الكل</a>
+                <a href="javascript:void(0)" onclick="_toggleAllProvincesM(false)" style="color:#ef9a9a;text-decoration:none;">✗ إلغاء</a>
+            </span>
+        </label>
+        <div id="mProvincePicker" style="display:flex;flex-wrap:wrap;gap:8px;padding:10px;background:var(--bg-input);border:1px solid var(--border);border-radius:8px;"></div>
+    </div>
+</div>
 <div id="mExportImportBar" style="display:none;margin-bottom:16px;">
     <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;">
-        <button onclick="exportMontasiat()"
+        <button id="btnExportMontasiat" onclick="exportMontasiat()"
             style="display:flex;align-items:center;gap:7px;background:linear-gradient(135deg,rgba(46,125,50,0.15),rgba(46,125,50,0.08));
                    border:1px solid rgba(46,125,50,0.4);border-radius:10px;padding:9px 18px;cursor:pointer;
                    color:#81c784;font-family:'Cairo';font-size:13px;font-weight:700;">
             ⬇️ تصدير Excel
         </button>
-        <label style="display:flex;align-items:center;gap:7px;background:linear-gradient(135deg,rgba(21,101,192,0.15),rgba(21,101,192,0.08));
+        <label id="lblImportMontasiat" style="display:flex;align-items:center;gap:7px;background:linear-gradient(135deg,rgba(21,101,192,0.15),rgba(21,101,192,0.08));
                       border:1px solid rgba(21,101,192,0.4);border-radius:10px;padding:9px 18px;cursor:pointer;
                       color:#64b5f6;font-family:'Cairo';font-size:13px;font-weight:700;">
             ⬆️ استيراد Excel
             <input type="file" accept=".xlsx,.xls" style="display:none;" onchange="importMontasiat(this)">
         </label>
-        <span style="font-size:12px;color:var(--text-dim);">الأعمدة المطلوبة عند الاستيراد: المحافظة، الفرع، التفاصيل</span>
+        <span id="hintImportMontasiat" style="font-size:12px;color:var(--text-dim);">الأعمدة المطلوبة عند الاستيراد: المحافظة، الفرع، التفاصيل</span>
         <button id="btnDeleteAllMontasiat" onclick="deleteAllMontasiat()" style="display:none;align-items:center;gap:7px;background:linear-gradient(135deg,rgba(211,47,47,0.18),rgba(211,47,47,0.08));border:1px solid rgba(211,47,47,0.5);border-radius:10px;padding:9px 18px;cursor:pointer;color:#ef9a9a;font-family:'Cairo';font-size:13px;font-weight:700;margin-right:auto;">
             🗑️ حذف كل المدخلات
         </button>
