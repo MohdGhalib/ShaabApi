@@ -3,7 +3,8 @@
 ══════════════════════════════════════════════════════ */
 function addControl() {
     const b=document.getElementById("cBranchAdd").value, n=document.getElementById("cNotes").value.trim(),
-          c=document.getElementById("cCityAdd").value;
+          c=document.getElementById("cCityAdd").value,
+          co=document.getElementById("cCountryAdd")?.value || '';
     if (!b||!n||!c) return alert("يرجى إكمال البيانات");
     const custPhone   = document.getElementById("cCustomerPhone").value.trim();
     const linkedSeq   = document.getElementById("cLinkedInquiry").value;
@@ -17,7 +18,7 @@ function addControl() {
     const _typeEl   = document.querySelector('input[name="cComplaintType"]:checked');
     const cType     = _typeEl ? _typeEl.value : 'أخرى';
     const status = 'تمت الموافقة';
-    const base = { id:Date.now(), city:c, branch:b, notes:n, audit:'', time:now(), iso:iso(),
+    const base = { id:Date.now(), country: co || _countryForCity(c), city:c, branch:b, notes:n, audit:'', time:now(), iso:iso(),
         addedBy:currentUser.name, status, customer, linkedInqSeq: linkedSeq||null,
         callTime, noteDate, moveNumber, invoiceValue, type: cType };
 
@@ -61,8 +62,10 @@ function resetControlForm() {
 
     document.getElementById("cNotes").value = "";
     document.getElementById("cFile").value  = "";
+    const _coEl = document.getElementById("cCountryAdd"); if (_coEl) _coEl.value = "";
     document.getElementById("cCityAdd").value = "";
-    updateBranches("cCityAdd", "cBranchAdd");
+    if (typeof updateCities === 'function') updateCities("cCountryAdd","cCityAdd","cBranchAdd");
+    else updateBranches("cCityAdd", "cBranchAdd");
     const _lbl = document.getElementById('cFileLabel'); if (_lbl) _lbl.textContent = 'لم يُختر ملف';
     document.getElementById("cCustomerPhone").value = "";
     document.getElementById("cMoveNumber").value    = "";

@@ -180,23 +180,27 @@ function resetSearch(t) {
         const disp=document.getElementById(fieldId+'-display'); if(disp){ disp.textContent='📅 اختر التاريخ'; disp.classList.remove('selected'); }
     };
     if (t==='M') {
-        clear(['searchCityM','searchTextM','searchAddedByM','searchDeliveredByM','searchTypeM']);
-        document.getElementById('searchBranchM').innerHTML='<option value="">الكل</option>';
+        clear(['searchCountryM','searchCityM','searchTextM','searchAddedByM','searchDeliveredByM','searchTypeM']);
+        if (typeof updateCities === 'function') updateCities('searchCountryM','searchCityM','searchBranchM');
+        else document.getElementById('searchBranchM').innerHTML='<option value="">الكل</option>';
         clearDate('searchDateM');
         _pg.M = 1;
     } else if (t==='O') {
-        clear(['searchCityO','searchTextO','searchAddedByO','searchTypeO']);
-        document.getElementById('searchBranchO').innerHTML='<option value="">الكل</option>';
+        clear(['searchCountryO','searchCityO','searchTextO','searchAddedByO','searchTypeO']);
+        if (typeof updateCities === 'function') updateCities('searchCountryO','searchCityO','searchBranchO');
+        else document.getElementById('searchBranchO').innerHTML='<option value="">الكل</option>';
         clearDate('searchDateO');
         _pg.O = 1;
     } else if (t==='I') {
-        clear(['searchCityI','searchAddedByI','searchTypeI']);
-        document.getElementById('searchBranchI').innerHTML='<option value="">الكل</option>';
+        clear(['searchCountryI','searchCityI','searchAddedByI','searchTypeI']);
+        if (typeof updateCities === 'function') updateCities('searchCountryI','searchCityI','searchBranchI');
+        else document.getElementById('searchBranchI').innerHTML='<option value="">الكل</option>';
         clearDate('searchDateI');
         _pg.I = 1;
     } else if (t==='C') {
-        clear(['searchCityC','searchTextC','searchTypeC','searchFinStatusC','searchAddedByC']);
-        document.getElementById('searchBranchC').innerHTML='<option value="">الكل</option>';
+        clear(['searchCountryC','searchCityC','searchTextC','searchTypeC','searchFinStatusC','searchAddedByC']);
+        if (typeof updateCities === 'function') updateCities('searchCountryC','searchCityC','searchBranchC');
+        else document.getElementById('searchBranchC').innerHTML='<option value="">الكل</option>';
         clearDate('searchDateC');
         _pg.C = 1;
     } else if (t==='CU') {
@@ -218,6 +222,7 @@ function _renderTableM(get, isAdmin) {
     if (mBar) mBar.style.display = canDelete ? '' : 'none';
 
     const f = {
+        country:     get("searchCountryM"),
         city:        get("searchCityM"),
         branch:      get("searchBranchM"),
         date:        get("searchDateM"),
@@ -243,6 +248,7 @@ function _renderTableM(get, isAdmin) {
     const allRows = db.montasiat.filter(x =>
         !x.deleted &&
         (!_branchFilter || (_branchFilter.type==='single' ? x.branch===_branchFilter.branch : _branchFilter.branches.includes(x.branch))) &&
+        (!f.country     || (x.country || _countryForCity(x.city))===f.country) &&
         (!f.city        || x.city===f.city) &&
         (!f.branch      || x.branch===f.branch) &&
         (!f.date        || x.iso.startsWith(f.date)) &&
@@ -349,6 +355,7 @@ function _renderTableO(get) {
 
     const f = {
         city:    get("searchCityO"),
+        country: get("searchCountryO"),
         branch:  get("searchBranchO"),
         date:    get("searchDateO"),
         text:    get("searchTextO").toLowerCase(),
@@ -360,6 +367,7 @@ function _renderTableO(get) {
         !x.deleted &&
         (x.status==='قيد الانتظار' || x.status==='بانتظار الموافقة' || x.status==='قيد الاستلام') &&
         (!_ctrlSubO?.assignedBranches?.length || _ctrlSubO.assignedBranches.some(b => b.branch === x.branch && b.city === x.city)) &&
+        (!f.country || (x.country || _countryForCity(x.city))===f.country) &&
         (!f.city    || x.city===f.city) &&
         (!f.branch  || x.branch===f.branch) &&
         (!f.date    || x.iso.startsWith(f.date)) &&
@@ -405,6 +413,7 @@ function _renderTableI(get) {
     if (thActions) thActions.textContent = canManage ? 'إجراءات' : '';
 
     const f = {
+        country: get("searchCountryI"),
         city:    get("searchCityI"),
         branch:  get("searchBranchI"),
         date:    get("searchDateI"),
@@ -413,6 +422,7 @@ function _renderTableI(get) {
     };
     const allRowsI = db.inquiries.filter(x =>
         !x.deleted &&
+        (!f.country || (x.country || _countryForCity(x.city))===f.country) &&
         (!f.city    || x.city===f.city) &&
         (!f.branch  || x.branch===f.branch) &&
         (!f.date    || x.iso.startsWith(f.date)) &&
@@ -495,6 +505,7 @@ function _renderTableC(get, isAdmin) {
                                .map(x => x.linkedComplaintId)
     );
     const f = {
+        country:   get("searchCountryC"),
         city:      get("searchCityC"),
         branch:    get("searchBranchC"),
         date:      get("searchDateC"),
@@ -511,6 +522,7 @@ function _renderTableC(get, isAdmin) {
                 ? currentUser.assignedBranches.some(b => b.branch === x.branch && b.city === x.city)
                 : x.assignedToSubId === currentUser.empId)
         ) : (isControl || isControlEmployee || isMedia) ? x.status === 'تمت الموافقة' : true) &&
+        (!f.country   || (x.country || _countryForCity(x.city))===f.country) &&
         (!f.city      || x.city===f.city) &&
         (!f.branch    || x.branch===f.branch) &&
         (!f.date      || x.iso.startsWith(f.date)) &&

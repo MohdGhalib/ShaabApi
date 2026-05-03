@@ -36,8 +36,10 @@ function toggleUnspecifiedBranch() {
 }
 
 function addInquiry() {
+    const ctryEl = document.getElementById("iCountryAdd");
     const cityEl  = document.getElementById("iCityAdd");
     const branchEl= document.getElementById("iBranchAdd");
+    const co = ctryEl ? ctryEl.value : '';
     const c = cityEl.value, t = document.getElementById("iType").value;
     const p = document.getElementById("iPhone").value;
     const b = c === 'غير محدد' ? 'غير محدد' : branchEl.value;
@@ -46,15 +48,17 @@ function addInquiry() {
     if (!c||!b||!p||!t) return alert("يرجى إكمال البيانات");
     if (needsNotes&&!n) return alert("يرجى كتابة التفاصيل");
     if (!db.inquiriesnqSeq) db.inquiriesnqSeq = 1;
-    db.inquiries.unshift({ id:Date.now(), seq:db.inquiriesnqSeq++, city:c, branch:b, phone:p, type:t, notes:n,
+    db.inquiries.unshift({ id:Date.now(), seq:db.inquiriesnqSeq++, country: co || _countryForCity(c), city:c, branch:b, phone:p, type:t, notes:n,
         time:now(), iso:iso(), addedBy:currentUser.name });
     save();
     document.getElementById("iPhone").value="";
     document.getElementById("iType").value="";
     document.getElementById("iNotes").value="";
     document.getElementById("iNotesBox").style.display="none";
+    if (ctryEl) ctryEl.value = "";
     document.getElementById("iCityAdd").value="";
-    updateBranches("iCityAdd","iBranchAdd");
+    if (typeof updateCities === 'function') updateCities("iCountryAdd","iCityAdd","iBranchAdd");
+    else updateBranches("iCityAdd","iBranchAdd");
     populateLinkedInquirySelect();
     toggleUnspecifiedBranch();
 }

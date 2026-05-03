@@ -307,11 +307,15 @@
             </div>
         </div>
 
-        <!-- قائمة الفروع (تظهر عند اختيار فرع آخر) -->
+        <!-- قائمة الفروع (تظهر عند اختيار فرع آخر) — تدعم التسليم لفرع بدولة أخرى -->
         <div id="deliveryBranchSelector" style="display:none;margin-bottom:20px;">
-            <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;">
+            <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px;">
                 <div>
-                    <label style="font-size:13px;color:var(--text-dim);display:block;margin-bottom:6px;">المحافظة</label>
+                    <label style="font-size:13px;color:var(--text-dim);display:block;margin-bottom:6px;">الدولة</label>
+                    <select id="deliverCountrySelect" onchange="updateCities('deliverCountrySelect','deliverCitySelect','deliverBranchSelect')"></select>
+                </div>
+                <div>
+                    <label style="font-size:13px;color:var(--text-dim);display:block;margin-bottom:6px;" data-region-label-for="deliverCitySelect">المحافظة</label>
                     <select id="deliverCitySelect" onchange="updateBranches('deliverCitySelect','deliverBranchSelect')"></select>
                 </div>
                 <div>

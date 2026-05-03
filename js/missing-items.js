@@ -41,6 +41,7 @@ function cancelAddMontasia() {
 }
 
 function confirmAddMontasia() {
+    const co = document.getElementById("mCountryAdd")?.value || '';
     const c = document.getElementById("mCityAdd").value;
     const b = document.getElementById("mBranchAdd").value;
     const n = document.getElementById("mNotes").value.trim();
@@ -48,7 +49,7 @@ function confirmAddMontasia() {
     const be = (document.getElementById("mBranchEmp")?.value||'').trim();
     if (!c||!b||!n||!t||!be) return alert("يرجى إكمال البيانات");
 
-    const rec = { id:Date.now(), city:c, branch:b, notes:n, type:t, branchEmp:be, time:now(), iso:iso(),
+    const rec = { id:Date.now(), country: co || _countryForCity(c), city:c, branch:b, notes:n, type:t, branchEmp:be, time:now(), iso:iso(),
         status:'قيد الانتظار', dt:'', addedBy:currentUser.name, deliveredBy:'' };
 
     if (_addMTimeMode === 'previous') {
@@ -76,8 +77,10 @@ function confirmAddMontasia() {
     document.getElementById("mNotes").value = "";
     document.getElementById("mType").value = "";
     const beEl = document.getElementById("mBranchEmp"); if (beEl) beEl.value = "";
+    const ctryEl = document.getElementById("mCountryAdd"); if (ctryEl) ctryEl.value = "";
     document.getElementById("mCityAdd").value = "";
-    updateBranches("mCityAdd", "mBranchAdd");
+    if (typeof updateCities === 'function') updateCities("mCountryAdd","mCityAdd","mBranchAdd");
+    else updateBranches("mCityAdd", "mBranchAdd");
     cancelAddMontasia();
 }
 
@@ -134,12 +137,17 @@ function deliver(id) {
     selectDeliveryType('same');
     selectDeliveryTimeMode('now');
 
-    // تعبئة قائمة المحافظات
+    // تعبئة قائمة الدول والمحافظات (دعم التسليم لدولة أخرى)
+    if (typeof setupCountrySelects === 'function') setupCountrySelects();
+    const ctryEl = document.getElementById("deliverCountrySelect");
+    if (ctryEl) ctryEl.value = '';
     const cityEl = document.getElementById("deliverCitySelect");
     let opts = '<option value="">اختر المحافظة</option>';
     for (let c in branches) opts += `<option value="${c}">${c}</option>`;
     cityEl.innerHTML = opts;
     document.getElementById("deliverBranchSelect").innerHTML = '<option value="">اختر الفرع</option>';
+    // إعادة label إلى المحافظة افتراضياً
+    document.querySelectorAll('[data-region-label-for="deliverCitySelect"]').forEach(el => el.textContent = 'المحافظة');
 
     // تفريغ حقول الوقت السابق
     const prevDate = document.getElementById('deliverPrevDate');
@@ -182,9 +190,11 @@ function confirmDeliver() {
     if (!item) return cancelDeliver();
 
     if (_deliverType === 'other') {
+        const country= document.getElementById("deliverCountrySelect")?.value || '';
         const city   = document.getElementById("deliverCitySelect").value;
         const branch = document.getElementById("deliverBranchSelect").value;
         if (!city || !branch) return alert("يرجى اختيار المحافظة والفرع");
+        item.deliveryCountry= country || _countryForCity(city);
         item.deliveryCity   = city;
         item.deliveryBranch = branch;
     }

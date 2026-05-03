@@ -313,6 +313,7 @@ function switchTab(t) {
     document.getElementById('page-container').innerHTML = PAGES[t] || '';
 
     setupCitySelects();
+    if (typeof setupCountrySelects === 'function') setupCountrySelects();
 
     if (t === 'e') {
         renderEmployees();
@@ -341,6 +342,7 @@ function switchTab(t) {
         return;
     } else if (t === 'comp') {
         setupCitySelects();
+    if (typeof setupCountrySelects === 'function') setupCountrySelects();
         if (typeof _populateCompComplaintSelect === 'function') _populateCompComplaintSelect();
         if (typeof renderCompensations === 'function') renderCompensations();
         const addCompCard = document.getElementById('addCompCard');
@@ -350,6 +352,7 @@ function switchTab(t) {
         return;
     } else if (t === 'mn') {
         setupCitySelects();
+    if (typeof setupCountrySelects === 'function') setupCountrySelects();
         if (typeof renderMediaNotes === 'function') renderMediaNotes();
         return;
     } else {
@@ -434,6 +437,46 @@ function updateBranches(cityId, branchId) {
         });
     }
     document.getElementById(branchId).innerHTML = html;
+}
+
+/* ── ربط دولة → مدن: ينظّف قائمة المدن ويحدّث label المستوى الثاني ── */
+function updateCities(countryId, cityId, branchId) {
+    const cEl = document.getElementById(countryId);
+    const ciEl = document.getElementById(cityId);
+    if (!cEl || !ciEl) return;
+    const country = cEl.value;
+    const isSearch = cityId.toLowerCase().includes('search');
+    const regionLabel = (country && COUNTRIES_DATA[country]) ? COUNTRIES_DATA[country].regionLabel : 'المحافظة';
+
+    // تحديث نصوص أي label/placeholder مرتبطة بهذا الـ cityId
+    document.querySelectorAll(`[data-region-label-for="${cityId}"]`).forEach(el => {
+        el.textContent = regionLabel;
+    });
+
+    let html = isSearch ? '<option value="">الكل</option>' : `<option value="">اختيار ${regionLabel}</option>`;
+    if (country && COUNTRIES_DATA[country]) {
+        for (const r in COUNTRIES_DATA[country].regions) html += `<option value="${r}">${r}</option>`;
+    } else {
+        for (const r in branches) html += `<option value="${r}">${r}</option>`;
+    }
+    ciEl.innerHTML = html;
+
+    if (branchId) {
+        const bEl = document.getElementById(branchId);
+        if (bEl) bEl.innerHTML = isSearch ? '<option value="">الكل</option>' : '<option value="">الفرع</option>';
+    }
+}
+
+/* ── تعبئة قوائم الدول ── */
+function setupCountrySelects() {
+    const countrySelects = ['mCountryAdd','iCountryAdd','cCountryAdd','searchCountryM','searchCountryC','searchCountryO','searchCountryI','deliverCountrySelect'];
+    let allOptions = '';
+    for (const c in COUNTRIES_DATA) allOptions += `<option value="${c}">${c}</option>`;
+    countrySelects.forEach(id => {
+        const el = document.getElementById(id); if (!el) return;
+        const isSearch = id.startsWith('search') || id === 'deliverCountrySelect';
+        el.innerHTML = (isSearch ? '<option value="">الكل</option>' : '<option value="">اختيار الدولة</option>') + allOptions;
+    });
 }
 
 function populateEmployeeDropdowns() {

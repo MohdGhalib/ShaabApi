@@ -7,7 +7,8 @@ const PAGES = {
 m: `
 <div class="card" id="addMontasiaCard">
     <h3>تسجيل منتسية جديدة</h3>
-    <div style="display:grid;grid-template-columns:1fr 1fr;gap:15px;margin-bottom:15px;">
+    <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:15px;margin-bottom:15px;">
+        <select id="mCountryAdd" onchange="updateCities('mCountryAdd','mCityAdd','mBranchAdd')"></select>
         <select id="mCityAdd" onchange="updateBranches('mCityAdd','mBranchAdd')"></select>
         <select id="mBranchAdd"></select>
     </div>
@@ -24,7 +25,8 @@ m: `
 </div>
 <div class="search-bar search-bar-m">
     <div style="grid-column:1/-1;" class="search-section-title">🔍 خيارات البحث</div>
-    <div><label>المحافظة</label><select id="searchCityM" onchange="updateBranches('searchCityM','searchBranchM');filterTable();"></select></div>
+    <div><label>الدولة</label><select id="searchCountryM" onchange="updateCities('searchCountryM','searchCityM','searchBranchM');filterTable();"></select></div>
+    <div><label data-region-label-for="searchCityM">المحافظة</label><select id="searchCityM" onchange="updateBranches('searchCityM','searchBranchM');filterTable();"></select></div>
     <div><label>الفرع</label><select id="searchBranchM" onchange="filterTable()"><option value="">الكل</option></select></div>
     <div><label>التاريخ</label><div class="date-picker-wrap" onclick="openDatePicker('searchDateM')"><span class="date-display" id="searchDateM-display">📅 اختر التاريخ</span><input type="hidden" id="searchDateM"></div></div>
     <div><label>بحث بالنص</label><input type="text" id="searchTextM" placeholder="بحث في التفاصيل..." oninput="filterTable()"></div>
@@ -72,7 +74,8 @@ o: `
     <h3>📂 الطلبات - لم يتم التسليم</h3>
     <div class="search-bar search-bar-o" style="margin-bottom:20px;">
         <div style="grid-column:1/-1;" class="search-section-title">🔍 خيارات البحث</div>
-        <div><label>المحافظة</label><select id="searchCityO" onchange="updateBranches('searchCityO','searchBranchO');filterTable();"></select></div>
+        <div><label>الدولة</label><select id="searchCountryO" onchange="updateCities('searchCountryO','searchCityO','searchBranchO');filterTable();"></select></div>
+        <div><label data-region-label-for="searchCityO">المحافظة</label><select id="searchCityO" onchange="updateBranches('searchCityO','searchBranchO');filterTable();"></select></div>
         <div><label>الفرع</label><select id="searchBranchO" onchange="filterTable()"><option value="">الكل</option></select></div>
         <div><label>التاريخ</label><div class="date-picker-wrap" onclick="openDatePicker('searchDateO')"><span class="date-display" id="searchDateO-display">📅 اختر التاريخ</span><input type="hidden" id="searchDateO"></div></div>
         <div><label>بحث بالنص</label><input type="text" id="searchTextO" placeholder="بحث في التفاصيل..." oninput="filterTable()"></div>
@@ -96,8 +99,11 @@ o: `
 i: `
 <div class="card" id="addInquiryCard">
     <h3>تسجيل استفسار عميل</h3>
-    <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:15px;margin-bottom:15px;">
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:15px;margin-bottom:15px;">
         <input type="text" id="iPhone" placeholder="رقم الهاتف">
+        <select id="iCountryAdd" onchange="updateCities('iCountryAdd','iCityAdd','iBranchAdd');toggleUnspecifiedBranch()"></select>
+    </div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:15px;margin-bottom:15px;">
         <select id="iCityAdd" onchange="updateBranches('iCityAdd','iBranchAdd');toggleUnspecifiedBranch()"></select>
         <select id="iBranchAdd"></select>
     </div>
@@ -122,7 +128,8 @@ i: `
 </div>
 <div class="search-bar search-bar-i">
     <div style="grid-column:1/-1;" class="search-section-title">🔍 خيارات البحث</div>
-    <div><label>المحافظة</label><select id="searchCityI" onchange="updateBranches('searchCityI','searchBranchI');filterTable();"></select></div>
+    <div><label>الدولة</label><select id="searchCountryI" onchange="updateCities('searchCountryI','searchCityI','searchBranchI');filterTable();"></select></div>
+    <div><label data-region-label-for="searchCityI">المحافظة</label><select id="searchCityI" onchange="updateBranches('searchCityI','searchBranchI');filterTable();"></select></div>
     <div><label>الفرع</label><select id="searchBranchI" onchange="filterTable()"><option value="">الكل</option></select></div>
     <div><label>التاريخ</label><div class="date-picker-wrap" onclick="openDatePicker('searchDateI')"><span class="date-display" id="searchDateI-display">📅 اختر التاريخ</span><input type="hidden" id="searchDateI"></div></div>
     <div><label>نوع الاستفسار</label>
@@ -158,7 +165,8 @@ i: `
 c: `
 <div class="card" id="addControlCard">
     <h3>تسجيل شكوى سيطرة</h3>
-    <div style="display:grid;grid-template-columns:1fr 1fr;gap:15px;margin-bottom:15px;">
+    <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:15px;margin-bottom:15px;">
+        <select id="cCountryAdd" onchange="updateCities('cCountryAdd','cCityAdd','cBranchAdd')"></select>
         <select id="cCityAdd" onchange="updateBranches('cCityAdd','cBranchAdd')"></select>
         <select id="cBranchAdd"></select>
     </div>
@@ -252,7 +260,8 @@ c: `
 </div>
 <div class="search-bar search-bar-c">
     <div style="grid-column:1/-1;" class="search-section-title">🔍 خيارات البحث</div>
-    <div><label>المحافظة</label><select id="searchCityC" onchange="updateBranches('searchCityC','searchBranchC');filterTable();"></select></div>
+    <div><label>الدولة</label><select id="searchCountryC" onchange="updateCities('searchCountryC','searchCityC','searchBranchC');filterTable();"></select></div>
+    <div><label data-region-label-for="searchCityC">المحافظة</label><select id="searchCityC" onchange="updateBranches('searchCityC','searchBranchC');filterTable();"></select></div>
     <div><label>الفرع</label><select id="searchBranchC" onchange="filterTable()"><option value="">الكل</option></select></div>
     <div><label>التاريخ</label><div class="date-picker-wrap" onclick="openDatePicker('searchDateC')"><span class="date-display" id="searchDateC-display">📅 اختر التاريخ</span><input type="hidden" id="searchDateC"></div></div>
     <div><label>نص الشكوى</label><input type="text" id="searchTextC" placeholder="بحث..." oninput="filterTable()"></div>
