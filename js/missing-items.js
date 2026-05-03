@@ -337,6 +337,7 @@ function saveEditMontasia(id) {
 function exportMontasiat() {
     const get = id => { const el = document.getElementById(id); return el ? el.value : ''; };
     const f = {
+        country:     get('searchCountryM'),
         city:        get('searchCityM'),
         branch:      get('searchBranchM'),
         date:        get('searchDateM'),
@@ -345,15 +346,27 @@ function exportMontasiat() {
         deliveredBy: get('searchDeliveredByM'),
         type:        get('searchTypeM'),
     };
+    // فلاتر مدير قسم السيطرة: القسم + الفروع المحددة داخله
+    const isCtrlMgrM = currentUser?.role === 'control_employee';
+    const selectedSectionM = isCtrlMgrM ? get('searchSectionM') : '';
+    let selectedSectionBranchesM = [];
+    if (isCtrlMgrM && selectedSectionM) {
+        const _picker = document.getElementById('mSectionBranchPicker');
+        if (_picker) {
+            selectedSectionBranchesM = Array.from(_picker.querySelectorAll('input[type="checkbox"]:checked')).map(cb => cb.value);
+        }
+    }
     const filtered = db.montasiat.filter(x =>
         !x.deleted &&
+        (!f.country     || (x.country || _countryForCity(x.city)) === f.country) &&
         (!f.city        || x.city === f.city) &&
         (!f.branch      || x.branch === f.branch) &&
         (!f.date        || x.iso.startsWith(f.date)) &&
         (!f.text        || (x.notes||'').toLowerCase().includes(f.text)) &&
         (!f.addedBy     || (x.addedBy||'').includes(f.addedBy)) &&
         (!f.deliveredBy || (x.deliveredBy||'').includes(f.deliveredBy)) &&
-        (!f.type        || (x.type||'') === f.type)
+        (!f.type        || (x.type||'') === f.type) &&
+        (!selectedSectionM || selectedSectionBranchesM.includes(x.branch))
     );
     if (!filtered.length) return alert('لا توجد نتائج للتصدير بالفلتر الحالي');
     const rows = filtered.map(x => ({
@@ -479,19 +492,40 @@ function confirmImportMontasia() {
         }
         // دمج تاريخ التسليم + وقت التسليم
         var dtParsed = _buildDateTime(r['التاريخ_1'] || r['تاريخ التسليم'], r['وقت التسليم']);
-        db.montasiat.unshift({
+        var _city    = String(r['المحافظة']).trim();
+        var _country = String(r['الدولة'] || '').trim() || (typeof _countryForCity === 'function' ? _countryForCity(_city) : 'الأردن');
+        var _type    = String(r['النوع'] || '').trim();
+        if (_type === 'اخرى') _type = 'أخرى'; // تطبيع الهمزة
+        var _delBranch = String(r['فرع التسليم'] || '').trim();
+        var _delCity   = String(r['محافظة التسليم'] || '').trim();
+        var _delNotes  = String(r['ملاحظات التسليم'] || '').trim();
+        var _rec = {
             id:          base + i,
-            city:        String(r['المحافظة']).trim(),
+            country:     _country,
+            city:        _city,
             branch:      String(r['الفرع']).trim(),
             notes:       String(r['التفاصيل']).trim(),
+            type:        _type,
             status:      String(r['الحالة']||'').trim() || 'قيد الانتظار',
             time:        parsed   ? parsed.time   : now(),
             iso:         parsed   ? parsed.iso    : iso(),
             branchEmp:   String(r['موظف الفرع'] || '').trim(),
             addedBy:     (String(r['أضافه'] || r['اضافه'] || r['الموظف'] || '').trim()) || currentUser.name,
             deliveredBy: String(r['سلّمه'] || r['سلمه'] || '').trim() || '',
-            dt:          dtParsed ? dtParsed.time : '',
-        });
+            dt:          dtParsed ? dtParsed.time : ''
+        };
+        if (_delBranch) {
+            _rec.deliveryBranch  = _delBranch;
+            _rec.deliveryCity    = _delCity || _city;
+            _rec.deliveryCountry = _country;
+        }
+        if (_delNotes) {
+            _rec.deliverNotes        = _delNotes;
+            _rec.deliverNotesAddedAt = _rec.dt || _rec.time;
+        }
+        // ميزة "تأخير التسليم" تلقائياً إذا تواريخ الإضافة والتسليم مختلفة
+        if (parsed && dtParsed && parsed.iso !== dtParsed.iso) _rec.isLateDelivery = true;
+        db.montasiat.unshift(_rec);
     });
     _importMontasiaData = [];
     save();
