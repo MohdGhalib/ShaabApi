@@ -293,15 +293,18 @@ function _showForcedOutToast() {
 
 function _showStickyIdleNotif(empName, empId, lastActiveTs) {
     const stack = _ensureNotifStack();
-    const minutes = Math.floor((Date.now() - lastActiveTs) / 60000);
-    // نفس درجة العمق المستخدمة في الدخول/الخروج، بلون عنبري داكن للتمييز
-    const bg = 'linear-gradient(135deg,rgba(216,67,21,0.96),rgba(216,67,21,0.86))';
+    const totalMin = Math.floor((Date.now() - lastActiveTs) / 60000);
+    const duration = (totalMin >= 60)
+        ? `${Math.floor(totalMin / 60)} ساعة${(totalMin % 60) ? ' و' + (totalMin % 60) + ' دقيقة' : ''}`
+        : `${totalMin} دقيقة`;
+    // نفس تصميم رسالة تسجيل الدخول (نفس اللون الأخضر)
+    const bg = 'linear-gradient(135deg,rgba(46,125,50,0.96),rgba(46,125,50,0.86))';
     const item = document.createElement('div');
     item.style.cssText = _NOTIF_BASE_CSS + `background:${bg};cursor:pointer;`;
     item.dataset.empId = empId;
     const txt = document.createElement('span');
     txt.style.cssText = 'flex:1;';
-    txt.innerHTML = `⚠️ ${sanitize(empName)} غير نشط منذ ${minutes} دقيقة`;
+    txt.innerHTML = `الموظف ${sanitize(empName)} غير نشط منذ ${duration}`;
     const closeBtn = document.createElement('button');
     closeBtn.textContent = '✕';
     closeBtn.style.cssText = 'background:rgba(255,255,255,0.22);border:none;color:#fff;width:20px;height:20px;border-radius:50%;cursor:pointer;font-weight:700;display:flex;align-items:center;justify-content:center;font-size:10px;flex-shrink:0;';
