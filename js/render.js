@@ -385,7 +385,14 @@ function _renderTableM(get, isAdmin) {
             : x.type==='أخرى'
             ? `<span style="padding:2px 8px;border-radius:6px;font-size:12px;font-weight:700;background:rgba(100,181,246,0.15);color:#90caf9;">أخرى</span>`
             : x.type==='اصناف محمص الشعب'
-            ? `<span style="padding:2px 8px;border-radius:6px;font-size:12px;font-weight:700;background:rgba(156,204,101,0.18);color:#c5e1a5;">أصناف محامص الشعب</span>`
+            ? `<div style="display:flex;flex-direction:column;align-items:center;gap:4px;">
+                   <span style="padding:2px 8px;border-radius:6px;font-size:12px;font-weight:700;background:rgba(156,204,101,0.18);color:#c5e1a5;">أصناف محامص الشعب</span>
+                   ${x.roastSubType==='وزن'
+                       ? `<span style="padding:2px 8px;border-radius:6px;font-size:11px;font-weight:700;background:rgba(255,152,0,0.20);color:#ffb74d;">⚖️ وزن</span>`
+                       : x.roastSubType==='قيمة'
+                       ? `<span style="padding:2px 8px;border-radius:6px;font-size:11px;font-weight:700;background:rgba(186,104,200,0.22);color:#e1bee7;">💵 قيمة</span>`
+                       : ''}
+               </div>`
             : `<span style="color:var(--text-dim);font-size:12px;">—</span>`;
         let extraInfo = '';
         const _lblColor = '#80deea';
