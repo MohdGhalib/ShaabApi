@@ -210,13 +210,24 @@ function _empNameHTML(name) {
     const safe = sanitize(name);
     if (!currentUser) return safe;
     if (name === currentUser?.name) return safe;          // لا تجعل اسم المستخدم الحالي قابل للضغط
-    // الاسم قابل للضغط دائمًا (لكل المستخدمين)
     const online = (sessions || []).some(s => s.empName === name && _isSessionAlive(s));
-    const dot    = online ? '🟢' : '⚫';
     const color  = online ? '#81d4fa' : '#b0bec5';
+    const dotBg  = online ? '#4caf50' : '#e53935';
+    const dotShadow = online ? '#4caf50' : '#e53935';
+    const tip   = online ? 'مسجّل دخول' : 'خارج النظام';
+    const dot = `<span class="emp-status-dot" style="display:inline-block;width:9px;height:9px;border-radius:50%;background:${dotBg};box-shadow:0 0 6px ${dotShadow},0 0 1px #fff;vertical-align:middle;animation:emp-pulse 1.4s ease-in-out infinite;"></span>`;
     const enc = encodeURIComponent(name);
-    return `<span class="emp-name-link" onclick="_showEmpCard(decodeURIComponent('${enc}'))" title="${online?'مسجّل دخول':'خارج النظام'} — اضغط للبطاقة" style="cursor:pointer;color:${color};border-bottom:1px dashed currentColor;font-weight:700;">${dot} ${safe}</span>`;
+    return `<span class="emp-name-link" onclick="_showEmpCard(decodeURIComponent('${enc}'))" title="${tip} — اضغط للبطاقة" style="cursor:pointer;color:${color};border-bottom:1px dashed currentColor;font-weight:700;display:inline-flex;align-items:center;gap:7px;">${dot}<span>${safe}</span></span>`;
 }
+
+/* أضف keyframes النبضة مرة واحدة */
+(function _injectPulseStyle(){
+    if (document.getElementById('_empPulseStyle')) return;
+    const s = document.createElement('style');
+    s.id = '_empPulseStyle';
+    s.textContent = '@keyframes emp-pulse { 0%,100%{transform:scale(1);opacity:1;} 50%{transform:scale(1.35);opacity:0.55;} }';
+    document.head.appendChild(s);
+})();
 
 function _showEmpCard(name) {
     if (!currentUser) return;

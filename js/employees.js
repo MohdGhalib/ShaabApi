@@ -345,9 +345,9 @@ function renderEmployees() {
         // مؤشر الاتصال + اسم قابل للضغط (لمدير الكول سنتر فقط)
         const _isOnline = (sessions || []).some(s => s.empId === e.empId &&
             (typeof _isSessionAlive === 'function' ? _isSessionAlive(s) : !s.logoutIso));
-        const _dot = _isOnline
-            ? `<span title="مسجّل دخول الآن" style="display:inline-block;width:9px;height:9px;border-radius:50%;background:#4caf50;box-shadow:0 0 8px #4caf50,0 0 2px #fff;margin-left:6px;vertical-align:middle;"></span>`
-            : '';
+        const _dotColor = _isOnline ? '#4caf50' : '#e53935';
+        const _dotTip   = _isOnline ? 'مسجّل دخول الآن' : 'خارج النظام';
+        const _dot = `<span title="${_dotTip}" style="display:inline-block;width:9px;height:9px;border-radius:50%;background:${_dotColor};box-shadow:0 0 8px ${_dotColor},0 0 2px #fff;margin-right:8px;vertical-align:middle;animation:emp-pulse 1.4s ease-in-out infinite;"></span>`;
         const _nameHtml = (typeof _empNameHTML === 'function')
             ? _empNameHTML(e.name)
             : sanitize(e.name);
