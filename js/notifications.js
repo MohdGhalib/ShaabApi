@@ -282,7 +282,6 @@ function _showEmpCard(name) {
             </div>
             <div style="display:flex;flex-direction:column;align-items:center;margin-bottom:14px;">
                 ${photoHtml}
-                ${photoUploadBtn}
                 ${photoDeleteBtn}
             </div>
             <div style="display:flex;flex-direction:column;gap:12px;background:var(--bg-input);border:1px solid var(--border);border-radius:12px;padding:14px;margin-bottom:16px;">
