@@ -96,6 +96,7 @@ function doLogout() {
     if (typeof stopClock === 'function') stopClock();
     const _bellW = document.getElementById('notifBellWidget');
     if (_bellW) _bellW.style.display = 'none';
+    if (typeof _logAudit === 'function') { _logAudit('logout', '—', currentUser?.name || '—'); save(); }
     recordLogout();
     setToken(null);
     // مسح توقيتات المشاهدة عند تسجيل الخروج
@@ -242,6 +243,8 @@ async function login() {
     document.getElementById("mainApp").style.display   = "flex";
     setProfileUI();
     recordLogin();
+    if (typeof _logAudit === 'function') { _logAudit('login', '—', currentUser?.name || '—'); save(); }
+    if (typeof initNotifications === 'function') initNotifications();
     init();
 
     // لا نطلب إذن الإشعارات تلقائياً — يُطلب فقط عند الحاجة الفعلية

@@ -22,6 +22,8 @@ const AUDIT_ACTION_LABELS = {
     'editComplaint':         'تعديل شكوى',
     'deleteComplaint':       'حذف شكوى',
     'restoreComplaint':      'استعادة شكوى',
+    'login':                 'تسجيل دخول',
+    'logout':                'تسجيل خروج',
 };
 function _auditActionLabel(a) { return AUDIT_ACTION_LABELS[a] || a; }
 
@@ -68,6 +70,13 @@ function resetAuditSearch() {
     _lastAuditFilter.branch = _lastAuditFilter.date = _lastAuditFilter.action = '';
     _auditPage = 1;
     renderAuditLog();
+}
+
+async function reloadAuditLog() {
+    try {
+        if (typeof loadAllData === 'function') await loadAllData();
+        _renderAuditTable();
+    } catch(e) { console.error('reloadAuditLog failed:', e); }
 }
 
 function changeAuditPage(dir) {
@@ -218,6 +227,7 @@ function renderAuditLog() {
                 </select>
             </div>
             <button class="btn" style="background:var(--bg-input);color:var(--text-dim);align-self:end;" onclick="resetAuditSearch()">تفريغ</button>
+            <button class="btn" style="background:linear-gradient(135deg,rgba(21,101,192,0.18),rgba(21,101,192,0.08));border:1px solid rgba(21,101,192,0.5);color:#90caf9;align-self:end;font-weight:700;" onclick="reloadAuditLog()">🔄 تحديث</button>
             <button class="btn" style="background:linear-gradient(135deg,rgba(46,125,50,0.18),rgba(46,125,50,0.08));border:1px solid rgba(46,125,50,0.5);color:#a5d6a7;align-self:end;font-weight:700;" onclick="exportAuditLog()">⬇️ تصدير Excel</button>
         </div>
         <div id="auditTableContainer"></div>

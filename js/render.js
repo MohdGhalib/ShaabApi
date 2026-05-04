@@ -906,6 +906,8 @@ function renderAll() {
     if (typeof _renderAuditTable === 'function' && document.getElementById('auditTableContainer')) {
         _renderAuditTable();
     }
+    // اشعارات مدير الكول سنتر — تسجيل دخول/خروج/خمول
+    if (typeof _checkSessionsForNotifs === 'function') _checkSessionsForNotifs();
     if (typeof _updateBadges === 'function') _updateBadges();
     if (typeof _checkNotifications === 'function') _checkNotifications();
 }
