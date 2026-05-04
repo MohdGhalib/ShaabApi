@@ -904,6 +904,8 @@ function renderAll() {
     }
     // اشعارات مدير الكول سنتر — تسجيل دخول/خروج/خمول
     if (typeof _checkSessionsForNotifs === 'function') _checkSessionsForNotifs();
+    // رسائل جديدة + شارة العداد
+    if (typeof _checkNewMessages === 'function') _checkNewMessages();
     // تحديث جدول الموظفين إن كان مفتوحًا (لتحديث النقطة الخضراء)
     if (typeof renderEmployees === 'function' && document.querySelector('#tableE tbody')) {
         renderEmployees();
