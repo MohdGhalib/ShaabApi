@@ -14,9 +14,11 @@ function _ensureMessages() {
 
 function _canMessage(targetName) {
     if (!currentUser || !targetName || targetName === currentUser?.name) return false;
+    const role = currentUser.role;
+    // أدوار السيطرة لا تستخدم نظام الرسائل إطلاقًا
+    if (role === 'control' || role === 'control_employee' || role === 'control_sub') return false;
     const target = (employees || []).find(e => e.name === targetName);
     if (!target) return false;
-    const role = currentUser.role;
     if (currentUser.isAdmin || role === 'cc_manager') return true;       // المدير يراسل الجميع
     if (role === 'cc_employee') {
         // موظف الكول سنتر يراسل زملاءه + المدير فقط
@@ -284,6 +286,8 @@ function _renderUnreadMsgBadge() {
 
 function _checkNewMessages() {
     if (!currentUser) return;
+    const role = currentUser.role;
+    if (role === 'control' || role === 'control_employee' || role === 'control_sub') return;
     _ensureMessages();
     const myName = currentUser.name;
     const incoming = (db.messages || []).filter(m => !m.deleted && m.to === myName);

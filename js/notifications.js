@@ -209,13 +209,17 @@ function _empNameHTML(name) {
     if (!name || name === '—') return sanitize(name || '—');
     const safe = sanitize(name);
     if (!currentUser) return safe;
-    if (name === currentUser?.name) return safe;          // لا تجعل اسم المستخدم الحالي قابل للضغط
     const online = (sessions || []).some(s => s.empName === name && _isSessionAlive(s));
-    const color  = online ? '#81d4fa' : '#b0bec5';
     const dotBg  = online ? '#4caf50' : '#e53935';
-    const dotShadow = online ? '#4caf50' : '#e53935';
-    const tip   = online ? 'مسجّل دخول' : 'خارج النظام';
-    const dot = `<span class="emp-status-dot" style="display:inline-block;width:10px;height:10px;border-radius:50%;background:${dotBg};box-shadow:0 0 8px ${dotShadow},0 0 2px #fff;vertical-align:middle;animation:emp-pulse 1.3s ease-in-out infinite;flex-shrink:0;"></span>`;
+    const tip    = online ? 'مسجّل دخول' : 'خارج النظام';
+    const dot = `<span class="emp-status-dot" title="${tip}" style="display:inline-block;width:10px;height:10px;border-radius:50%;background:${dotBg};box-shadow:0 0 8px ${dotBg},0 0 2px #fff;vertical-align:middle;animation:emp-pulse 1.3s ease-in-out infinite;flex-shrink:0;"></span>`;
+    // أدوار السيطرة + اسم المستخدم نفسه → النقطة فقط بدون إمكانية الضغط
+    const role = currentUser.role;
+    const isControlRole = role === 'control' || role === 'control_employee' || role === 'control_sub';
+    if (isControlRole || name === currentUser.name) {
+        return `<span style="display:inline-flex;align-items:center;gap:8px;font-weight:700;"><span>${safe}</span>${dot}</span>`;
+    }
+    const color = online ? '#81d4fa' : '#b0bec5';
     const enc = encodeURIComponent(name);
     // الاسم أولًا ثم النقطة → في RTL النقطة تظهر على يسار الاسم
     return `<span class="emp-name-link" onclick="_showEmpCard(decodeURIComponent('${enc}'))" title="${tip} — اضغط للبطاقة" style="cursor:pointer;color:${color};border-bottom:1px dashed currentColor;font-weight:700;display:inline-flex;align-items:center;gap:8px;"><span>${safe}</span>${dot}</span>`;
