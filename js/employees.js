@@ -349,15 +349,11 @@ function renderEmployees() {
         const _nameHtml = (typeof _empNameHTML === 'function')
             ? _empNameHTML(e.name)
             : sanitize(e.name);
-        const _isCCMgr3 = currentUser?.role === 'cc_manager' || currentUser?.isAdmin;
-        const _photoBtn = _isCCMgr3
-            ? `<label title="رفع صورة" style="display:inline-flex;align-items:center;cursor:pointer;color:var(--text-dim);padding:0 6px;font-size:13px;vertical-align:middle;">📷<input type="file" accept="image/*" style="display:none;" onchange="uploadEmployeePhoto('${e.empId}',this)"></label>`
-            : '';
         const _photoThumb = e.photo
             ? `<img src="${e.photo}" alt="" style="width:30px;height:30px;border-radius:50%;object-fit:cover;border:1px solid var(--border);vertical-align:middle;margin-left:6px;">`
             : '';
         return `<tr>
-        <td>${i+1}</td><td>${_photoThumb}<b>${_nameHtml}</b>${_photoBtn}${branchInfo}</td>
+        <td>${i+1}</td><td>${_photoThumb}<b>${_nameHtml}</b>${branchInfo}</td>
         <td><span class="emp-badge">${sanitize(e.title)}</span></td>
         <td><span class="emp-id-display">${sanitize(e.empId)}</span></td>
         <td style="display:flex;gap:6px;flex-wrap:wrap;">
