@@ -53,6 +53,7 @@ function initNotifications() {
 
 function _checkSessionsForNotifs() {
     if (!_isCCMgr()) return;
+    if (!_notifInited) initNotifications();              // تهيئة كسولة عند أول استدعاء
     const myId = currentUser?.empId;
     (sessions || []).forEach(s => {
         if (s.empId === myId) return;                    // تجاهل النفس
