@@ -442,11 +442,16 @@ function _renderChatPane(conv, myName, isAllView) {
         ? ordered.map(m => _renderChatBubble(m, myName, isAllView)).join('')
         : '<div style="text-align:center;padding:40px 20px;color:var(--text-dim);font-size:13px;">لا توجد رسائل بعد — ابدأ المحادثة</div>';
 
-    const inputBar = (!isAllView && otherName && _canMessage(otherName))
-        ? _renderChatInput(otherName)
-        : (isAllView
-            ? '<div style="padding:12px;text-align:center;color:var(--text-dim);font-size:11px;border-top:1px solid var(--border);">عرض المراقبة فقط</div>'
-            : '');
+    const isMgr = (currentUser?.role === 'cc_manager') || currentUser?.isAdmin;
+    let inputBar = '';
+    if (!isAllView && otherName && _canMessage(otherName)) {
+        inputBar = _renderChatInput(otherName);
+    } else if (isAllView && isMgr) {
+        // المدير يستطيع التدخّل في محادثات المراقبة
+        inputBar = _renderInterventionInput(conv);
+    } else if (isAllView) {
+        inputBar = '<div style="padding:12px;text-align:center;color:var(--text-dim);font-size:11px;border-top:1px solid var(--border);">عرض المراقبة فقط</div>';
+    }
 
     return `
         <div style="padding:11px 16px;border-bottom:1px solid var(--border);background:rgba(0,0,0,0.18);display:flex;align-items:center;gap:10px;">
@@ -465,14 +470,23 @@ function _renderChatPane(conv, myName, isAllView) {
 function _renderChatBubble(m, myName, isAllView) {
     const mineSent = m.from === myName;
     const align = isAllView ? 'flex-start' : (mineSent ? 'flex-start' : 'flex-end');
-    const bg = isAllView
-        ? 'rgba(255,255,255,0.05)'
-        : (mineSent
-            ? 'linear-gradient(135deg,rgba(46,125,50,0.30),rgba(46,125,50,0.18))'
-            : 'linear-gradient(135deg,rgba(38,50,56,0.65),rgba(38,50,56,0.50))');
-    const border = isAllView
-        ? '1px solid var(--border)'
-        : (mineSent ? '1px solid rgba(46,125,50,0.4)' : '1px solid rgba(255,255,255,0.08)');
+    let bg, border;
+    if (m.isIntervention) {
+        bg = 'linear-gradient(135deg,rgba(245,124,0,0.30),rgba(245,124,0,0.18))';
+        border = '1px solid rgba(245,124,0,0.55)';
+    } else if (isAllView) {
+        bg = 'rgba(255,255,255,0.05)';
+        border = '1px solid var(--border)';
+    } else if (mineSent) {
+        bg = 'linear-gradient(135deg,rgba(46,125,50,0.30),rgba(46,125,50,0.18))';
+        border = '1px solid rgba(46,125,50,0.4)';
+    } else {
+        bg = 'linear-gradient(135deg,rgba(38,50,56,0.65),rgba(38,50,56,0.50))';
+        border = '1px solid rgba(255,255,255,0.08)';
+    }
+    const interventionBadge = m.isIntervention
+        ? `<div style="font-size:10px;color:#ffb74d;margin-bottom:4px;font-weight:700;background:rgba(245,124,0,0.15);padding:3px 7px;border-radius:6px;display:inline-block;">⚠️ تدخّل من المدير</div>`
+        : '';
     const senderLine = isAllView
         ? `<div style="font-size:10px;color:var(--text-dim);margin-bottom:3px;"><b>${sanitize(m.from)}</b> → <b>${sanitize(m.to)}</b></div>`
         : (mineSent ? '' : `<div style="font-size:10px;color:#90caf9;margin-bottom:3px;font-weight:700;">${sanitize(m.from)}</div>`);
@@ -489,12 +503,64 @@ function _renderChatBubble(m, myName, isAllView) {
     return `
         <div style="display:flex;justify-content:${align};">
             <div style="background:${bg};border:${border};border-radius:12px;padding:7px 11px;max-width:75%;min-width:80px;">
+                ${interventionBadge}
                 ${senderLine}
                 <div style="font-size:13px;color:var(--text-main);line-height:1.55;white-space:pre-wrap;word-break:break-word;">${sanitize(m.text||'')}</div>
                 ${attachHtml}
                 <div style="font-size:9px;color:var(--text-dim);text-align:left;margin-top:3px;">${time}</div>
             </div>
         </div>`;
+}
+
+function _renderInterventionInput(conv) {
+    const a = conv.parties[0];
+    const b = conv.parties[1];
+    const encA = encodeURIComponent(a);
+    const encB = encodeURIComponent(b);
+    return `
+        <div style="border-top:1px solid var(--border);padding:10px 14px;background:rgba(255,152,0,0.05);">
+            <div style="display:flex;align-items:center;gap:6px;margin-bottom:8px;color:#ffb74d;font-size:11px;font-weight:700;">
+                ⚠️ تدخّل إداري — سيُرسَل إلى الطرفين مع إشارة "تدخّل من المدير"
+            </div>
+            <div style="display:flex;align-items:flex-end;gap:8px;">
+                <textarea id="msgChatInput" rows="1" placeholder="اكتب رد المدير..." style="flex:1;padding:9px 12px;border-radius:18px;border:1px solid rgba(255,152,0,0.4);background:var(--bg-input);color:var(--text-main);font-family:'Cairo';font-size:13px;resize:none;line-height:1.5;max-height:120px;" oninput="this.style.height='auto';this.style.height=Math.min(this.scrollHeight,120)+'px';" onkeydown="if(event.key==='Enter'&&!event.shiftKey){event.preventDefault();_sendInterventionMessage('${encA}','${encB}');}"></textarea>
+                <button onclick="_sendInterventionMessage('${encA}','${encB}')" style="background:linear-gradient(135deg,rgba(245,124,0,0.95),rgba(245,124,0,0.85));border:none;border-radius:50%;width:42px;height:42px;color:#fff;cursor:pointer;font-size:18px;flex-shrink:0;display:flex;align-items:center;justify-content:center;" title="إرسال تدخّل إداري">⚠</button>
+            </div>
+        </div>`;
+}
+
+async function _sendInterventionMessage(encA, encB) {
+    const isMgr = (currentUser?.role === 'cc_manager') || currentUser?.isAdmin;
+    if (!isMgr) return;
+    const a = decodeURIComponent(encA);
+    const b = decodeURIComponent(encB);
+    const ta = document.getElementById('msgChatInput');
+    const text = (ta?.value || '').trim();
+    if (!text) return;
+    if (!confirm(`سيتم إرسال هذا الرد إلى الطرفين:\n• ${a}\n• ${b}\n\nستظهر الرسالة لهم بإشارة "تدخّل من المدير".\n\nهل تريد المتابعة؟`)) return;
+    _ensureMessages();
+    const baseTs = Date.now();
+    const targets = [a, b].filter(n => n !== currentUser.name);  // لا ترسل لنفسك
+    targets.forEach((target, i) => {
+        const tEmp = (employees || []).find(e => e.name === target);
+        db.messages.unshift({
+            id: baseTs + i,
+            from: currentUser.name, fromEmpId: currentUser.empId || '',
+            to: target, toEmpId: tEmp?.empId || '',
+            text, attachments: [], replyToId: null,
+            time: now(), iso: iso(), ts: baseTs, readByMe: true,
+            isIntervention: true,
+            interventionPair: [a, b]
+        });
+    });
+    if (typeof _logAudit === 'function') _logAudit('interventionMessage', '—', `للطرفين: ${a} + ${b} — ${text.slice(0,40)}`);
+    save();
+    if (ta) ta.value = '';
+    renderMessagesPage();
+    setTimeout(() => {
+        const sc = document.getElementById('msgChatScroll');
+        if (sc) sc.scrollTop = sc.scrollHeight;
+    }, 30);
 }
 
 function _renderChatInput(targetName) {

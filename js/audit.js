@@ -25,6 +25,8 @@ const AUDIT_ACTION_LABELS = {
     'login':                 'تسجيل دخول',
     'logout':                'تسجيل خروج',
     'forceLogout':           'إخراج موظف من النظام',
+    'sendMessage':           'إرسال رسالة',
+    'interventionMessage':   'تدخّل إداري في محادثة',
 };
 function _auditActionLabel(a) { return AUDIT_ACTION_LABELS[a] || a; }
 
