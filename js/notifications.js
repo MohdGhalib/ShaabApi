@@ -282,7 +282,7 @@ function _showEmpCard(name) {
             </div>
             <div style="display:flex;flex-direction:column;gap:12px;background:var(--bg-input);border:1px solid var(--border);border-radius:12px;padding:14px;margin-bottom:16px;">
                 <div><span style="color:var(--text-dim);font-size:12px;">الاسم:</span> <b style="color:var(--text-main);">${sanitize(name)}</b></div>
-                <div><span style="color:var(--text-dim);font-size:12px;">الرقم الوظيفي:</span> <b style="color:#81d4fa;font-family:monospace;">${sanitize(emp?.empId || session?.empId || '—')}</b></div>
+                <div><span style="color:var(--text-dim);font-size:12px;">الرقم الوظيفي:</span> <b style="color:#81d4fa;font-family:monospace;">${(_isCCMgr() || isSelf) ? sanitize(emp?.empId || session?.empId || '—') : '****'}</b></div>
                 <div><span style="color:var(--text-dim);font-size:12px;">المسمى الوظيفي:</span> <b style="color:var(--text-main);">${sanitize(emp?.title || '—')}</b></div>
                 ${loginRow}
                 <div><span style="color:var(--text-dim);font-size:12px;">الحالة:</span> ${statusBadge}</div>
