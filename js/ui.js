@@ -314,11 +314,17 @@ function switchTab(t) {
     const tabC = document.getElementById('tab-c');
     if (tabC) { tabC.classList.remove('active'); tabC.classList.toggle('group-active', t === 'c' || t === 'cu' || t === 'comp' || t === 'mn'); }
 
+    // tab-msg الأب: group-active عند msg أو msg-mine أو msg-all
+    const tabMsgEl = document.getElementById('tab-msg');
+    if (tabMsgEl) { tabMsgEl.classList.remove('active'); tabMsgEl.classList.toggle('group-active', t === 'msg' || t === 'msg-mine' || t === 'msg-all'); }
+
     // فتح/إغلاق القوائم الفرعية
     const grpM = document.getElementById('nav-group-m');
     if (grpM) grpM.classList.toggle('open', t === 'm' || t === 'o');
     const grpC = document.getElementById('nav-group-c');
     if (grpC) grpC.classList.toggle('open', t === 'c' || t === 'cu' || t === 'comp' || t === 'mn');
+    const grpMsg = document.getElementById('nav-group-msg');
+    if (grpMsg) grpMsg.classList.toggle('open', t === 'msg' || t === 'msg-mine' || t === 'msg-all');
 
     // فتح/إغلاق مجموعة الموظفين
     const grpE = document.getElementById('nav-group-e');
@@ -363,14 +369,10 @@ function switchTab(t) {
         if (typeof _setMsgPageView === 'function') {
             _setMsgPageView(t === 'msg-all' ? 'all' : 'mine');
         }
-        // تفعيل الـ active للأزرار الفرعية والمجموعة
+        // تفعيل active للأزرار الفرعية (group/open تدار من الـ toggles أعلاه)
         document.getElementById('tab-msg-mine')?.classList.toggle('active', t !== 'msg-all');
         document.getElementById('tab-msg-all')?.classList.toggle('active', t === 'msg-all');
-        const tabMsgParent = document.getElementById('tab-msg');
-        if (tabMsgParent) { tabMsgParent.classList.remove('active'); tabMsgParent.classList.add('group-active'); }
-        const grpMsg = document.getElementById('nav-group-msg');
-        if (grpMsg) grpMsg.classList.add('open');
-        // رسم الصفحة (PAGES['msg'] يتضمن الحاوية)
+        // رسم الصفحة
         document.getElementById('page-container').innerHTML = PAGES['msg'] || '';
         if (typeof renderMessagesPage === 'function') renderMessagesPage();
         return;
