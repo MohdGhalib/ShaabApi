@@ -59,23 +59,42 @@ function applyThemeIcon() {
 }
 
 /* ── ترقيم الصفحات ── */
-const _pg = { M:1, I:1, C:1, O:1 };
-const _PAGE_SIZE = 10;
+const _pg = { M:1, I:1, C:1, O:1, CU:1 };
+const _DEFAULT_PAGE_SIZE = 10;
+const _pgSize = { M:10, O:10, I:10, C:10, CU:10 };
+try {
+    const _saved = JSON.parse(localStorage.getItem('_shaabPgSize') || '{}');
+    Object.assign(_pgSize, _saved);
+} catch {}
 
 function changePage(table, dir) {
     _pg[table] = Math.max(1, (_pg[table] || 1) + dir);
     renderAll();
 }
 
+function changePageSize(table, size) {
+    const n = parseInt(size, 10);
+    _pgSize[table] = (n > 0) ? n : _DEFAULT_PAGE_SIZE;
+    _pg[table] = 1;
+    try { localStorage.setItem('_shaabPgSize', JSON.stringify(_pgSize)); } catch {}
+    renderAll();
+}
+
 function _paginationBar(table, total, currentPage) {
-    const pages = Math.max(1, Math.ceil(total / _PAGE_SIZE));
-    if (pages <= 1) return '';
+    const size = _pgSize[table] || _DEFAULT_PAGE_SIZE;
+    const pages = Math.max(1, Math.ceil(total / size));
     const cp = Math.min(currentPage, pages);
-    return `<div style="display:flex;align-items:center;justify-content:center;gap:10px;margin-top:14px;flex-wrap:wrap;">
+    const sizeOptions = [10, 20, 50, 100].map(n =>
+        `<option value="${n}" ${n === size ? 'selected' : ''}>${n}</option>`).join('');
+    const sizeBox = `<span style="font-size:12px;color:var(--text-dim);display:inline-flex;align-items:center;gap:6px;">عرض
+        <select onchange="changePageSize('${table}', this.value)" style="padding:4px 8px;border-radius:7px;border:1px solid var(--border);background:var(--bg-input);color:var(--text-main);font-family:'Cairo';font-size:12px;cursor:pointer;">${sizeOptions}</select>
+        / صفحة</span>`;
+    if (pages <= 1 && total <= 10) return '';
+    const navBtns = (pages <= 1) ? '' : `
         <button onclick="changePage('${table}',-1)" ${cp<=1?'disabled':''} style="padding:6px 14px;border-radius:8px;border:1px solid var(--border);background:var(--bg-input);color:var(--text-main);cursor:pointer;font-family:'Cairo';">◄ السابق</button>
         <span style="font-size:13px;color:var(--text-dim);">صفحة <b style="color:var(--text-main);">${cp}</b> من <b style="color:var(--text-main);">${pages}</b> (${total} عنصر)</span>
-        <button onclick="changePage('${table}',1)" ${cp>=pages?'disabled':''} style="padding:6px 14px;border-radius:8px;border:1px solid var(--border);background:var(--bg-input);color:var(--text-main);cursor:pointer;font-family:'Cairo';">التالي ►</button>
-    </div>`;
+        <button onclick="changePage('${table}',1)" ${cp>=pages?'disabled':''} style="padding:6px 14px;border-radius:8px;border:1px solid var(--border);background:var(--bg-input);color:var(--text-main);cursor:pointer;font-family:'Cairo';">التالي ►</button>`;
+    return `<div style="display:flex;align-items:center;justify-content:center;gap:14px;margin-top:14px;flex-wrap:wrap;">${navBtns}${sizeBox}</div>`;
 }
 
 /* ── شارات الأرقام على التبويبات ── */

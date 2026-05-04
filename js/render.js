@@ -351,9 +351,10 @@ function _renderTableM(get, isAdmin) {
         (!selectedSectionM || selectedSectionBranchesM.includes(x.branch))
     );
     if (!_pg.M) _pg.M = 1;
-    const _pageM = Math.min(_pg.M, Math.max(1, Math.ceil(allRows.length / _PAGE_SIZE)));
+    const _sizeM = _pgSize.M || _DEFAULT_PAGE_SIZE;
+    const _pageM = Math.min(_pg.M, Math.max(1, Math.ceil(allRows.length / _sizeM)));
     _pg.M = _pageM;
-    const rows = allRows.slice((_pageM - 1) * _PAGE_SIZE, _pageM * _PAGE_SIZE);
+    const rows = allRows.slice((_pageM - 1) * _sizeM, _pageM * _sizeM);
     tbodyM.innerHTML = rows.map(x => {
         const statusClass = x.status==='تم التسليم' ? 'done'
             : x.status==='مرفوضة'         ? 'rejected'
@@ -550,9 +551,10 @@ function _renderTableO(get) {
         (!f.subType || (x.roastSubType||'') === f.subType)
     );
     if (!_pg.O) _pg.O = 1;
-    const _pageO = Math.min(_pg.O, Math.max(1, Math.ceil(allRowsO.length / _PAGE_SIZE)));
+    const _sizeO = _pgSize.O || _DEFAULT_PAGE_SIZE;
+    const _pageO = Math.min(_pg.O, Math.max(1, Math.ceil(allRowsO.length / _sizeO)));
     _pg.O = _pageO;
-    const rows = allRowsO.slice((_pageO - 1) * _PAGE_SIZE, _pageO * _PAGE_SIZE);
+    const rows = allRowsO.slice((_pageO - 1) * _sizeO, _pageO * _sizeO);
     tbodyO.innerHTML = rows.map(x => {
         let actionBtn = '—';
         if (x.status==='بانتظار الموافقة' && perm('approveM'))
@@ -615,9 +617,10 @@ function _renderTableI(get) {
         (!f.addedBy || (x.addedBy||'').includes(f.addedBy))
     );
     if (!_pg.I) _pg.I = 1;
-    const _pageI = Math.min(_pg.I, Math.max(1, Math.ceil(allRowsI.length / _PAGE_SIZE)));
+    const _sizeI = _pgSize.I || _DEFAULT_PAGE_SIZE;
+    const _pageI = Math.min(_pg.I, Math.max(1, Math.ceil(allRowsI.length / _sizeI)));
     _pg.I = _pageI;
-    const rows = allRowsI.slice((_pageI - 1) * _PAGE_SIZE, _pageI * _PAGE_SIZE);
+    const rows = allRowsI.slice((_pageI - 1) * _sizeI, _pageI * _sizeI);
     const _tbodyIRows = rows; // kept for select-all check below
     tbodyI.innerHTML = rows.map(x => {
         const editBox = canManage ? `
@@ -745,9 +748,10 @@ function _renderTableC(get, isAdmin) {
         ))
     );
     if (!_pg.C) _pg.C = 1;
-    const _pageC = Math.min(_pg.C, Math.max(1, Math.ceil(allRowsC.length / _PAGE_SIZE)));
+    const _sizeC = _pgSize.C || _DEFAULT_PAGE_SIZE;
+    const _pageC = Math.min(_pg.C, Math.max(1, Math.ceil(allRowsC.length / _sizeC)));
     _pg.C = _pageC;
-    const rows = allRowsC.slice((_pageC - 1) * _PAGE_SIZE, _pageC * _PAGE_SIZE);
+    const rows = allRowsC.slice((_pageC - 1) * _sizeC, _pageC * _sizeC);
 
     tbodyC.innerHTML = rows.map(x => {
         const hideFromControl = isControl || isMedia || isControlEmployee || isControlSub;
