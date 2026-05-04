@@ -305,8 +305,10 @@ function _checkNewMessages() {
     _renderUnreadMsgBadge();
 }
 
-/* ══ صفحة الرسائل (تبويب جانبي) ═════════════════════════ */
-let _msgPageView = 'mine'; // 'mine' أو 'all' (للمدير فقط)
+/* ══ صفحة الرسائل (تصميم WhatsApp Web) ═════════════════════════ */
+let _msgPageView = 'mine';        // 'mine' أو 'all'
+let _selectedConv = null;          // اسم الطرف الآخر (mine) أو مفتاح المحادثة (all)
+let _msgComposeAttachments = [];   // مرفقات شريط الإدخال السفلي
 
 function renderMessagesPage() {
     const root = document.getElementById('messagesPageContainer');
@@ -314,47 +316,267 @@ function renderMessagesPage() {
     _ensureMessages();
     const isMgr = (currentUser?.role === 'cc_manager') || currentUser?.isAdmin;
     if (!isMgr) _msgPageView = 'mine';
-
     const myName = currentUser?.name;
-    const all = (db.messages || []).filter(m => !m.deleted);
+    const isAllView = isMgr && _msgPageView === 'all';
 
-    // ── تجميع الرسائل في محادثات (كل محادثة = طرفان) ──
-    // مفتاح المحادثة: ترتيب أبجدي للأسماء بفاصل ثابت
+    // ── جمع المحادثات ──
+    const all = (db.messages || []).filter(m => !m.deleted);
     const convs = new Map();
-    const eligible = (isMgr && _msgPageView === 'all')
-        ? all
-        : all.filter(m => m.from === myName || m.to === myName);
+    const eligible = isAllView ? all : all.filter(m => m.from === myName || m.to === myName);
     eligible.forEach(m => {
-        const key = [m.from, m.to].sort((a,b) => a.localeCompare(b, 'ar')).join(' ↔ ');
-        if (!convs.has(key)) convs.set(key, { key, parties:[m.from, m.to], messages:[], lastTs:0, unread:0 });
+        const key = [m.from, m.to].sort((a,b) => a.localeCompare(b, 'ar')).join('|');
+        if (!convs.has(key)) convs.set(key, { key, parties:[m.from, m.to].sort((a,b)=>a.localeCompare(b,'ar')), messages:[], lastTs:0, lastMsg:null, unread:0 });
         const c = convs.get(key);
         c.messages.push(m);
-        if (m.ts > c.lastTs) c.lastTs = m.ts;
+        if ((m.ts||0) > c.lastTs) { c.lastTs = m.ts||0; c.lastMsg = m; }
         if (m.to === myName && !m.readByMe) c.unread++;
     });
 
-    // رتّب المحادثات: الأحدث أولًا
-    const convList = Array.from(convs.values()).sort((a,b) => b.lastTs - a.lastTs);
-
-    let body = '';
-    if (!convList.length) {
-        body = '<div style="text-align:center;padding:40px;color:var(--text-dim);">لا توجد مراسلات</div>';
-    } else {
-        body = convList.map(c => _renderConversationCard(c, myName, isMgr && _msgPageView === 'all')).join('');
+    // أضف جهات الاتصال (موظفين يمكن مراسلتهم) حتى لو لم توجد محادثة معهم — في عرض mine فقط
+    if (!isAllView) {
+        (employees || []).forEach(e => {
+            if (e.name === myName) return;
+            if (!_canMessage(e.name)) return;
+            const key = [myName, e.name].sort((a,b) => a.localeCompare(b, 'ar')).join('|');
+            if (!convs.has(key)) convs.set(key, { key, parties:[myName, e.name], messages:[], lastTs:0, lastMsg:null, unread:0, isNew:true });
+        });
     }
 
-    const sectionTitle = (isMgr && _msgPageView === 'all') ? '📋 جميع المراسلات' : '💬 مراسلاتي';
-    // قسم "بدء محادثة جديدة" — يظهر فقط في عرض "مراسلاتي"
-    const composeSection = (_msgPageView === 'mine') ? _renderQuickContactsSection() : '';
+    const convList = Array.from(convs.values()).sort((a,b) => {
+        // محادثات لها رسائل تتقدّم على الفارغة، ثم الأحدث أولاً
+        if (!!a.lastMsg !== !!b.lastMsg) return a.lastMsg ? -1 : 1;
+        return (b.lastTs||0) - (a.lastTs||0);
+    });
+
+    // اختر محادثة افتراضية إذا لم يكن هناك اختيار حالي صالح
+    if (!convList.find(c => _convKeyOf(c, myName, isAllView) === _selectedConv) && convList.length) {
+        _selectedConv = _convKeyOf(convList[0], myName, isAllView);
+    }
+    const selected = convList.find(c => _convKeyOf(c, myName, isAllView) === _selectedConv) || null;
+
+    const sectionTitle = isAllView ? '📋 جميع المراسلات' : '💬 مراسلاتي';
+
     root.innerHTML = `
-        ${composeSection}
-        <div class="card">
-            <div style="margin-bottom:14px;display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px;">
-                <h3 style="margin:0;color:var(--text-main);">${sectionTitle}</h3>
-                <small style="color:var(--text-dim);">${convList.length} محادثة • ${eligible.length} رسالة</small>
+        <div class="card" style="padding:0;overflow:hidden;">
+            <div style="padding:12px 16px;border-bottom:1px solid var(--border);display:flex;justify-content:space-between;align-items:center;">
+                <h3 style="margin:0;color:var(--text-main);font-size:15px;">${sectionTitle}</h3>
+                <small style="color:var(--text-dim);">${convList.length} محادثة</small>
             </div>
-            ${body}
+            <div style="display:grid;grid-template-columns:300px 1fr;height:560px;">
+                <!-- قائمة جهات الاتصال (يمين في RTL) -->
+                <div id="msgContactsList" style="border-left:1px solid var(--border);overflow-y:auto;background:rgba(0,0,0,0.12);">
+                    ${_renderContactsList(convList, myName, isAllView)}
+                </div>
+                <!-- منطقة المحادثة (يسار في RTL) -->
+                <div id="msgChatPane" style="display:flex;flex-direction:column;background:rgba(0,0,0,0.04);">
+                    ${_renderChatPane(selected, myName, isAllView)}
+                </div>
+            </div>
         </div>`;
+}
+
+function _convKeyOf(conv, myName, isAllView) {
+    if (isAllView) return conv.key;
+    return conv.parties[0] === myName ? conv.parties[1] : conv.parties[0];
+}
+
+function _renderContactsList(convList, myName, isAllView) {
+    if (!convList.length) {
+        return '<div style="padding:30px 16px;text-align:center;color:var(--text-dim);font-size:13px;">لا توجد جهات اتصال</div>';
+    }
+    return convList.map(c => {
+        const otherName = isAllView ? null : (c.parties[0] === myName ? c.parties[1] : c.parties[0]);
+        const title = isAllView ? `${sanitize(c.parties[0])} ↔ ${sanitize(c.parties[1])}` : sanitize(otherName);
+        const online = !isAllView && otherName && (sessions || []).some(s => s.empName === otherName && (typeof _isSessionAlive==='function'?_isSessionAlive(s):!s.logoutIso));
+        const dotColor = online ? '#4caf50' : '#e53935';
+        const preview = c.lastMsg
+            ? sanitize((c.lastMsg.text || (c.lastMsg.attachments?.length ? `📎 ${c.lastMsg.attachments.length} مرفق` : '')).slice(0,40))
+            : '<i style="color:var(--text-dim);">لا توجد رسائل بعد — اضغط لبدء محادثة</i>';
+        const ts = c.lastMsg ? sanitize(c.lastMsg.time||'').split('،').pop().trim() : '';
+        const key = _convKeyOf(c, myName, isAllView);
+        const isSelected = key === _selectedConv;
+        const bg = isSelected ? 'rgba(46,125,50,0.18)' : 'transparent';
+        const unreadBadge = c.unread > 0 ? `<span style="background:#1976d2;color:#fff;border-radius:20px;padding:1px 7px;font-size:10px;font-weight:700;min-width:18px;display:inline-block;text-align:center;">${c.unread}</span>` : '';
+        const dot = !isAllView ? `<span style="display:inline-block;width:9px;height:9px;border-radius:50%;background:${dotColor};box-shadow:0 0 6px ${dotColor};animation:emp-pulse 1.3s ease-in-out infinite;flex-shrink:0;"></span>` : '';
+        return `
+            <div onclick="_selectConv('${encodeURIComponent(key)}')"
+                 style="cursor:pointer;padding:11px 14px;border-bottom:1px solid var(--border);background:${bg};display:flex;align-items:center;gap:10px;transition:background 0.12s;"
+                 onmouseover="if(this.style.background==='transparent')this.style.background='rgba(255,255,255,0.04)';"
+                 onmouseout="this.style.background='${bg}';">
+                <div style="width:38px;height:38px;border-radius:50%;background:linear-gradient(135deg,#37474f,#263238);color:#fff;display:flex;align-items:center;justify-content:center;font-weight:700;flex-shrink:0;font-size:14px;">${sanitize((isAllView?c.parties[0]:otherName||'?').charAt(0))}</div>
+                <div style="flex:1;min-width:0;">
+                    <div style="display:flex;justify-content:space-between;align-items:center;gap:6px;">
+                        <span style="font-size:13px;font-weight:700;color:var(--text-main);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${title}</span>
+                        <small style="color:var(--text-dim);font-size:10px;flex-shrink:0;">${ts}</small>
+                    </div>
+                    <div style="display:flex;justify-content:space-between;align-items:center;gap:6px;margin-top:3px;">
+                        <span style="font-size:11px;color:var(--text-dim);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;flex:1;">${preview}</span>
+                        ${unreadBadge}
+                    </div>
+                </div>
+                ${dot}
+            </div>`;
+    }).join('');
+}
+
+function _renderChatPane(conv, myName, isAllView) {
+    if (!conv) {
+        return '<div style="flex:1;display:flex;align-items:center;justify-content:center;color:var(--text-dim);font-size:14px;">📬 اختر محادثة من القائمة</div>';
+    }
+    const otherName = isAllView ? null : (conv.parties[0] === myName ? conv.parties[1] : conv.parties[0]);
+    const headerTitle = isAllView ? `${sanitize(conv.parties[0])} ↔ ${sanitize(conv.parties[1])}` : sanitize(otherName);
+    const online = !isAllView && otherName && (sessions || []).some(s => s.empName === otherName && (typeof _isSessionAlive==='function'?_isSessionAlive(s):!s.logoutIso));
+    const statusTxt = isAllView ? '' : (online ? '🟢 متصل الآن' : '⚫ غير متصل');
+
+    // علّم الواردة كمقروءة عند فتح المحادثة
+    if (!isAllView) {
+        let changed = false;
+        conv.messages.forEach(m => {
+            if (m.to === myName && !m.readByMe) { m.readByMe = true; changed = true; }
+        });
+        if (changed) { save(); if (typeof _renderUnreadMsgBadge === 'function') _renderUnreadMsgBadge(); }
+    }
+
+    const ordered = conv.messages.slice().sort((a,b) => (a.ts||0) - (b.ts||0));
+    const bubbles = ordered.length
+        ? ordered.map(m => _renderChatBubble(m, myName, isAllView)).join('')
+        : '<div style="text-align:center;padding:40px 20px;color:var(--text-dim);font-size:13px;">لا توجد رسائل بعد — ابدأ المحادثة</div>';
+
+    const inputBar = (!isAllView && otherName && _canMessage(otherName))
+        ? _renderChatInput(otherName)
+        : (isAllView
+            ? '<div style="padding:12px;text-align:center;color:var(--text-dim);font-size:11px;border-top:1px solid var(--border);">عرض المراقبة فقط</div>'
+            : '');
+
+    return `
+        <div style="padding:11px 16px;border-bottom:1px solid var(--border);background:rgba(0,0,0,0.18);display:flex;align-items:center;gap:10px;">
+            <div style="width:34px;height:34px;border-radius:50%;background:linear-gradient(135deg,#37474f,#263238);color:#fff;display:flex;align-items:center;justify-content:center;font-weight:700;font-size:13px;">${sanitize((isAllView?conv.parties[0]:otherName||'?').charAt(0))}</div>
+            <div style="flex:1;">
+                <div style="font-size:14px;font-weight:700;color:var(--text-main);">${headerTitle}</div>
+                <small style="color:${online?'#a5d6a7':'var(--text-dim)'};font-size:11px;">${statusTxt}</small>
+            </div>
+        </div>
+        <div id="msgChatScroll" style="flex:1;overflow-y:auto;padding:14px 16px;display:flex;flex-direction:column;gap:6px;">
+            ${bubbles}
+        </div>
+        ${inputBar}`;
+}
+
+function _renderChatBubble(m, myName, isAllView) {
+    const mineSent = m.from === myName;
+    const align = isAllView ? 'flex-start' : (mineSent ? 'flex-start' : 'flex-end');
+    const bg = isAllView
+        ? 'rgba(255,255,255,0.05)'
+        : (mineSent
+            ? 'linear-gradient(135deg,rgba(46,125,50,0.30),rgba(46,125,50,0.18))'
+            : 'linear-gradient(135deg,rgba(38,50,56,0.65),rgba(38,50,56,0.50))');
+    const border = isAllView
+        ? '1px solid var(--border)'
+        : (mineSent ? '1px solid rgba(46,125,50,0.4)' : '1px solid rgba(255,255,255,0.08)');
+    const senderLine = isAllView
+        ? `<div style="font-size:10px;color:var(--text-dim);margin-bottom:3px;"><b>${sanitize(m.from)}</b> → <b>${sanitize(m.to)}</b></div>`
+        : (mineSent ? '' : `<div style="font-size:10px;color:#90caf9;margin-bottom:3px;font-weight:700;">${sanitize(m.from)}</div>`);
+    let attachHtml = '';
+    if ((m.attachments||[]).length) {
+        attachHtml = '<div style="margin-top:6px;display:flex;flex-direction:column;gap:5px;">' +
+            m.attachments.map(a => {
+                const isImg = (a.type||'').startsWith('image/');
+                if (isImg) return `<a href="${a.dataUrl}" target="_blank"><img src="${a.dataUrl}" style="max-width:240px;max-height:180px;border-radius:8px;border:1px solid var(--border);"></a>`;
+                return `<a href="${a.dataUrl}" download="${sanitize(a.name)}" style="display:inline-flex;align-items:center;gap:5px;background:rgba(0,0,0,0.18);border:1px solid var(--border);border-radius:8px;padding:5px 9px;color:#64b5f6;font-size:11px;text-decoration:none;font-weight:700;">📄 ${sanitize(a.name)}</a>`;
+            }).join('') + '</div>';
+    }
+    const time = sanitize((m.time||'').split('،').pop().trim());
+    return `
+        <div style="display:flex;justify-content:${align};">
+            <div style="background:${bg};border:${border};border-radius:12px;padding:7px 11px;max-width:75%;min-width:80px;">
+                ${senderLine}
+                <div style="font-size:13px;color:var(--text-main);line-height:1.55;white-space:pre-wrap;word-break:break-word;">${sanitize(m.text||'')}</div>
+                ${attachHtml}
+                <div style="font-size:9px;color:var(--text-dim);text-align:left;margin-top:3px;">${time}</div>
+            </div>
+        </div>`;
+}
+
+function _renderChatInput(targetName) {
+    const enc = encodeURIComponent(targetName);
+    const chips = _msgComposeAttachments.map((f,i) => {
+        const isImg = (f.type||'').startsWith('image/');
+        return `<span style="display:inline-flex;align-items:center;gap:4px;background:var(--bg-input);border:1px solid var(--border);border-radius:7px;padding:3px 9px;font-size:11px;max-width:160px;">
+            ${isImg?'🖼️':'📄'} <span style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${sanitize(f.name)}</span>
+            <button onclick="_removeChatAttach(${i})" style="background:none;border:none;color:#ef9a9a;cursor:pointer;font-size:11px;padding:0 2px;">✕</button>
+        </span>`;
+    }).join('');
+    return `
+        <div style="border-top:1px solid var(--border);padding:10px 14px;background:rgba(0,0,0,0.18);">
+            ${_msgComposeAttachments.length ? `<div style="display:flex;flex-wrap:wrap;gap:5px;margin-bottom:7px;">${chips}</div>` : ''}
+            <div style="display:flex;align-items:flex-end;gap:8px;">
+                <label style="cursor:pointer;background:var(--bg-input);border:1px solid var(--border);border-radius:9px;padding:8px 11px;color:var(--text-dim);font-size:14px;flex-shrink:0;" title="إرفاق">
+                    📎
+                    <input type="file" multiple style="display:none;" onchange="_pickChatAttachments(this.files)">
+                </label>
+                <textarea id="msgChatInput" rows="1" placeholder="اكتب رسالة..." style="flex:1;padding:9px 12px;border-radius:18px;border:1px solid var(--border);background:var(--bg-input);color:var(--text-main);font-family:'Cairo';font-size:13px;resize:none;line-height:1.5;max-height:120px;" oninput="this.style.height='auto';this.style.height=Math.min(this.scrollHeight,120)+'px';" onkeydown="if(event.key==='Enter'&&!event.shiftKey){event.preventDefault();_sendChatMessage('${enc}');}"></textarea>
+                <button onclick="_sendChatMessage('${enc}')" style="background:linear-gradient(135deg,rgba(46,125,50,0.95),rgba(46,125,50,0.85));border:none;border-radius:50%;width:42px;height:42px;color:#fff;cursor:pointer;font-size:18px;flex-shrink:0;display:flex;align-items:center;justify-content:center;">↩</button>
+            </div>
+        </div>`;
+}
+
+function _selectConv(encKey) {
+    _selectedConv = decodeURIComponent(encKey);
+    _msgComposeAttachments = [];
+    renderMessagesPage();
+    // مرّر إلى أسفل المحادثة
+    setTimeout(() => {
+        const sc = document.getElementById('msgChatScroll');
+        if (sc) sc.scrollTop = sc.scrollHeight;
+    }, 30);
+}
+
+function _pickChatAttachments(files) {
+    Array.from(files || []).forEach(f => {
+        if (f.size > _MSG_MAX_FILE_SIZE) { alert(`الملف "${f.name}" أكبر من 2MB`); return; }
+        _msgComposeAttachments.push(f);
+    });
+    renderMessagesPage();
+}
+
+function _removeChatAttach(i) {
+    _msgComposeAttachments.splice(i, 1);
+    renderMessagesPage();
+}
+
+async function _sendChatMessage(encName) {
+    const name = decodeURIComponent(encName);
+    if (!_canMessage(name)) return alert('غير مصرح');
+    const ta = document.getElementById('msgChatInput');
+    const text = (ta?.value || '').trim();
+    if (!text && !_msgComposeAttachments.length) return;
+    const attachments = [];
+    for (const f of _msgComposeAttachments) {
+        try {
+            const dataUrl = await new Promise((res, rej) => {
+                const r = new FileReader(); r.onload = () => res(r.result); r.onerror = rej; r.readAsDataURL(f);
+            });
+            attachments.push({ name: f.name, type: f.type, size: f.size, dataUrl });
+        } catch {}
+    }
+    _ensureMessages();
+    const target = (employees || []).find(e => e.name === name);
+    db.messages.unshift({
+        id: Date.now() + Math.floor(Math.random()*1000),
+        from: currentUser.name, fromEmpId: currentUser.empId || '',
+        to: name, toEmpId: target?.empId || '',
+        text, attachments, replyToId: null,
+        time: now(), iso: iso(), ts: Date.now(), readByMe: true,
+    });
+    if (typeof _logAudit === 'function') _logAudit('sendMessage', name, text.slice(0,40));
+    save();
+    _msgComposeAttachments = [];
+    if (ta) ta.value = '';
+    renderMessagesPage();
+    setTimeout(() => {
+        const sc = document.getElementById('msgChatScroll');
+        if (sc) sc.scrollTop = sc.scrollHeight;
+    }, 30);
 }
 
 function _renderQuickContactsSection() {
