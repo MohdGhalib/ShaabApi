@@ -309,47 +309,34 @@ function renderMessagesPage() {
     if (!root) return;
     _ensureMessages();
     const isMgr = (currentUser?.role === 'cc_manager') || currentUser?.isAdmin;
-    // افتراضيًا للمدير: "جميع المراسلات"؛ للموظف: "مراسلاتي" فقط
     if (!isMgr) _msgPageView = 'mine';
-
-    // التبويبات الفرعية تظهر في الشريط الجانبي الآن — لا حاجة لتكرارها هنا
-    const tabsHtml = '';
 
     const myName = currentUser?.name;
     const all = (db.messages || []).filter(m => !m.deleted);
-    const list = (isMgr && _msgPageView === 'all')
-        ? all.slice().sort((a,b) => (b.ts||0) - (a.ts||0))
-        : all.filter(m => m.from === myName || m.to === myName).sort((a,b) => (b.ts||0) - (a.ts||0));
+
+    // ── تجميع الرسائل في محادثات (كل محادثة = طرفان) ──
+    // مفتاح المحادثة: ترتيب أبجدي للأسماء بفاصل ثابت
+    const convs = new Map();
+    const eligible = (isMgr && _msgPageView === 'all')
+        ? all
+        : all.filter(m => m.from === myName || m.to === myName);
+    eligible.forEach(m => {
+        const key = [m.from, m.to].sort((a,b) => a.localeCompare(b, 'ar')).join(' ↔ ');
+        if (!convs.has(key)) convs.set(key, { key, parties:[m.from, m.to], messages:[], lastTs:0, unread:0 });
+        const c = convs.get(key);
+        c.messages.push(m);
+        if (m.ts > c.lastTs) c.lastTs = m.ts;
+        if (m.to === myName && !m.readByMe) c.unread++;
+    });
+
+    // رتّب المحادثات: الأحدث أولًا
+    const convList = Array.from(convs.values()).sort((a,b) => b.lastTs - a.lastTs);
 
     let body = '';
-    if (!list.length) {
-        body = '<div style="text-align:center;padding:40px;color:var(--text-dim);">لا توجد رسائل</div>';
+    if (!convList.length) {
+        body = '<div style="text-align:center;padding:40px;color:var(--text-dim);">لا توجد مراسلات</div>';
     } else {
-        body = list.map(m => {
-            const incoming = m.to === myName;
-            const dirIcon  = (isMgr && _msgPageView==='all')
-                ? '↔'
-                : (incoming ? '⬇' : '⬆');
-            const dirLabel = (isMgr && _msgPageView==='all')
-                ? `<b>${sanitize(m.from)}</b> → <b>${sanitize(m.to)}</b>`
-                : (incoming ? `من: <b>${sanitize(m.from)}</b>` : `إلى: <b>${sanitize(m.to)}</b>`);
-            const unread = incoming && !m.readByMe;
-            const dot    = unread ? '<span style="display:inline-block;width:8px;height:8px;border-radius:50%;background:#64b5f6;margin-right:6px;animation:emp-pulse 1.3s ease-in-out infinite;"></span>' : '';
-            const attachN = (m.attachments||[]).length;
-            const replyBtn = incoming ? `<button onclick="event.stopPropagation();_openComposeMessage('${encodeURIComponent(m.from)}','${m.id}')" style="margin-right:6px;padding:4px 10px;font-size:11px;border-radius:7px;border:1px solid rgba(46,125,50,0.4);background:rgba(46,125,50,0.12);color:#a5d6a7;cursor:pointer;font-family:'Cairo';font-weight:700;">↩ رد</button>` : '';
-            return `
-            <div onclick="_openMessageDetail('${m.id}')" style="cursor:pointer;background:${unread?'rgba(21,101,192,0.10)':'var(--bg-input)'};border:1px solid var(--border);border-radius:10px;padding:11px 14px;margin-bottom:8px;">
-                <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:5px;">
-                    <div style="font-size:13px;color:var(--text-main);">${dirIcon} ${dirLabel}${dot}</div>
-                    <small style="color:var(--text-dim);">${sanitize(m.time||'')}</small>
-                </div>
-                <div style="font-size:13px;color:var(--text-main);line-height:1.5;">${sanitize((m.text||'').slice(0,140))}${(m.text||'').length>140?'...':''}</div>
-                <div style="margin-top:6px;display:flex;align-items:center;justify-content:space-between;">
-                    <small style="color:var(--text-dim);">${attachN ? `📎 ${attachN} مرفق` : ''}</small>
-                    ${replyBtn}
-                </div>
-            </div>`;
-        }).join('');
+        body = convList.map(c => _renderConversationCard(c, myName, isMgr && _msgPageView === 'all')).join('');
     }
 
     const sectionTitle = (isMgr && _msgPageView === 'all') ? '📋 جميع المراسلات' : '💬 مراسلاتي';
@@ -357,9 +344,81 @@ function renderMessagesPage() {
         <div class="card">
             <div style="margin-bottom:14px;display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px;">
                 <h3 style="margin:0;color:var(--text-main);">${sectionTitle}</h3>
-                <small style="color:var(--text-dim);">${list.length} رسالة</small>
+                <small style="color:var(--text-dim);">${convList.length} محادثة • ${eligible.length} رسالة</small>
             </div>
             ${body}
+        </div>`;
+}
+
+function _renderConversationCard(conv, myName, isAllView) {
+    // عنوان المحادثة
+    const title = isAllView
+        ? `<b>${sanitize(conv.parties[0])}</b> ↔ <b>${sanitize(conv.parties[1])}</b>`
+        : (() => {
+            const other = conv.parties[0] === myName ? conv.parties[1] : conv.parties[0];
+            return `💬 محادثة مع: <b style="color:#81d4fa;">${sanitize(other)}</b>`;
+          })();
+    // رتّب الرسائل من الأقدم إلى الأحدث (ترتيب محادثة)
+    const ordered = conv.messages.slice().sort((a,b) => (a.ts||0) - (b.ts||0));
+    const bubbles = ordered.map(m => _renderBubble(m, myName, isAllView)).join('');
+    const unreadBadge = conv.unread > 0
+        ? `<span style="background:#1976d2;color:#fff;border-radius:20px;padding:2px 9px;font-size:11px;font-weight:700;margin-right:8px;">${conv.unread} جديد</span>`
+        : '';
+    // زر الرد السريع للطرف الآخر (في عرض "مراسلاتي" فقط)
+    let replyBar = '';
+    if (!isAllView) {
+        const other = conv.parties[0] === myName ? conv.parties[1] : conv.parties[0];
+        if (typeof _canMessage === 'function' && _canMessage(other)) {
+            const enc = encodeURIComponent(other);
+            replyBar = `<div style="border-top:1px solid var(--border);padding-top:10px;margin-top:6px;display:flex;justify-content:flex-end;">
+                <button onclick="_openComposeMessage('${enc}','')" style="padding:7px 18px;border-radius:9px;border:none;background:linear-gradient(135deg,rgba(46,125,50,0.95),rgba(46,125,50,0.85));color:#fff;font-family:'Cairo';font-weight:700;cursor:pointer;font-size:13px;">↩ رد</button>
+            </div>`;
+        }
+    }
+
+    return `
+        <div style="background:var(--bg-input);border:1px solid var(--border);border-radius:14px;padding:14px;margin-bottom:14px;">
+            <div style="display:flex;justify-content:space-between;align-items:center;border-bottom:1px solid var(--border);padding-bottom:10px;margin-bottom:12px;flex-wrap:wrap;gap:8px;">
+                <div style="font-size:14px;color:var(--text-main);">${title}${unreadBadge}</div>
+                <small style="color:var(--text-dim);">${conv.messages.length} رسالة</small>
+            </div>
+            <div style="display:flex;flex-direction:column;gap:8px;">
+                ${bubbles}
+            </div>
+            ${replyBar}
+        </div>`;
+}
+
+function _renderBubble(m, myName, isAllView) {
+    const mineSent = m.from === myName;
+    // اللون: الصادر مني → أخضر مائل لليمين | الوارد → أزرق مائل لليسار
+    // في عرض "جميع المراسلات": لا يوجد "أنا"، لذا لون موحّد
+    const bg = isAllView
+        ? 'rgba(255,255,255,0.04)'
+        : (mineSent
+            ? 'linear-gradient(135deg,rgba(46,125,50,0.18),rgba(46,125,50,0.10))'
+            : 'linear-gradient(135deg,rgba(21,101,192,0.18),rgba(21,101,192,0.10))');
+    const align = isAllView ? 'flex-start' : (mineSent ? 'flex-start' : 'flex-end');
+    const border = isAllView
+        ? '1px solid var(--border)'
+        : (mineSent ? '1px solid rgba(46,125,50,0.4)' : '1px solid rgba(21,101,192,0.4)');
+    const unread = !isAllView && m.to === myName && !m.readByMe;
+    const unreadDot = unread ? '<span style="display:inline-block;width:7px;height:7px;border-radius:50%;background:#64b5f6;margin-right:6px;animation:emp-pulse 1.3s ease-in-out infinite;"></span>' : '';
+    const onClick = `onclick="_openMessageDetail('${m.id}')"`;
+    const sender = isAllView ? `<b style="color:var(--text-main);">${sanitize(m.from)}</b> → <b style="color:var(--text-main);">${sanitize(m.to)}</b>` : (mineSent ? '— أنا —' : `<b style="color:#90caf9;">${sanitize(m.from)}</b>`);
+    const attachN = (m.attachments||[]).length;
+    const attachStrip = attachN ? `<div style="margin-top:5px;font-size:11px;color:var(--text-dim);">📎 ${attachN} مرفق</div>` : '';
+    const replyMark = m.replyToId ? '<span title="رد على رسالة سابقة" style="font-size:11px;color:var(--text-dim);margin-left:5px;">↩</span>' : '';
+    return `
+        <div style="display:flex;justify-content:${align};">
+            <div ${onClick} style="cursor:pointer;background:${bg};border:${border};border-radius:12px;padding:9px 13px;max-width:78%;min-width:120px;">
+                <div style="display:flex;justify-content:space-between;align-items:center;gap:10px;font-size:11px;color:var(--text-dim);margin-bottom:4px;">
+                    <span>${unreadDot}${sender}${replyMark}</span>
+                    <span>${sanitize(m.time||'')}</span>
+                </div>
+                <div style="font-size:13px;color:var(--text-main);line-height:1.6;white-space:pre-wrap;word-break:break-word;">${sanitize(m.text||'')}</div>
+                ${attachStrip}
+            </div>
         </div>`;
 }
 
