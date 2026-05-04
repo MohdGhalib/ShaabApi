@@ -80,6 +80,11 @@ function editMontasiaType(id) {
     if (currentUser?.role !== 'cc_manager') return;
     const item = db.montasiat.find(x => x.id === id);
     if (!item) return;
+    // النوع متعدد الأصناف يُعدَّل عبر نافذة منفصلة
+    if (item.type === 'متعدد الأصناف' && typeof openMultiItemEditModal === 'function') {
+        openMultiItemEditModal(id);
+        return;
+    }
     const view = document.getElementById('typeView-' + id);
     const edit = document.getElementById('typeEdit-' + id);
     const sel  = document.getElementById('typeEditSel-' + id);
