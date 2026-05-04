@@ -221,9 +221,15 @@ i: `
         <label style="font-size:13px;color:#90caf9;font-weight:700;display:block;margin-bottom:5px;">📦 اسم الصنف *</label>
         <input type="text" id="iItemName" placeholder="اكتب اسم الصنف...">
     </div>
-    <div id="iOfferNameBox" style="display:none;margin-bottom:15px;">
-        <label style="font-size:13px;color:#ce93d8;font-weight:700;display:block;margin-bottom:5px;">🎁 اسم العرض *</label>
-        <input type="text" id="iOfferName" placeholder="اكتب اسم العرض...">
+    <div id="iOfferNameBox" style="display:none;margin-bottom:15px;background:rgba(206,147,216,0.05);border:1px dashed rgba(206,147,216,0.4);border-radius:12px;padding:14px;">
+        <div style="margin-bottom:12px;">
+            <label style="font-size:13px;color:#ce93d8;font-weight:700;display:block;margin-bottom:5px;">🎁 اسم العرض *</label>
+            <input type="text" id="iOfferName" placeholder="اكتب اسم العرض...">
+        </div>
+        <div>
+            <label style="font-size:13px;color:#ce93d8;font-weight:700;display:block;margin-bottom:5px;">📋 طبيعة العرض *</label>
+            <input type="text" id="iOfferNature" placeholder="مثال: خصم 10%، 1+1، هدية مع الشراء...">
+        </div>
     </div>
     <div id="iNotesBox" style="display:none;margin-bottom:15px;">
         <label style="font-size:13px;color:var(--text-dim);display:block;margin-bottom:5px;">التفاصيل</label>
