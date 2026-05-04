@@ -286,8 +286,6 @@ function _renderTableM(get, isAdmin) {
     const isCtrlMgrM = currentUser?.role === 'control_employee';
     const mBar = document.getElementById('mExportImportBar');
     if (mBar) mBar.style.display = (canDelete || isCCMgrM || isCtrlMgrM) ? '' : 'none';
-    const btnDelAll = document.getElementById('btnDeleteAllMontasiat');
-    if (btnDelAll) btnDelAll.style.display = isCCMgrM ? 'flex' : 'none';
     // مدير قسم السيطرة: يرى زر التصدير فقط (لا استيراد ولا حذف)
     const lblImp  = document.getElementById('lblImportMontasiat');
     const hintImp = document.getElementById('hintImportMontasiat');

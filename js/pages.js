@@ -21,10 +21,7 @@ m: `
         <input id="mBranchEmp" type="text" placeholder="اسم موظف الفرع *">
     </div>
     <textarea id="mNotes" placeholder="تفاصيل المنتسية..." rows="3"></textarea>
-    <div style="display:flex;gap:10px;margin-top:15px;flex-wrap:wrap;">
-        <button class="btn btn-main" onclick="addMontasia()">حفظ البيانات</button>
-        <button class="btn" onclick="openBulkMontasiat()" style="background:linear-gradient(135deg,rgba(21,101,192,0.18),rgba(21,101,192,0.08));border:1px solid rgba(21,101,192,0.5);color:#64b5f6;font-family:'Cairo';font-weight:700;">📋 إدخال منتسيات جماعية</button>
-    </div>
+    <button class="btn btn-main" style="margin-top:15px" onclick="addMontasia()">حفظ البيانات</button>
 </div>
 <div class="search-bar search-bar-m">
     <div style="grid-column:1/-1;" class="search-section-title">🔍 خيارات البحث</div>
@@ -78,9 +75,6 @@ m: `
             <input type="file" accept=".xlsx,.xls" style="display:none;" onchange="importMontasiat(this)">
         </label>
         <span id="hintImportMontasiat" style="font-size:12px;color:var(--text-dim);">الأعمدة المطلوبة عند الاستيراد: المحافظة، الفرع، التفاصيل</span>
-        <button id="btnDeleteAllMontasiat" onclick="deleteAllMontasiat()" style="display:none;align-items:center;gap:7px;background:linear-gradient(135deg,rgba(211,47,47,0.18),rgba(211,47,47,0.08));border:1px solid rgba(211,47,47,0.5);border-radius:10px;padding:9px 18px;cursor:pointer;color:#ef9a9a;font-family:'Cairo';font-size:13px;font-weight:700;margin-right:auto;">
-            🗑️ حذف كل المدخلات
-        </button>
     </div>
 </div>
 <div class="card">
