@@ -24,6 +24,7 @@ const AUDIT_ACTION_LABELS = {
     'restoreComplaint':      'استعادة شكوى',
     'login':                 'تسجيل دخول',
     'logout':                'تسجيل خروج',
+    'forceLogout':           'إخراج موظف من النظام',
 };
 function _auditActionLabel(a) { return AUDIT_ACTION_LABELS[a] || a; }
 
