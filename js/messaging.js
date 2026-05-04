@@ -362,13 +362,13 @@ function renderMessagesPage() {
                 <h3 style="margin:0;color:var(--text-main);font-size:15px;">${sectionTitle}</h3>
                 <small style="color:var(--text-dim);">${convList.length} محادثة</small>
             </div>
-            <div style="display:grid;grid-template-columns:300px 1fr;height:560px;">
+            <div style="display:grid;grid-template-columns:300px 1fr;height:560px;min-height:0;">
                 <!-- قائمة جهات الاتصال (يمين في RTL) -->
-                <div id="msgContactsList" style="border-left:1px solid var(--border);overflow-y:auto;background:rgba(0,0,0,0.12);">
+                <div id="msgContactsList" style="border-left:1px solid var(--border);overflow-y:auto;min-height:0;background:rgba(0,0,0,0.12);">
                     ${_renderContactsList(convList, myName, isAllView)}
                 </div>
                 <!-- منطقة المحادثة (يسار في RTL) -->
-                <div id="msgChatPane" style="display:flex;flex-direction:column;background:rgba(0,0,0,0.04);">
+                <div id="msgChatPane" style="display:flex;flex-direction:column;min-height:0;overflow:hidden;background:rgba(0,0,0,0.04);">
                     ${_renderChatPane(selected, myName, isAllView)}
                 </div>
             </div>
@@ -461,10 +461,10 @@ function _renderChatPane(conv, myName, isAllView) {
                 <small style="color:${online?'#a5d6a7':'var(--text-dim)'};font-size:11px;">${statusTxt}</small>
             </div>
         </div>
-        <div id="msgChatScroll" style="flex:1;overflow-y:auto;padding:14px 16px;display:flex;flex-direction:column;gap:6px;">
+        <div id="msgChatScroll" style="flex:1 1 0;min-height:0;overflow-y:auto;padding:14px 16px;display:flex;flex-direction:column;gap:6px;">
             ${bubbles}
         </div>
-        ${inputBar}`;
+        <div style="flex-shrink:0;">${inputBar}</div>`;
 }
 
 function _renderChatBubble(m, myName, isAllView) {
