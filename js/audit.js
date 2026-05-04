@@ -147,7 +147,7 @@ function _buildAuditTable() {
             <div style="${dCell}"><span class="emp-badge" style="font-size:12px;">${sanitize(_auditActionLabel(entry.action))}</span></div>
             <div style="${dCell}">${sanitize(entry.entity || '—')}</div>
             <div style="${dCell}"><span class="text-box-cell" style="font-size:12px;">${sanitize(entry.summary || '—')}</span></div>
-            <div style="${dCell}"><small style="color:var(--text-main);">${sanitize(entry.by || '—')}</small></div>
+            <div style="${dCell}"><small style="color:var(--text-main);">${typeof _empNameHTML==='function'?_empNameHTML(entry.by || '—'):sanitize(entry.by || '—')}</small></div>
             <div style="${dCell}"><small style="color:var(--text-dim);">${sanitize(entry.empId || '—')}</small></div>
             <div style="${dCell}"><small style="color:var(--text-dim);">${_toLatinDigits(entry.time || '—')}</small></div>`).join('')
         : `<div style="grid-column:1/-1;padding:20px;text-align:center;color:var(--text-dim);">لا توجد سجلات مطابقة</div>`;

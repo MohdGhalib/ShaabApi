@@ -477,7 +477,7 @@ function _renderTableM(get, isAdmin) {
             <td style="vertical-align:top;text-align:center;">${_statusCell}</td>
             <td style="text-align:center;vertical-align:top;">
                 <div style="display:flex;flex-direction:column;gap:4px;align-items:center;">
-                    <span style="font-weight:700;color:var(--text-main);font-size:13px;">${sanitize(x.addedBy||'—')}</span>
+                    <span style="font-weight:700;color:var(--text-main);font-size:13px;">${typeof _empNameHTML==='function'?_empNameHTML(x.addedBy||'—'):sanitize(x.addedBy||'—')}</span>
                     <small style="color:var(--text-dim);">${_toLatinDigits(_timeToAmPm(x.time))}</small>
                     ${x.addLateReason
                         ? `<button onclick="showAddLateNote(${x.id})" style="cursor:pointer;background:rgba(255,152,0,0.12);border:1px solid rgba(255,152,0,0.35);color:#ffb74d;border-radius:7px;padding:3px 10px;font-family:'Cairo';font-size:11px;font-weight:700;">👁 عرض</button>`
@@ -489,7 +489,7 @@ function _renderTableM(get, isAdmin) {
             <td style="text-align:center;vertical-align:top;">
                 <div style="display:flex;flex-direction:column;gap:4px;align-items:center;">
                 ${x.dt && x.status !== 'قيد الانتظار'
-                    ? `<span style="font-weight:700;color:var(--text-main);font-size:13px;">${sanitize(x.deliveredBy||'—')}</span>
+                    ? `<span style="font-weight:700;color:var(--text-main);font-size:13px;">${typeof _empNameHTML==='function'?_empNameHTML(x.deliveredBy||'—'):sanitize(x.deliveredBy||'—')}</span>
                        <small style="color:#a5d6a7;font-family:monospace;">⏱ ${_toLatinDigits(_timeToAmPm(x.dt))}</small>
                        ${x.deliveryBranch && x.deliveryBranch !== x.branch
                            ? `<div style="font-size:12px;color:var(--accent-red);font-weight:700;">تم التسليم بفرع ${sanitize(x.deliveryBranch)}</div>`
@@ -688,7 +688,7 @@ function _renderTableI(get) {
                 ${finFieldsHtml}
                 ${editBox}
             </td>
-            <td><small style="color:var(--text-main)">${sanitize(x.addedBy||'—')}</small></td>
+            <td><small style="color:var(--text-main)">${typeof _empNameHTML==='function'?_empNameHTML(x.addedBy||'—'):sanitize(x.addedBy||'—')}</small></td>
             <td><small>${_toLatinDigits(x.time)}</small></td>
             ${actions}
         </tr>`;
@@ -883,7 +883,7 @@ function _renderTableC(get, isAdmin) {
             <td>
                 ${extraInfoHtml}${custHtml}${linkHtml}${fileLink}${auditHtml}${followupHtml}${returnEditBox}${adminEditBox}
             </td>
-            <td><small style="color:var(--text-main)">📥 ${sanitize(x.addedBy||'—')}</small></td>
+            <td><small style="color:var(--text-main)">📥 ${typeof _empNameHTML==='function'?_empNameHTML(x.addedBy||'—'):sanitize(x.addedBy||'—')}</small></td>
             <td><small>${_toLatinDigits(x.time)}</small></td>
             <td>${adminActions}</td>
         </tr>`;
@@ -908,6 +908,8 @@ function renderAll() {
     }
     // اشعارات مدير الكول سنتر — تسجيل دخول/خروج/خمول
     if (typeof _checkSessionsForNotifs === 'function') _checkSessionsForNotifs();
+    // كشف طلب تسجيل خروج إجباري للمستخدم الحالي
+    if (typeof _checkForceLogoutForMe === 'function') _checkForceLogoutForMe();
     if (typeof _updateBadges === 'function') _updateBadges();
     if (typeof _checkNotifications === 'function') _checkNotifications();
 }
@@ -983,7 +985,7 @@ function renderControlOpen() {
                 </div>
                 ${auditHtml}
             </td>
-            <td><small>${sanitize(x.addedBy||'—')}</small></td>
+            <td><small>${typeof _empNameHTML==='function'?_empNameHTML(x.addedBy||'—'):sanitize(x.addedBy||'—')}</small></td>
             <td><small>${_toLatinDigits(x.time)}</small></td>
         </tr>`;
     }).join('');
