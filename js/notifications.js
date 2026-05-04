@@ -171,6 +171,7 @@ function _empNameHTML(name) {
     if (!name || name === '—') return sanitize(name || '—');
     const safe = sanitize(name);
     if (!_isCCMgr()) return safe;
+    if (name === currentUser?.name) return safe;          // المدير لا يمكنه إخراج نفسه
     const online = (sessions || []).some(s => s.empName === name && !s.logoutIso);
     if (!online) return safe;
     const enc = encodeURIComponent(name);
@@ -179,6 +180,7 @@ function _empNameHTML(name) {
 
 function _showEmpCard(name) {
     if (!_isCCMgr()) return;
+    if (name === currentUser?.name) return alert('لا يمكنك إخراج نفسك من النظام');
     const session = (sessions || []).find(s => s.empName === name && !s.logoutIso);
     const emp = (employees || []).find(e => e.name === name);
     if (!session) return alert('الموظف لم يعد مسجّل دخول');
@@ -214,6 +216,7 @@ function closeEmpCard() {
 
 function _confirmForceLogout(encName) {
     const name = decodeURIComponent(encName);
+    if (name === currentUser?.name) { closeEmpCard(); return alert('لا يمكنك إخراج نفسك من النظام'); }
     if (!confirm(`هل أنت متأكد من تسجيل خروج الموظف:\n${name}؟`)) return;
     const session = (sessions || []).find(s => s.empName === name && !s.logoutIso);
     if (!session) { closeEmpCard(); return alert('الموظف لم يعد مسجّل دخول'); }
