@@ -307,7 +307,7 @@ function _showEmpCard(name) {
 
     const overlay = document.createElement('div');
     overlay.id = '_empCardOverlay';
-    overlay.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.65);z-index:100000;display:flex;align-items:center;justify-content:center;font-family:"Cairo";padding:16px;';
+    overlay.style.cssText = 'position:fixed;inset:0;background:#ffffff;z-index:100000;display:flex;align-items:center;justify-content:center;font-family:"Cairo";padding:16px;';
     overlay.onclick = (e) => { if (e.target === overlay) closeEmpCard(); };
 
     const isOnline = !!session;
