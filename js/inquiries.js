@@ -136,11 +136,13 @@ function addInquiry() {
         const reader = new FileReader();
         reader.onload = e => {
             db.inquiries.unshift({ ...baseRec, file: e.target.result });
+            if (typeof _logAudit === 'function') _logAudit('addInquiry', baseRec.branch || '—', `${baseRec.type} — ${(baseRec.notes||baseRec.itemName||baseRec.offerName||'').substring(0,40)}`);
             _afterSave();
         };
         reader.readAsDataURL(fileInput.files[0]);
     } else {
         db.inquiries.unshift({ ...baseRec, file: null });
+        if (typeof _logAudit === 'function') _logAudit('addInquiry', baseRec.branch || '—', `${baseRec.type} — ${(baseRec.notes||baseRec.itemName||baseRec.offerName||'').substring(0,40)}`);
         _afterSave();
     }
 }
@@ -178,6 +180,7 @@ function saveEditInquiry(id) {
         item.phone   = phone;
         item.notes   = notes;
         item.editedBy = currentUser.name;
+        if (typeof _logAudit === 'function') _logAudit('editInquiry', item.branch || '—', `${item.type} — ${(notes||'').substring(0,40)}`);
         save();
     }
 }

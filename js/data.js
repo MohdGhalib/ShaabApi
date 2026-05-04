@@ -16,11 +16,16 @@ function _logAudit(action, entity, summary) {
         action,
         entity,
         summary,
-        by:   currentUser ? currentUser.name : '—',
-        time: now()
+        by:    currentUser ? currentUser.name : '—',
+        empId: currentUser?.empId || '',
+        role:  currentUser?.role  || '',
+        time:  now(),
+        iso:   iso(),
+        ts:    Date.now()
     });
-    // الاحتفاظ بآخر 200 سجل فقط
-    if (db.auditLog.length > 200) db.auditLog = db.auditLog.slice(-200);
+    // الاحتفاظ بسجلات آخر 7 أيام لكل موظف
+    const cutoff = Date.now() - 7 * 24 * 60 * 60 * 1000;
+    db.auditLog = db.auditLog.filter(e => (e.ts || 0) >= cutoff);
 }
 
 /* ── صوت الإشعار (consideration.mp3) ── */

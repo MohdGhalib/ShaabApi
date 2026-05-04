@@ -299,6 +299,7 @@ function confirmAddMontasia() {
 
     db.montasiat.unshift(rec);
     if (typeof _skipMontasiaNotif !== 'undefined') _skipMontasiaNotif = true;
+    if (typeof _logAudit === 'function') _logAudit('addMontasia', rec.branch || '—', `${rec.type} — ${(rec.notes||'').substring(0,40)}`);
     save();
     document.getElementById("mNotes").value = "";
     document.getElementById("mType").value = "";
@@ -446,6 +447,7 @@ function confirmDeliver() {
 
     item.status      = 'تم التسليم';
     item.deliveredBy = currentUser.name;
+    if (typeof _logAudit === 'function') _logAudit('deliverMontasia', item.branch || '—', `${(item.notes||'').substring(0,40)}`);
     save();
     cancelDeliver();
 }
@@ -458,7 +460,11 @@ function cancelDeliver() {
 
 function approveMontasia(id) {
     const item = db.montasiat.find(x => x.id===id);
-    if (item) { item.status='قيد الانتظار'; save(); }
+    if (item) {
+        item.status='قيد الانتظار';
+        if (typeof _logAudit === 'function') _logAudit('approveMontasia', item.branch || '—', `${(item.notes||'').substring(0,40)}`);
+        save();
+    }
 }
 
 // الموافقة على منتسيات التطبيق → قيد الانتظار (لتفعيل نظام التسليم)
@@ -468,6 +474,7 @@ function approveMontasiaFromMobile(id) {
     item.status     = 'قيد الانتظار';
     item.approvedBy = currentUser ? currentUser.name : '—';
     item.approvedAt = now();
+    if (typeof _logAudit === 'function') _logAudit('approveMontasiaMobile', item.branch || '—', `${(item.notes||'').substring(0,40)}`);
     save();
 }
 
@@ -557,7 +564,11 @@ function saveEditMontasia(id) {
     const newText = document.getElementById(`editText-${id}`).value.trim();
     if (!newText) return alert("يرجى كتابة التفاصيل");
     const item = db.montasiat.find(x => x.id===id);
-    if (item) { item.notes=newText; item.editedBy=currentUser.name; save(); }
+    if (item) {
+        item.notes=newText; item.editedBy=currentUser.name;
+        if (typeof _logAudit === 'function') _logAudit('editMontasiaNotes', item.branch || '—', `${(newText||'').substring(0,40)}`);
+        save();
+    }
 }
 
 /* ══ تصدير / استيراد Excel ══ */

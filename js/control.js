@@ -66,6 +66,7 @@ function addControl() {
         const reader = new FileReader();
         reader.onload = e => {
             db.complaints.unshift({ ...base, file:e.target.result });
+            if (typeof _logAudit === 'function') _logAudit('addComplaint', base.branch || '—', `${(base.notes||'').substring(0,40)}`);
             save();
             _notifyComplaint();
             resetControlForm();
@@ -74,11 +75,13 @@ function addControl() {
     } else if (inheritedFile) {
         // نقل المرفق المحجوز من الاستفسار المرتبط
         db.complaints.unshift({ ...base, file: inheritedFile });
+        if (typeof _logAudit === 'function') _logAudit('addComplaint', base.branch || '—', `${(base.notes||'').substring(0,40)}`);
         save();
         _notifyComplaint();
         resetControlForm();
     } else {
         db.complaints.unshift({ ...base, file:null });
+        if (typeof _logAudit === 'function') _logAudit('addComplaint', base.branch || '—', `${(base.notes||'').substring(0,40)}`);
         save();
         _notifyComplaint();
         resetControlForm();
@@ -116,7 +119,12 @@ function resetControlForm() {
 
 function approveControl(id) {
     const item = db.complaints.find(x => x.id===id);
-    if (item) { item.status='تمت الموافقة'; item.approvedBy=currentUser.name; save(); }
+    if (item) {
+        item.status='تمت الموافقة';
+        item.approvedBy=currentUser.name;
+        if (typeof _logAudit === 'function') _logAudit('approveComplaint', item.branch || '—', `${(item.notes||'').substring(0,40)}`);
+        save();
+    }
 }
 
 function editControl(id) {
@@ -128,7 +136,11 @@ function saveEditControl(id) {
     const v = document.getElementById(`ceditText-${id}`).value.trim();
     if (!v) return alert("يرجى كتابة التعديل");
     const item = db.complaints.find(x => x.id===id);
-    if (item) { item.notes=v; item.editedBy=currentUser.name; save(); }
+    if (item) {
+        item.notes=v; item.editedBy=currentUser.name;
+        if (typeof _logAudit === 'function') _logAudit('editComplaint', item.branch || '—', `${(v||'').substring(0,40)}`);
+        save();
+    }
 }
 
 function returnControl(id) {
