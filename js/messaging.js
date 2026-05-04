@@ -507,9 +507,16 @@ function _renderChatBubble(m, myName, isAllView) {
             ? `<span title="قُرئت" style="color:#42a5f5;font-weight:700;letter-spacing:-2px;">✓✓</span>`
             : `<span title="مُرسلة" style="color:rgba(255,255,255,0.45);font-weight:700;">✓</span>`;
     }
+    // صورة المرسِل بجانب الفقاعة (للرسائل الواردة في عرض mine، أو لجميع الفقاعات في عرض all)
+    const showAvatar = !mineSent || isAllView;
+    const avatarHtml = showAvatar && typeof _empAvatarHTML === 'function'
+        ? _empAvatarHTML(m.from, 28)
+        : '';
+    const avatarLeft  = showAvatar ? avatarHtml : '';
     return `
-        <div style="display:flex;justify-content:${align};">
-            <div style="background:${bg};border:${border};border-radius:12px;padding:7px 11px;max-width:75%;min-width:80px;">
+        <div style="display:flex;justify-content:${align};align-items:flex-end;gap:6px;">
+            ${avatarLeft}
+            <div style="background:${bg};border:${border};border-radius:12px;padding:7px 11px;max-width:72%;min-width:80px;">
                 ${interventionBadge}
                 ${senderLine}
                 <div style="font-size:13px;color:var(--text-main);line-height:1.55;white-space:pre-wrap;word-break:break-word;">${sanitize(m.text||'')}</div>
