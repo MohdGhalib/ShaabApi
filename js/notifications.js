@@ -55,6 +55,7 @@ function _checkSessionsForNotifs() {
     if (!_isCCMgr()) return;
     if (!_notifInited) initNotifications();              // تهيئة كسولة عند أول استدعاء
     const myId = currentUser?.empId;
+    const _loggedOutIds = new Set();
     (sessions || []).forEach(s => {
         if (s.empId === myId) return;                    // تجاهل النفس
         if (!_seenLoginIds.has(s.id)) {
@@ -64,8 +65,17 @@ function _checkSessionsForNotifs() {
         if (s.logoutIso && !_seenLogoutIds.has(s.id)) {
             _seenLogoutIds.add(s.id);
             _showTransientNotif('logout', s.empName);
+            _loggedOutIds.add(s.empId);
+        } else if (s.logoutIso) {
+            _loggedOutIds.add(s.empId);
         }
     });
+    // أزل أي إشعار خمول لموظف سجّل خروج
+    if (_loggedOutIds.size) {
+        document.querySelectorAll('#notifStack [data-emp-id]').forEach(el => {
+            if (_loggedOutIds.has(el.dataset.empId)) _animateOut(el);
+        });
+    }
     _saveNotifSeen();
     _checkIdleEmployees();
 }
@@ -107,64 +117,64 @@ function _ensureNotifStack() {
     if (!stack) {
         stack = document.createElement('div');
         stack.id = 'notifStack';
-        stack.style.cssText = 'position:fixed;top:64px;left:50%;transform:translateX(-50%);z-index:99999;display:flex;flex-direction:column;gap:8px;align-items:center;pointer-events:none;max-width:96vw;';
+        stack.style.cssText = 'position:fixed;top:80px;left:66px;z-index:99998;display:flex;flex-direction:column;gap:8px;align-items:flex-start;pointer-events:none;max-width:min(440px,calc(100vw - 80px));';
         document.body.appendChild(stack);
     }
     return stack;
 }
 
+/* ── تنسيق موحّد لكل الرسائل (مماثل لرسائل الدخول/الخروج) ── */
+const _NOTIF_BASE_CSS = `
+    color:#fff;padding:11px 16px;border-radius:12px;
+    box-shadow:0 6px 20px rgba(0,0,0,0.45);
+    backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px);
+    font-family:'Cairo';font-weight:700;font-size:13.5px;
+    opacity:0;transform:translateX(-30px);
+    transition:opacity 0.4s ease,transform 0.4s ease;
+    pointer-events:auto;display:flex;align-items:center;gap:10px;
+    width:100%;box-sizing:border-box;`;
+
+function _animateIn(el) {
+    requestAnimationFrame(() => {
+        el.style.opacity = '1';
+        el.style.transform = 'translateX(0)';
+    });
+}
+function _animateOut(el) {
+    el.style.opacity = '0';
+    el.style.transform = 'translateX(-20px)';
+    setTimeout(() => el.remove(), 400);
+}
+
 function _showTransientNotif(type, empName) {
     const stack = _ensureNotifStack();
     const isLogin = type === 'login';
+    const bg = isLogin
+        ? 'linear-gradient(135deg,rgba(46,125,50,0.96),rgba(46,125,50,0.86))'
+        : 'linear-gradient(135deg,rgba(120,120,120,0.96),rgba(120,120,120,0.86))';
     const item = document.createElement('div');
-    item.style.cssText = `
-        background: ${isLogin
-            ? 'linear-gradient(135deg,rgba(46,125,50,0.96),rgba(46,125,50,0.86))'
-            : 'linear-gradient(135deg,rgba(120,120,120,0.96),rgba(120,120,120,0.86))'};
-        color:#fff;padding:11px 22px;border-radius:12px;
-        box-shadow:0 6px 20px rgba(0,0,0,0.45);
-        font-family:'Cairo';font-weight:700;font-size:14px;
-        opacity:0;transform:translateY(-30px);
-        transition:opacity 0.4s ease,transform 0.4s ease;
-        pointer-events:auto;white-space:nowrap;`;
-    item.innerHTML = `${isLogin ? '🟢' : '⚫'} ${sanitize(empName)} ${isLogin ? 'سجّل الدخول' : 'سجّل الخروج'}`;
+    item.style.cssText = _NOTIF_BASE_CSS + `background:${bg};`;
+    item.innerHTML = `<span style="flex:1;">${isLogin ? '🟢' : '⚫'} ${sanitize(empName)} ${isLogin ? 'سجّل الدخول' : 'سجّل الخروج'}</span>`;
     stack.appendChild(item);
-    requestAnimationFrame(() => {
-        item.style.opacity = '1';
-        item.style.transform = 'translateY(0)';
-    });
+    _animateIn(item);
     _playNotifSound();
-    setTimeout(() => {
-        item.style.opacity = '0';
-        item.style.transform = 'translateY(-20px)';
-        setTimeout(() => item.remove(), 400);
-    }, _NOTIF_AUTOFADE);
+    setTimeout(() => _animateOut(item), _NOTIF_AUTOFADE);
 }
 
 function _showStickyIdleNotif(empName, empId, lastActiveTs) {
     const stack = _ensureNotifStack();
     const minutes = Math.floor((Date.now() - lastActiveTs) / 60000);
+    const bg = 'linear-gradient(135deg,rgba(230,81,0,0.96),rgba(230,81,0,0.86))';
     const item = document.createElement('div');
-    item.style.cssText = `
-        background:linear-gradient(135deg,rgba(245,124,0,0.96),rgba(245,124,0,0.86));
-        color:#fff;padding:11px 14px 11px 18px;border-radius:12px;
-        box-shadow:0 6px 20px rgba(0,0,0,0.45);
-        font-family:'Cairo';font-weight:700;font-size:14px;
-        opacity:0;transform:translateY(-30px);
-        transition:opacity 0.4s ease,transform 0.4s ease;
-        pointer-events:auto;display:flex;align-items:center;gap:12px;
-        max-width:96vw;cursor:pointer;`;
+    item.style.cssText = _NOTIF_BASE_CSS + `background:${bg};cursor:pointer;`;
+    item.dataset.empId = empId;
+    const txt = document.createElement('span');
+    txt.style.cssText = 'flex:1;';
+    txt.innerHTML = `⚠️ ${sanitize(empName)} غير نشط منذ ${minutes} دقيقة — اضغط لعرض حركاته`;
     const closeBtn = document.createElement('button');
     closeBtn.textContent = '✕';
-    closeBtn.style.cssText = 'background:rgba(255,255,255,0.25);border:none;color:#fff;width:24px;height:24px;border-radius:50%;cursor:pointer;font-weight:700;display:flex;align-items:center;justify-content:center;font-size:12px;flex-shrink:0;';
-    closeBtn.onclick = (e) => {
-        e.stopPropagation();
-        item.style.opacity = '0';
-        item.style.transform = 'translateY(-20px)';
-        setTimeout(() => item.remove(), 400);
-    };
-    const txt = document.createElement('span');
-    txt.innerHTML = `⚠️ ${sanitize(empName)} غير نشط منذ ${minutes} دقيقة — اضغط لعرض حركاته`;
+    closeBtn.style.cssText = 'background:rgba(255,255,255,0.25);border:none;color:#fff;width:22px;height:22px;border-radius:50%;cursor:pointer;font-weight:700;display:flex;align-items:center;justify-content:center;font-size:11px;flex-shrink:0;';
+    closeBtn.onclick = (e) => { e.stopPropagation(); _animateOut(item); };
     item.appendChild(txt);
     item.appendChild(closeBtn);
     item.onclick = () => {
@@ -176,14 +186,9 @@ function _showStickyIdleNotif(empName, empId, lastActiveTs) {
                 if (typeof _onAuditFilterChange === 'function') _onAuditFilterChange();
             }
         }, 250);
-        item.style.opacity = '0';
-        item.style.transform = 'translateY(-20px)';
-        setTimeout(() => item.remove(), 400);
+        _animateOut(item);
     };
     stack.appendChild(item);
-    requestAnimationFrame(() => {
-        item.style.opacity = '1';
-        item.style.transform = 'translateY(0)';
-    });
+    _animateIn(item);
     _playNotifSound();
 }
