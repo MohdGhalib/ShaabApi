@@ -415,13 +415,47 @@ function _renderTableM(get, isAdmin) {
             ? `<span style="padding:1px 6px;border-radius:5px;font-size:10px;background:rgba(255,152,0,0.15);color:#ffb74d;margin-right:4px;">📱</span>` : '';
         const approvedByRow = x.approvedBy
             ? `<div class="added-by">✓ وافق: ${sanitize(x.approvedBy)}</div>` : '';
+        const _isCCMgr = currentUser?.role === 'cc_manager';
+        const _typeEditPanel = _isCCMgr ? `
+            <div id="typeEdit-${x.id}" style="display:none;flex-direction:column;gap:6px;align-items:center;">
+                <select id="typeEditSel-${x.id}" style="padding:5px;font-size:12px;width:160px;font-family:'Cairo';">
+                    <option value="نقدي">نقدي</option>
+                    <option value="اخرى">اخرى</option>
+                    <option value="اصناف محمص الشعب">أصناف محامص الشعب</option>
+                </select>
+                <div style="display:flex;gap:5px;">
+                    <button onclick="saveMontasiaType(${x.id})" style="padding:4px 12px;font-size:11px;background:rgba(46,125,50,0.18);border:1px solid rgba(46,125,50,0.5);color:#a5d6a7;border-radius:7px;cursor:pointer;font-family:'Cairo';font-weight:700;">💾 حفظ</button>
+                    <button onclick="cancelMontasiaTypeEdit(${x.id})" style="padding:4px 10px;font-size:11px;background:rgba(211,47,47,0.1);border:1px solid rgba(211,47,47,0.4);color:#ef9a9a;border-radius:7px;cursor:pointer;font-family:'Cairo';font-weight:700;">إلغاء</button>
+                </div>
+            </div>` : '';
+        const _typePencil = _isCCMgr ? `<button onclick="editMontasiaType(${x.id})" title="تعديل النوع" style="background:none;border:none;cursor:pointer;color:var(--text-dim);padding:0 4px;font-size:13px;">✏️</button>` : '';
+        const _typeCell = `
+            <div id="typeView-${x.id}" style="display:flex;flex-direction:column;align-items:center;gap:4px;">
+                ${typeLabel}
+                ${_typePencil}
+            </div>${_typeEditPanel}`;
+        const _statusEditPanel = _isCCMgr ? `
+            <div id="statusEdit-${x.id}" style="display:none;flex-direction:column;gap:6px;align-items:center;">
+                <select id="statusEditSel-${x.id}" style="padding:5px;font-size:12px;width:140px;font-family:'Cairo';">
+                    <option value="قيد الانتظار">لم يتم التسليم</option>
+                    <option value="تم التسليم">تم التسليم</option>
+                </select>
+                <div style="display:flex;gap:5px;">
+                    <button onclick="saveMontasiaStatus(${x.id})" style="padding:4px 12px;font-size:11px;background:rgba(46,125,50,0.18);border:1px solid rgba(46,125,50,0.5);color:#a5d6a7;border-radius:7px;cursor:pointer;font-family:'Cairo';font-weight:700;">💾 حفظ</button>
+                    <button onclick="cancelMontasiaStatusEdit(${x.id})" style="padding:4px 10px;font-size:11px;background:rgba(211,47,47,0.1);border:1px solid rgba(211,47,47,0.4);color:#ef9a9a;border-radius:7px;cursor:pointer;font-family:'Cairo';font-weight:700;">إلغاء</button>
+                </div>
+            </div>` : '';
+        const _statusPencil = _isCCMgr ? `<button onclick="editMontasiaStatus(${x.id})" title="تعديل الحالة" style="background:none;border:none;cursor:pointer;color:var(--text-dim);padding:0 4px;font-size:13px;margin-right:4px;">✏️</button>` : '';
+        const _statusBadge = `<span class="status-badge ${statusClass}">${x.status==='قيد الانتظار' ? 'لم يتم التسليم' : (x.status==='تم التسليم' ? 'تم التسليم' : x.status)}</span>`;
+        const _statusCell = `
+            <div id="statusView-${x.id}" style="display:flex;flex-direction:column;align-items:center;gap:4px;">
+                <div style="display:inline-flex;align-items:center;">${_statusBadge}${_statusPencil}</div>
+            </div>${_statusEditPanel}`;
         return `<tr data-id="${x.id}">
             <td><b>${x.branch}</b>${x.branchEmp?`<br><span style="font-size:13px;color:var(--text-dim);font-weight:700;">👤 ${sanitize(x.branchEmp)}</span>`:''}${mobileTag}</td>
-            <td style="text-align:center;">${typeLabel}</td>
+            <td style="text-align:center;">${_typeCell}</td>
             <td><span class="text-box-cell">${sanitize(x.notes)}</span>${extraInfo}${photoCell}${editBox}</td>
-            <td style="vertical-align:top;text-align:center;">
-                <span class="status-badge ${statusClass}">${x.status==='قيد الانتظار' ? 'لم يتم التسليم' : (x.status==='تم التسليم' ? 'تم التسليم' : x.status)}</span>
-            </td>
+            <td style="vertical-align:top;text-align:center;">${_statusCell}</td>
             <td style="text-align:center;vertical-align:top;">
                 <div style="display:flex;flex-direction:column;gap:4px;align-items:center;">
                     <span style="font-weight:700;color:var(--text-main);font-size:13px;">${sanitize(x.addedBy||'—')}</span>

@@ -39,6 +39,87 @@ function toggleRoastSubMode() {
     if (v) v.style.display = sub === 'قيمة' ? 'grid' : 'none';
 }
 
+/* ── تعديل سريع للنوع وحالة التسليم (لمدير الكول سنتر فقط) ── */
+function editMontasiaType(id) {
+    if (currentUser?.role !== 'cc_manager') return;
+    const item = db.montasiat.find(x => x.id === id);
+    if (!item) return;
+    const view = document.getElementById('typeView-' + id);
+    const edit = document.getElementById('typeEdit-' + id);
+    const sel  = document.getElementById('typeEditSel-' + id);
+    if (sel) sel.value = item.type || 'اخرى';
+    if (view) view.style.display = 'none';
+    if (edit) edit.style.display = 'flex';
+}
+
+function cancelMontasiaTypeEdit(id) {
+    const view = document.getElementById('typeView-' + id);
+    const edit = document.getElementById('typeEdit-' + id);
+    if (edit) edit.style.display = 'none';
+    if (view) view.style.display = 'flex';
+}
+
+function saveMontasiaType(id) {
+    if (currentUser?.role !== 'cc_manager') return;
+    const item = db.montasiat.find(x => x.id === id);
+    const sel  = document.getElementById('typeEditSel-' + id);
+    if (!item || !sel) return;
+    const newType = sel.value;
+    if (newType !== item.type) {
+        item.type = newType;
+        if (newType !== 'نقدي') item.missingValue = '';
+        if (newType !== 'اصناف محمص الشعب') {
+            item.roastSubType    = '';
+            item.roastItemName   = '';
+            item.roastItemValue  = '';
+            item.roastItemWeight = '';
+        }
+        if (typeof _logAudit === 'function') _logAudit('editMontasiaType', item.branch || '—', `${item.notes?.slice(0,40) || ''} → ${newType}`);
+        save();
+    }
+    renderAll();
+}
+
+function editMontasiaStatus(id) {
+    if (currentUser?.role !== 'cc_manager') return;
+    const item = db.montasiat.find(x => x.id === id);
+    if (!item) return;
+    const view = document.getElementById('statusView-' + id);
+    const edit = document.getElementById('statusEdit-' + id);
+    const sel  = document.getElementById('statusEditSel-' + id);
+    if (sel) sel.value = (item.status === 'تم التسليم') ? 'تم التسليم' : 'قيد الانتظار';
+    if (view) view.style.display = 'none';
+    if (edit) edit.style.display = 'flex';
+}
+
+function cancelMontasiaStatusEdit(id) {
+    const view = document.getElementById('statusView-' + id);
+    const edit = document.getElementById('statusEdit-' + id);
+    if (edit) edit.style.display = 'none';
+    if (view) view.style.display = 'flex';
+}
+
+function saveMontasiaStatus(id) {
+    if (currentUser?.role !== 'cc_manager') return;
+    const item = db.montasiat.find(x => x.id === id);
+    const sel  = document.getElementById('statusEditSel-' + id);
+    if (!item || !sel) return;
+    const newStatus = sel.value;
+    if (newStatus !== item.status) {
+        item.status = newStatus;
+        if (newStatus === 'تم التسليم') {
+            if (!item.dt) item.dt = now();
+            if (!item.deliveredBy) item.deliveredBy = currentUser?.name || '—';
+        } else if (newStatus === 'قيد الانتظار') {
+            item.dt = '';
+            item.deliveredBy = '';
+        }
+        if (typeof _logAudit === 'function') _logAudit('editMontasiaStatus', item.branch || '—', `${item.notes?.slice(0,40) || ''} → ${newStatus}`);
+        save();
+    }
+    renderAll();
+}
+
 function _toggleRoastSubFilter(suffix) {
     const tEl = document.getElementById('searchType' + suffix);
     const wrap = document.getElementById('searchRoastSub' + suffix + 'Wrap');
