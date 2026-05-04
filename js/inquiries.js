@@ -4,16 +4,10 @@
 function toggleInquiryNotes() {
     const t = document.getElementById("iType").value;
     document.getElementById("iNotesBox").style.display = (t==="شكوى"||t==="أخرى") ? "block" : "none";
-    const itemBox  = document.getElementById("iItemNameBox");
-    const offerBox = document.getElementById("iOfferNameBox");
-    if (itemBox)  itemBox.style.display  = (t === "استفسار عن أصناف") ? "block" : "none";
-    if (offerBox) offerBox.style.display = (t === "استفسار عن عروض")  ? "block" : "none";
+    const itemBox = document.getElementById("iItemNameBox");
+    if (itemBox) itemBox.style.display = (t === "استفسار عن أصناف") ? "block" : "none";
     if (t !== "استفسار عن أصناف") {
         const _i = document.getElementById("iItemName"); if (_i) _i.value = '';
-    }
-    if (t !== "استفسار عن عروض") {
-        const _o  = document.getElementById("iOfferName");   if (_o)  _o.value  = '';
-        const _on = document.getElementById("iOfferNature"); if (_on) _on.value = '';
     }
     const ctBox = document.getElementById("iComplaintTypeBox");
     if (ctBox) ctBox.style.display = (t === "شكوى") ? "block" : "none";
@@ -78,15 +72,11 @@ function addInquiry() {
     const needsNotes = (t==="شكوى"||t==="أخرى");
     const n = needsNotes ? document.getElementById("iNotes").value.trim() : "";
     const ct = (t === "شكوى") ? (document.getElementById("iComplaintType")?.value || '') : '';
-    const itemName    = (t === "استفسار عن أصناف") ? (document.getElementById("iItemName")?.value.trim()    || '') : '';
-    const offerName   = (t === "استفسار عن عروض")  ? (document.getElementById("iOfferName")?.value.trim()   || '') : '';
-    const offerNature = (t === "استفسار عن عروض")  ? (document.getElementById("iOfferNature")?.value.trim() || '') : '';
+    const itemName = (t === "استفسار عن أصناف") ? (document.getElementById("iItemName")?.value.trim() || '') : '';
     if (!c||!b||!p||!t) return alert("يرجى إكمال البيانات");
     if (needsNotes&&!n) return alert("يرجى كتابة التفاصيل");
     if (t === "شكوى" && !ct) return alert("يرجى تحديد نوع الشكوى");
     if (t === "استفسار عن أصناف" && !itemName) return alert("يرجى كتابة اسم الصنف");
-    if (t === "استفسار عن عروض"  && !offerName)   return alert("يرجى كتابة اسم العرض");
-    if (t === "استفسار عن عروض"  && !offerNature) return alert("يرجى كتابة طبيعة العرض");
     let invoiceValue='', moveNumber='', noteDate='';
     let fileInput = null;
     if (ct === "مالية") {
@@ -105,9 +95,7 @@ function addInquiry() {
         invoiceValue: invoiceValue || '',
         moveNumber:   moveNumber   || '',
         noteDate:     noteDate     || '',
-        itemName:    itemName    || '',
-        offerName:   offerName   || '',
-        offerNature: offerNature || '',
+        itemName: itemName || '',
         time: now(), iso: iso(), addedBy: currentUser.name
     };
 
@@ -119,10 +107,8 @@ function addInquiry() {
         document.getElementById("iNotesBox").style.display="none";
         const _ctSel = document.getElementById("iComplaintType"); if (_ctSel) _ctSel.value = "";
         const _ctBox = document.getElementById("iComplaintTypeBox"); if (_ctBox) _ctBox.style.display = "none";
-        const _iName = document.getElementById("iItemName");  if (_iName) _iName.value = "";
-        const _oName = document.getElementById("iOfferName"); if (_oName) _oName.value = "";
-        const _iBox  = document.getElementById("iItemNameBox");  if (_iBox) _iBox.style.display  = "none";
-        const _oBox  = document.getElementById("iOfferNameBox"); if (_oBox) _oBox.style.display  = "none";
+        const _iName = document.getElementById("iItemName"); if (_iName) _iName.value = "";
+        const _iBox  = document.getElementById("iItemNameBox"); if (_iBox) _iBox.style.display = "none";
         toggleComplaintFinancialBox();
         if (ctryEl) ctryEl.value = "";
         document.getElementById("iCityAdd").value="";

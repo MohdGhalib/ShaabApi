@@ -673,17 +673,13 @@ function _renderTableI(get) {
               </div>` : '';
         const _itemBadge = x.itemName
             ? `<div style="margin-top:5px;font-size:12px;font-weight:700;"><span style="color:#80deea;">📦 اسم الصنف:</span> <span style="color:#90caf9;">${sanitize(x.itemName)}</span></div>` : '';
-        const _offerBadge = x.offerName
-            ? `<div style="margin-top:5px;font-size:12px;font-weight:700;"><span style="color:#80deea;">🎁 اسم العرض:</span> <span style="color:#ce93d8;">${sanitize(x.offerName)}</span></div>` : '';
-        const _offerNatureBadge = x.offerNature
-            ? `<div style="margin-top:3px;font-size:12px;font-weight:700;"><span style="color:#80deea;">📋 طبيعة العرض:</span> <span style="color:#ce93d8;">${sanitize(x.offerNature)}</span></div>` : '';
         return `<tr>
             <td><span class="seq-badge" title="الرقم التسلسلي">#${x.seq||'—'}</span></td>
             <td><b>${x.branch}</b><br><small>${x.city}</small></td>
             <td>${sanitize(x.phone)}</td>
             <td>
                 <span class="emp-badge">${x.type||'—'}</span>${ctBadge}
-                ${_itemBadge}${_offerBadge}${_offerNatureBadge}
+                ${_itemBadge}
                 ${x.notes?`<br><span class="text-box-cell" style="font-size:13px;color:var(--text-dim)">${sanitize(x.notes)}</span>`:''}
                 ${finFieldsHtml}
                 ${editBox}
