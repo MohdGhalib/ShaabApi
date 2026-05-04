@@ -403,7 +403,7 @@ function _renderContactsList(convList, myName, isAllView) {
                  style="cursor:pointer;padding:11px 14px;border-bottom:1px solid var(--border);background:${bg};display:flex;align-items:center;gap:10px;transition:background 0.12s;"
                  onmouseover="if(this.style.background==='transparent')this.style.background='rgba(255,255,255,0.04)';"
                  onmouseout="this.style.background='${bg}';">
-                <div style="width:38px;height:38px;border-radius:50%;background:linear-gradient(135deg,#37474f,#263238);color:#fff;display:flex;align-items:center;justify-content:center;font-weight:700;flex-shrink:0;font-size:14px;">${sanitize((isAllView?c.parties[0]:otherName||'?').charAt(0))}</div>
+                ${(typeof _empAvatarHTML==='function') ? _empAvatarHTML(isAllView?c.parties[0]:otherName, 38) : `<div style="width:38px;height:38px;border-radius:50%;background:linear-gradient(135deg,#37474f,#263238);color:#fff;display:flex;align-items:center;justify-content:center;font-weight:700;flex-shrink:0;font-size:14px;">${sanitize((isAllView?c.parties[0]:otherName||'?').charAt(0))}</div>`}
                 <div style="flex:1;min-width:0;">
                     <div style="display:flex;justify-content:space-between;align-items:center;gap:6px;">
                         <span style="font-size:13px;font-weight:700;color:var(--text-main);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${title}</span>
@@ -455,7 +455,7 @@ function _renderChatPane(conv, myName, isAllView) {
 
     return `
         <div style="padding:11px 16px;border-bottom:1px solid var(--border);background:rgba(0,0,0,0.18);display:flex;align-items:center;gap:10px;">
-            <div style="width:34px;height:34px;border-radius:50%;background:linear-gradient(135deg,#37474f,#263238);color:#fff;display:flex;align-items:center;justify-content:center;font-weight:700;font-size:13px;">${sanitize((isAllView?conv.parties[0]:otherName||'?').charAt(0))}</div>
+            ${(typeof _empAvatarHTML==='function') ? _empAvatarHTML(isAllView?conv.parties[0]:otherName, 34) : `<div style="width:34px;height:34px;border-radius:50%;background:linear-gradient(135deg,#37474f,#263238);color:#fff;display:flex;align-items:center;justify-content:center;font-weight:700;font-size:13px;">${sanitize((isAllView?conv.parties[0]:otherName||'?').charAt(0))}</div>`}
             <div style="flex:1;">
                 <div style="font-size:14px;font-weight:700;color:var(--text-main);">${headerTitle}</div>
                 <small style="color:${online?'#a5d6a7':'var(--text-dim)'};font-size:11px;">${statusTxt}</small>

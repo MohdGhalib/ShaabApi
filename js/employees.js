@@ -349,8 +349,15 @@ function renderEmployees() {
         const _nameHtml = (typeof _empNameHTML === 'function')
             ? _empNameHTML(e.name)
             : sanitize(e.name);
+        const _isCCMgr3 = currentUser?.role === 'cc_manager' || currentUser?.isAdmin;
+        const _photoBtn = _isCCMgr3
+            ? `<label title="رفع صورة" style="display:inline-flex;align-items:center;cursor:pointer;color:var(--text-dim);padding:0 6px;font-size:13px;vertical-align:middle;">📷<input type="file" accept="image/*" style="display:none;" onchange="uploadEmployeePhoto('${e.empId}',this)"></label>`
+            : '';
+        const _photoThumb = e.photo
+            ? `<img src="${e.photo}" alt="" style="width:30px;height:30px;border-radius:50%;object-fit:cover;border:1px solid var(--border);vertical-align:middle;margin-left:6px;">`
+            : '';
         return `<tr>
-        <td>${i+1}</td><td><b>${_nameHtml}</b>${branchInfo}</td>
+        <td>${i+1}</td><td>${_photoThumb}<b>${_nameHtml}</b>${_photoBtn}${branchInfo}</td>
         <td><span class="emp-badge">${sanitize(e.title)}</span></td>
         <td><span class="emp-id-display">${sanitize(e.empId)}</span></td>
         <td style="display:flex;gap:6px;flex-wrap:wrap;">
@@ -360,6 +367,54 @@ function renderEmployees() {
         </td>
     </tr>`;
     }).join('');
+}
+
+// ── رفع صورة موظف (مدير الكول سنتر / المدير العام) ─────────────────────────
+const _MAX_PHOTO_SIZE = 1.5 * 1024 * 1024; // 1.5MB
+
+function uploadEmployeePhoto(empId, input) {
+    if (!(currentUser?.role === 'cc_manager' || currentUser?.isAdmin)) return;
+    const file = input?.files?.[0];
+    if (!file) return;
+    if (!file.type?.startsWith('image/')) { input.value=''; return alert('يجب اختيار ملف صورة'); }
+    if (file.size > _MAX_PHOTO_SIZE) { input.value=''; return alert('حجم الصورة أكبر من 1.5MB'); }
+    const reader = new FileReader();
+    reader.onload = e => {
+        const emp = employees.find(x => x.empId === empId);
+        if (!emp) return;
+        // ضغط بسيط: إعادة تحجيم الصورة إلى 256×256 للحفاظ على حجم DB
+        const img = new Image();
+        img.onload = () => {
+            const size = 256;
+            const canvas = document.createElement('canvas');
+            canvas.width = canvas.height = size;
+            const ctx = canvas.getContext('2d');
+            // اقتصاص مربّع من الوسط
+            const minSide = Math.min(img.width, img.height);
+            const sx = (img.width - minSide) / 2;
+            const sy = (img.height - minSide) / 2;
+            ctx.drawImage(img, sx, sy, minSide, minSide, 0, 0, size, size);
+            emp.photo = canvas.toDataURL('image/jpeg', 0.8);
+            if (typeof saveEmployees === 'function') saveEmployees();
+            if (typeof _logAudit === 'function') { _logAudit('uploadPhoto', '—', `صورة لـ ${emp.name}`); save(); }
+            input.value = '';
+            renderEmployees();
+        };
+        img.src = e.target.result;
+    };
+    reader.readAsDataURL(file);
+}
+
+function deleteEmployeePhoto(empId) {
+    if (!(currentUser?.role === 'cc_manager' || currentUser?.isAdmin)) return;
+    const emp = employees.find(x => x.empId === empId);
+    if (!emp || !emp.photo) return;
+    if (!confirm('حذف صورة الموظف؟')) return;
+    delete emp.photo;
+    if (typeof saveEmployees === 'function') saveEmployees();
+    if (typeof _logAudit === 'function') { _logAudit('deletePhoto', '—', `حذف صورة ${emp.name}`); save(); }
+    closeEmpCard();
+    renderEmployees();
 }
 
 // ── تحديث قائمة الفروع لمدير الفرع (مع حجب المحجوز) ─────────────────────────

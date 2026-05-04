@@ -27,6 +27,8 @@ const AUDIT_ACTION_LABELS = {
     'forceLogout':           'إخراج موظف من النظام',
     'sendMessage':           'إرسال رسالة',
     'interventionMessage':   'تدخّل إداري في محادثة',
+    'uploadPhoto':           'رفع صورة موظف',
+    'deletePhoto':           'حذف صورة موظف',
 };
 function _auditActionLabel(a) { return AUDIT_ACTION_LABELS[a] || a; }
 
