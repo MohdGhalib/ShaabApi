@@ -138,7 +138,7 @@ async function _sendComposedMessage(encName, replyToId) {
         time: now(),
         iso: iso(),
         ts: Date.now(),
-        readByMe: true,        // المرسل قرأها بطبيعة الحال
+        readByMe: false,        // الـ flag يعكس قراءة المستلم — false عند الإرسال
     });
     if (typeof _logAudit === 'function') _logAudit('sendMessage', name, text.slice(0,40));
     save();
@@ -500,6 +500,13 @@ function _renderChatBubble(m, myName, isAllView) {
             }).join('') + '</div>';
     }
     const time = sanitize((m.time||'').split('،').pop().trim());
+    // علامات صح: ✓ مرسلة | ✓✓ مقروءة (للمرسل فقط في عرض mine)
+    let ticks = '';
+    if (mineSent && !isAllView) {
+        ticks = m.readByMe
+            ? `<span title="قُرئت" style="color:#42a5f5;font-weight:700;letter-spacing:-2px;">✓✓</span>`
+            : `<span title="مُرسلة" style="color:rgba(255,255,255,0.45);font-weight:700;">✓</span>`;
+    }
     return `
         <div style="display:flex;justify-content:${align};">
             <div style="background:${bg};border:${border};border-radius:12px;padding:7px 11px;max-width:75%;min-width:80px;">
@@ -507,7 +514,7 @@ function _renderChatBubble(m, myName, isAllView) {
                 ${senderLine}
                 <div style="font-size:13px;color:var(--text-main);line-height:1.55;white-space:pre-wrap;word-break:break-word;">${sanitize(m.text||'')}</div>
                 ${attachHtml}
-                <div style="font-size:9px;color:var(--text-dim);text-align:left;margin-top:3px;">${time}</div>
+                <div style="font-size:9px;color:var(--text-dim);text-align:left;margin-top:3px;display:flex;gap:5px;align-items:center;justify-content:flex-end;">${ticks}<span>${time}</span></div>
             </div>
         </div>`;
 }
@@ -548,7 +555,7 @@ async function _sendInterventionMessage(encA, encB) {
             from: currentUser.name, fromEmpId: currentUser.empId || '',
             to: target, toEmpId: tEmp?.empId || '',
             text, attachments: [], replyToId: null,
-            time: now(), iso: iso(), ts: baseTs, readByMe: true,
+            time: now(), iso: iso(), ts: baseTs, readByMe: false,
             isIntervention: true,
             interventionPair: [a, b]
         });
@@ -632,7 +639,7 @@ async function _sendChatMessage(encName) {
         from: currentUser.name, fromEmpId: currentUser.empId || '',
         to: name, toEmpId: target?.empId || '',
         text, attachments, replyToId: null,
-        time: now(), iso: iso(), ts: Date.now(), readByMe: true,
+        time: now(), iso: iso(), ts: Date.now(), readByMe: false,
     });
     if (typeof _logAudit === 'function') _logAudit('sendMessage', name, text.slice(0,40));
     save();

@@ -910,9 +910,11 @@ function renderAll() {
     if (typeof _checkSessionsForNotifs === 'function') _checkSessionsForNotifs();
     // رسائل جديدة + شارة العداد
     if (typeof _checkNewMessages === 'function') _checkNewMessages();
-    // تحديث صفحة الرسائل إن كانت مفتوحة
+    // تحديث صفحة الرسائل إن كانت مفتوحة (لا تُعِد البناء أثناء الكتابة لتجنّب اختفاء شريط الإدخال)
     if (typeof renderMessagesPage === 'function' && document.getElementById('messagesPageContainer')) {
-        renderMessagesPage();
+        const _msgInputEl = document.getElementById('msgChatInput');
+        const _isTypingMsg = _msgInputEl && (document.activeElement === _msgInputEl || (_msgInputEl.value && _msgInputEl.value.length));
+        if (!_isTypingMsg) renderMessagesPage();
     }
     // تحديث جدول الموظفين إن كان مفتوحًا (لتحديث النقطة الخضراء)
     if (typeof renderEmployees === 'function' && document.querySelector('#tableE tbody')) {
