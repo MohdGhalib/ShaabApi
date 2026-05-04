@@ -59,7 +59,8 @@ m: `
     <div><label>بحث بالنص</label><input type="text" id="searchTextM" placeholder="بحث في التفاصيل..." oninput="filterTable()"></div>
     <div><label>موظف الاستلام</label><select id="searchAddedByM" onchange="filterTable()"><option value="">الكل</option></select></div>
     <div><label>موظف التسليم</label><select id="searchDeliveredByM" onchange="filterTable()"><option value="">الكل</option></select></div>
-    <div><label>نوع المنتسية</label><select id="searchTypeM" onchange="filterTable()"><option value="">الكل</option><option value="نقدي">نقدي</option><option value="اصناف محمص الشعب">🌰 اصناف محمص الشعب</option><option value="أخرى">أخرى</option></select></div>
+    <div><label>نوع المنتسية</label><select id="searchTypeM" onchange="filterTable();_toggleRoastSubFilter('M')"><option value="">الكل</option><option value="نقدي">نقدي</option><option value="اصناف محمص الشعب">أصناف محامص الشعب</option><option value="أخرى">أخرى</option></select></div>
+    <div id="searchRoastSubMWrap" style="display:none;"><label>طريقة التسجيل</label><select id="searchRoastSubM" onchange="filterTable()"><option value="">الكل</option><option value="وزن">وزن</option><option value="قيمة">قيمة</option></select></div>
     <button class="btn" style="background:var(--bg-input);color:var(--text-dim);align-self:end;" onclick="resetSearch('M')">تفريغ</button>
 </div>
 <div id="mCtrlMgrFilters" class="search-bar search-bar-m" style="display:none;margin-bottom:18px;background:linear-gradient(135deg,rgba(106,27,154,0.10),rgba(21,101,192,0.06));border:1px dashed rgba(156,39,176,0.40);">
@@ -131,7 +132,8 @@ o: `
         <div><label>التاريخ</label><div class="date-picker-wrap" onclick="openDatePicker('searchDateO')"><span class="date-display" id="searchDateO-display">📅 اختر التاريخ</span><input type="hidden" id="searchDateO"></div></div>
         <div><label>بحث بالنص</label><input type="text" id="searchTextO" placeholder="بحث في التفاصيل..." oninput="filterTable()"></div>
         <div><label>موظف الاستلام</label><select id="searchAddedByO" onchange="filterTable()"><option value="">الكل</option></select></div>
-        <div><label>نوع المنتسية</label><select id="searchTypeO" onchange="filterTable()"><option value="">الكل</option><option value="نقدي">نقدي</option><option value="اصناف محمص الشعب">🌰 اصناف محمص الشعب</option><option value="أخرى">أخرى</option></select></div>
+        <div><label>نوع المنتسية</label><select id="searchTypeO" onchange="filterTable();_toggleRoastSubFilter('O')"><option value="">الكل</option><option value="نقدي">نقدي</option><option value="اصناف محمص الشعب">أصناف محامص الشعب</option><option value="أخرى">أخرى</option></select></div>
+        <div id="searchRoastSubOWrap" style="display:none;"><label>طريقة التسجيل</label><select id="searchRoastSubO" onchange="filterTable()"><option value="">الكل</option><option value="وزن">وزن</option><option value="قيمة">قيمة</option></select></div>
         <button class="btn" style="background:var(--bg-input);color:var(--text-dim);align-self:end;" onclick="resetSearch('O')">تفريغ</button>
     </div>
     <table id="tableO">

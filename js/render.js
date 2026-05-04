@@ -180,7 +180,7 @@ function resetSearch(t) {
         const disp=document.getElementById(fieldId+'-display'); if(disp){ disp.textContent='📅 اختر التاريخ'; disp.classList.remove('selected'); }
     };
     if (t==='M') {
-        clear(['searchCountryM','searchCityM','searchTextM','searchAddedByM','searchDeliveredByM','searchTypeM','searchSectionM']);
+        clear(['searchCountryM','searchCityM','searchTextM','searchAddedByM','searchDeliveredByM','searchTypeM','searchSectionM','searchRoastSubM']);
         if (typeof updateCities === 'function') updateCities('searchCountryM','searchCityM','searchBranchM');
         else document.getElementById('searchBranchM').innerHTML='<option value="">الكل</option>';
         clearDate('searchDateM');
@@ -189,12 +189,14 @@ function resetSearch(t) {
         if (_sbWrap) _sbWrap.style.display = 'none';
         const _sbBox = document.getElementById('mSectionBranchPicker');
         if (_sbBox) { _sbBox.innerHTML = ''; _sbBox.dataset.section = ''; }
+        if (typeof _toggleRoastSubFilter === 'function') _toggleRoastSubFilter('M');
         _pg.M = 1;
     } else if (t==='O') {
-        clear(['searchCountryO','searchCityO','searchTextO','searchAddedByO','searchTypeO']);
+        clear(['searchCountryO','searchCityO','searchTextO','searchAddedByO','searchTypeO','searchRoastSubO']);
         if (typeof updateCities === 'function') updateCities('searchCountryO','searchCityO','searchBranchO');
         else document.getElementById('searchBranchO').innerHTML='<option value="">الكل</option>';
         clearDate('searchDateO');
+        if (typeof _toggleRoastSubFilter === 'function') _toggleRoastSubFilter('O');
         _pg.O = 1;
     } else if (t==='I') {
         clear(['searchCountryI','searchCityI','searchAddedByI','searchTypeI']);
@@ -317,7 +319,8 @@ function _renderTableM(get, isAdmin) {
         text:        get("searchTextM").toLowerCase(),
         addedBy:     get("searchAddedByM"),
         deliveredBy: get("searchDeliveredByM"),
-        type:        get("searchTypeM")
+        type:        get("searchTypeM"),
+        subType:     get("searchRoastSubM")
     };
     // فلتر الفرع لموظف/مدير الفرع ومدير المنطقة
     const _myRole = currentUser?.role;
@@ -344,6 +347,7 @@ function _renderTableM(get, isAdmin) {
         (!f.addedBy     || (x.addedBy||'').includes(f.addedBy)) &&
         (!f.deliveredBy || (x.deliveredBy||'').includes(f.deliveredBy)) &&
         (!f.type        || (x.type||'')=== f.type) &&
+        (!f.subType     || (x.roastSubType||'') === f.subType) &&
         (!selectedSectionM || selectedSectionBranchesM.includes(x.branch))
     );
     if (!_pg.M) _pg.M = 1;
@@ -381,17 +385,17 @@ function _renderTableM(get, isAdmin) {
             : x.type==='أخرى'
             ? `<span style="padding:2px 8px;border-radius:6px;font-size:12px;font-weight:700;background:rgba(100,181,246,0.15);color:#90caf9;">أخرى</span>`
             : x.type==='اصناف محمص الشعب'
-            ? `<span style="padding:2px 8px;border-radius:6px;font-size:12px;font-weight:700;background:rgba(156,204,101,0.18);color:#c5e1a5;">🌰 محمص الشعب</span>`
+            ? `<span style="padding:2px 8px;border-radius:6px;font-size:12px;font-weight:700;background:rgba(156,204,101,0.18);color:#c5e1a5;">أصناف محامص الشعب</span>`
             : `<span style="color:var(--text-dim);font-size:12px;">—</span>`;
         let extraInfo = '';
         if (x.type === 'نقدي' && x.missingValue) {
-            extraInfo = `<div style="margin-top:5px;font-size:12px;color:#ffd54f;font-weight:700;">💰 المفقود: ${sanitize(x.missingValue)}</div>`;
+            extraInfo = `<div style="margin-top:5px;font-size:12px;color:#ffd54f;font-weight:700;">القيمة المالية المفقودة: ${sanitize(x.missingValue)}</div>`;
         } else if (x.type === 'اصناف محمص الشعب') {
-            const parts = [];
-            if (x.roastItemName)   parts.push(`📦 ${sanitize(x.roastItemName)}`);
-            if (x.roastItemValue)  parts.push(`💵 ${sanitize(x.roastItemValue)}`);
-            if (x.roastItemWeight) parts.push(`⚖️ ${sanitize(x.roastItemWeight)}`);
-            if (parts.length) extraInfo = `<div style="margin-top:5px;font-size:12px;color:#c5e1a5;font-weight:700;display:flex;gap:10px;flex-wrap:wrap;">${parts.map(p=>`<span>${p}</span>`).join('')}</div>`;
+            const lines = [];
+            if (x.roastItemName)   lines.push(`اسم الصنف: ${sanitize(x.roastItemName)}`);
+            if (x.roastItemValue)  lines.push(`القيمة المالية: ${sanitize(x.roastItemValue)}`);
+            if (x.roastItemWeight) lines.push(`الوزن: ${sanitize(x.roastItemWeight)}`);
+            if (lines.length) extraInfo = `<div style="margin-top:5px;font-size:12px;color:#c5e1a5;font-weight:700;line-height:1.7;">${lines.map(l=>`<div>${l}</div>`).join('')}</div>`;
         }
         const photoCell = x.photoBase64
             ? `<div style="margin-top:6px;">
@@ -468,7 +472,8 @@ function _renderTableO(get) {
         date:    get("searchDateO"),
         text:    get("searchTextO").toLowerCase(),
         addedBy: get("searchAddedByO"),
-        type:    get("searchTypeO")
+        type:    get("searchTypeO"),
+        subType: get("searchRoastSubO")
     };
     const _ctrlSubO = currentUser?.role === 'control_sub' ? employees.find(e => e.empId === currentUser?.empId) : null;
     const allRowsO = db.montasiat.filter(x =>
@@ -481,7 +486,8 @@ function _renderTableO(get) {
         (!f.date    || x.iso.startsWith(f.date)) &&
         (!f.text    || x.notes.toLowerCase().includes(f.text)) &&
         (!f.addedBy || (x.addedBy||'').includes(f.addedBy)) &&
-        (!f.type    || (x.type||'')=== f.type)
+        (!f.type    || (x.type||'')=== f.type) &&
+        (!f.subType || (x.roastSubType||'') === f.subType)
     );
     if (!_pg.O) _pg.O = 1;
     const _pageO = Math.min(_pg.O, Math.max(1, Math.ceil(allRowsO.length / _PAGE_SIZE)));
@@ -501,13 +507,13 @@ function _renderTableO(get) {
             ? `<span class="status-badge mobile-pending" style="font-size:11px;padding:2px 8px;">📱 ${x.status}</span><br>` : '';
         let _xInfo = '';
         if (x.type === 'نقدي' && x.missingValue) {
-            _xInfo = `<div style="margin-top:5px;font-size:12px;color:#ffd54f;font-weight:700;">💰 المفقود: ${sanitize(x.missingValue)}</div>`;
+            _xInfo = `<div style="margin-top:5px;font-size:12px;color:#ffd54f;font-weight:700;">القيمة المالية المفقودة: ${sanitize(x.missingValue)}</div>`;
         } else if (x.type === 'اصناف محمص الشعب') {
-            const _p = [];
-            if (x.roastItemName)   _p.push(`📦 ${sanitize(x.roastItemName)}`);
-            if (x.roastItemValue)  _p.push(`💵 ${sanitize(x.roastItemValue)}`);
-            if (x.roastItemWeight) _p.push(`⚖️ ${sanitize(x.roastItemWeight)}`);
-            if (_p.length) _xInfo = `<div style="margin-top:5px;font-size:12px;color:#c5e1a5;font-weight:700;display:flex;gap:10px;flex-wrap:wrap;">${_p.map(p=>`<span>${p}</span>`).join('')}</div>`;
+            const _lines = [];
+            if (x.roastItemName)   _lines.push(`اسم الصنف: ${sanitize(x.roastItemName)}`);
+            if (x.roastItemValue)  _lines.push(`القيمة المالية: ${sanitize(x.roastItemValue)}`);
+            if (x.roastItemWeight) _lines.push(`الوزن: ${sanitize(x.roastItemWeight)}`);
+            if (_lines.length) _xInfo = `<div style="margin-top:5px;font-size:12px;color:#c5e1a5;font-weight:700;line-height:1.7;">${_lines.map(l=>`<div>${l}</div>`).join('')}</div>`;
         }
         return `<tr>
             <td><b>${x.branch}</b><br><small>${x.city}</small></td>

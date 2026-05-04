@@ -39,6 +39,16 @@ function toggleRoastSubMode() {
     if (v) v.style.display = sub === 'قيمة' ? 'grid' : 'none';
 }
 
+function _toggleRoastSubFilter(suffix) {
+    const tEl = document.getElementById('searchType' + suffix);
+    const wrap = document.getElementById('searchRoastSub' + suffix + 'Wrap');
+    const sel  = document.getElementById('searchRoastSub' + suffix);
+    if (!wrap) return;
+    const show = tEl?.value === 'اصناف محمص الشعب';
+    wrap.style.display = show ? '' : 'none';
+    if (!show && sel) sel.value = '';
+}
+
 function _resetMontasiaExtraFields() {
     ['mMissingValue','mRoastValueW','mRoastNameW','mRoastWeightW','mRoastNameV','mRoastValueV']
         .forEach(id => { const el = document.getElementById(id); if (el) el.value = ''; });
