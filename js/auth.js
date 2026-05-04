@@ -293,6 +293,14 @@ function setProfileUI() {
         document.getElementById('tab-l')?.classList.add('hidden');
     }
 
+    // الرسائل — لمدير الكول سنتر وموظفي الكول سنتر
+    const isCCEmp = currentUser?.role === 'cc_employee';
+    if (isAdmin || isCCManager || isCCEmp) {
+        document.getElementById('tab-msg')?.classList.remove('hidden');
+    } else {
+        document.getElementById('tab-msg')?.classList.add('hidden');
+    }
+
     // سلة المحذوفات — للمدير ومدير الكول سنتر فقط
     if (isAdmin || isCCManager) {
         document.getElementById('tab-t')?.classList.remove('hidden');

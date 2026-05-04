@@ -301,6 +301,72 @@ function _checkNewMessages() {
     _renderUnreadMsgBadge();
 }
 
+/* ══ صفحة الرسائل (تبويب جانبي) ═════════════════════════ */
+let _msgPageView = 'mine'; // 'mine' أو 'all' (للمدير فقط)
+
+function renderMessagesPage() {
+    const root = document.getElementById('messagesPageContainer');
+    if (!root) return;
+    _ensureMessages();
+    const isMgr = (currentUser?.role === 'cc_manager') || currentUser?.isAdmin;
+    // افتراضيًا للمدير: "جميع المراسلات"؛ للموظف: "مراسلاتي" فقط
+    if (!isMgr) _msgPageView = 'mine';
+
+    const tabsHtml = isMgr ? `
+        <div style="display:flex;gap:6px;margin-bottom:14px;">
+            <button onclick="_setMsgPageView('all')" style="padding:8px 18px;border-radius:10px;border:1px solid var(--border);background:${_msgPageView==='all'?'rgba(46,125,50,0.18)':'var(--bg-input)'};color:${_msgPageView==='all'?'#a5d6a7':'var(--text-dim)'};font-family:'Cairo';font-weight:700;cursor:pointer;font-size:13px;">📋 جميع المراسلات</button>
+            <button onclick="_setMsgPageView('mine')" style="padding:8px 18px;border-radius:10px;border:1px solid var(--border);background:${_msgPageView==='mine'?'rgba(46,125,50,0.18)':'var(--bg-input)'};color:${_msgPageView==='mine'?'#a5d6a7':'var(--text-dim)'};font-family:'Cairo';font-weight:700;cursor:pointer;font-size:13px;">💬 مراسلاتي</button>
+        </div>` : '';
+
+    const myName = currentUser?.name;
+    const all = (db.messages || []).filter(m => !m.deleted);
+    const list = (isMgr && _msgPageView === 'all')
+        ? all.slice().sort((a,b) => (b.ts||0) - (a.ts||0))
+        : all.filter(m => m.from === myName || m.to === myName).sort((a,b) => (b.ts||0) - (a.ts||0));
+
+    let body = '';
+    if (!list.length) {
+        body = '<div style="text-align:center;padding:40px;color:var(--text-dim);">لا توجد رسائل</div>';
+    } else {
+        body = list.map(m => {
+            const incoming = m.to === myName;
+            const dirIcon  = (isMgr && _msgPageView==='all')
+                ? '↔'
+                : (incoming ? '⬇' : '⬆');
+            const dirLabel = (isMgr && _msgPageView==='all')
+                ? `<b>${sanitize(m.from)}</b> → <b>${sanitize(m.to)}</b>`
+                : (incoming ? `من: <b>${sanitize(m.from)}</b>` : `إلى: <b>${sanitize(m.to)}</b>`);
+            const unread = incoming && !m.readByMe;
+            const dot    = unread ? '<span style="display:inline-block;width:8px;height:8px;border-radius:50%;background:#64b5f6;margin-right:6px;animation:emp-pulse 1.3s ease-in-out infinite;"></span>' : '';
+            const attachN = (m.attachments||[]).length;
+            const replyBtn = incoming ? `<button onclick="event.stopPropagation();_openComposeMessage('${encodeURIComponent(m.from)}','${m.id}')" style="margin-right:6px;padding:4px 10px;font-size:11px;border-radius:7px;border:1px solid rgba(46,125,50,0.4);background:rgba(46,125,50,0.12);color:#a5d6a7;cursor:pointer;font-family:'Cairo';font-weight:700;">↩ رد</button>` : '';
+            return `
+            <div onclick="_openMessageDetail('${m.id}')" style="cursor:pointer;background:${unread?'rgba(21,101,192,0.10)':'var(--bg-input)'};border:1px solid var(--border);border-radius:10px;padding:11px 14px;margin-bottom:8px;">
+                <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:5px;">
+                    <div style="font-size:13px;color:var(--text-main);">${dirIcon} ${dirLabel}${dot}</div>
+                    <small style="color:var(--text-dim);">${sanitize(m.time||'')}</small>
+                </div>
+                <div style="font-size:13px;color:var(--text-main);line-height:1.5;">${sanitize((m.text||'').slice(0,140))}${(m.text||'').length>140?'...':''}</div>
+                <div style="margin-top:6px;display:flex;align-items:center;justify-content:space-between;">
+                    <small style="color:var(--text-dim);">${attachN ? `📎 ${attachN} مرفق` : ''}</small>
+                    ${replyBtn}
+                </div>
+            </div>`;
+        }).join('');
+    }
+
+    root.innerHTML = `
+        <div class="card">
+            ${tabsHtml}
+            <div style="margin-bottom:12px;display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px;">
+                <small style="color:var(--text-dim);">${list.length} رسالة</small>
+            </div>
+            ${body}
+        </div>`;
+}
+
+function _setMsgPageView(v) { _msgPageView = v; renderMessagesPage(); }
+
 function _showNewMessageToast(m) {
     if (typeof _ensureNotifStack !== 'function') return;
     const stack = _ensureNotifStack();

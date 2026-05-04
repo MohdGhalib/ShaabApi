@@ -345,14 +345,12 @@ function renderEmployees() {
         // مؤشر الاتصال + اسم قابل للضغط (لمدير الكول سنتر فقط)
         const _isOnline = (sessions || []).some(s => s.empId === e.empId &&
             (typeof _isSessionAlive === 'function' ? _isSessionAlive(s) : !s.logoutIso));
-        const _dotColor = _isOnline ? '#4caf50' : '#e53935';
-        const _dotTip   = _isOnline ? 'مسجّل دخول الآن' : 'خارج النظام';
-        const _dot = `<span title="${_dotTip}" style="display:inline-block;width:9px;height:9px;border-radius:50%;background:${_dotColor};box-shadow:0 0 8px ${_dotColor},0 0 2px #fff;margin-right:8px;vertical-align:middle;animation:emp-pulse 1.4s ease-in-out infinite;"></span>`;
+        // _empNameHTML يضمّن النقطة الملوّنة بنفسه — لا حاجة لنقطة منفصلة هنا
         const _nameHtml = (typeof _empNameHTML === 'function')
             ? _empNameHTML(e.name)
             : sanitize(e.name);
         return `<tr>
-        <td>${i+1}</td><td><b>${_nameHtml}</b>${_dot}${branchInfo}</td>
+        <td>${i+1}</td><td><b>${_nameHtml}</b>${branchInfo}</td>
         <td><span class="emp-badge">${sanitize(e.title)}</span></td>
         <td><span class="emp-id-display">${sanitize(e.empId)}</span></td>
         <td style="display:flex;gap:6px;flex-wrap:wrap;">

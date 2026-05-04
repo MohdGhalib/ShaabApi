@@ -532,6 +532,13 @@ l: `
     <div id="auditLogContainer"></div>
 </div>`,
 
+msg: `
+<div style="padding:4px 0 20px;">
+    <h2 style="margin:0 0 6px;color:var(--accent-red);">📬 الرسائل</h2>
+    <p style="color:var(--text-dim);font-size:13px;margin:0 0 20px;">المراسلات الداخلية بين الموظفين</p>
+    <div id="messagesPageContainer"></div>
+</div>`,
+
 t: `
 <div style="padding:4px 0 20px;">
     <h2 style="margin:0 0 6px;color:var(--accent-red);">🗑️ سلة المحذوفات</h2>

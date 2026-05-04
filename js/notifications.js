@@ -215,9 +215,10 @@ function _empNameHTML(name) {
     const dotBg  = online ? '#4caf50' : '#e53935';
     const dotShadow = online ? '#4caf50' : '#e53935';
     const tip   = online ? 'مسجّل دخول' : 'خارج النظام';
-    const dot = `<span class="emp-status-dot" style="display:inline-block;width:9px;height:9px;border-radius:50%;background:${dotBg};box-shadow:0 0 6px ${dotShadow},0 0 1px #fff;vertical-align:middle;animation:emp-pulse 1.4s ease-in-out infinite;"></span>`;
+    const dot = `<span class="emp-status-dot" style="display:inline-block;width:10px;height:10px;border-radius:50%;background:${dotBg};box-shadow:0 0 8px ${dotShadow},0 0 2px #fff;vertical-align:middle;animation:emp-pulse 1.3s ease-in-out infinite;flex-shrink:0;"></span>`;
     const enc = encodeURIComponent(name);
-    return `<span class="emp-name-link" onclick="_showEmpCard(decodeURIComponent('${enc}'))" title="${tip} — اضغط للبطاقة" style="cursor:pointer;color:${color};border-bottom:1px dashed currentColor;font-weight:700;display:inline-flex;align-items:center;gap:7px;">${dot}<span>${safe}</span></span>`;
+    // الاسم أولًا ثم النقطة → في RTL النقطة تظهر على يسار الاسم
+    return `<span class="emp-name-link" onclick="_showEmpCard(decodeURIComponent('${enc}'))" title="${tip} — اضغط للبطاقة" style="cursor:pointer;color:${color};border-bottom:1px dashed currentColor;font-weight:700;display:inline-flex;align-items:center;gap:8px;"><span>${safe}</span>${dot}</span>`;
 }
 
 /* أضف keyframes النبضة مرة واحدة */

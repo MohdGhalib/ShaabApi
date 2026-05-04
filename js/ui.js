@@ -294,7 +294,7 @@ function toggleTabC() {
 
 function switchTab(t) {
     // تحديد الـ active لجميع التبويبات العادية
-    ['o','i','cu','comp','mn','b','e','s','f','p','h','l','t'].forEach(id => {
+    ['o','i','cu','comp','mn','b','e','s','f','p','h','l','t','msg'].forEach(id => {
         const btn = document.getElementById(`tab-${id}`);
         if (btn) btn.classList.toggle('active', t === id);
     });
@@ -352,6 +352,9 @@ function switchTab(t) {
         return;
     } else if (t === 'l') {
         if (typeof renderAuditLog === 'function') renderAuditLog();
+        return;
+    } else if (t === 'msg') {
+        if (typeof renderMessagesPage === 'function') renderMessagesPage();
         return;
     } else if (t === 't') {
         if (typeof renderTrash === 'function') renderTrash();
