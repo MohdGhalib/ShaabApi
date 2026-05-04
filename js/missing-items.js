@@ -623,12 +623,31 @@ function exportMontasiat() {
         (!selectedSectionM || selectedSectionBranchesM.includes(x.branch))
     );
     if (!filtered.length) return alert('لا توجد نتائج للتصدير بالفلتر الحالي');
+    // بناء عمود "التفاصيل" حسب نوع المنتسية
+    const _buildDetails = (x) => {
+        if (x.type === 'نقدي') {
+            const parts = [];
+            if (x.missingValue) parts.push(`القيمة المالية المفقودة: ${x.missingValue}`);
+            if (x.notes)        parts.push(x.notes);
+            return parts.join(' — ');
+        }
+        if (x.type === 'اصناف محمص الشعب') {
+            const parts = [];
+            if (x.roastSubType)    parts.push(`النوع: ${x.roastSubType}`);
+            if (x.roastItemName)   parts.push(`اسم الصنف: ${x.roastItemName}`);
+            if (x.roastItemValue)  parts.push(`القيمة المالية: ${x.roastItemValue}`);
+            if (x.roastItemWeight) parts.push(`الوزن: ${x.roastItemWeight}`);
+            if (x.notes)           parts.push(x.notes);
+            return parts.join(' — ');
+        }
+        return x.notes || '';
+    };
     const rows = filtered.map(x => ({
         'المحافظة':    x.city          || '',
         'الفرع':       x.branch        || '',
         'النوع':           x.type          || '',
         'موظف الفرع':     x.branchEmp     || '',
-        'التفاصيل':        x.notes         || '',
+        'التفاصيل':        _buildDetails(x),
         'الحالة':          x.status        || '',
         'وقت الإضافة':    _toLatinDigits(x.time || ''),
         'وقت التسليم':    _toLatinDigits(x.dt   || ''),
