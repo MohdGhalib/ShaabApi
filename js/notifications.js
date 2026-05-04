@@ -107,12 +107,8 @@ function _checkSessionsForNotifs() {
             _offlineIds.add(s.empId);
         }
     });
-    // أزل أي إشعار خمول لموظف غير متصل (سجّل خروج أو انقطع heartbeat)
-    if (_offlineIds.size) {
-        document.querySelectorAll('#notifStack [data-emp-id]').forEach(el => {
-            if (_offlineIds.has(el.dataset.empId)) _animateOut(el);
-        });
-    }
+    // ملاحظة: لا نحذف إشعارات الخمول تلقائيًا حتى لو خرج الموظف —
+    // المدير يغلقها يدويًا بـ X بعد الاطلاع
     _saveNotifSeen();
     _checkIdleEmployees();
 }
@@ -380,7 +376,7 @@ function _showStickyIdleNotif(empName, empId, lastActiveTs) {
                 if (typeof _onAuditFilterChange === 'function') _onAuditFilterChange();
             }
         }, 250);
-        _animateOut(item);
+        // الإشعار يبقى ظاهرًا — يُغلق فقط بالضغط على X
     };
     stack.appendChild(item);
     _animateIn(item);
