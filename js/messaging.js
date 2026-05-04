@@ -354,12 +354,25 @@ function renderMessagesPage() {
     }
     const selected = convList.find(c => _convKeyOf(c, myName, isAllView) === _selectedConv) || null;
 
-    const sectionTitle = isAllView ? '📋 جميع المراسلات' : '💬 مراسلاتي';
+    // عنوان القسم: "مراسلاتي" يظهر مع صورة الحساب الحالي + حالة الاتصال
+    let sectionTitleHtml;
+    if (isAllView) {
+        sectionTitleHtml = `<h3 style="margin:0;color:var(--text-main);font-size:15px;">📋 جميع المراسلات</h3>`;
+    } else {
+        const myAvatar = (typeof _empAvatarWithStatusHTML === 'function')
+            ? _empAvatarWithStatusHTML(currentUser?.name || '', 36)
+            : '';
+        const encMe = encodeURIComponent(currentUser?.name || '');
+        sectionTitleHtml = `<div style="display:flex;align-items:center;gap:10px;cursor:pointer;" onclick="if(typeof _showEmpCard==='function')_showEmpCard(decodeURIComponent('${encMe}'))" title="اضغط لفتح بطاقتك">
+            ${myAvatar}
+            <h3 style="margin:0;color:var(--text-main);font-size:15px;">💬 مراسلاتي</h3>
+        </div>`;
+    }
 
     root.innerHTML = `
         <div class="card" style="padding:0;overflow:hidden;">
             <div style="padding:12px 16px;border-bottom:1px solid var(--border);display:flex;justify-content:space-between;align-items:center;">
-                <h3 style="margin:0;color:var(--text-main);font-size:15px;">${sectionTitle}</h3>
+                ${sectionTitleHtml}
                 <small style="color:var(--text-dim);">${convList.length} محادثة</small>
             </div>
             <div style="display:grid;grid-template-columns:300px 1fr;height:560px;min-height:0;">
