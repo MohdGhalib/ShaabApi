@@ -13,12 +13,14 @@ function toggleMontasiaTypeFields() {
     const wF    = document.getElementById('mRoastWeightFields');
     const vF    = document.getElementById('mRoastValueFields');
     const nWrap = document.getElementById('mNotesWrap');
+    const multi = document.getElementById('mMultiFieldsWrap');
     if (!box) return;
     box.style.display = 'none';
     if (cash)  cash.style.display  = 'none';
     if (roast) roast.style.display = 'none';
     if (wF)    wF.style.display    = 'none';
     if (vF)    vF.style.display    = 'none';
+    if (multi) multi.style.display = 'none';
     document.querySelectorAll('input[name="mRoastSub"]').forEach(r => r.checked = false);
     if (t === 'نقدي') {
         box.style.display = '';
@@ -26,9 +28,16 @@ function toggleMontasiaTypeFields() {
     } else if (t === 'اصناف محمص الشعب') {
         box.style.display = '';
         if (roast) roast.style.display = '';
+    } else if (t === 'متعدد الأصناف') {
+        if (multi) multi.style.display = '';
+        // ابدأ بصف واحد فارغ لتيسير الاستخدام
+        if (typeof _clearMultiItemRows === 'function') _clearMultiItemRows();
+        if (typeof _addMultiItemRow === 'function' && document.querySelectorAll('.m-multi-row').length === 0) {
+            _addMultiItemRow();
+        }
     }
-    // التفاصيل تظهر فقط مع نوع "أخرى"
-    if (nWrap) nWrap.style.display = (t === 'أخرى') ? '' : 'none';
+    // التفاصيل (ملاحظة عامة) تظهر مع "أخرى" أو "متعدد الأصناف"
+    if (nWrap) nWrap.style.display = (t === 'أخرى' || t === 'متعدد الأصناف') ? '' : 'none';
 }
 
 function toggleRoastSubMode() {
@@ -216,6 +225,9 @@ function _resetMontasiaExtraFields() {
         .forEach(id => { const el = document.getElementById(id); if (el) el.style.display = 'none'; });
     const nWrap = document.getElementById('mNotesWrap');
     if (nWrap) nWrap.style.display = 'none';
+    const multi = document.getElementById('mMultiFieldsWrap');
+    if (multi) multi.style.display = 'none';
+    if (typeof _clearMultiItemRows === 'function') _clearMultiItemRows();
 }
 
 function addMontasia() {
@@ -226,6 +238,10 @@ function addMontasia() {
     const be = (document.getElementById("mBranchEmp")?.value||'').trim();
     if (!c||!b||!t||!be) return alert("يرجى إكمال البيانات");
     if (t === 'أخرى' && !n) return alert("يرجى إكمال البيانات");
+    if (t === 'متعدد الأصناف') {
+        const probe = (typeof _collectMultiItems === 'function') ? _collectMultiItems() : { error:'حقل الأصناف غير متاح' };
+        if (probe.error) return alert(probe.error);
+    }
 
     // فتح نافذة اختيار وقت التسجيل
     _addMTimeMode = 'now';
@@ -289,6 +305,10 @@ function confirmAddMontasia() {
             _extra.roastItemName  = nm;
             _extra.roastItemValue = v;
         }
+    } else if (t === 'متعدد الأصناف') {
+        const collected = (typeof _collectMultiItems === 'function') ? _collectMultiItems() : { error:'حقل الأصناف غير متاح' };
+        if (collected.error) return alert(collected.error);
+        _extra.items = collected.items;
     }
 
     const rec = { id:Date.now(), country: co || _countryForCity(c), city:c, branch:b, notes:n, type:t, branchEmp:be, time:now(), iso:iso(),
@@ -639,6 +659,10 @@ function exportMontasiat() {
             if (x.roastItemWeight) parts.push(`الوزن: ${x.roastItemWeight}`);
             if (x.notes)           parts.push(x.notes);
             return parts.join(' — ');
+        }
+        if (x.type === 'متعدد الأصناف' && typeof _buildItemsExportText === 'function') {
+            const txt = _buildItemsExportText(x);
+            return x.notes ? `${txt}\n[ملاحظة: ${x.notes}]` : txt;
         }
         return x.notes || '';
     };

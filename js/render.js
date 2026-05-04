@@ -394,6 +394,11 @@ function _renderTableM(get, isAdmin) {
                        ? `<span style="padding:2px 8px;border-radius:6px;font-size:11px;font-weight:700;background:rgba(186,104,200,0.22);color:#e1bee7;">💵 قيمة</span>`
                        : ''}
                </div>`
+            : x.type==='متعدد الأصناف'
+            ? `<div style="display:flex;flex-direction:column;align-items:center;gap:4px;">
+                   <span style="padding:2px 8px;border-radius:6px;font-size:12px;font-weight:700;background:rgba(76,175,80,0.18);color:#a5d6a7;">📋 متعدد الأصناف</span>
+                   <span style="font-size:10px;color:var(--text-dim);">${(Array.isArray(x.items)?x.items.length:0)} أصناف</span>
+               </div>`
             : `<span style="color:var(--text-dim);font-size:12px;">—</span>`;
         let extraInfo = '';
         const _lblColor = '#80deea';
@@ -405,6 +410,8 @@ function _renderTableM(get, isAdmin) {
             if (x.roastItemValue)  lines.push({l:'القيمة المالية', v:sanitize(x.roastItemValue)});
             if (x.roastItemWeight) lines.push({l:'الوزن', v:sanitize(x.roastItemWeight)});
             if (lines.length) extraInfo = `<div style="margin-top:5px;font-size:12px;font-weight:700;line-height:1.7;">${lines.map(o=>`<div><span style="color:${_lblColor};">${o.l}:</span> <span style="color:#c5e1a5;">${o.v}</span></div>`).join('')}</div>`;
+        } else if (x.type === 'متعدد الأصناف' && typeof _renderItemsCellHTML === 'function') {
+            extraInfo = `<div style="margin-top:6px;background:rgba(76,175,80,0.05);border:1px dashed rgba(76,175,80,0.3);border-radius:8px;padding:6px 8px;">${_renderItemsCellHTML(x)}</div>`;
         }
         const photoCell = x.photoBase64
             ? `<div style="margin-top:6px;">

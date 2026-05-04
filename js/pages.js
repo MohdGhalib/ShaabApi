@@ -18,6 +18,7 @@ m: `
             <option value="نقدي">نقدي</option>
             <option value="اصناف محمص الشعب">🌰 اصناف محمص الشعب</option>
             <option value="أخرى">أخرى</option>
+            <option value="متعدد الأصناف">📋 متعدد الأصناف</option>
         </select>
         <input id="mBranchEmp" type="text" placeholder="اسم موظف الفرع *">
     </div>
@@ -47,6 +48,14 @@ m: `
             </div>
         </div>
     </div>
+    <div id="mMultiFieldsWrap" style="display:none;margin-bottom:15px;background:rgba(76,175,80,0.05);border:1px dashed rgba(76,175,80,0.4);border-radius:12px;padding:14px;">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;">
+            <label style="font-size:13px;color:#a5d6a7;font-weight:700;">📋 الأصناف</label>
+            <button type="button" onclick="_addMultiItemRow()" style="background:linear-gradient(135deg,#1976d2,#0d47a1);color:#fff;border:none;border-radius:10px;padding:7px 14px;cursor:pointer;font-family:'Cairo';font-weight:700;font-size:12px;">+ إضافة صنف</button>
+        </div>
+        <div id="mMultiItemsList"></div>
+        <div style="font-size:11px;color:var(--text-dim);margin-top:6px;">يمكنك إضافة عدة أصناف من أنواع مختلفة في منتسية واحدة (مثلاً: قهوة بالوزن + 5د نقدي + علبة شوكولاته).</div>
+    </div>
     <div id="mNotesWrap" style="display:none;"><textarea id="mNotes" placeholder="تفاصيل المنتسية..." rows="3"></textarea></div>
     <button class="btn btn-main" style="margin-top:15px" onclick="addMontasia()">حفظ البيانات</button>
 </div>
@@ -59,7 +68,7 @@ m: `
     <div><label>بحث بالنص</label><input type="text" id="searchTextM" placeholder="بحث في التفاصيل..." oninput="filterTable()"></div>
     <div><label>موظف الاستلام</label><select id="searchAddedByM" onchange="filterTable()"><option value="">الكل</option></select></div>
     <div><label>موظف التسليم</label><select id="searchDeliveredByM" onchange="filterTable()"><option value="">الكل</option></select></div>
-    <div><label>نوع المنتسية</label><select id="searchTypeM" onchange="filterTable();_toggleRoastSubFilter('M')"><option value="">الكل</option><option value="نقدي">نقدي</option><option value="اصناف محمص الشعب">أصناف محامص الشعب</option><option value="أخرى">أخرى</option></select></div>
+    <div><label>نوع المنتسية</label><select id="searchTypeM" onchange="filterTable();_toggleRoastSubFilter('M')"><option value="">الكل</option><option value="نقدي">نقدي</option><option value="اصناف محمص الشعب">أصناف محامص الشعب</option><option value="أخرى">أخرى</option><option value="متعدد الأصناف">📋 متعدد الأصناف</option></select></div>
     <div id="searchRoastSubMWrap" style="display:none;"><label>طريقة التسجيل</label><select id="searchRoastSubM" onchange="filterTable()"><option value="">الكل</option><option value="وزن">وزن</option><option value="قيمة">قيمة</option></select></div>
     <button class="btn" style="background:var(--bg-input);color:var(--text-dim);align-self:end;" onclick="resetSearch('M')">تفريغ</button>
 </div>
