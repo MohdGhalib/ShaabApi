@@ -47,7 +47,7 @@ m: `
             </div>
         </div>
     </div>
-    <textarea id="mNotes" placeholder="تفاصيل المنتسية..." rows="3"></textarea>
+    <div id="mNotesWrap" style="display:none;"><textarea id="mNotes" placeholder="تفاصيل المنتسية..." rows="3"></textarea></div>
     <button class="btn btn-main" style="margin-top:15px" onclick="addMontasia()">حفظ البيانات</button>
 </div>
 <div class="search-bar search-bar-m">

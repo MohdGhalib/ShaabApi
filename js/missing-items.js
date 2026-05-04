@@ -12,6 +12,7 @@ function toggleMontasiaTypeFields() {
     const roast = document.getElementById('mRoastFields');
     const wF    = document.getElementById('mRoastWeightFields');
     const vF    = document.getElementById('mRoastValueFields');
+    const nWrap = document.getElementById('mNotesWrap');
     if (!box) return;
     box.style.display = 'none';
     if (cash)  cash.style.display  = 'none';
@@ -26,6 +27,8 @@ function toggleMontasiaTypeFields() {
         box.style.display = '';
         if (roast) roast.style.display = '';
     }
+    // التفاصيل تظهر فقط مع نوع "أخرى"
+    if (nWrap) nWrap.style.display = (t === 'أخرى') ? '' : 'none';
 }
 
 function toggleRoastSubMode() {
@@ -44,6 +47,8 @@ function _resetMontasiaExtraFields() {
     if (box) box.style.display = 'none';
     ['mCashFields','mRoastFields','mRoastWeightFields','mRoastValueFields']
         .forEach(id => { const el = document.getElementById(id); if (el) el.style.display = 'none'; });
+    const nWrap = document.getElementById('mNotesWrap');
+    if (nWrap) nWrap.style.display = 'none';
 }
 
 function addMontasia() {
@@ -52,7 +57,8 @@ function addMontasia() {
     const n = document.getElementById("mNotes").value.trim();
     const t = document.getElementById("mType").value;
     const be = (document.getElementById("mBranchEmp")?.value||'').trim();
-    if (!c||!b||!n||!t||!be) return alert("يرجى إكمال البيانات");
+    if (!c||!b||!t||!be) return alert("يرجى إكمال البيانات");
+    if (t === 'أخرى' && !n) return alert("يرجى إكمال البيانات");
 
     // فتح نافذة اختيار وقت التسجيل
     _addMTimeMode = 'now';
@@ -89,7 +95,8 @@ function confirmAddMontasia() {
     const n = document.getElementById("mNotes").value.trim();
     const t = document.getElementById("mType").value;
     const be = (document.getElementById("mBranchEmp")?.value||'').trim();
-    if (!c||!b||!n||!t||!be) return alert("يرجى إكمال البيانات");
+    if (!c||!b||!t||!be) return alert("يرجى إكمال البيانات");
+    if (t === 'أخرى' && !n) return alert("يرجى إكمال البيانات");
 
     const _extra = {};
     if (t === 'نقدي') {
