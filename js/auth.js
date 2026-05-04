@@ -271,6 +271,8 @@ function setProfileUI() {
     document.getElementById("sidebarName").textContent  = currentUser.name;
     document.getElementById("sidebarTitle").textContent = currentUser.title;
     document.getElementById("profileBtn").style.display = "flex";
+    // تحديث صورة الـ avatar في الشريط الجانبي
+    refreshSidebarAvatar();
 
     // إظهار/إخفاء التبويبات حسب الصلاحيات
     const isMedia          = currentUser.role === 'media';
@@ -352,6 +354,17 @@ function setProfileUI() {
     // إظهار مجموعة الموظفين إذا كان أي عنصر فرعي مرئياً
     _syncEmpGroup();
 
+}
+
+function refreshSidebarAvatar() {
+    const avatarEl = document.getElementById('sidebarAvatar');
+    if (!avatarEl || !currentUser) return;
+    const me = (employees || []).find(e => e.empId === currentUser?.empId);
+    if (me?.photo) {
+        avatarEl.innerHTML = `<img src="${me.photo}" alt="" style="width:100%;height:100%;object-fit:cover;border-radius:50%;display:block;">`;
+    } else {
+        avatarEl.innerHTML = '👤';
+    }
 }
 
 function openProfile() {

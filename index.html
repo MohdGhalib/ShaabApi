@@ -205,7 +205,7 @@
             <button class="nav-item hidden" id="tab-t" onclick="switchTab('t')">🗑️ سلة المحذوفات</button>
         </div>
         <button class="user-profile-btn" id="profileBtn" onclick="if(typeof _showEmpCard==='function'&&currentUser){_showEmpCard(currentUser.name);}else{openProfile();}" style="display:none;">
-            <div class="user-avatar">👤</div>
+            <div class="user-avatar" id="sidebarAvatar" style="overflow:hidden;">👤</div>
             <div class="user-info-mini">
                 <div class="u-name"  id="sidebarName">—</div>
                 <div class="u-title" id="sidebarTitle">—</div>
@@ -722,7 +722,7 @@
 <script src="js/missing-items.js?v=50"></script>
 <script src="js/inquiries.js?v=29"></script>
 <script src="js/control.js?v=37"></script>
-<script src="js/employees.js?v=34"></script>
+<script src="js/employees.js?v=35"></script>
 <script src="js/breaks.js?v=23"></script>
 <script src="js/stats.js?v=101"></script>
 <script src="js/datepicker.js?v=24"></script>

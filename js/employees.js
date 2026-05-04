@@ -397,6 +397,7 @@ function uploadEmployeePhoto(empId, input) {
             if (typeof saveEmployees === 'function') saveEmployees();
             if (typeof _logAudit === 'function') { _logAudit('uploadPhoto', '—', `صورة لـ ${emp.name}`); save(); }
             input.value = '';
+            if (typeof refreshSidebarAvatar === 'function' && currentUser?.empId === emp.empId) refreshSidebarAvatar();
             renderEmployees();
         };
         img.src = e.target.result;
@@ -415,6 +416,7 @@ function deleteEmployeePhoto(empId) {
     if (typeof saveEmployees === 'function') saveEmployees();
     if (typeof _logAudit === 'function') { _logAudit('deletePhoto', '—', `حذف صورة ${emp.name}`); save(); }
     closeEmpCard();
+    if (typeof refreshSidebarAvatar === 'function' && currentUser?.empId === emp.empId) refreshSidebarAvatar();
     renderEmployees();
 }
 
