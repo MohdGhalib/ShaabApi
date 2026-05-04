@@ -473,17 +473,51 @@ function _setMsgPageView(v) {
 }
 
 function _showNewMessageToast(m) {
-    if (typeof _ensureNotifStack !== 'function') return;
-    const stack = _ensureNotifStack();
-    const item = document.createElement('div');
-    // نفس تصميم تنبيه تسجيل الدخول (الأخضر)
-    const bg = 'linear-gradient(135deg,rgba(46,125,50,0.96),rgba(46,125,50,0.86))';
-    item.style.cssText = (typeof _NOTIF_BASE_CSS === 'string' ? _NOTIF_BASE_CSS : '') + `background:${bg};cursor:pointer;`;
-    item.innerHTML = `<span style="flex:1;">💬 وصلتك رسالة من ${sanitize(m.from)} — اضغط للعرض</span>`;
-    item.onclick = () => { openInbox(); item.remove(); };
-    stack.appendChild(item);
-    if (typeof _animateIn === 'function') _animateIn(item);
+    // الإشعارات تظهر داخل لوحة الجرس فقط — لا توست تلقائي
+    // نشغّل صوتًا خفيفًا لإعلام المستخدم بوصول رسالة جديدة
     if (typeof _playNotifSound === 'function') _playNotifSound();
-    // عند عدم النقر — يختفي التنبيه لكن العداد يبقى في الجرس حتى تفتح الرسالة
-    setTimeout(() => { if (typeof _animateOut === 'function') _animateOut(item); else item.remove(); }, 6000);
+}
+
+/* ── لوحة إشعارات الرسائل (تُفتح من الجرس) ─────────────── */
+function openMessagesNotifPanel() {
+    _ensureMessages();
+    const myName = currentUser?.name;
+    const unread = (db.messages || []).filter(m => !m.deleted && m.to === myName && !m.readByMe);
+    closeMessagesNotifPanel();
+    const overlay = document.createElement('div');
+    overlay.id = '_msgNotifOverlay';
+    overlay.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.55);z-index:99999;display:flex;align-items:flex-start;justify-content:center;padding-top:90px;font-family:"Cairo";';
+    overlay.onclick = (e) => { if (e.target === overlay) closeMessagesNotifPanel(); };
+    let body = '';
+    if (!unread.length) {
+        body = `<div style="padding:30px 20px;text-align:center;color:var(--text-dim);font-size:13px;">لا توجد رسائل جديدة<br><button onclick="closeMessagesNotifPanel();openInbox();" style="margin-top:12px;padding:8px 18px;border-radius:9px;border:none;background:rgba(21,101,192,0.18);color:#90caf9;font-family:'Cairo';font-weight:700;cursor:pointer;">📬 فتح صندوق الرسائل</button></div>`;
+    } else {
+        body = unread.map(m => {
+            const enc = encodeURIComponent(m.from);
+            return `
+                <div onclick="closeMessagesNotifPanel();_openMessageDetail('${m.id}')"
+                     style="cursor:pointer;display:flex;align-items:center;gap:10px;padding:11px 14px;border-bottom:1px solid var(--border);transition:background 0.15s;"
+                     onmouseover="this.style.background='rgba(46,125,50,0.08)'" onmouseout="this.style.background='transparent'">
+                    <span style="background:linear-gradient(135deg,rgba(46,125,50,0.95),rgba(46,125,50,0.85));color:#fff;border-radius:50%;width:34px;height:34px;display:flex;align-items:center;justify-content:center;font-size:14px;flex-shrink:0;">💬</span>
+                    <div style="flex:1;min-width:0;">
+                        <div style="font-size:13px;color:var(--text-main);font-weight:700;line-height:1.5;">وصلتك رسالة من ${sanitize(m.from)} — اضغط للأطلاع والرد عليها</div>
+                        <div style="font-size:11px;color:var(--text-dim);margin-top:2px;">${sanitize(m.time||'')}</div>
+                    </div>
+                </div>`;
+        }).join('') + `<div style="padding:10px;text-align:center;border-top:1px solid var(--border);"><button onclick="closeMessagesNotifPanel();openInbox();" style="padding:6px 16px;border-radius:8px;border:none;background:rgba(21,101,192,0.15);color:#90caf9;font-family:'Cairo';font-weight:700;cursor:pointer;font-size:12px;">📬 عرض كل الرسائل</button></div>`;
+    }
+    overlay.innerHTML = `
+        <div style="background:var(--bg-main);border:1px solid var(--border);border-radius:14px;width:380px;max-width:94vw;max-height:70vh;overflow:hidden;display:flex;flex-direction:column;box-shadow:0 12px 40px rgba(0,0,0,0.55);">
+            <div style="display:flex;justify-content:space-between;align-items:center;padding:14px 16px;border-bottom:1px solid var(--border);">
+                <h3 style="margin:0;color:var(--text-main);font-size:15px;">🔔 الإشعارات</h3>
+                <button onclick="closeMessagesNotifPanel()" style="background:none;border:none;color:var(--text-dim);cursor:pointer;font-size:18px;">✕</button>
+            </div>
+            <div style="overflow-y:auto;">${body}</div>
+        </div>`;
+    document.body.appendChild(overlay);
+}
+
+function closeMessagesNotifPanel() {
+    const o = document.getElementById('_msgNotifOverlay');
+    if (o) o.remove();
 }

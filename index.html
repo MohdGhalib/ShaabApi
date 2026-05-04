@@ -60,7 +60,7 @@
 
         <!-- زر الإشعارات بجانب الساعة -->
         <div id="notifBellWidget" style="display:none;position:relative;font-family:'Cairo';">
-            <button id="notifBellBtn" onclick="(function(){var r=currentUser?.role;var isCtrl=r==='control'||r==='control_employee'||r==='control_sub';if(!isCtrl&&typeof openInbox==='function')openInbox();else _toggleNotifPanel();})()" title="الإشعارات"
+            <button id="notifBellBtn" onclick="(function(){var r=currentUser?.role;var isCtrl=r==='control'||r==='control_employee'||r==='control_sub';if(!isCtrl&&typeof openMessagesNotifPanel==='function')openMessagesNotifPanel();else _toggleNotifPanel();})()" title="الإشعارات"
                 style="background:rgba(18,18,18,0.82);backdrop-filter:blur(12px);-webkit-backdrop-filter:blur(12px);
                        border:1px solid rgba(211,47,47,0.25);border-radius:14px;
                        padding:0 14px;cursor:pointer;position:relative;
@@ -712,14 +712,14 @@
 </style>
 
 <!-- ══ SCRIPTS (load order matters) ══ -->
-<script src="js/data.js?v=31"></script>
+<script src="js/data.js?v=32"></script>
 <script src="js/session.js?v=23"></script>
 <script src="js/clock.js?v=23"></script>
 <script src="js/auth.js?v=35"></script>
 <script src="js/render.js?v=52"></script>
 <script src="js/pages.js?v=52"></script>
 <script src="js/ui.js?v=39"></script>
-<script src="js/missing-items.js?v=47"></script>
+<script src="js/missing-items.js?v=48"></script>
 <script src="js/inquiries.js?v=29"></script>
 <script src="js/control.js?v=37"></script>
 <script src="js/employees.js?v=31"></script>
@@ -730,7 +730,7 @@
 <script src="js/dashboard.js?v=23"></script>
 <script src="js/audit.js?v=25"></script>
 <script src="js/notifications.js?v=12"></script>
-<script src="js/messaging.js?v=7"></script>
+<script src="js/messaging.js?v=8"></script>
 <script src="js/trash.js?v=23"></script>
 <script>
     document.addEventListener("click", function(e) {

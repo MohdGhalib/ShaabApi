@@ -58,6 +58,30 @@ function _playSound() {
 let _prevCounts = { montasiat: -1, complaints: -1, auditedC: -1, controlC: -1, myAuditedC: -1 };
 let _skipMontasiaNotif = false;
 
+/* ── منع تكرار الإشعارات لنفس السجل (يستمر بين الجلسات) ── */
+const _NOTIFIED_KEY = '_shaabNotifiedIds';
+let _notifiedIds = { m: new Set(), c: new Set() };
+try {
+    const raw = JSON.parse(localStorage.getItem(_NOTIFIED_KEY) || '{}');
+    _notifiedIds.m = new Set(raw.m || []);
+    _notifiedIds.c = new Set(raw.c || []);
+} catch {}
+function _wasNotified(type, id) { return _notifiedIds[type]?.has(id); }
+function _markNotified(type, id) {
+    if (!_notifiedIds[type]) _notifiedIds[type] = new Set();
+    _notifiedIds[type].add(id);
+    // الحدّ الأقصى لكل نوع 2000 معرّف (نحتفظ بأحدث 1000 لتفادي تضخّم localStorage)
+    if (_notifiedIds[type].size > 2000) {
+        _notifiedIds[type] = new Set(Array.from(_notifiedIds[type]).slice(-1000));
+    }
+    try {
+        localStorage.setItem(_NOTIFIED_KEY, JSON.stringify({
+            m: Array.from(_notifiedIds.m),
+            c: Array.from(_notifiedIds.c)
+        }));
+    } catch {}
+}
+
 function _checkNotifications() {
     if (!currentUser) return;
 
@@ -799,6 +823,9 @@ function _initSSE() {
         try { info = JSON.parse(e.data); } catch {}
         // تجاهل الشكاوى القديمة المُعاد بثّها (أكثر من 60 ثانية)
         if (info.id && (Date.now() - info.id) > 60_000) return;
+        // دفاع إضافي: تجاهل إذا تم تنبيه نفس الـ id من قبل
+        if (info.id && _wasNotified('c', info.id)) return;
+        if (info.id) _markNotified('c', info.id);
         // كول سنتر + ميديا + أدمن → popup + صوت عادي
         // الميديا: لا إشعار إذا كان هو من أضاف الشكوى
         if (isAdmin || role === 'cc_manager' || role === 'media') {
@@ -831,6 +858,9 @@ function _initSSE() {
             if (info.addedBy && info.addedBy === currentUser?.name) return;
             // تجاهل السجلات القديمة (id = Date.now() عند الإنشاء؛ نتجاهل ما يزيد عن 60 ثانية)
             if (info.id && (Date.now() - info.id) > 60_000) return;
+            // دفاع إضافي: تجاهل إذا تم تنبيه نفس الـ id من قبل (يستمر بين الجلسات)
+            if (info.id && _wasNotified('m', info.id)) return;
+            if (info.id) _markNotified('m', info.id);
             _playSound();
             _showMontasiaPopup(info);
         }

@@ -133,6 +133,9 @@ function saveMontasiaType(id) {
         item.roastItemName   = '';
         item.roastItemValue  = '';
         item.roastItemWeight = '';
+    } else if (_extras.roastSubType === 'قيمة') {
+        // عند التحويل من وزن إلى قيمة: امسح حقل الوزن نهائيًا
+        item.roastItemWeight = '';
     }
     Object.assign(item, _extras);
     if (typeof _logAudit === 'function') _logAudit('editMontasiaType', item.branch || '—', `${item.notes?.slice(0,40) || ''} → ${newType}`);
