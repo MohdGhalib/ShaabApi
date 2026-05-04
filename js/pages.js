@@ -165,9 +165,14 @@ i: `
         <select id="iType" onchange="toggleInquiryNotes();toggleUnspecifiedBranch()">
             <option value="">اختر نوع الاستفسار</option>
             <option value="شكوى">شكوى</option>
-            <option value="استفسار عن توفر منتج">استفسار عن توفر منتج</option>
-            <option value="استفسار عن سعر منتج">استفسار عن سعر منتج</option>
-            <option value="توظيف">توظيف</option>
+            <option value="استفسار عن أصناف">استفسار عن أصناف</option>
+            <option value="استفسار عن منتسيات">استفسار عن منتسيات</option>
+            <option value="استفسار عن عروض">استفسار عن عروض</option>
+            <option value="موظفين شركات توصيل">موظفين شركات توصيل</option>
+            <option value="موظف محامص الشعب">موظف محامص الشعب</option>
+            <option value="أوقات الدوام">أوقات الدوام</option>
+            <option value="تحويل اقسام داخلي">تحويل اقسام داخلي</option>
+            <option value="توظيف وشؤون موظفين">توظيف وشؤون موظفين</option>
             <option value="طلبية">طلبية</option>
             <option value="تحويل لمولات او بوابة الشعب">تحويل لمولات او بوابة الشعب</option>
             <option value="أخرى">أخرى</option>
@@ -212,6 +217,14 @@ i: `
             </div>
         </div>
     </div>
+    <div id="iItemNameBox" style="display:none;margin-bottom:15px;">
+        <label style="font-size:13px;color:#90caf9;font-weight:700;display:block;margin-bottom:5px;">📦 اسم الصنف *</label>
+        <input type="text" id="iItemName" placeholder="اكتب اسم الصنف...">
+    </div>
+    <div id="iOfferNameBox" style="display:none;margin-bottom:15px;">
+        <label style="font-size:13px;color:#ce93d8;font-weight:700;display:block;margin-bottom:5px;">🎁 اسم العرض *</label>
+        <input type="text" id="iOfferName" placeholder="اكتب اسم العرض...">
+    </div>
     <div id="iNotesBox" style="display:none;margin-bottom:15px;">
         <label style="font-size:13px;color:var(--text-dim);display:block;margin-bottom:5px;">التفاصيل</label>
         <textarea id="iNotes" placeholder="اكتب التفاصيل هنا..." rows="3"></textarea>
@@ -228,9 +241,14 @@ i: `
         <select id="searchTypeI" onchange="filterTable()">
             <option value="">الكل</option>
             <option value="شكوى">شكوى</option>
-            <option value="استفسار عن توفر منتج">استفسار عن توفر منتج</option>
-            <option value="استفسار عن سعر منتج">استفسار عن سعر منتج</option>
-            <option value="توظيف">توظيف</option>
+            <option value="استفسار عن أصناف">استفسار عن أصناف</option>
+            <option value="استفسار عن منتسيات">استفسار عن منتسيات</option>
+            <option value="استفسار عن عروض">استفسار عن عروض</option>
+            <option value="موظفين شركات توصيل">موظفين شركات توصيل</option>
+            <option value="موظف محامص الشعب">موظف محامص الشعب</option>
+            <option value="أوقات الدوام">أوقات الدوام</option>
+            <option value="تحويل اقسام داخلي">تحويل اقسام داخلي</option>
+            <option value="توظيف وشؤون موظفين">توظيف وشؤون موظفين</option>
             <option value="طلبية">طلبية</option>
             <option value="تحويل لمولات او بوابة الشعب">تحويل لمولات او بوابة الشعب</option>
             <option value="أخرى">أخرى</option>
