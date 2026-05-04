@@ -42,10 +42,8 @@ function toggleMontasiaTypeFields() {
 
 function toggleRoastSubMode() {
     const sub = document.querySelector('input[name="mRoastSub"]:checked')?.value || '';
-    const w = document.getElementById('mRoastWeightFields');
-    const v = document.getElementById('mRoastValueFields');
-    if (w) w.style.display = sub === 'وزن'  ? 'grid' : 'none';
-    if (v) v.style.display = sub === 'قيمة' ? 'grid' : 'none';
+    const wrap = document.getElementById('mRoastFreeWrap');
+    if (wrap) wrap.style.display = sub ? '' : 'none';
 }
 
 /* ── تعديل سريع للنوع وحالة التسليم (لمدير الكول سنتر فقط) ── */
@@ -221,12 +219,12 @@ function _toggleRoastSubFilter(suffix) {
 }
 
 function _resetMontasiaExtraFields() {
-    ['mMissingValue','mRoastValueW','mRoastNameW','mRoastWeightW','mRoastNameV','mRoastValueV']
+    ['mMissingValue','mRoastFreeText']
         .forEach(id => { const el = document.getElementById(id); if (el) el.value = ''; });
     document.querySelectorAll('input[name="mRoastSub"]').forEach(r => r.checked = false);
     const box = document.getElementById('mTypeExtraBox');
     if (box) box.style.display = 'none';
-    ['mCashFields','mRoastFields','mRoastWeightFields','mRoastValueFields']
+    ['mCashFields','mRoastFields','mRoastFreeWrap']
         .forEach(id => { const el = document.getElementById(id); if (el) el.style.display = 'none'; });
     const nWrap = document.getElementById('mNotesWrap');
     if (nWrap) nWrap.style.display = 'none';
@@ -293,23 +291,13 @@ function confirmAddMontasia() {
         _extra.missingValue = mv;
     } else if (t === 'اصناف محمص الشعب') {
         const sub = document.querySelector('input[name="mRoastSub"]:checked')?.value || '';
-        if (!sub) return alert('يرجى اختيار "وزن" أو "قيمة"');
-        _extra.roastSubType = sub;
-        if (sub === 'وزن') {
-            const v  = (document.getElementById('mRoastValueW')?.value  || '').trim();
-            const nm = (document.getElementById('mRoastNameW')?.value   || '').trim();
-            const w  = (document.getElementById('mRoastWeightW')?.value || '').trim();
-            if (!v || !nm || !w) return alert('يرجى إكمال (القيمة المالية، اسم الصنف، الوزن)');
-            _extra.roastItemValue  = v;
-            _extra.roastItemName   = nm;
-            _extra.roastItemWeight = w;
-        } else {
-            const nm = (document.getElementById('mRoastNameV')?.value  || '').trim();
-            const v  = (document.getElementById('mRoastValueV')?.value || '').trim();
-            if (!nm || !v) return alert('يرجى إكمال (اسم الصنف، القيمة المالية)');
-            _extra.roastItemName  = nm;
-            _extra.roastItemValue = v;
-        }
+        if (!sub) return alert('يرجى اختيار "وزن" أو "قيمة" أو "وزن وقيمة"');
+        const txt = (document.getElementById('mRoastFreeText')?.value || '').trim();
+        if (!txt) return alert('يرجى كتابة تفاصيل الصنف');
+        _extra.roastSubType    = sub;
+        _extra.roastItemName   = txt;
+        _extra.roastItemValue  = '';
+        _extra.roastItemWeight = '';
     } else if (t === 'متعدد الأصناف') {
         const collected = (typeof _collectMultiItems === 'function') ? _collectMultiItems() : { error:'حقل الأصناف غير متاح' };
         if (collected.error) return alert(collected.error);

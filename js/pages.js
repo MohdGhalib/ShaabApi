@@ -36,15 +36,12 @@ m: `
                 <label style="display:flex;align-items:center;gap:6px;cursor:pointer;font-size:13px;color:var(--text-main);">
                     <input type="radio" name="mRoastSub" value="قيمة" onchange="toggleRoastSubMode()"> 💵 قيمة
                 </label>
+                <label style="display:flex;align-items:center;gap:6px;cursor:pointer;font-size:13px;color:var(--text-main);">
+                    <input type="radio" name="mRoastSub" value="وزن وقيمة" onchange="toggleRoastSubMode()"> 🌰 وزن وقيمة
+                </label>
             </div>
-            <div id="mRoastWeightFields" style="display:none;grid-template-columns:1fr 1fr 1fr;gap:10px;">
-                <input id="mRoastValueW"  type="text" inputmode="decimal" placeholder="القيمة المالية *">
-                <input id="mRoastNameW"   type="text" placeholder="اسم الصنف *">
-                <input id="mRoastWeightW" type="text" inputmode="decimal" placeholder="الوزن *">
-            </div>
-            <div id="mRoastValueFields" style="display:none;grid-template-columns:1fr 1fr;gap:10px;">
-                <input id="mRoastNameV"  type="text" placeholder="اسم الصنف *">
-                <input id="mRoastValueV" type="text" inputmode="decimal" placeholder="القيمة المالية *">
+            <div id="mRoastFreeWrap" style="display:none;">
+                <textarea id="mRoastFreeText" rows="3" placeholder="اكتب التفاصيل بحرية (الصنف / الوزن / القيمة / أي ملاحظات)..." style="width:100%;font-size:13px;padding:8px;font-family:'Cairo';box-sizing:border-box;resize:vertical;"></textarea>
             </div>
         </div>
     </div>
