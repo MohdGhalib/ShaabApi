@@ -388,14 +388,15 @@ function _renderTableM(get, isAdmin) {
             ? `<span style="padding:2px 8px;border-radius:6px;font-size:12px;font-weight:700;background:rgba(156,204,101,0.18);color:#c5e1a5;">أصناف محامص الشعب</span>`
             : `<span style="color:var(--text-dim);font-size:12px;">—</span>`;
         let extraInfo = '';
+        const _lblColor = '#80deea';
         if (x.type === 'نقدي' && x.missingValue) {
-            extraInfo = `<div style="margin-top:5px;font-size:12px;color:#ffd54f;font-weight:700;">القيمة المالية المفقودة: ${sanitize(x.missingValue)}</div>`;
+            extraInfo = `<div style="margin-top:5px;font-size:12px;font-weight:700;"><span style="color:${_lblColor};">القيمة المالية المفقودة:</span> <span style="color:#ffd54f;">${sanitize(x.missingValue)}</span></div>`;
         } else if (x.type === 'اصناف محمص الشعب') {
             const lines = [];
-            if (x.roastItemName)   lines.push(`اسم الصنف: ${sanitize(x.roastItemName)}`);
-            if (x.roastItemValue)  lines.push(`القيمة المالية: ${sanitize(x.roastItemValue)}`);
-            if (x.roastItemWeight) lines.push(`الوزن: ${sanitize(x.roastItemWeight)}`);
-            if (lines.length) extraInfo = `<div style="margin-top:5px;font-size:12px;color:#c5e1a5;font-weight:700;line-height:1.7;">${lines.map(l=>`<div>${l}</div>`).join('')}</div>`;
+            if (x.roastItemName)   lines.push({l:'اسم الصنف', v:sanitize(x.roastItemName)});
+            if (x.roastItemValue)  lines.push({l:'القيمة المالية', v:sanitize(x.roastItemValue)});
+            if (x.roastItemWeight) lines.push({l:'الوزن', v:sanitize(x.roastItemWeight)});
+            if (lines.length) extraInfo = `<div style="margin-top:5px;font-size:12px;font-weight:700;line-height:1.7;">${lines.map(o=>`<div><span style="color:${_lblColor};">${o.l}:</span> <span style="color:#c5e1a5;">${o.v}</span></div>`).join('')}</div>`;
         }
         const photoCell = x.photoBase64
             ? `<div style="margin-top:6px;">
@@ -506,14 +507,15 @@ function _renderTableO(get) {
             : x.status==='قيد الاستلام'
             ? `<span class="status-badge mobile-pending" style="font-size:11px;padding:2px 8px;">📱 ${x.status}</span><br>` : '';
         let _xInfo = '';
+        const _lblC = '#80deea';
         if (x.type === 'نقدي' && x.missingValue) {
-            _xInfo = `<div style="margin-top:5px;font-size:12px;color:#ffd54f;font-weight:700;">القيمة المالية المفقودة: ${sanitize(x.missingValue)}</div>`;
+            _xInfo = `<div style="margin-top:5px;font-size:12px;font-weight:700;"><span style="color:${_lblC};">القيمة المالية المفقودة:</span> <span style="color:#ffd54f;">${sanitize(x.missingValue)}</span></div>`;
         } else if (x.type === 'اصناف محمص الشعب') {
             const _lines = [];
-            if (x.roastItemName)   _lines.push(`اسم الصنف: ${sanitize(x.roastItemName)}`);
-            if (x.roastItemValue)  _lines.push(`القيمة المالية: ${sanitize(x.roastItemValue)}`);
-            if (x.roastItemWeight) _lines.push(`الوزن: ${sanitize(x.roastItemWeight)}`);
-            if (_lines.length) _xInfo = `<div style="margin-top:5px;font-size:12px;color:#c5e1a5;font-weight:700;line-height:1.7;">${_lines.map(l=>`<div>${l}</div>`).join('')}</div>`;
+            if (x.roastItemName)   _lines.push({l:'اسم الصنف', v:sanitize(x.roastItemName)});
+            if (x.roastItemValue)  _lines.push({l:'القيمة المالية', v:sanitize(x.roastItemValue)});
+            if (x.roastItemWeight) _lines.push({l:'الوزن', v:sanitize(x.roastItemWeight)});
+            if (_lines.length) _xInfo = `<div style="margin-top:5px;font-size:12px;font-weight:700;line-height:1.7;">${_lines.map(o=>`<div><span style="color:${_lblC};">${o.l}:</span> <span style="color:#c5e1a5;">${o.v}</span></div>`).join('')}</div>`;
         }
         return `<tr>
             <td><b>${x.branch}</b><br><small>${x.city}</small></td>
