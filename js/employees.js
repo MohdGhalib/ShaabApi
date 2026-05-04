@@ -369,7 +369,10 @@ function renderEmployees() {
 const _MAX_PHOTO_SIZE = 1.5 * 1024 * 1024; // 1.5MB
 
 function uploadEmployeePhoto(empId, input) {
-    if (!(currentUser?.role === 'cc_manager' || currentUser?.isAdmin)) return;
+    // مسموح: المدير، مدير الكول سنتر، أو الموظف لصورته الشخصية
+    const isMgr = currentUser?.role === 'cc_manager' || currentUser?.isAdmin;
+    const isSelf = currentUser?.empId === empId;
+    if (!isMgr && !isSelf) return;
     const file = input?.files?.[0];
     if (!file) return;
     if (!file.type?.startsWith('image/')) { input.value=''; return alert('يجب اختيار ملف صورة'); }
@@ -402,7 +405,9 @@ function uploadEmployeePhoto(empId, input) {
 }
 
 function deleteEmployeePhoto(empId) {
-    if (!(currentUser?.role === 'cc_manager' || currentUser?.isAdmin)) return;
+    const isMgr = currentUser?.role === 'cc_manager' || currentUser?.isAdmin;
+    const isSelf = currentUser?.empId === empId;
+    if (!isMgr && !isSelf) return;
     const emp = employees.find(x => x.empId === empId);
     if (!emp || !emp.photo) return;
     if (!confirm('حذف صورة الموظف؟')) return;

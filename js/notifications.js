@@ -236,7 +236,7 @@ function _empNameHTML(name) {
 
 function _showEmpCard(name) {
     if (!currentUser) return;
-    if (name === currentUser?.name) return;
+    const isSelf = name === currentUser?.name;
     const session = (sessions || []).find(s => s.empName === name && _isSessionAlive(s));
     const emp = (employees || []).find(e => e.name === name);
     closeEmpCard();
@@ -257,20 +257,22 @@ function _showEmpCard(name) {
         loginRow = `<div><span style="color:var(--text-dim);font-size:12px;">وقت تسجيل الدخول:</span> <b style="color:#a5d6a7;">${sanitize(loginStr)}</b></div>`;
     }
 
-    const canMessage = (typeof _canMessage === 'function') && _canMessage(name);
-    const canForceLogout = isOnline && _isCCMgr();
+    const canMessage = !isSelf && (typeof _canMessage === 'function') && _canMessage(name);
+    const canForceLogout = !isSelf && isOnline && _isCCMgr();
     const msgBtn = canMessage ? `<button onclick="_openComposeMessage('${encodeURIComponent(name)}')" style="width:100%;padding:11px;border:none;border-radius:12px;background:linear-gradient(135deg,rgba(21,101,192,0.95),rgba(21,101,192,0.85));color:#fff;font-family:'Cairo';font-weight:700;font-size:14px;cursor:pointer;box-shadow:0 4px 14px rgba(21,101,192,0.3);margin-bottom:8px;">💬 إرسال رسالة</button>` : '';
     const logoutBtn = canForceLogout ? `<button onclick="_confirmForceLogout('${encodeURIComponent(name)}')" style="width:100%;padding:11px;border:none;border-radius:12px;background:linear-gradient(135deg,rgba(211,47,47,0.95),rgba(211,47,47,0.85));color:#fff;font-family:'Cairo';font-weight:700;font-size:14px;cursor:pointer;box-shadow:0 4px 14px rgba(211,47,47,0.3);">🔴 تسجيل خروج الموظف من النظام</button>` : '';
 
-    const photoHtml = emp?.photo
+    const isMgrViewer = _isCCMgr();
+    const canEditPhoto = isSelf || (isMgrViewer && emp);    // الموظف يعدّل صورته، المدير يعدّل أي صورة
+    const photoInner = emp?.photo
         ? `<img src="${emp.photo}" alt="" style="width:90px;height:90px;border-radius:50%;object-fit:cover;border:2px solid var(--border);box-shadow:0 4px 14px rgba(0,0,0,0.4);">`
         : `<div style="width:90px;height:90px;border-radius:50%;background:linear-gradient(135deg,#37474f,#263238);color:#fff;display:flex;align-items:center;justify-content:center;font-size:34px;font-weight:700;box-shadow:0 4px 14px rgba(0,0,0,0.4);">${sanitize((name||'?').charAt(0))}</div>`;
-    const isMgrViewer = _isCCMgr();
-    const photoUploadBtn = isMgrViewer && emp
-        ? `<label title="رفع/تغيير الصورة" style="margin-top:8px;display:inline-flex;align-items:center;gap:5px;cursor:pointer;background:var(--bg-input);border:1px solid var(--border);border-radius:8px;padding:5px 12px;color:var(--text-dim);font-size:12px;">📷 رفع صورة<input type="file" accept="image/*" style="display:none;" onchange="closeEmpCard();uploadEmployeePhoto('${emp.empId}',this);"></label>`
+    const pencilOverlay = canEditPhoto && emp
+        ? `<label title="تعديل الصورة" style="position:absolute;bottom:0;left:0;width:30px;height:30px;border-radius:50%;background:linear-gradient(135deg,rgba(21,101,192,0.95),rgba(21,101,192,0.85));border:2px solid var(--bg-main);color:#fff;display:flex;align-items:center;justify-content:center;cursor:pointer;font-size:13px;box-shadow:0 2px 8px rgba(0,0,0,0.4);">✏️<input type="file" accept="image/*" style="display:none;" onchange="closeEmpCard();uploadEmployeePhoto('${emp.empId}',this);"></label>`
         : '';
-    const photoDeleteBtn = isMgrViewer && emp?.photo
-        ? `<button onclick="deleteEmployeePhoto('${emp.empId}')" style="margin-top:6px;background:none;border:none;color:#ef9a9a;cursor:pointer;font-size:11px;">🗑 حذف الصورة</button>`
+    const photoHtml = `<div style="position:relative;display:inline-block;">${photoInner}${pencilOverlay}</div>`;
+    const photoDeleteBtn = canEditPhoto && emp?.photo
+        ? `<button onclick="deleteEmployeePhoto('${emp.empId}')" style="margin-top:8px;background:none;border:none;color:#ef9a9a;cursor:pointer;font-size:11px;">🗑 حذف الصورة</button>`
         : '';
     overlay.innerHTML = `
         <div style="background:var(--bg-main);border:1px solid var(--border);border-radius:18px;padding:26px;width:380px;max-width:92vw;text-align:right;box-shadow:0 12px 40px rgba(0,0,0,0.55);">
