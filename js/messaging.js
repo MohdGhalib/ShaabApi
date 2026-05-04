@@ -305,12 +305,14 @@ function _showNewMessageToast(m) {
     if (typeof _ensureNotifStack !== 'function') return;
     const stack = _ensureNotifStack();
     const item = document.createElement('div');
-    const bg = 'linear-gradient(135deg,rgba(21,101,192,0.96),rgba(21,101,192,0.86))';
+    // نفس تصميم تنبيه تسجيل الدخول (الأخضر)
+    const bg = 'linear-gradient(135deg,rgba(46,125,50,0.96),rgba(46,125,50,0.86))';
     item.style.cssText = (typeof _NOTIF_BASE_CSS === 'string' ? _NOTIF_BASE_CSS : '') + `background:${bg};cursor:pointer;`;
-    item.innerHTML = `<span style="flex:1;">💬 رسالة جديدة من ${sanitize(m.from)}</span>`;
+    item.innerHTML = `<span style="flex:1;">💬 وصلتك رسالة من ${sanitize(m.from)} — اضغط للعرض</span>`;
     item.onclick = () => { openInbox(); item.remove(); };
     stack.appendChild(item);
     if (typeof _animateIn === 'function') _animateIn(item);
     if (typeof _playNotifSound === 'function') _playNotifSound();
-    setTimeout(() => { if (typeof _animateOut === 'function') _animateOut(item); else item.remove(); }, 5000);
+    // عند عدم النقر — يختفي التنبيه لكن العداد يبقى في الجرس حتى تفتح الرسالة
+    setTimeout(() => { if (typeof _animateOut === 'function') _animateOut(item); else item.remove(); }, 6000);
 }
