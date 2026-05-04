@@ -245,6 +245,7 @@ async function login() {
     recordLogin();
     if (typeof _logAudit === 'function') { _logAudit('login', '—', currentUser?.name || '—'); save(); }
     if (typeof initNotifications === 'function') initNotifications();
+    if (typeof startSessionHeartbeat === 'function') startSessionHeartbeat();
     init();
 
     // لا نطلب إذن الإشعارات تلقائياً — يُطلب فقط عند الحاجة الفعلية

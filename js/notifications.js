@@ -19,6 +19,40 @@ let   _notifInited     = false;
 
 function _isCCMgr() { return currentUser?.role === 'cc_manager'; }
 
+/* ── نبضات Heartbeat للجلسة الحالية ──
+   كل 2 دقيقة يحدّث المستخدم خانة lastSeen في جلسته.
+   إن انقطعت لأكثر من 10 دقائق → الجلسة تُعتبر مغلقة فعليًا. */
+const _NOTIF_HEARTBEAT_INTERVAL_MS = 2 * 60 * 1000;
+const _NOTIF_STALE_THRESHOLD_MS    = 10 * 60 * 1000;
+let _heartbeatTimer = null;
+
+function startSessionHeartbeat() {
+    if (!currentUser || currentUser.isAdmin) return;
+    if (!currentUser.empId) return;
+    if (_heartbeatTimer) clearInterval(_heartbeatTimer);
+    const tick = () => {
+        const s = (sessions || []).find(x => x.empId === currentUser.empId && !x.logoutIso);
+        if (s) {
+            s.lastSeen = Date.now();
+            if (typeof saveSessions === 'function') saveSessions();
+        }
+    };
+    tick();
+    _heartbeatTimer = setInterval(tick, _NOTIF_HEARTBEAT_INTERVAL_MS);
+}
+
+function _isSessionAlive(s) {
+    if (!s || s.logoutIso) return false;
+    const now = Date.now();
+    if (s.lastSeen && (now - s.lastSeen) <= _NOTIF_STALE_THRESHOLD_MS) return true;
+    if (!s.lastSeen) {
+        // جلسة قديمة بدون heartbeat — مقبولة فقط لأول 30 دقيقة بعد الدخول (للجلسات قبل التحديث)
+        const loginTs = Date.parse(s.loginIso) || 0;
+        return (now - loginTs) <= 30 * 60 * 1000;
+    }
+    return false;
+}
+
 function _saveNotifSeen() {
     try {
         localStorage.setItem(_NOTIF_SEEN_KEY, JSON.stringify({
@@ -55,7 +89,7 @@ function _checkSessionsForNotifs() {
     if (!_isCCMgr()) return;
     if (!_notifInited) initNotifications();              // تهيئة كسولة عند أول استدعاء
     const myId = currentUser?.empId;
-    const _loggedOutIds = new Set();
+    const _offlineIds = new Set();
     (sessions || []).forEach(s => {
         if (s.empId === myId) return;                    // تجاهل النفس
         if (!_seenLoginIds.has(s.id)) {
@@ -65,15 +99,18 @@ function _checkSessionsForNotifs() {
         if (s.logoutIso && !_seenLogoutIds.has(s.id)) {
             _seenLogoutIds.add(s.id);
             _showTransientNotif('logout', s.empName);
-            _loggedOutIds.add(s.empId);
+            _offlineIds.add(s.empId);
         } else if (s.logoutIso) {
-            _loggedOutIds.add(s.empId);
+            _offlineIds.add(s.empId);
+        } else if (!_isSessionAlive(s)) {
+            // جلسة مفتوحة لكن انقطع heartbeat → تُعدّ غير متصلة
+            _offlineIds.add(s.empId);
         }
     });
-    // أزل أي إشعار خمول لموظف سجّل خروج
-    if (_loggedOutIds.size) {
+    // أزل أي إشعار خمول لموظف غير متصل (سجّل خروج أو انقطع heartbeat)
+    if (_offlineIds.size) {
         document.querySelectorAll('#notifStack [data-emp-id]').forEach(el => {
-            if (_loggedOutIds.has(el.dataset.empId)) _animateOut(el);
+            if (_offlineIds.has(el.dataset.empId)) _animateOut(el);
         });
     }
     _saveNotifSeen();
@@ -85,9 +122,10 @@ function _checkIdleEmployees() {
     const now = Date.now();
     const myId = currentUser?.empId;
     (sessions || []).forEach(s => {
-        // شرط أساسي: الموظف يجب أن يكون مسجّل دخول حاليًا
+        // شرط أساسي: الموظف يجب أن يكون مسجّل دخول حاليًا (heartbeat حيّ)
         if (s.logoutIso) return;
         if (s.empId === myId) return;
+        if (!_isSessionAlive(s)) return;                  // اعتُبر غير متصل
         // كلمة "غير نشط" = لا يوجد سجل حركات للموظف في سجل التدقيق لمدة ساعة
         const loginTs = Date.parse(s.loginIso) || 0;
         const lastAction = (db.auditLog || [])
@@ -172,7 +210,7 @@ function _empNameHTML(name) {
     const safe = sanitize(name);
     if (!_isCCMgr()) return safe;
     if (name === currentUser?.name) return safe;          // المدير لا يمكنه إخراج نفسه
-    const online = (sessions || []).some(s => s.empName === name && !s.logoutIso);
+    const online = (sessions || []).some(s => s.empName === name && _isSessionAlive(s));
     if (!online) return safe;
     const enc = encodeURIComponent(name);
     return `<span class="online-emp-name" onclick="_showEmpCard(decodeURIComponent('${enc}'))" title="موظف مسجّل دخول — اضغط للبطاقة" style="cursor:pointer;color:#81d4fa;border-bottom:1px dashed currentColor;font-weight:700;">${safe}</span>`;
@@ -181,7 +219,7 @@ function _empNameHTML(name) {
 function _showEmpCard(name) {
     if (!_isCCMgr()) return;
     if (name === currentUser?.name) return alert('لا يمكنك إخراج نفسك من النظام');
-    const session = (sessions || []).find(s => s.empName === name && !s.logoutIso);
+    const session = (sessions || []).find(s => s.empName === name && _isSessionAlive(s));
     const emp = (employees || []).find(e => e.name === name);
     if (!session) return alert('الموظف لم يعد مسجّل دخول');
     closeEmpCard();
