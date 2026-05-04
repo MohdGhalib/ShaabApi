@@ -340,13 +340,53 @@ function renderMessagesPage() {
     }
 
     const sectionTitle = (isMgr && _msgPageView === 'all') ? '📋 جميع المراسلات' : '💬 مراسلاتي';
+    // قسم "بدء محادثة جديدة" — يظهر فقط في عرض "مراسلاتي"
+    const composeSection = (_msgPageView === 'mine') ? _renderQuickContactsSection() : '';
     root.innerHTML = `
+        ${composeSection}
         <div class="card">
             <div style="margin-bottom:14px;display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px;">
                 <h3 style="margin:0;color:var(--text-main);">${sectionTitle}</h3>
                 <small style="color:var(--text-dim);">${convList.length} محادثة • ${eligible.length} رسالة</small>
             </div>
             ${body}
+        </div>`;
+}
+
+function _renderQuickContactsSection() {
+    if (!currentUser) return '';
+    const myName = currentUser.name;
+    // جمع كل من يمكن مراسلته
+    const recipients = (employees || [])
+        .filter(e => e.name !== myName && _canMessage(e.name));
+    if (!recipients.length) return '';
+    // المدير في الأعلى للموظفين
+    recipients.sort((a,b) => {
+        const aIsMgr = a.title === 'مدير الكول سنتر' ? 0 : 1;
+        const bIsMgr = b.title === 'مدير الكول سنتر' ? 0 : 1;
+        if (aIsMgr !== bIsMgr) return aIsMgr - bIsMgr;
+        return (a.name||'').localeCompare(b.name||'', 'ar');
+    });
+    const chips = recipients.map(e => {
+        const online = (sessions || []).some(s => s.empName === e.name && (typeof _isSessionAlive === 'function' ? _isSessionAlive(s) : !s.logoutIso));
+        const dotColor = online ? '#4caf50' : '#e53935';
+        const tip = online ? 'مسجّل دخول' : 'خارج النظام';
+        const isMgr = e.title === 'مدير الكول سنتر';
+        const bg = isMgr ? 'linear-gradient(135deg,rgba(21,101,192,0.18),rgba(21,101,192,0.08))' : 'var(--bg-input)';
+        const border = isMgr ? '1px solid rgba(21,101,192,0.45)' : '1px solid var(--border)';
+        const titleHint = isMgr ? '<span style="font-size:10px;color:#90caf9;margin-right:4px;">(مدير)</span>' : '';
+        return `<button onclick="_openComposeMessage('${encodeURIComponent(e.name)}','')" title="إرسال رسالة لـ ${sanitize(e.name)} — ${tip}" style="display:inline-flex;align-items:center;gap:8px;padding:8px 12px;border-radius:10px;background:${bg};border:${border};color:var(--text-main);cursor:pointer;font-family:'Cairo';font-weight:700;font-size:13px;transition:transform 0.12s;" onmouseover="this.style.transform='translateY(-1px)'" onmouseout="this.style.transform='translateY(0)'">
+            <span>${sanitize(e.name)}</span>${titleHint}
+            <span style="display:inline-block;width:9px;height:9px;border-radius:50%;background:${dotColor};box-shadow:0 0 7px ${dotColor};animation:emp-pulse 1.3s ease-in-out infinite;flex-shrink:0;"></span>
+        </button>`;
+    }).join('');
+    return `
+        <div class="card" style="margin-bottom:14px;">
+            <div style="margin-bottom:10px;display:flex;align-items:center;gap:8px;">
+                <h3 style="margin:0;color:var(--text-main);font-size:15px;">✉️ بدء محادثة جديدة</h3>
+                <small style="color:var(--text-dim);">— اضغط على اسم لإرسال رسالة</small>
+            </div>
+            <div style="display:flex;flex-wrap:wrap;gap:8px;">${chips}</div>
         </div>`;
 }
 
