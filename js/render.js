@@ -417,15 +417,33 @@ function _renderTableM(get, isAdmin) {
             ? `<div class="added-by">✓ وافق: ${sanitize(x.approvedBy)}</div>` : '';
         const _isCCMgr = currentUser?.role === 'cc_manager';
         const _typeEditPanel = _isCCMgr ? `
-            <div id="typeEdit-${x.id}" style="display:none;flex-direction:column;gap:6px;align-items:center;">
-                <select id="typeEditSel-${x.id}" style="padding:5px;font-size:12px;width:160px;font-family:'Cairo';">
+            <div id="typeEdit-${x.id}" style="display:none;flex-direction:column;gap:8px;align-items:stretch;background:rgba(255,255,255,0.03);border:1px solid var(--border);border-radius:10px;padding:10px;width:230px;">
+                <select id="typeEditSel-${x.id}" onchange="_onTypeEditChange(${x.id})" style="padding:6px;font-size:12px;font-family:'Cairo';width:100%;">
                     <option value="نقدي">نقدي</option>
                     <option value="اخرى">اخرى</option>
                     <option value="اصناف محمص الشعب">أصناف محامص الشعب</option>
                 </select>
-                <div style="display:flex;gap:5px;">
-                    <button onclick="saveMontasiaType(${x.id})" style="padding:4px 12px;font-size:11px;background:rgba(46,125,50,0.18);border:1px solid rgba(46,125,50,0.5);color:#a5d6a7;border-radius:7px;cursor:pointer;font-family:'Cairo';font-weight:700;">💾 حفظ</button>
-                    <button onclick="cancelMontasiaTypeEdit(${x.id})" style="padding:4px 10px;font-size:11px;background:rgba(211,47,47,0.1);border:1px solid rgba(211,47,47,0.4);color:#ef9a9a;border-radius:7px;cursor:pointer;font-family:'Cairo';font-weight:700;">إلغاء</button>
+                <div id="typeEditCash-${x.id}" style="display:none;">
+                    <input id="typeEditMissingValue-${x.id}" type="text" inputmode="decimal" placeholder="القيمة المالية المفقودة *" style="width:100%;padding:6px;font-size:12px;font-family:'Cairo';box-sizing:border-box;">
+                </div>
+                <div id="typeEditRoast-${x.id}" style="display:none;flex-direction:column;gap:6px;">
+                    <div style="display:flex;gap:14px;justify-content:center;font-size:12px;">
+                        <label style="display:flex;align-items:center;gap:4px;cursor:pointer;"><input type="radio" name="typeEditSub-${x.id}" value="وزن"  onchange="_onTypeEditSubChange(${x.id})"> ⚖️ وزن</label>
+                        <label style="display:flex;align-items:center;gap:4px;cursor:pointer;"><input type="radio" name="typeEditSub-${x.id}" value="قيمة" onchange="_onTypeEditSubChange(${x.id})"> 💵 قيمة</label>
+                    </div>
+                    <div id="typeEditRoastWeight-${x.id}" style="display:none;flex-direction:column;gap:5px;">
+                        <input id="typeEditRoastValueW-${x.id}"  type="text" inputmode="decimal" placeholder="القيمة المالية *" style="width:100%;padding:6px;font-size:12px;font-family:'Cairo';box-sizing:border-box;">
+                        <input id="typeEditRoastNameW-${x.id}"   type="text" placeholder="اسم الصنف *"        style="width:100%;padding:6px;font-size:12px;font-family:'Cairo';box-sizing:border-box;">
+                        <input id="typeEditRoastWeightW-${x.id}" type="text" inputmode="decimal" placeholder="الوزن *"            style="width:100%;padding:6px;font-size:12px;font-family:'Cairo';box-sizing:border-box;">
+                    </div>
+                    <div id="typeEditRoastValue-${x.id}" style="display:none;flex-direction:column;gap:5px;">
+                        <input id="typeEditRoastNameV-${x.id}"  type="text" placeholder="اسم الصنف *"        style="width:100%;padding:6px;font-size:12px;font-family:'Cairo';box-sizing:border-box;">
+                        <input id="typeEditRoastValueV-${x.id}" type="text" inputmode="decimal" placeholder="القيمة المالية *" style="width:100%;padding:6px;font-size:12px;font-family:'Cairo';box-sizing:border-box;">
+                    </div>
+                </div>
+                <div style="display:flex;gap:5px;justify-content:center;">
+                    <button onclick="saveMontasiaType(${x.id})" style="padding:5px 14px;font-size:11px;background:rgba(46,125,50,0.18);border:1px solid rgba(46,125,50,0.5);color:#a5d6a7;border-radius:7px;cursor:pointer;font-family:'Cairo';font-weight:700;">💾 حفظ</button>
+                    <button onclick="cancelMontasiaTypeEdit(${x.id})" style="padding:5px 12px;font-size:11px;background:rgba(211,47,47,0.1);border:1px solid rgba(211,47,47,0.4);color:#ef9a9a;border-radius:7px;cursor:pointer;font-family:'Cairo';font-weight:700;">إلغاء</button>
                 </div>
             </div>` : '';
         const _typePencil = _isCCMgr ? `<button onclick="editMontasiaType(${x.id})" title="تعديل النوع" style="background:none;border:none;cursor:pointer;color:var(--text-dim);padding:0 4px;font-size:13px;">✏️</button>` : '';

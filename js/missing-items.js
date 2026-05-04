@@ -40,6 +40,30 @@ function toggleRoastSubMode() {
 }
 
 /* ── تعديل سريع للنوع وحالة التسليم (لمدير الكول سنتر فقط) ── */
+function _onTypeEditChange(id) {
+    const sel  = document.getElementById('typeEditSel-' + id);
+    const cash = document.getElementById('typeEditCash-' + id);
+    const roast = document.getElementById('typeEditRoast-' + id);
+    const wF   = document.getElementById('typeEditRoastWeight-' + id);
+    const vF   = document.getElementById('typeEditRoastValue-' + id);
+    if (cash)  cash.style.display  = 'none';
+    if (roast) roast.style.display = 'none';
+    if (wF)    wF.style.display    = 'none';
+    if (vF)    vF.style.display    = 'none';
+    document.querySelectorAll(`input[name="typeEditSub-${id}"]`).forEach(r => r.checked = false);
+    const v = sel?.value || '';
+    if (v === 'نقدي' && cash) cash.style.display = '';
+    else if (v === 'اصناف محمص الشعب' && roast) roast.style.display = 'flex';
+}
+
+function _onTypeEditSubChange(id) {
+    const sub = document.querySelector(`input[name="typeEditSub-${id}"]:checked`)?.value || '';
+    const wF = document.getElementById('typeEditRoastWeight-' + id);
+    const vF = document.getElementById('typeEditRoastValue-' + id);
+    if (wF) wF.style.display = sub === 'وزن'  ? 'flex' : 'none';
+    if (vF) vF.style.display = sub === 'قيمة' ? 'flex' : 'none';
+}
+
 function editMontasiaType(id) {
     if (currentUser?.role !== 'cc_manager') return;
     const item = db.montasiat.find(x => x.id === id);
@@ -48,8 +72,21 @@ function editMontasiaType(id) {
     const edit = document.getElementById('typeEdit-' + id);
     const sel  = document.getElementById('typeEditSel-' + id);
     if (sel) sel.value = item.type || 'اخرى';
+    // Pre-fill extra fields
+    const _setVal = (eid, val) => { const el = document.getElementById(eid); if (el) el.value = val || ''; };
+    _setVal('typeEditMissingValue-' + id, item.missingValue);
+    _setVal('typeEditRoastValueW-' + id,  item.roastItemValue);
+    _setVal('typeEditRoastNameW-' + id,   item.roastItemName);
+    _setVal('typeEditRoastWeightW-' + id, item.roastItemWeight);
+    _setVal('typeEditRoastNameV-' + id,   item.roastItemName);
+    _setVal('typeEditRoastValueV-' + id,  item.roastItemValue);
     if (view) view.style.display = 'none';
     if (edit) edit.style.display = 'flex';
+    _onTypeEditChange(id);
+    if (item.roastSubType) {
+        const subRadio = document.querySelector(`input[name="typeEditSub-${id}"][value="${item.roastSubType}"]`);
+        if (subRadio) { subRadio.checked = true; _onTypeEditSubChange(id); }
+    }
 }
 
 function cancelMontasiaTypeEdit(id) {
@@ -65,18 +102,41 @@ function saveMontasiaType(id) {
     const sel  = document.getElementById('typeEditSel-' + id);
     if (!item || !sel) return;
     const newType = sel.value;
-    if (newType !== item.type) {
-        item.type = newType;
-        if (newType !== 'نقدي') item.missingValue = '';
-        if (newType !== 'اصناف محمص الشعب') {
-            item.roastSubType    = '';
-            item.roastItemName   = '';
-            item.roastItemValue  = '';
-            item.roastItemWeight = '';
+
+    const _extras = {};
+    if (newType === 'نقدي') {
+        const mv = (document.getElementById('typeEditMissingValue-' + id)?.value || '').trim();
+        if (!mv) return alert('يرجى إدخال القيمة المالية المفقودة');
+        _extras.missingValue = mv;
+    } else if (newType === 'اصناف محمص الشعب') {
+        const sub = document.querySelector(`input[name="typeEditSub-${id}"]:checked`)?.value || '';
+        if (!sub) return alert('يرجى اختيار "وزن" أو "قيمة"');
+        _extras.roastSubType = sub;
+        if (sub === 'وزن') {
+            const v  = (document.getElementById('typeEditRoastValueW-' + id)?.value  || '').trim();
+            const nm = (document.getElementById('typeEditRoastNameW-' + id)?.value   || '').trim();
+            const w  = (document.getElementById('typeEditRoastWeightW-' + id)?.value || '').trim();
+            if (!v || !nm || !w) return alert('يرجى إكمال (القيمة المالية، اسم الصنف، الوزن)');
+            _extras.roastItemValue = v; _extras.roastItemName = nm; _extras.roastItemWeight = w;
+        } else {
+            const nm = (document.getElementById('typeEditRoastNameV-' + id)?.value  || '').trim();
+            const v  = (document.getElementById('typeEditRoastValueV-' + id)?.value || '').trim();
+            if (!nm || !v) return alert('يرجى إكمال (اسم الصنف، القيمة المالية)');
+            _extras.roastItemName = nm; _extras.roastItemValue = v;
         }
-        if (typeof _logAudit === 'function') _logAudit('editMontasiaType', item.branch || '—', `${item.notes?.slice(0,40) || ''} → ${newType}`);
-        save();
     }
+
+    item.type = newType;
+    if (newType !== 'نقدي') item.missingValue = '';
+    if (newType !== 'اصناف محمص الشعب') {
+        item.roastSubType    = '';
+        item.roastItemName   = '';
+        item.roastItemValue  = '';
+        item.roastItemWeight = '';
+    }
+    Object.assign(item, _extras);
+    if (typeof _logAudit === 'function') _logAudit('editMontasiaType', item.branch || '—', `${item.notes?.slice(0,40) || ''} → ${newType}`);
+    save();
     renderAll();
 }
 
