@@ -41,18 +41,21 @@ function toggleRoastSubMode() {
 
 /* ── تعديل سريع للنوع وحالة التسليم (لمدير الكول سنتر فقط) ── */
 function _onTypeEditChange(id) {
-    const sel  = document.getElementById('typeEditSel-' + id);
-    const cash = document.getElementById('typeEditCash-' + id);
+    const sel   = document.getElementById('typeEditSel-' + id);
+    const cash  = document.getElementById('typeEditCash-' + id);
+    const other = document.getElementById('typeEditOther-' + id);
     const roast = document.getElementById('typeEditRoast-' + id);
-    const wF   = document.getElementById('typeEditRoastWeight-' + id);
-    const vF   = document.getElementById('typeEditRoastValue-' + id);
+    const wF    = document.getElementById('typeEditRoastWeight-' + id);
+    const vF    = document.getElementById('typeEditRoastValue-' + id);
     if (cash)  cash.style.display  = 'none';
+    if (other) other.style.display = 'none';
     if (roast) roast.style.display = 'none';
     if (wF)    wF.style.display    = 'none';
     if (vF)    vF.style.display    = 'none';
     document.querySelectorAll(`input[name="typeEditSub-${id}"]`).forEach(r => r.checked = false);
     const v = sel?.value || '';
-    if (v === 'نقدي' && cash) cash.style.display = '';
+    if (v === 'نقدي' && cash) cash.style.display = 'flex';
+    else if (v === 'اخرى' && other) other.style.display = 'flex';
     else if (v === 'اصناف محمص الشعب' && roast) roast.style.display = 'flex';
 }
 
@@ -75,6 +78,8 @@ function editMontasiaType(id) {
     // Pre-fill extra fields
     const _setVal = (eid, val) => { const el = document.getElementById(eid); if (el) el.value = val || ''; };
     _setVal('typeEditMissingValue-' + id, item.missingValue);
+    _setVal('typeEditNotesCash-'    + id, item.notes);
+    _setVal('typeEditNotesOther-'   + id, item.notes);
     _setVal('typeEditRoastValueW-' + id,  item.roastItemValue);
     _setVal('typeEditRoastNameW-' + id,   item.roastItemName);
     _setVal('typeEditRoastWeightW-' + id, item.roastItemWeight);
@@ -104,10 +109,17 @@ function saveMontasiaType(id) {
     const newType = sel.value;
 
     const _extras = {};
+    let   _newNotes = null;            // null = لا تُعدَّل التفاصيل
     if (newType === 'نقدي') {
         const mv = (document.getElementById('typeEditMissingValue-' + id)?.value || '').trim();
         if (!mv) return alert('يرجى إدخال القيمة المالية المفقودة');
         _extras.missingValue = mv;
+        const nc = (document.getElementById('typeEditNotesCash-' + id)?.value || '').trim();
+        _newNotes = nc;                // اختيارية
+    } else if (newType === 'اخرى') {
+        const no = (document.getElementById('typeEditNotesOther-' + id)?.value || '').trim();
+        if (!no) return alert('يرجى كتابة التفاصيل');
+        _newNotes = no;
     } else if (newType === 'اصناف محمص الشعب') {
         const sub = document.querySelector(`input[name="typeEditSub-${id}"]:checked`)?.value || '';
         if (!sub) return alert('يرجى اختيار "وزن" أو "قيمة"');
@@ -138,6 +150,7 @@ function saveMontasiaType(id) {
         item.roastItemWeight = '';
     }
     Object.assign(item, _extras);
+    if (_newNotes !== null) item.notes = _newNotes;
     if (typeof _logAudit === 'function') _logAudit('editMontasiaType', item.branch || '—', `${item.notes?.slice(0,40) || ''} → ${newType}`);
     save();
     renderAll();

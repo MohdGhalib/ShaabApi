@@ -424,8 +424,12 @@ function _renderTableM(get, isAdmin) {
                     <option value="اخرى">اخرى</option>
                     <option value="اصناف محمص الشعب">أصناف محامص الشعب</option>
                 </select>
-                <div id="typeEditCash-${x.id}" style="display:none;">
+                <div id="typeEditCash-${x.id}" style="display:none;flex-direction:column;gap:6px;">
                     <input id="typeEditMissingValue-${x.id}" type="text" inputmode="decimal" placeholder="القيمة المالية المفقودة *" style="width:100%;padding:6px;font-size:12px;font-family:'Cairo';box-sizing:border-box;">
+                    <textarea id="typeEditNotesCash-${x.id}" rows="2" placeholder="تفاصيل إضافية (اختياري)" style="width:100%;padding:6px;font-size:12px;font-family:'Cairo';box-sizing:border-box;resize:vertical;"></textarea>
+                </div>
+                <div id="typeEditOther-${x.id}" style="display:none;flex-direction:column;gap:6px;">
+                    <textarea id="typeEditNotesOther-${x.id}" rows="3" placeholder="التفاصيل *" style="width:100%;padding:6px;font-size:12px;font-family:'Cairo';box-sizing:border-box;resize:vertical;"></textarea>
                 </div>
                 <div id="typeEditRoast-${x.id}" style="display:none;flex-direction:column;gap:6px;">
                     <div style="display:flex;gap:14px;justify-content:center;font-size:12px;">
