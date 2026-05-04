@@ -481,6 +481,7 @@ const _COUNTRY_LINKAGE = {
     'searchCountryI':        { cityId:'searchCityI',       branchId:'searchBranchI',      isSearch:true  },
     'searchCountryCU':       { cityId:'searchCityCU',      branchId:'searchBranchCU',     isSearch:true  },
     'searchCountryComp':     { cityId:'compSearchCity',    branchId:'compSearchBranch',   isSearch:true  },
+    'searchCountryAudit':    { cityId:'searchCityAudit',   branchId:'searchBranchAudit',  isSearch:true  },
     'deliverCountrySelect':  { cityId:'deliverCitySelect', branchId:'deliverBranchSelect',isSearch:true  }
 };
 
