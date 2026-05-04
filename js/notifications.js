@@ -303,6 +303,45 @@ function _empAvatarHTML(name, size) {
     return `<div style="width:${sz}px;height:${sz}px;border-radius:50%;background:linear-gradient(135deg,#37474f,#263238);color:#fff;display:flex;align-items:center;justify-content:center;font-weight:700;flex-shrink:0;font-size:${fontSize}px;">${sanitize((name||'?').charAt(0))}</div>`;
 }
 
+/* avatar + overlay status dot at bottom-right (WhatsApp-style) */
+function _empAvatarWithStatusHTML(name, size) {
+    const sz = size || 38;
+    const online = (sessions || []).some(s => s.empName === name && _isSessionAlive(s));
+    const dotSize = Math.max(10, Math.floor(sz * 0.30));
+    const dotColor = online ? '#4caf50' : '#e53935';
+    const inner = _empAvatarHTML(name, sz);
+    return `<div style="position:relative;display:inline-block;flex-shrink:0;width:${sz}px;height:${sz}px;">
+        ${inner}
+        <span title="${online?'مسجّل دخول':'خارج النظام'}" style="position:absolute;bottom:-2px;left:-2px;width:${dotSize}px;height:${dotSize}px;border-radius:50%;background:${dotColor};border:2px solid var(--bg-main);box-shadow:0 0 6px ${dotColor};animation:emp-pulse 1.3s ease-in-out infinite;"></span>
+    </div>`;
+}
+
+/* employee last-seen helpers */
+function _empLastSeenTs(name) {
+    if (!sessions) return null;
+    const empSessions = sessions.filter(s => s.empName === name);
+    if (!empSessions.length) return null;
+    let maxTs = 0;
+    empSessions.forEach(s => {
+        const ts = s.lastSeen || (s.logoutIso ? Date.parse(s.logoutIso) : 0) || (s.loginIso ? Date.parse(s.loginIso) : 0);
+        if (ts > maxTs) maxTs = ts;
+    });
+    return maxTs || null;
+}
+
+function _formatLastSeen(ts) {
+    if (!ts) return '';
+    const diff = Date.now() - ts;
+    const min = Math.floor(diff / 60000);
+    if (min < 1) return 'قبل لحظات';
+    if (min < 60) return `قبل ${min} دقيقة`;
+    const hr = Math.floor(min / 60);
+    if (hr < 24) return `قبل ${hr} ساعة`;
+    const day = Math.floor(hr / 24);
+    if (day < 30) return `قبل ${day} يوم`;
+    try { return new Date(ts).toLocaleDateString('ar-EG'); } catch { return ''; }
+}
+
 function closeEmpCard() {
     const o = document.getElementById('_empCardOverlay');
     if (o) o.remove();

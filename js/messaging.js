@@ -388,7 +388,6 @@ function _renderContactsList(convList, myName, isAllView) {
         const otherName = isAllView ? null : (c.parties[0] === myName ? c.parties[1] : c.parties[0]);
         const title = isAllView ? `${sanitize(c.parties[0])} ↔ ${sanitize(c.parties[1])}` : sanitize(otherName);
         const online = !isAllView && otherName && (sessions || []).some(s => s.empName === otherName && (typeof _isSessionAlive==='function'?_isSessionAlive(s):!s.logoutIso));
-        const dotColor = online ? '#4caf50' : '#e53935';
         const preview = c.lastMsg
             ? sanitize((c.lastMsg.text || (c.lastMsg.attachments?.length ? `📎 ${c.lastMsg.attachments.length} مرفق` : '')).slice(0,40))
             : '<i style="color:var(--text-dim);">لا توجد رسائل بعد — اضغط لبدء محادثة</i>';
@@ -397,13 +396,21 @@ function _renderContactsList(convList, myName, isAllView) {
         const isSelected = key === _selectedConv;
         const bg = isSelected ? 'rgba(46,125,50,0.18)' : 'transparent';
         const unreadBadge = c.unread > 0 ? `<span style="background:#1976d2;color:#fff;border-radius:20px;padding:1px 7px;font-size:10px;font-weight:700;min-width:18px;display:inline-block;text-align:center;">${c.unread}</span>` : '';
-        const dot = !isAllView ? `<span style="display:inline-block;width:9px;height:9px;border-radius:50%;background:${dotColor};box-shadow:0 0 6px ${dotColor};animation:emp-pulse 1.3s ease-in-out infinite;flex-shrink:0;"></span>` : '';
+        // آخر ظهور للموظفين الخارجين
+        let lastSeenTxt = '';
+        if (!isAllView && otherName && !online && typeof _empLastSeenTs === 'function') {
+            const ls = _empLastSeenTs(otherName);
+            if (ls) lastSeenTxt = `<small style="color:#ef9a9a;font-size:10px;">آخر ظهور: ${_formatLastSeen(ls)}</small>`;
+        }
+        const avatarHtml = (typeof _empAvatarWithStatusHTML === 'function')
+            ? _empAvatarWithStatusHTML(isAllView ? c.parties[0] : otherName, 42)
+            : (typeof _empAvatarHTML === 'function' ? _empAvatarHTML(isAllView?c.parties[0]:otherName, 42) : '');
         return `
             <div onclick="_selectConv('${encodeURIComponent(key)}')"
-                 style="cursor:pointer;padding:11px 14px;border-bottom:1px solid var(--border);background:${bg};display:flex;align-items:center;gap:10px;transition:background 0.12s;"
+                 style="cursor:pointer;padding:11px 14px;border-bottom:1px solid var(--border);background:${bg};display:flex;align-items:center;gap:11px;transition:background 0.12s;"
                  onmouseover="if(this.style.background==='transparent')this.style.background='rgba(255,255,255,0.04)';"
                  onmouseout="this.style.background='${bg}';">
-                ${(typeof _empAvatarHTML==='function') ? _empAvatarHTML(isAllView?c.parties[0]:otherName, 38) : `<div style="width:38px;height:38px;border-radius:50%;background:linear-gradient(135deg,#37474f,#263238);color:#fff;display:flex;align-items:center;justify-content:center;font-weight:700;flex-shrink:0;font-size:14px;">${sanitize((isAllView?c.parties[0]:otherName||'?').charAt(0))}</div>`}
+                ${avatarHtml}
                 <div style="flex:1;min-width:0;">
                     <div style="display:flex;justify-content:space-between;align-items:center;gap:6px;">
                         <span style="font-size:13px;font-weight:700;color:var(--text-main);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${title}</span>
@@ -413,8 +420,8 @@ function _renderContactsList(convList, myName, isAllView) {
                         <span style="font-size:11px;color:var(--text-dim);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;flex:1;">${preview}</span>
                         ${unreadBadge}
                     </div>
+                    ${lastSeenTxt ? `<div style="margin-top:2px;">${lastSeenTxt}</div>` : ''}
                 </div>
-                ${dot}
             </div>`;
     }).join('');
 }
@@ -426,7 +433,14 @@ function _renderChatPane(conv, myName, isAllView) {
     const otherName = isAllView ? null : (conv.parties[0] === myName ? conv.parties[1] : conv.parties[0]);
     const headerTitle = isAllView ? `${sanitize(conv.parties[0])} ↔ ${sanitize(conv.parties[1])}` : sanitize(otherName);
     const online = !isAllView && otherName && (sessions || []).some(s => s.empName === otherName && (typeof _isSessionAlive==='function'?_isSessionAlive(s):!s.logoutIso));
-    const statusTxt = isAllView ? '' : (online ? '🟢 متصل الآن' : '⚫ غير متصل');
+    let statusTxt = '';
+    if (!isAllView) {
+        if (online) statusTxt = '🟢 متصل الآن';
+        else if (otherName && typeof _empLastSeenTs === 'function') {
+            const ls = _empLastSeenTs(otherName);
+            statusTxt = ls ? `⚫ آخر ظهور ${_formatLastSeen(ls)}` : '⚫ غير متصل';
+        }
+    }
 
     // علّم الواردة كمقروءة عند فتح المحادثة
     if (!isAllView) {
@@ -455,10 +469,10 @@ function _renderChatPane(conv, myName, isAllView) {
 
     return `
         <div style="padding:11px 16px;border-bottom:1px solid var(--border);background:rgba(0,0,0,0.18);display:flex;align-items:center;gap:10px;">
-            ${(typeof _empAvatarHTML==='function') ? _empAvatarHTML(isAllView?conv.parties[0]:otherName, 34) : `<div style="width:34px;height:34px;border-radius:50%;background:linear-gradient(135deg,#37474f,#263238);color:#fff;display:flex;align-items:center;justify-content:center;font-weight:700;font-size:13px;">${sanitize((isAllView?conv.parties[0]:otherName||'?').charAt(0))}</div>`}
+            ${(typeof _empAvatarWithStatusHTML==='function') ? _empAvatarWithStatusHTML(isAllView?conv.parties[0]:otherName, 38) : (typeof _empAvatarHTML==='function' ? _empAvatarHTML(isAllView?conv.parties[0]:otherName, 38) : '')}
             <div style="flex:1;">
                 <div style="font-size:14px;font-weight:700;color:var(--text-main);">${headerTitle}</div>
-                <small style="color:${online?'#a5d6a7':'var(--text-dim)'};font-size:11px;">${statusTxt}</small>
+                <small style="color:${online?'#a5d6a7':'#ef9a9a'};font-size:11px;">${statusTxt}</small>
             </div>
         </div>
         <div id="msgChatScroll" style="flex:1 1 0;min-height:0;overflow-y:auto;padding:14px 16px;display:flex;flex-direction:column;gap:6px;">
