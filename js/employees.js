@@ -349,12 +349,8 @@ function renderEmployees() {
         const _nameHtml = (typeof _empNameHTML === 'function')
             ? _empNameHTML(e.name)
             : sanitize(e.name);
-        const _isCCMgrE2 = currentUser?.role === 'cc_manager' || currentUser?.isAdmin;
-        const _editPencil = _isCCMgrE2
-            ? `<button onclick="renameEmployee('${e.empId}')" title="تعديل اسم الموظف" style="background:none;border:none;cursor:pointer;color:var(--text-dim);padding:0 6px;font-size:13px;vertical-align:middle;">✏️</button>`
-            : '';
         return `<tr>
-        <td>${i+1}</td><td><b>${_nameHtml}</b>${_editPencil}${branchInfo}</td>
+        <td>${i+1}</td><td><b>${_nameHtml}</b>${branchInfo}</td>
         <td><span class="emp-badge">${sanitize(e.title)}</span></td>
         <td><span class="emp-id-display">${sanitize(e.empId)}</span></td>
         <td style="display:flex;gap:6px;flex-wrap:wrap;">
@@ -364,30 +360,6 @@ function renderEmployees() {
         </td>
     </tr>`;
     }).join('');
-}
-
-// ── تعديل اسم الموظف (مدير الكول سنتر فقط) ──────────────────────────────────
-function renameEmployee(empId) {
-    if (!(currentUser?.role === 'cc_manager' || currentUser?.isAdmin)) return;
-    const emp = employees.find(e => e.empId === empId);
-    if (!emp) return;
-    const oldName = emp.name;
-    const newName = prompt('الاسم الجديد للموظف:', oldName);
-    if (newName === null) return;
-    const trimmed = newName.trim();
-    if (!trimmed) return alert('الاسم لا يمكن أن يكون فارغًا');
-    if (trimmed === oldName) return;
-    if (employees.some(e => e.empId !== empId && e.name === trimmed)) {
-        return alert('يوجد موظف آخر بنفس الاسم');
-    }
-    emp.name = trimmed;
-    // حدّث اسم الموظف في الجلسات المفتوحة (لتحديث المؤشرات والإشعارات)
-    (sessions || []).forEach(s => { if (s.empId === empId) s.empName = trimmed; });
-    if (typeof saveEmployees === 'function') saveEmployees();
-    if (typeof saveSessions === 'function') saveSessions();
-    if (typeof _logAudit === 'function') { _logAudit('renameEmployee', '—', `${oldName} → ${trimmed}`); save(); }
-    if (typeof populateEmployeeDropdowns === 'function') populateEmployeeDropdowns();
-    renderEmployees();
 }
 
 // ── تحديث قائمة الفروع لمدير الفرع (مع حجب المحجوز) ─────────────────────────
