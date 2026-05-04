@@ -85,15 +85,17 @@ function _checkIdleEmployees() {
     const now = Date.now();
     const myId = currentUser?.empId;
     (sessions || []).forEach(s => {
+        // شرط أساسي: الموظف يجب أن يكون مسجّل دخول حاليًا
         if (s.logoutIso) return;
         if (s.empId === myId) return;
+        // كلمة "غير نشط" = لا يوجد سجل حركات للموظف في سجل التدقيق لمدة ساعة
         const loginTs = Date.parse(s.loginIso) || 0;
         const lastAction = (db.auditLog || [])
             .filter(e => e.empId === s.empId && e.action !== 'login' && e.action !== 'logout')
             .reduce((max, e) => Math.max(max, e.ts || 0), 0);
+        // نقطة المرجع: آخر حركة فعلية، أو وقت الدخول إن لم تكن هناك حركات
         const lastTs = Math.max(loginTs, lastAction);
         if ((now - lastTs) >= _NOTIF_IDLE_MS) {
-            // مفتاح يتغيّر مع كل ساعة جديدة لمنع التكرار
             const bucket = Math.floor((now - lastTs) / _NOTIF_IDLE_MS);
             const key = `${s.id}-${bucket}`;
             if (!_idleNotifShown.has(key)) {
@@ -117,21 +119,22 @@ function _ensureNotifStack() {
     if (!stack) {
         stack = document.createElement('div');
         stack.id = 'notifStack';
-        stack.style.cssText = 'position:fixed;top:80px;left:66px;z-index:99998;display:flex;flex-direction:column;gap:8px;align-items:flex-start;pointer-events:none;max-width:min(440px,calc(100vw - 80px));';
+        stack.style.cssText = 'position:fixed;top:78px;left:66px;z-index:99998;display:flex;flex-direction:column;gap:6px;align-items:stretch;pointer-events:none;width:340px;max-width:calc(100vw - 80px);';
         document.body.appendChild(stack);
     }
     return stack;
 }
 
-/* ── تنسيق موحّد لكل الرسائل (مماثل لرسائل الدخول/الخروج) ── */
+/* ── تنسيق موحّد لكل الرسائل (نفس الحجم واللون والتصميم) ── */
 const _NOTIF_BASE_CSS = `
-    color:#fff;padding:11px 16px;border-radius:12px;
-    box-shadow:0 6px 20px rgba(0,0,0,0.45);
+    color:#fff;padding:9px 14px;border-radius:12px;
+    box-shadow:0 4px 16px rgba(0,0,0,0.40);
     backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px);
-    font-family:'Cairo';font-weight:700;font-size:13.5px;
-    opacity:0;transform:translateX(-30px);
-    transition:opacity 0.4s ease,transform 0.4s ease;
-    pointer-events:auto;display:flex;align-items:center;gap:10px;
+    font-family:'Cairo';font-weight:700;font-size:13px;
+    line-height:1.4;
+    opacity:0;transform:translateX(-20px);
+    transition:opacity 0.35s ease,transform 0.35s ease;
+    pointer-events:auto;display:flex;align-items:center;gap:8px;
     width:100%;box-sizing:border-box;`;
 
 function _animateIn(el) {
@@ -250,16 +253,17 @@ function _showForcedOutToast() {
 function _showStickyIdleNotif(empName, empId, lastActiveTs) {
     const stack = _ensureNotifStack();
     const minutes = Math.floor((Date.now() - lastActiveTs) / 60000);
-    const bg = 'linear-gradient(135deg,rgba(230,81,0,0.96),rgba(230,81,0,0.86))';
+    // نفس درجة العمق المستخدمة في الدخول/الخروج، بلون عنبري داكن للتمييز
+    const bg = 'linear-gradient(135deg,rgba(216,67,21,0.96),rgba(216,67,21,0.86))';
     const item = document.createElement('div');
     item.style.cssText = _NOTIF_BASE_CSS + `background:${bg};cursor:pointer;`;
     item.dataset.empId = empId;
     const txt = document.createElement('span');
     txt.style.cssText = 'flex:1;';
-    txt.innerHTML = `⚠️ ${sanitize(empName)} غير نشط منذ ${minutes} دقيقة — اضغط لعرض حركاته`;
+    txt.innerHTML = `⚠️ ${sanitize(empName)} غير نشط منذ ${minutes} دقيقة`;
     const closeBtn = document.createElement('button');
     closeBtn.textContent = '✕';
-    closeBtn.style.cssText = 'background:rgba(255,255,255,0.25);border:none;color:#fff;width:22px;height:22px;border-radius:50%;cursor:pointer;font-weight:700;display:flex;align-items:center;justify-content:center;font-size:11px;flex-shrink:0;';
+    closeBtn.style.cssText = 'background:rgba(255,255,255,0.22);border:none;color:#fff;width:20px;height:20px;border-radius:50%;cursor:pointer;font-weight:700;display:flex;align-items:center;justify-content:center;font-size:10px;flex-shrink:0;';
     closeBtn.onclick = (e) => { e.stopPropagation(); _animateOut(item); };
     item.appendChild(txt);
     item.appendChild(closeBtn);
