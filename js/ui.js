@@ -185,7 +185,13 @@ function _renderNotifPanel() {
     const newMItems = (db.montasiat  || []).filter(x => !x.deleted && x.id > lastM).slice(0, 4);
     const newCItems = (db.complaints || []).filter(x => !x.deleted && x.id > lastC).slice(0, 4);
     const newIItems = (db.inquiries  || []).filter(x => !x.deleted && x.id > lastI).slice(0, 4);
-    const total     = newMItems.length + newCItems.length + newIItems.length;
+    // إشعارات الرسائل غير المقروءة (لمن لديهم نظام الرسائل)
+    const role = currentUser?.role;
+    const isCtrl = role === 'control' || role === 'control_employee' || role === 'control_sub';
+    const newMsgItems = (!isCtrl && currentUser)
+        ? (db.messages || []).filter(m => !m.deleted && m.to === currentUser.name && !m.readByMe).slice(0, 6)
+        : [];
+    const total     = newMItems.length + newCItems.length + newIItems.length + newMsgItems.length;
 
     const sItem = `padding:9px 12px;cursor:pointer;border-radius:10px;transition:background 0.15s;
                    font-size:13px;display:flex;flex-direction:column;gap:2px;`;
@@ -206,6 +212,19 @@ function _renderNotifPanel() {
     if (total === 0) {
         html += `<div style="padding:28px;text-align:center;color:var(--text-dim);font-size:13px;">
                     ✅ لا توجد إشعارات جديدة</div>`;
+    }
+
+    // إشعارات الرسائل أولاً
+    if (newMsgItems.length) {
+        html += `<div style="${sLabel}">💬 رسائل جديدة</div>`;
+        newMsgItems.forEach(m => {
+            html += `<div style="${sItem}" onclick="_openMsgFromNotif('${m.id}')"
+                         onmouseover="this.style.background='rgba(46,125,50,0.08)'"
+                         onmouseout="this.style.background=''">
+                <span style="font-weight:700;color:var(--text-main);">💬 وصلتك رسالة من ${sanitize(m.from)}</span>
+                <span style="color:var(--text-dim);font-size:11px;">اضغط للأطلاع والرد عليها</span>
+            </div>`;
+        });
     }
 
     if (newMItems.length) {
@@ -253,6 +272,13 @@ function _navFromNotif(tab, id) {
     const panel = document.getElementById('notifPanel');
     if (panel) panel.style.display = 'none';
     viewDashboardItem(tab, id);
+}
+
+function _openMsgFromNotif(msgId) {
+    _notifOpen = false;
+    const panel = document.getElementById('notifPanel');
+    if (panel) panel.style.display = 'none';
+    if (typeof _openMessageDetail === 'function') _openMessageDetail(msgId);
 }
 
 function _markAllNotifRead() {

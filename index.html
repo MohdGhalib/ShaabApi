@@ -60,7 +60,7 @@
 
         <!-- زر الإشعارات بجانب الساعة -->
         <div id="notifBellWidget" style="display:none;position:relative;font-family:'Cairo';">
-            <button id="notifBellBtn" onclick="(function(){var r=currentUser?.role;var isCtrl=r==='control'||r==='control_employee'||r==='control_sub';if(!isCtrl&&typeof openMessagesNotifPanel==='function')openMessagesNotifPanel();else _toggleNotifPanel();})()" title="الإشعارات"
+            <button id="notifBellBtn" onclick="_toggleNotifPanel()" title="الإشعارات"
                 style="background:rgba(18,18,18,0.82);backdrop-filter:blur(12px);-webkit-backdrop-filter:blur(12px);
                        border:1px solid rgba(211,47,47,0.25);border-radius:14px;
                        padding:0 14px;cursor:pointer;position:relative;
@@ -718,7 +718,7 @@
 <script src="js/auth.js?v=35"></script>
 <script src="js/render.js?v=53"></script>
 <script src="js/pages.js?v=52"></script>
-<script src="js/ui.js?v=39"></script>
+<script src="js/ui.js?v=40"></script>
 <script src="js/missing-items.js?v=50"></script>
 <script src="js/inquiries.js?v=29"></script>
 <script src="js/control.js?v=37"></script>
