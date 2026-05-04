@@ -795,11 +795,13 @@ function _initSSE() {
     es.addEventListener('new-complaint', (e) => {
         const role    = currentUser?.role;
         const isAdmin = currentUser?.isAdmin;
+        let info = {};
+        try { info = JSON.parse(e.data); } catch {}
+        // تجاهل الشكاوى القديمة المُعاد بثّها (أكثر من 60 ثانية)
+        if (info.id && (Date.now() - info.id) > 60_000) return;
         // كول سنتر + ميديا + أدمن → popup + صوت عادي
         // الميديا: لا إشعار إذا كان هو من أضاف الشكوى
         if (isAdmin || role === 'cc_manager' || role === 'media') {
-            let info = {};
-            try { info = JSON.parse(e.data); } catch {}
             if (role === 'media' && info.addedBy === currentUser?.name) { /* تجاهل — أنت من أضفتها */ }
             else { _playSound(); _showComplaintPopup(info); }
         }
@@ -827,6 +829,8 @@ function _initSSE() {
             let info = {};
             try { info = JSON.parse(e.data); } catch {}
             if (info.addedBy && info.addedBy === currentUser?.name) return;
+            // تجاهل السجلات القديمة (id = Date.now() عند الإنشاء؛ نتجاهل ما يزيد عن 60 ثانية)
+            if (info.id && (Date.now() - info.id) > 60_000) return;
             _playSound();
             _showMontasiaPopup(info);
         }
