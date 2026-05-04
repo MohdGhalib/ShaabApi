@@ -380,7 +380,19 @@ function _renderTableM(get, isAdmin) {
             ? `<span style="padding:2px 8px;border-radius:6px;font-size:12px;font-weight:700;background:rgba(255,193,7,0.15);color:#ffd54f;">نقدي</span>`
             : x.type==='أخرى'
             ? `<span style="padding:2px 8px;border-radius:6px;font-size:12px;font-weight:700;background:rgba(100,181,246,0.15);color:#90caf9;">أخرى</span>`
+            : x.type==='اصناف محمص الشعب'
+            ? `<span style="padding:2px 8px;border-radius:6px;font-size:12px;font-weight:700;background:rgba(156,204,101,0.18);color:#c5e1a5;">🌰 محمص الشعب</span>`
             : `<span style="color:var(--text-dim);font-size:12px;">—</span>`;
+        let extraInfo = '';
+        if (x.type === 'نقدي' && x.missingValue) {
+            extraInfo = `<div style="margin-top:5px;font-size:12px;color:#ffd54f;font-weight:700;">💰 المفقود: ${sanitize(x.missingValue)}</div>`;
+        } else if (x.type === 'اصناف محمص الشعب') {
+            const parts = [];
+            if (x.roastItemName)   parts.push(`📦 ${sanitize(x.roastItemName)}`);
+            if (x.roastItemValue)  parts.push(`💵 ${sanitize(x.roastItemValue)}`);
+            if (x.roastItemWeight) parts.push(`⚖️ ${sanitize(x.roastItemWeight)}`);
+            if (parts.length) extraInfo = `<div style="margin-top:5px;font-size:12px;color:#c5e1a5;font-weight:700;display:flex;gap:10px;flex-wrap:wrap;">${parts.map(p=>`<span>${p}</span>`).join('')}</div>`;
+        }
         const photoCell = x.photoBase64
             ? `<div style="margin-top:6px;">
                    <img src="data:image/jpeg;base64,${x.photoBase64}"
@@ -394,7 +406,7 @@ function _renderTableM(get, isAdmin) {
         return `<tr data-id="${x.id}">
             <td><b>${x.branch}</b>${x.branchEmp?`<br><span style="font-size:13px;color:var(--text-dim);font-weight:700;">👤 ${sanitize(x.branchEmp)}</span>`:''}${mobileTag}</td>
             <td style="text-align:center;">${typeLabel}</td>
-            <td><span class="text-box-cell">${sanitize(x.notes)}</span>${photoCell}${editBox}</td>
+            <td><span class="text-box-cell">${sanitize(x.notes)}</span>${extraInfo}${photoCell}${editBox}</td>
             <td style="vertical-align:top;text-align:center;">
                 <span class="status-badge ${statusClass}">${x.status==='قيد الانتظار' ? 'لم يتم التسليم' : (x.status==='تم التسليم' ? 'تم التسليم' : x.status)}</span>
             </td>
@@ -487,9 +499,19 @@ function _renderTableO(get) {
             ? `<span class="status-badge awaiting" style="font-size:11px;padding:2px 8px;">${x.status}</span><br>`
             : x.status==='قيد الاستلام'
             ? `<span class="status-badge mobile-pending" style="font-size:11px;padding:2px 8px;">📱 ${x.status}</span><br>` : '';
+        let _xInfo = '';
+        if (x.type === 'نقدي' && x.missingValue) {
+            _xInfo = `<div style="margin-top:5px;font-size:12px;color:#ffd54f;font-weight:700;">💰 المفقود: ${sanitize(x.missingValue)}</div>`;
+        } else if (x.type === 'اصناف محمص الشعب') {
+            const _p = [];
+            if (x.roastItemName)   _p.push(`📦 ${sanitize(x.roastItemName)}`);
+            if (x.roastItemValue)  _p.push(`💵 ${sanitize(x.roastItemValue)}`);
+            if (x.roastItemWeight) _p.push(`⚖️ ${sanitize(x.roastItemWeight)}`);
+            if (_p.length) _xInfo = `<div style="margin-top:5px;font-size:12px;color:#c5e1a5;font-weight:700;display:flex;gap:10px;flex-wrap:wrap;">${_p.map(p=>`<span>${p}</span>`).join('')}</div>`;
+        }
         return `<tr>
             <td><b>${x.branch}</b><br><small>${x.city}</small></td>
-            <td><span class="text-box-cell">${sanitize(x.notes)}</span></td>
+            <td><span class="text-box-cell">${sanitize(x.notes)}</span>${_xInfo}</td>
             <td><small style="color:var(--text-main)">📥 ${sanitize(x.addedBy||'—')}</small></td>
             <td>${statusDot}<small>${_toLatinDigits(_timeToAmPm(x.time))}</small></td>
             <td>${actionBtn}</td>

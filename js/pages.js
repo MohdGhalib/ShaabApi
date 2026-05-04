@@ -13,12 +13,39 @@ m: `
         <select id="mBranchAdd"></select>
     </div>
     <div style="display:grid;grid-template-columns:1fr 1fr;gap:15px;margin-bottom:15px;">
-        <select id="mType">
+        <select id="mType" onchange="toggleMontasiaTypeFields()">
             <option value="">-- نوع المنتسية --</option>
             <option value="نقدي">نقدي</option>
+            <option value="اصناف محمص الشعب">🌰 اصناف محمص الشعب</option>
             <option value="أخرى">أخرى</option>
         </select>
         <input id="mBranchEmp" type="text" placeholder="اسم موظف الفرع *">
+    </div>
+    <div id="mTypeExtraBox" style="display:none;margin-bottom:15px;background:rgba(255,193,7,0.05);border:1px dashed rgba(255,193,7,0.4);border-radius:12px;padding:14px;">
+        <div id="mCashFields" style="display:none;">
+            <label style="font-size:13px;color:#ffd54f;font-weight:700;display:block;margin-bottom:8px;">💰 القيمة المالية المفقودة *</label>
+            <input id="mMissingValue" type="text" inputmode="decimal" placeholder="مثال: 5.5">
+        </div>
+        <div id="mRoastFields" style="display:none;">
+            <label style="font-size:13px;color:#90caf9;font-weight:700;display:block;margin-bottom:8px;">🌰 طريقة التسجيل *</label>
+            <div style="display:flex;gap:18px;margin-bottom:12px;flex-wrap:wrap;">
+                <label style="display:flex;align-items:center;gap:6px;cursor:pointer;font-size:13px;color:var(--text-main);">
+                    <input type="radio" name="mRoastSub" value="وزن" onchange="toggleRoastSubMode()"> ⚖️ وزن
+                </label>
+                <label style="display:flex;align-items:center;gap:6px;cursor:pointer;font-size:13px;color:var(--text-main);">
+                    <input type="radio" name="mRoastSub" value="قيمة" onchange="toggleRoastSubMode()"> 💵 قيمة
+                </label>
+            </div>
+            <div id="mRoastWeightFields" style="display:none;grid-template-columns:1fr 1fr 1fr;gap:10px;">
+                <input id="mRoastValueW"  type="text" inputmode="decimal" placeholder="القيمة المالية *">
+                <input id="mRoastNameW"   type="text" placeholder="اسم الصنف *">
+                <input id="mRoastWeightW" type="text" inputmode="decimal" placeholder="الوزن *">
+            </div>
+            <div id="mRoastValueFields" style="display:none;grid-template-columns:1fr 1fr;gap:10px;">
+                <input id="mRoastNameV"  type="text" placeholder="اسم الصنف *">
+                <input id="mRoastValueV" type="text" inputmode="decimal" placeholder="القيمة المالية *">
+            </div>
+        </div>
     </div>
     <textarea id="mNotes" placeholder="تفاصيل المنتسية..." rows="3"></textarea>
     <button class="btn btn-main" style="margin-top:15px" onclick="addMontasia()">حفظ البيانات</button>
@@ -32,7 +59,7 @@ m: `
     <div><label>بحث بالنص</label><input type="text" id="searchTextM" placeholder="بحث في التفاصيل..." oninput="filterTable()"></div>
     <div><label>موظف الاستلام</label><select id="searchAddedByM" onchange="filterTable()"><option value="">الكل</option></select></div>
     <div><label>موظف التسليم</label><select id="searchDeliveredByM" onchange="filterTable()"><option value="">الكل</option></select></div>
-    <div><label>نوع المنتسية</label><select id="searchTypeM" onchange="filterTable()"><option value="">الكل</option><option value="نقدي">نقدي</option><option value="أخرى">أخرى</option></select></div>
+    <div><label>نوع المنتسية</label><select id="searchTypeM" onchange="filterTable()"><option value="">الكل</option><option value="نقدي">نقدي</option><option value="اصناف محمص الشعب">🌰 اصناف محمص الشعب</option><option value="أخرى">أخرى</option></select></div>
     <button class="btn" style="background:var(--bg-input);color:var(--text-dim);align-self:end;" onclick="resetSearch('M')">تفريغ</button>
 </div>
 <div id="mCtrlMgrFilters" class="search-bar search-bar-m" style="display:none;margin-bottom:18px;background:linear-gradient(135deg,rgba(106,27,154,0.10),rgba(21,101,192,0.06));border:1px dashed rgba(156,39,176,0.40);">
@@ -104,7 +131,7 @@ o: `
         <div><label>التاريخ</label><div class="date-picker-wrap" onclick="openDatePicker('searchDateO')"><span class="date-display" id="searchDateO-display">📅 اختر التاريخ</span><input type="hidden" id="searchDateO"></div></div>
         <div><label>بحث بالنص</label><input type="text" id="searchTextO" placeholder="بحث في التفاصيل..." oninput="filterTable()"></div>
         <div><label>موظف الاستلام</label><select id="searchAddedByO" onchange="filterTable()"><option value="">الكل</option></select></div>
-        <div><label>نوع المنتسية</label><select id="searchTypeO" onchange="filterTable()"><option value="">الكل</option><option value="نقدي">نقدي</option><option value="أخرى">أخرى</option></select></div>
+        <div><label>نوع المنتسية</label><select id="searchTypeO" onchange="filterTable()"><option value="">الكل</option><option value="نقدي">نقدي</option><option value="اصناف محمص الشعب">🌰 اصناف محمص الشعب</option><option value="أخرى">أخرى</option></select></div>
         <button class="btn" style="background:var(--bg-input);color:var(--text-dim);align-self:end;" onclick="resetSearch('O')">تفريغ</button>
     </div>
     <table id="tableO">

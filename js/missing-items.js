@@ -4,6 +4,48 @@
 /* ── حالة نافذة وقت تسجيل المنتسية ── */
 let _addMTimeMode = 'now';
 
+/* ── إظهار/إخفاء الحقول الإضافية حسب نوع المنتسية ── */
+function toggleMontasiaTypeFields() {
+    const t = document.getElementById('mType')?.value || '';
+    const box   = document.getElementById('mTypeExtraBox');
+    const cash  = document.getElementById('mCashFields');
+    const roast = document.getElementById('mRoastFields');
+    const wF    = document.getElementById('mRoastWeightFields');
+    const vF    = document.getElementById('mRoastValueFields');
+    if (!box) return;
+    box.style.display = 'none';
+    if (cash)  cash.style.display  = 'none';
+    if (roast) roast.style.display = 'none';
+    if (wF)    wF.style.display    = 'none';
+    if (vF)    vF.style.display    = 'none';
+    document.querySelectorAll('input[name="mRoastSub"]').forEach(r => r.checked = false);
+    if (t === 'نقدي') {
+        box.style.display = '';
+        if (cash) cash.style.display = '';
+    } else if (t === 'اصناف محمص الشعب') {
+        box.style.display = '';
+        if (roast) roast.style.display = '';
+    }
+}
+
+function toggleRoastSubMode() {
+    const sub = document.querySelector('input[name="mRoastSub"]:checked')?.value || '';
+    const w = document.getElementById('mRoastWeightFields');
+    const v = document.getElementById('mRoastValueFields');
+    if (w) w.style.display = sub === 'وزن'  ? 'grid' : 'none';
+    if (v) v.style.display = sub === 'قيمة' ? 'grid' : 'none';
+}
+
+function _resetMontasiaExtraFields() {
+    ['mMissingValue','mRoastValueW','mRoastNameW','mRoastWeightW','mRoastNameV','mRoastValueV']
+        .forEach(id => { const el = document.getElementById(id); if (el) el.value = ''; });
+    document.querySelectorAll('input[name="mRoastSub"]').forEach(r => r.checked = false);
+    const box = document.getElementById('mTypeExtraBox');
+    if (box) box.style.display = 'none';
+    ['mCashFields','mRoastFields','mRoastWeightFields','mRoastValueFields']
+        .forEach(id => { const el = document.getElementById(id); if (el) el.style.display = 'none'; });
+}
+
 function addMontasia() {
     const c = document.getElementById("mCityAdd").value;
     const b = document.getElementById("mBranchAdd").value;
@@ -49,8 +91,34 @@ function confirmAddMontasia() {
     const be = (document.getElementById("mBranchEmp")?.value||'').trim();
     if (!c||!b||!n||!t||!be) return alert("يرجى إكمال البيانات");
 
+    const _extra = {};
+    if (t === 'نقدي') {
+        const mv = (document.getElementById('mMissingValue')?.value || '').trim();
+        if (!mv) return alert('يرجى إدخال القيمة المالية المفقودة');
+        _extra.missingValue = mv;
+    } else if (t === 'اصناف محمص الشعب') {
+        const sub = document.querySelector('input[name="mRoastSub"]:checked')?.value || '';
+        if (!sub) return alert('يرجى اختيار "وزن" أو "قيمة"');
+        _extra.roastSubType = sub;
+        if (sub === 'وزن') {
+            const v  = (document.getElementById('mRoastValueW')?.value  || '').trim();
+            const nm = (document.getElementById('mRoastNameW')?.value   || '').trim();
+            const w  = (document.getElementById('mRoastWeightW')?.value || '').trim();
+            if (!v || !nm || !w) return alert('يرجى إكمال (القيمة المالية، اسم الصنف، الوزن)');
+            _extra.roastItemValue  = v;
+            _extra.roastItemName   = nm;
+            _extra.roastItemWeight = w;
+        } else {
+            const nm = (document.getElementById('mRoastNameV')?.value  || '').trim();
+            const v  = (document.getElementById('mRoastValueV')?.value || '').trim();
+            if (!nm || !v) return alert('يرجى إكمال (اسم الصنف، القيمة المالية)');
+            _extra.roastItemName  = nm;
+            _extra.roastItemValue = v;
+        }
+    }
+
     const rec = { id:Date.now(), country: co || _countryForCity(c), city:c, branch:b, notes:n, type:t, branchEmp:be, time:now(), iso:iso(),
-        status:'قيد الانتظار', dt:'', addedBy:currentUser.name, deliveredBy:'' };
+        status:'قيد الانتظار', dt:'', addedBy:currentUser.name, deliveredBy:'', ..._extra };
 
     if (_addMTimeMode === 'previous') {
         const dateVal = document.getElementById('addMPrevDate')?.value;
@@ -76,6 +144,7 @@ function confirmAddMontasia() {
     save();
     document.getElementById("mNotes").value = "";
     document.getElementById("mType").value = "";
+    _resetMontasiaExtraFields();
     const beEl = document.getElementById("mBranchEmp"); if (beEl) beEl.value = "";
     const ctryEl = document.getElementById("mCountryAdd"); if (ctryEl) ctryEl.value = "";
     document.getElementById("mCityAdd").value = "";
