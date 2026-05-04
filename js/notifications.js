@@ -237,10 +237,10 @@ function _injectEmpCardStyle() {
     s.textContent = `
         @keyframes empc-card-in { from { opacity:0; transform:translateY(22px) scale(0.95);} to { opacity:1; transform:translateY(0) scale(1);} }
         @keyframes empc-blob-float { 0%,100%{ transform:translate(0,0) scale(1);} 50%{ transform:translate(10px,-8px) scale(1.06);} }
-        @keyframes empc-ring-pulse { 0%,100%{ box-shadow:0 0 0 4px var(--bg-main),0 8px 22px rgba(0,0,0,0.45),0 0 0 6px rgba(76,175,80,0.55);} 50%{ box-shadow:0 0 0 4px var(--bg-main),0 8px 22px rgba(0,0,0,0.45),0 0 0 12px rgba(76,175,80,0);} }
+        @keyframes empc-ring-pulse { 0%,100%{ box-shadow:0 0 0 4px var(--bg-card),0 8px 22px rgba(0,0,0,0.45),0 0 0 6px rgba(76,175,80,0.55);} 50%{ box-shadow:0 0 0 4px var(--bg-card),0 8px 22px rgba(0,0,0,0.45),0 0 0 12px rgba(76,175,80,0);} }
         @keyframes empc-dot-pulse { 0%,100%{ transform:scale(1); opacity:1;} 50%{ transform:scale(1.45); opacity:0.55;} }
 
-        #_empCardOverlay .empc-card{position:relative;background:var(--bg-main);border:1px solid var(--border);border-radius:22px;width:400px;max-width:94vw;text-align:right;box-shadow:0 22px 60px rgba(0,0,0,0.6),0 6px 18px rgba(0,0,0,0.35);overflow:hidden;animation:empc-card-in 0.32s cubic-bezier(0.2,0.9,0.3,1.1);}
+        #_empCardOverlay .empc-card{position:relative;background:var(--bg-card);color:var(--text-main);border:1px solid var(--border);border-radius:22px;width:400px;max-width:94vw;text-align:right;box-shadow:0 22px 60px rgba(0,0,0,0.6),0 6px 18px rgba(0,0,0,0.35);overflow:hidden;animation:empc-card-in 0.32s cubic-bezier(0.2,0.9,0.3,1.1);}
         #_empCardOverlay .empc-close{position:absolute;top:12px;left:12px;z-index:3;background:rgba(0,0,0,0.4);border:1px solid rgba(255,255,255,0.18);color:#fff;width:32px;height:32px;border-radius:50%;cursor:pointer;font-size:14px;display:flex;align-items:center;justify-content:center;transition:transform 0.25s,background 0.2s;}
         #_empCardOverlay .empc-close:hover{background:rgba(0,0,0,0.65);transform:rotate(90deg);}
 
@@ -252,10 +252,10 @@ function _injectEmpCardStyle() {
         #_empCardOverlay .empc-hero-label{position:absolute;top:16px;right:18px;color:#fff;font-weight:800;font-size:14px;letter-spacing:0.3px;text-shadow:0 1px 5px rgba(0,0,0,0.4);display:inline-flex;align-items:center;gap:6px;}
 
         #_empCardOverlay .empc-avatar-wrap{display:flex;justify-content:center;margin-top:-58px;position:relative;z-index:2;}
-        #_empCardOverlay .empc-avatar-ring{position:relative;width:114px;height:114px;border-radius:50%;padding:4px;background:var(--bg-main);box-shadow:0 0 0 4px var(--bg-main),0 8px 22px rgba(0,0,0,0.45),0 0 0 6px rgba(150,150,150,0.18);}
+        #_empCardOverlay .empc-avatar-ring{position:relative;width:114px;height:114px;border-radius:50%;padding:4px;background:var(--bg-card);box-shadow:0 0 0 4px var(--bg-card),0 8px 22px rgba(0,0,0,0.45),0 0 0 6px rgba(150,150,150,0.18);}
         #_empCardOverlay .empc-avatar-ring-on{animation:empc-ring-pulse 2.2s ease-in-out infinite;}
         #_empCardOverlay .empc-avatar-img,#_empCardOverlay .empc-avatar-fallback{width:100%;height:100%;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:40px;font-weight:800;color:#fff;background:linear-gradient(135deg,#37474f,#263238);object-fit:cover;}
-        #_empCardOverlay .empc-edit-photo{position:absolute;bottom:2px;left:2px;width:34px;height:34px;border-radius:50%;background:linear-gradient(135deg,#1976d2,#0d47a1);border:3px solid var(--bg-main);color:#fff;display:flex;align-items:center;justify-content:center;cursor:pointer;font-size:13px;box-shadow:0 3px 10px rgba(0,0,0,0.45);transition:transform 0.18s;}
+        #_empCardOverlay .empc-edit-photo{position:absolute;bottom:2px;left:2px;width:34px;height:34px;border-radius:50%;background:linear-gradient(135deg,#1976d2,#0d47a1);border:3px solid var(--bg-card);color:#fff;display:flex;align-items:center;justify-content:center;cursor:pointer;font-size:13px;box-shadow:0 3px 10px rgba(0,0,0,0.45);transition:transform 0.18s;}
         #_empCardOverlay .empc-edit-photo:hover{transform:scale(1.1);}
 
         #_empCardOverlay .empc-body{padding:14px 22px 22px;display:flex;flex-direction:column;align-items:center;}
