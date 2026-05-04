@@ -332,8 +332,17 @@ function renderEmployees() {
         } else if (e.assignedBranches?.length) {
             branchInfo = `<div style="font-size:11px;color:var(--text-dim);margin-top:3px;">📍 ${e.assignedBranches.map(b => `${sanitize(b.branch)}`).join(' · ')}</div>`;
         }
+        // مؤشر الاتصال + اسم قابل للضغط (لمدير الكول سنتر فقط)
+        const _isOnline = (sessions || []).some(s => s.empId === e.empId &&
+            (typeof _isSessionAlive === 'function' ? _isSessionAlive(s) : !s.logoutIso));
+        const _dot = _isOnline
+            ? `<span title="مسجّل دخول الآن" style="display:inline-block;width:9px;height:9px;border-radius:50%;background:#4caf50;box-shadow:0 0 8px #4caf50,0 0 2px #fff;margin-left:6px;vertical-align:middle;"></span>`
+            : '';
+        const _nameHtml = (typeof _empNameHTML === 'function')
+            ? _empNameHTML(e.name)
+            : sanitize(e.name);
         return `<tr>
-        <td>${i+1}</td><td><b>${sanitize(e.name)}</b>${branchInfo}</td>
+        <td>${i+1}</td><td><b>${_nameHtml}</b>${_dot}${branchInfo}</td>
         <td><span class="emp-badge">${sanitize(e.title)}</span></td>
         <td><span class="emp-id-display">${sanitize(e.empId)}</span></td>
         <td style="display:flex;gap:6px;flex-wrap:wrap;">

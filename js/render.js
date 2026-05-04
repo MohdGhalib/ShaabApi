@@ -904,6 +904,10 @@ function renderAll() {
     }
     // اشعارات مدير الكول سنتر — تسجيل دخول/خروج/خمول
     if (typeof _checkSessionsForNotifs === 'function') _checkSessionsForNotifs();
+    // تحديث جدول الموظفين إن كان مفتوحًا (لتحديث النقطة الخضراء)
+    if (typeof renderEmployees === 'function' && document.querySelector('#tableE tbody')) {
+        renderEmployees();
+    }
     // كشف طلب تسجيل خروج إجباري للمستخدم الحالي
     if (typeof _checkForceLogoutForMe === 'function') _checkForceLogoutForMe();
     if (typeof _updateBadges === 'function') _updateBadges();
