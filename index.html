@@ -186,7 +186,21 @@
             </div>
             <button class="nav-item hidden" id="tab-f" onclick="switchTab('f')">🏪 تقييم الفروع</button>
             <button class="nav-item hidden" id="tab-p" onclick="switchTab('p')">💰 قائمة الأسعار</button>
-            <button class="nav-item hidden" id="tab-msg" onclick="switchTab('msg')" style="position:relative;">📬 الرسائل<span class="nav-badge" id="badge-msg" style="display:none;"></span></button>
+            <div class="nav-group hidden" id="nav-group-msg">
+                <button class="nav-item" id="tab-msg" onclick="toggleTabMsg()" style="position:relative;">
+                    📬 الرسائل
+                    <span class="nav-badge" id="badge-msg" style="display:none;"></span>
+                    <span class="nav-chevron" id="chevron-msg">❯</span>
+                </button>
+                <div class="nav-sub" id="sub-msg">
+                    <button class="nav-sub-item" id="tab-msg-mine" onclick="switchTab('msg-mine')">
+                        <span class="nav-sub-dot"></span>💬 مراسلاتي
+                    </button>
+                    <button class="nav-sub-item hidden" id="tab-msg-all" onclick="switchTab('msg-all')">
+                        <span class="nav-sub-dot"></span>📋 جميع المراسلات
+                    </button>
+                </div>
+            </div>
             <button class="nav-item hidden" id="tab-l" onclick="switchTab('l')">📋 سجل التدقيق</button>
             <button class="nav-item hidden" id="tab-t" onclick="switchTab('t')">🗑️ سلة المحذوفات</button>
         </div>
@@ -701,10 +715,10 @@
 <script src="js/data.js?v=31"></script>
 <script src="js/session.js?v=23"></script>
 <script src="js/clock.js?v=23"></script>
-<script src="js/auth.js?v=34"></script>
+<script src="js/auth.js?v=35"></script>
 <script src="js/render.js?v=52"></script>
 <script src="js/pages.js?v=52"></script>
-<script src="js/ui.js?v=37"></script>
+<script src="js/ui.js?v=38"></script>
 <script src="js/missing-items.js?v=47"></script>
 <script src="js/inquiries.js?v=29"></script>
 <script src="js/control.js?v=37"></script>
@@ -716,7 +730,7 @@
 <script src="js/dashboard.js?v=23"></script>
 <script src="js/audit.js?v=25"></script>
 <script src="js/notifications.js?v=11"></script>
-<script src="js/messaging.js?v=3"></script>
+<script src="js/messaging.js?v=4"></script>
 <script src="js/trash.js?v=23"></script>
 <script>
     document.addEventListener("click", function(e) {

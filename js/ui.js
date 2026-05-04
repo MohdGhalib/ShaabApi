@@ -292,9 +292,14 @@ function toggleTabC() {
     if (grpC) grpC.classList.toggle('open');
 }
 
+function toggleTabMsg() {
+    const grpMsg = document.getElementById('nav-group-msg');
+    if (grpMsg) grpMsg.classList.toggle('open');
+}
+
 function switchTab(t) {
     // تحديد الـ active لجميع التبويبات العادية
-    ['o','i','cu','comp','mn','b','e','s','f','p','h','l','t','msg'].forEach(id => {
+    ['o','i','cu','comp','mn','b','e','s','f','p','h','l','t','msg','msg-mine','msg-all'].forEach(id => {
         const btn = document.getElementById(`tab-${id}`);
         if (btn) btn.classList.toggle('active', t === id);
     });
@@ -353,7 +358,20 @@ function switchTab(t) {
     } else if (t === 'l') {
         if (typeof renderAuditLog === 'function') renderAuditLog();
         return;
-    } else if (t === 'msg') {
+    } else if (t === 'msg' || t === 'msg-mine' || t === 'msg-all') {
+        // إعداد التقسيم الفرعي + رسم الصفحة
+        if (typeof _setMsgPageView === 'function') {
+            _setMsgPageView(t === 'msg-all' ? 'all' : 'mine');
+        }
+        // تفعيل الـ active للأزرار الفرعية والمجموعة
+        document.getElementById('tab-msg-mine')?.classList.toggle('active', t !== 'msg-all');
+        document.getElementById('tab-msg-all')?.classList.toggle('active', t === 'msg-all');
+        const tabMsgParent = document.getElementById('tab-msg');
+        if (tabMsgParent) { tabMsgParent.classList.remove('active'); tabMsgParent.classList.add('group-active'); }
+        const grpMsg = document.getElementById('nav-group-msg');
+        if (grpMsg) grpMsg.classList.add('open');
+        // رسم الصفحة (PAGES['msg'] يتضمن الحاوية)
+        document.getElementById('page-container').innerHTML = PAGES['msg'] || '';
         if (typeof renderMessagesPage === 'function') renderMessagesPage();
         return;
     } else if (t === 't') {

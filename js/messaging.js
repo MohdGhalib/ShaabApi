@@ -312,11 +312,8 @@ function renderMessagesPage() {
     // افتراضيًا للمدير: "جميع المراسلات"؛ للموظف: "مراسلاتي" فقط
     if (!isMgr) _msgPageView = 'mine';
 
-    const tabsHtml = isMgr ? `
-        <div style="display:flex;gap:6px;margin-bottom:14px;">
-            <button onclick="_setMsgPageView('all')" style="padding:8px 18px;border-radius:10px;border:1px solid var(--border);background:${_msgPageView==='all'?'rgba(46,125,50,0.18)':'var(--bg-input)'};color:${_msgPageView==='all'?'#a5d6a7':'var(--text-dim)'};font-family:'Cairo';font-weight:700;cursor:pointer;font-size:13px;">📋 جميع المراسلات</button>
-            <button onclick="_setMsgPageView('mine')" style="padding:8px 18px;border-radius:10px;border:1px solid var(--border);background:${_msgPageView==='mine'?'rgba(46,125,50,0.18)':'var(--bg-input)'};color:${_msgPageView==='mine'?'#a5d6a7':'var(--text-dim)'};font-family:'Cairo';font-weight:700;cursor:pointer;font-size:13px;">💬 مراسلاتي</button>
-        </div>` : '';
+    // التبويبات الفرعية تظهر في الشريط الجانبي الآن — لا حاجة لتكرارها هنا
+    const tabsHtml = '';
 
     const myName = currentUser?.name;
     const all = (db.messages || []).filter(m => !m.deleted);
@@ -355,17 +352,22 @@ function renderMessagesPage() {
         }).join('');
     }
 
+    const sectionTitle = (isMgr && _msgPageView === 'all') ? '📋 جميع المراسلات' : '💬 مراسلاتي';
     root.innerHTML = `
         <div class="card">
-            ${tabsHtml}
-            <div style="margin-bottom:12px;display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px;">
+            <div style="margin-bottom:14px;display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px;">
+                <h3 style="margin:0;color:var(--text-main);">${sectionTitle}</h3>
                 <small style="color:var(--text-dim);">${list.length} رسالة</small>
             </div>
             ${body}
         </div>`;
 }
 
-function _setMsgPageView(v) { _msgPageView = v; renderMessagesPage(); }
+function _setMsgPageView(v) {
+    _msgPageView = v;
+    // ارسم فقط إذا الحاوية موجودة (تجنّب الرسم قبل تحميل PAGES['msg'])
+    if (document.getElementById('messagesPageContainer')) renderMessagesPage();
+}
 
 function _showNewMessageToast(m) {
     if (typeof _ensureNotifStack !== 'function') return;

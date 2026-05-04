@@ -295,11 +295,16 @@ function setProfileUI() {
 
     // الرسائل — لمدير الكول سنتر وموظفي الكول سنتر
     const isCCEmp = currentUser?.role === 'cc_employee';
+    const grpMsg  = document.getElementById('nav-group-msg');
     if (isAdmin || isCCManager || isCCEmp) {
-        document.getElementById('tab-msg')?.classList.remove('hidden');
+        grpMsg?.classList.remove('hidden');
     } else {
-        document.getElementById('tab-msg')?.classList.add('hidden');
+        grpMsg?.classList.add('hidden');
     }
+    // "جميع المراسلات" — للمدير ومدير الكول سنتر فقط
+    const tabAll = document.getElementById('tab-msg-all');
+    if (isAdmin || isCCManager) tabAll?.classList.remove('hidden');
+    else tabAll?.classList.add('hidden');
 
     // سلة المحذوفات — للمدير ومدير الكول سنتر فقط
     if (isAdmin || isCCManager) {
