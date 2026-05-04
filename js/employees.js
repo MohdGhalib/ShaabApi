@@ -320,9 +320,19 @@ function renderEmployees() {
         eTitleEl.innerHTML = `<option value="">اختر المسمى الوظيفي</option>
             <option value="موظف سيطرة">موظف سيطرة</option>`;
     }
-    const list = _visibleEmployees();
+    // إظهار شريط البحث لمدير الكول سنتر فقط + تطبيق الفلاتر
+    const _isCCMgrE = currentUser?.role === 'cc_manager';
+    const _empBar = document.getElementById('empSearchBar');
+    if (_empBar) _empBar.style.display = _isCCMgrE ? '' : 'none';
+    const _fTitle  = _isCCMgrE ? (document.getElementById('empSearchTitle')?.value  || '') : '';
+    const _fStatus = _isCCMgrE ? (document.getElementById('empSearchStatus')?.value || '') : '';
+    const _isOnlineFn = (emp) => (sessions || []).some(s => s.empId === emp.empId &&
+        (typeof _isSessionAlive === 'function' ? _isSessionAlive(s) : !s.logoutIso));
+    let list = _visibleEmployees();
+    if (_fTitle)  list = list.filter(e => e.title === _fTitle);
+    if (_fStatus) list = list.filter(e => _fStatus === 'online' ? _isOnlineFn(e) : !_isOnlineFn(e));
     if (!list.length) {
-        tbody.innerHTML=`<tr><td colspan="5" style="color:var(--text-dim);padding:30px;">لا يوجد موظفون مسجلون بعد</td></tr>`;
+        tbody.innerHTML=`<tr><td colspan="5" style="color:var(--text-dim);padding:30px;">لا توجد نتائج مطابقة</td></tr>`;
         return;
     }
     tbody.innerHTML = list.map((e,i) => {

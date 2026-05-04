@@ -426,6 +426,31 @@ e: `
 </div>
 <div class="card">
     <h3 style="margin-bottom:20px;">قائمة الموظفين المسجلين</h3>
+    <div id="empSearchBar" class="search-bar" style="display:none;margin-bottom:18px;">
+        <div style="grid-column:1/-1;" class="search-section-title">🔍 خيارات البحث</div>
+        <div><label>المسمى الوظيفي</label>
+            <select id="empSearchTitle" onchange="renderEmployees()">
+                <option value="">الكل</option>
+                <option value="مدير الكول سنتر">مدير الكول سنتر</option>
+                <option value="موظف كول سنتر">موظف كول سنتر</option>
+                <option value="موظف ميديا">موظف ميديا</option>
+                <option value="قسم السيطرة">قسم السيطرة</option>
+                <option value="مدير قسم السيطرة">مدير قسم السيطرة</option>
+                <option value="موظف سيطرة">موظف سيطرة</option>
+                <option value="موظف فرع">موظف فرع</option>
+                <option value="مدير فرع">مدير فرع</option>
+                <option value="مدير منطقة">مدير منطقة</option>
+            </select>
+        </div>
+        <div><label>حالة الحساب</label>
+            <select id="empSearchStatus" onchange="renderEmployees()">
+                <option value="">الكل</option>
+                <option value="online">🟢 داخل النظام</option>
+                <option value="offline">⚫ خارج النظام</option>
+            </select>
+        </div>
+        <button class="btn" style="background:var(--bg-input);color:var(--text-dim);align-self:end;" onclick="document.getElementById('empSearchTitle').value='';document.getElementById('empSearchStatus').value='';renderEmployees();">تفريغ</button>
+    </div>
     <table id="tableE">
         <thead><tr>
             <th style="width:5%">#</th>
