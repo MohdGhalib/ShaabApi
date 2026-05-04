@@ -902,6 +902,10 @@ function renderAll() {
     _renderTableC(get, isAdmin);
     renderControlOpen();
     if (typeof renderCompensations === 'function') renderCompensations();
+    // تحديث جدول التدقيق إن كان مفتوحًا (دون إعادة بناء الفلاتر)
+    if (typeof _renderAuditTable === 'function' && document.getElementById('auditTableContainer')) {
+        _renderAuditTable();
+    }
     if (typeof _updateBadges === 'function') _updateBadges();
     if (typeof _checkNotifications === 'function') _checkNotifications();
 }
