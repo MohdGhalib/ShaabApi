@@ -173,9 +173,19 @@ function _abScheduleSnapshot(reason) {
 
 /* ── helpers for UI ── */
 function _abFormatBytes(n) {
-    if (n < 1024) return n + ' B';
-    if (n < 1024*1024) return (n/1024).toFixed(1) + ' KB';
-    return (n/1024/1024).toFixed(2) + ' MB';
+    if (n == null) return '—';
+    if (n < 1024)        return n.toLocaleString('en-US') + ' B';
+    if (n < 1024*1024)   return n.toLocaleString('en-US') + ' B (' + (n/1024).toFixed(2) + ' KB)';
+    return (n/1024/1024).toFixed(3) + ' MB (' + n.toLocaleString('en-US') + ' B)';
+}
+
+function _abFormatDelta(d) {
+    if (d == null || d === 0) return '<span style="color:var(--text-dim);">±0 B</span>';
+    const sign = d > 0 ? '+' : '−';
+    const abs  = Math.abs(d);
+    const txt  = sign + abs.toLocaleString('en-US') + ' B';
+    const col  = d > 0 ? '#81c784' : '#ef9a9a';
+    return '<span style="color:' + col + ';font-weight:700;">' + txt + '</span>';
 }
 
 function _abFormatTs(ts) {
@@ -490,14 +500,16 @@ function showAutoBackupsModal() {
         rowsHtml = '<div style="text-align:center;color:var(--text-dim);padding:30px;">لا توجد نسخ احتياطية بعد</div>';
     } else {
         for (let i = arr.length - 1; i >= 0; i--) {
-            const s = arr[i];
-            const d = _abDigest(s);
+            const s        = arr[i];
+            const d        = _abDigest(s);
+            const prevSize = i > 0 ? (arr[i-1].size || 0) : null;
+            const delta    = prevSize != null ? (s.size||0) - prevSize : null;
             rowsHtml += `
                 <div style="display:flex;align-items:center;gap:12px;padding:11px 12px;border:1px solid var(--border);border-radius:12px;background:var(--bg-input);margin-bottom:8px;">
                     <div style="flex:1;min-width:0;">
                         <div style="font-weight:700;color:var(--text-main);font-size:13px;">${_abFormatTs(s.ts)}</div>
                         <div style="font-size:11px;color:var(--text-dim);margin-top:3px;">
-                            بواسطة: ${s.user || '—'} · سبب: ${s.reason || 'auto'} · حجم: ${_abFormatBytes(s.size||0)}
+                            بواسطة: ${s.user || '—'} · سبب: ${s.reason || 'auto'} · حجم: ${_abFormatBytes(s.size||0)}${delta != null ? ' · فرق: ' + _abFormatDelta(delta) : ''}
                         </div>
                         <div style="font-size:11px;color:#81d4fa;margin-top:2px;">
                             منتسيات: ${d.montasiat} · استفسارات: ${d.inquiries} · شكاوى: ${d.complaints} · موظفون: ${d.employees}
