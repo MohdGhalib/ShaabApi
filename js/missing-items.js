@@ -328,7 +328,19 @@ function confirmAddMontasia() {
 
     db.montasiat.unshift(rec);
     if (typeof _skipMontasiaNotif !== 'undefined') _skipMontasiaNotif = true;
-    if (typeof _logAudit === 'function') _logAudit('addMontasia', rec.branch || '—', `${rec.type} — ${(rec.notes||'').substring(0,40)}`);
+    if (typeof _logAudit === 'function') {
+        let _auditDetail = '';
+        if (rec.type === 'اصناف محمص الشعب' && rec.roastItemName) {
+            _auditDetail = (rec.roastSubType ? '['+rec.roastSubType+'] ' : '') + rec.roastItemName;
+        } else if (rec.type === 'نقدي' && rec.missingValue) {
+            _auditDetail = rec.missingValue + (rec.notes ? ' — ' + rec.notes : '');
+        } else if (rec.type === 'متعدد الأصناف' && Array.isArray(rec.items)) {
+            _auditDetail = rec.items.length + ' صنف' + (rec.notes ? ' — ' + rec.notes : '');
+        } else {
+            _auditDetail = rec.notes || '';
+        }
+        _logAudit('addMontasia', rec.branch || '—', `${rec.type} — ${(_auditDetail||'').substring(0,80)}`);
+    }
     save();
     document.getElementById("mNotes").value = "";
     document.getElementById("mType").value = "";
