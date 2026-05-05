@@ -8,7 +8,7 @@
 
 const _AB_STORE_KEY      = 'Shaab_AutoBackups';
 const _AB_AUTO_KEY       = 'Shaab_AutoBackup_Auto';   // '1' = on, '0'/null = off
-const _AB_MAX_SNAPSHOTS  = 30;
+const _AB_MAX_SNAPSHOTS  = 100;
 const _AB_DEBOUNCE_MS    = 1500;
 const _AB_AUTOSYNC_MS    = 60_000;                    // كل دقيقة
 const _AB_FS_DB_NAME     = 'Shaab_AutoBackup_FS';     // IndexedDB لتخزين folder handle
@@ -101,8 +101,11 @@ function _abTakeSnapshot(reason) {
             const last       = arr[arr.length - 1];
             const sameMaster = last.data && last.data['Shaab_Master_DB']    === snap.data['Shaab_Master_DB'];
             const sameEmp    = last.data && last.data['Shaab_Employees_DB'] === snap.data['Shaab_Employees_DB'];
-            // للنسخ التلقائية فقط نتخطى عند التطابق؛ النسخ اليدوية والمزامنة تُحفظ دائماً
-            const isAuto     = !reason || reason === 'auto' || reason.startsWith('save:') || reason === 'startup';
+            // أي نسخة تلقائية (timer/SSE/polling/save) تُتخطّى عند التطابق
+            // فقط النسخ اليدوية الصريحة (manual / manual-sync / pre-restore / unload) تُحفَظ دائماً
+            const isAuto = !reason || reason === 'auto' || reason.startsWith('save:') ||
+                           reason === 'startup'  || reason === 'autosync' ||
+                           reason === 'sync'     || reason === 'remote-load';
             if (isAuto && sameMaster && sameEmp) return null;
         }
         arr.push(snap);
@@ -142,6 +145,30 @@ function _abScheduleSnapshot(reason) {
     setTimeout(() => _abTakeSnapshot('startup'), 4000);
 
     window.addEventListener('beforeunload', () => { try { _abTakeSnapshot('unload'); } catch {} });
+})();
+
+/* ── hook into loadAllData (يلتقط التغييرات الواردة من السيرفر فوراً) ─────
+   loadAllData يُنفَّذ عند: SSE reload event، polling tick، تسجيل الدخول.
+   إذا اختلفت البيانات عن آخر snapshot، يُكتَب snapshot جديد (dedupe يعتني بالباقي).
+   ──────────────────────────────────────────────────────────────────────── */
+(function _abInstallLoadHook() {
+    let installed = false;
+    const tryInstall = () => {
+        if (installed) return;
+        if (typeof window.loadAllData !== 'function') return;
+        const orig = window.loadAllData;
+        window.loadAllData = async function() {
+            const r = await orig.apply(this, arguments);
+            try { _abScheduleSnapshot('remote-load'); } catch {}
+            return r;
+        };
+        installed = true;
+    };
+    if (typeof window.loadAllData === 'function') tryInstall();
+    else {
+        const t = setInterval(() => { tryInstall(); if (installed) clearInterval(t); }, 500);
+        setTimeout(() => clearInterval(t), 30000);
+    }
 })();
 
 /* ── helpers for UI ── */
@@ -528,9 +555,10 @@ function showAutoBackupsModal() {
 
             <!-- قائمة النسخ -->
             <div style="padding:14px 22px;overflow-y:auto;flex:1;">
-                <div style="font-size:11px;color:var(--text-dim);margin-bottom:10px;">
+                <div style="font-size:11px;color:var(--text-dim);margin-bottom:10px;line-height:1.7;">
                     عدد النسخ: <b style="color:var(--text-main);">${arr.length}</b> / ${_AB_MAX_SNAPSHOTS} (الأحدث في الأعلى)
-                    · تشمل كل البيانات: المنتسيات، الاستفسارات، الشكاوى، <b>جميع الحسابات</b>، الجلسات، فترات الراحة، قائمة الأسعار
+                    · تشمل كل البيانات: المنتسيات، الاستفسارات، الشكاوى، <b>جميع الحسابات</b>، الجلسات، فترات الراحة، قائمة الأسعار<br>
+                    <span style="color:#81d4fa;">⚡ النسخ تُلتقَط تلقائياً <b>فقط عند تغيير فعلي</b> (حفظ محلي أو تحديث وارد من جهاز آخر) — لا تتراكم نسخ مكرّرة.</span>
                 </div>
                 ${rowsHtml}
             </div>
