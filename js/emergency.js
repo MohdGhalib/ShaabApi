@@ -272,7 +272,7 @@ function showEmergencySentModal() {
 }
 
 /* ══════════════════════════════════════════════════════
-   ربط على loadAllData للتحقّق من تنبيهات معلَّقة
+   ربط على loadAllData + شبكة أمان دورية
    ══════════════════════════════════════════════════════ */
 (function _emInstallLoadHook() {
     let installed = false;
@@ -292,7 +292,26 @@ function showEmergencySentModal() {
         const t = setInterval(() => { tryInstall(); if (installed) clearInterval(t); }, 500);
         setTimeout(() => clearInterval(t), 30000);
     }
+
+    // شبكة أمان: فحص بعد 6 ثوانٍ من تحميل الصفحة (يلتقط ما فات الـ hook)
+    setTimeout(() => { try { _emCheckPending(); } catch {} }, 6000);
+
+    // فحص دوري كل 30 ثانية كاحتياط إن فشل SSE/polling لأي سبب
+    setInterval(() => { try { _emCheckPending(); } catch {} }, 30000);
 })();
+
+/* ══════════════════════════════════════════════════════
+   أدوات تشخيص قابلة للاستدعاء من الكونسول
+   ══════════════════════════════════════════════════════ */
+window._emDiag = function() {
+    console.log('=== EMERGENCY DIAGNOSTIC ===');
+    console.log('currentUser:', typeof currentUser !== 'undefined' ? currentUser : 'UNDEFINED');
+    console.log('db.emergencyMessages:', typeof db !== 'undefined' && db ? db.emergencyMessages : 'NO DB');
+    console.log('loadAllData wrapped:', typeof window.loadAllData === 'function');
+    console.log('Now running _emCheckPending()...');
+    try { _emCheckPending(); } catch (e) { console.error('check failed:', e); }
+    console.log('=== END DIAG ===');
+};
 
 /* ══════════════════════════════════════════════════════
    حقن الزر العائم 🚨 (cc_manager + admin فقط)
