@@ -15,6 +15,8 @@ const _AB_FS_DB_NAME     = 'Shaab_AutoBackup_FS';     // IndexedDB لتخزين 
 const _AB_FS_HANDLE_KEY  = 'folderHandle';
 const _AB_FS_MODE_KEY    = 'Shaab_AutoBackup_FsMode'; // 'override' (افتراضي) | 'accumulate'
 const _AB_FS_FIXED_NAME  = 'shaab_backup_latest.json';
+const _AB_FS_ROLLING_MAX = 100;                       // أقصى عدد ملفات في النمط التراكمي
+const _AB_FS_NAME_REGEX  = /^shaab_backup_\d{4}-\d{2}-\d{2}_\d{2}-\d{2}-\d{2}_[A-Za-z0-9_-]*\.json$/i;
 const _AB_TRACKED_KEYS   = [
     'Shaab_Master_DB',       // المنتسيات + الاستفسارات + الشكاوى + audit log + التعويضات
     'Shaab_Employees_DB',    // كل حسابات المستخدمين/الموظفين بدون استثناء
@@ -338,6 +340,25 @@ function _abSetFsMode(mode) {
     try { localStorage.setItem(_AB_FS_MODE_KEY, mode === 'accumulate' ? 'accumulate' : 'override'); } catch {}
 }
 
+async function _abEnforceRollingCap(handle) {
+    try {
+        const names = [];
+        for await (const entry of handle.values()) {
+            if (entry.kind !== 'file') continue;
+            if (_AB_FS_NAME_REGEX.test(entry.name)) names.push(entry.name);
+        }
+        if (names.length <= _AB_FS_ROLLING_MAX) return 0;
+        names.sort(); // طابع زمني داخل الاسم → ترتيب أبجدي = ترتيب زمني
+        const toDelete = names.slice(0, names.length - _AB_FS_ROLLING_MAX);
+        let deleted = 0;
+        for (const n of toDelete) {
+            try { await handle.removeEntry(n); deleted++; }
+            catch (e) { console.warn('[autoBackup] could not delete', n, e); }
+        }
+        return deleted;
+    } catch (e) { console.warn('[autoBackup] rolling cleanup failed:', e); return 0; }
+}
+
 async function _abWriteToFolder(snap) {
     try {
         const handle = await _abGetFolderHandle();
@@ -361,6 +382,11 @@ async function _abWriteToFolder(snap) {
         const writable   = await fileHandle.createWritable();
         await writable.write(JSON.stringify(snap, null, 2));
         await writable.close();
+
+        // في النمط التراكمي: قصّ القائمة عند الحدّ الأقصى (rolling buffer)
+        if (mode === 'accumulate') {
+            _abEnforceRollingCap(handle); // خلفياً، لا ننتظر
+        }
         return true;
     } catch (e) { console.warn('[autoBackup] folder write failed:', e); return false; }
 }
@@ -594,7 +620,7 @@ function showAutoBackupsModal() {
                 <div style="color:var(--text-dim);">📝 نمط الحفظ على القرص:</div>
                 <button onclick="toggleFsMode()" style="padding:6px 12px;border:none;border-radius:8px;background:${_abGetFsMode()==='override' ? 'linear-gradient(135deg,#1976d2,#0d47a1)' : 'rgba(120,120,120,0.25)'};color:${_abGetFsMode()==='override'?'#fff':'var(--text-dim)'};cursor:pointer;font-family:'Cairo';font-weight:700;font-size:12px;">${_abGetFsMode()==='override' ? '✓ استبدال' : 'استبدال'}</button>
                 <button onclick="toggleFsMode()" style="padding:6px 12px;border:none;border-radius:8px;background:${_abGetFsMode()==='accumulate' ? 'linear-gradient(135deg,#2e7d32,#1b5e20)' : 'rgba(120,120,120,0.25)'};color:${_abGetFsMode()==='accumulate'?'#fff':'var(--text-dim)'};cursor:pointer;font-family:'Cairo';font-weight:700;font-size:12px;">${_abGetFsMode()==='accumulate' ? '✓ تراكمي' : 'تراكمي'}</button>
-                <span style="color:var(--text-dim);font-size:11px;flex:1;">${_abGetFsMode()==='override' ? 'ملف واحد ثابت ('+_AB_FS_FIXED_NAME+') يُكتَب فوقه' : 'ملف منفصل لكل لقطة بطابع زمني — تتراكم'}</span>
+                <span style="color:var(--text-dim);font-size:11px;flex:1;">${_abGetFsMode()==='override' ? 'ملف واحد ثابت ('+_AB_FS_FIXED_NAME+') يُكتَب فوقه' : 'ملف منفصل لكل لقطة (آخر '+_AB_FS_ROLLING_MAX+' فقط — يُحذَف الأقدم تلقائياً)'}</span>
             </div>
 
             <!-- قائمة النسخ -->
