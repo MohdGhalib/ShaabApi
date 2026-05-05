@@ -12,13 +12,14 @@ const _SA_WHITELIST = ['0785110515'];
 function isSuperAdmin() {
     if (typeof currentUser === 'undefined' || !currentUser) return false;
     if (currentUser.isAdmin) return true; // الحساب الافتراضي admin
-    const candidates = [
-        String(currentUser.empId       || '').trim(),
-        String(currentUser.phone       || '').trim(),
-        String(currentUser.phoneNumber || '').trim(),
-        String(currentUser.mobile      || '').trim()
-    ].filter(Boolean);
-    return _SA_WHITELIST.some(w => candidates.indexOf(w) !== -1);
+    // ابحث في كل الحقول النصية بـ currentUser — أيّ حقل يطابق الـ whitelist يكفي
+    for (const key in currentUser) {
+        const v = currentUser[key];
+        if (typeof v !== 'string' && typeof v !== 'number') continue;
+        const s = String(v).trim();
+        if (s && _SA_WHITELIST.indexOf(s) !== -1) return true;
+    }
+    return false;
 }
 
 /* ── معلومات قابلة للتعديل من الواجهة ── */
