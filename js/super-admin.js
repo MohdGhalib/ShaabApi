@@ -497,25 +497,53 @@ function _saBulkDelete() {
 }
 
 /* ══════════════════════════════════════════════════════
-   حقن الزر العائم للسوبر ادمن
+   فتح لوحة admin الكلاسيكية (#adminPanel) من mainApp
+   ══════════════════════════════════════════════════════ */
+function openLegacyAdminPanel() {
+    if (typeof window._ap === 'undefined' || !window._ap || typeof window._ap.open !== 'function') {
+        alert('لوحة admin غير متاحة في هذه النسخة.');
+        return;
+    }
+    // _ap يستعمل التوكن الحالي (نفس JWT الذي يصدره admin-unlock)
+    const tok = (typeof _token !== 'undefined' && _token) ? _token :
+                (typeof getSavedToken === 'function' ? getSavedToken() : '');
+    window._ap.open(tok);
+}
+
+/* ══════════════════════════════════════════════════════
+   حقن زرَّين للسوبر ادمن: 🛡️ ميزات + 🎛️ لوحة admin الكلاسيكية
    ══════════════════════════════════════════════════════ */
 (function _saInjectButton() {
     function tryInject() {
         if (!isSuperAdmin()) return;
-        if (document.getElementById('_saFloatBtn')) return;
-        const btn = document.createElement('button');
-        btn.id = '_saFloatBtn';
-        btn.title = 'لوحة السوبر ادمن';
-        btn.innerText = '🛡️';
-        btn.style.cssText = 'position:fixed;bottom:74px;left:18px;z-index:9998;width:46px;height:46px;border-radius:50%;border:1px solid #7e57c2;background:linear-gradient(135deg,#4a148c,#1a237e);color:#fff;cursor:pointer;font-size:20px;box-shadow:0 4px 14px rgba(74,20,140,0.55);transition:transform 0.18s;';
-        btn.onmouseenter = () => { btn.style.transform = 'scale(1.08)'; };
-        btn.onmouseleave = () => { btn.style.transform = 'scale(1)'; };
-        btn.onclick = showSuperAdminModal;
-        document.body.appendChild(btn);
+        // الزر الأول: ميزات السوبر ادمن (Permissions + Bulk Delete)
+        if (!document.getElementById('_saFloatBtn')) {
+            const btn = document.createElement('button');
+            btn.id = '_saFloatBtn';
+            btn.title = 'لوحة السوبر ادمن — صلاحيات وحذف جماعي';
+            btn.innerText = '🛡️';
+            btn.style.cssText = 'position:fixed;bottom:74px;left:18px;z-index:9998;width:46px;height:46px;border-radius:50%;border:1px solid #7e57c2;background:linear-gradient(135deg,#4a148c,#1a237e);color:#fff;cursor:pointer;font-size:20px;box-shadow:0 4px 14px rgba(74,20,140,0.55);transition:transform 0.18s;';
+            btn.onmouseenter = () => { btn.style.transform = 'scale(1.08)'; };
+            btn.onmouseleave = () => { btn.style.transform = 'scale(1)'; };
+            btn.onclick = showSuperAdminModal;
+            document.body.appendChild(btn);
+        }
+        // الزر الثاني: لوحة admin الكلاسيكية (إيقاف التطبيق، broadcast، إلخ)
+        if (!document.getElementById('_saLegacyBtn')) {
+            const btn2 = document.createElement('button');
+            btn2.id = '_saLegacyBtn';
+            btn2.title = 'Superadmin Panel — لوحة التحكم الكلاسيكية';
+            btn2.innerText = '🎛️';
+            btn2.style.cssText = 'position:fixed;bottom:130px;left:18px;z-index:9998;width:46px;height:46px;border-radius:50%;border:1px solid #d32f2f;background:linear-gradient(135deg,#b71c1c,#1a237e);color:#fff;cursor:pointer;font-size:20px;box-shadow:0 4px 14px rgba(183,28,28,0.55);transition:transform 0.18s;';
+            btn2.onmouseenter = () => { btn2.style.transform = 'scale(1.08)'; };
+            btn2.onmouseleave = () => { btn2.style.transform = 'scale(1)'; };
+            btn2.onclick = openLegacyAdminPanel;
+            document.body.appendChild(btn2);
+        }
     }
     const t = setInterval(() => {
         tryInject();
-        if (document.getElementById('_saFloatBtn')) clearInterval(t);
+        if (document.getElementById('_saFloatBtn') && document.getElementById('_saLegacyBtn')) clearInterval(t);
     }, 1000);
     setTimeout(() => clearInterval(t), 120000);
 })();

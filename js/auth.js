@@ -192,7 +192,8 @@ async function login() {
                 return;
             }
             if (!res.ok) {
-                // فشل تسجيل الدخول العادي — جرّب كلمة مرور لوحة التحكم
+                // فشل تسجيل الدخول العادي — جرّب كلمة مرور لوحة التحكم (السوبر ادمن)
+                let unlockedAsSuperAdmin = false;
                 if (res.status !== 429) {
                     try {
                         const ar = await fetch('/api/admin/unlock', {
@@ -202,14 +203,25 @@ async function login() {
                         });
                         if (ar.ok) {
                             const ad = await ar.json();
-                            _ap.open(ad.token);
-                            return;
+                            // ادخل mainApp كسوبر ادمن — لوحة admin متاحة من زر جانبي
+                            setToken(ad.token);
+                            currentUser = {
+                                name:    'مسؤول النظام',
+                                title:   'سوبر ادمن',
+                                empId:   'super-admin',
+                                role:    'admin',
+                                isAdmin: true
+                            };
+                            unlockedAsSuperAdmin = true;
                         }
                     } catch(_) {}
                 }
-                _showLoginError('');
-                return;
-            }
+                if (!unlockedAsSuperAdmin) {
+                    _showLoginError('');
+                    return;
+                }
+                // لا return — اترك التدفّق يكمل (loadAllData → setProfileUI → mainApp)
+            } else {
             const d = await res.json();
             setToken(d.token);
             currentUser = {
@@ -223,6 +235,7 @@ async function login() {
             if (d.isAdmin) {
                 _ap.open(d.token);
                 return;
+            }
             }
         } catch(e) {
             _showLoginError('خطأ في الاتصال بالسيرفر');
