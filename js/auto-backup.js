@@ -13,6 +13,8 @@ const _AB_DEBOUNCE_MS    = 1500;
 const _AB_AUTOSYNC_MS    = 60_000;                    // كل دقيقة
 const _AB_FS_DB_NAME     = 'Shaab_AutoBackup_FS';     // IndexedDB لتخزين folder handle
 const _AB_FS_HANDLE_KEY  = 'folderHandle';
+const _AB_FS_MODE_KEY    = 'Shaab_AutoBackup_FsMode'; // 'override' (افتراضي) | 'accumulate'
+const _AB_FS_FIXED_NAME  = 'shaab_backup_latest.json';
 const _AB_TRACKED_KEYS   = [
     'Shaab_Master_DB',       // المنتسيات + الاستفسارات + الشكاوى + audit log + التعويضات
     'Shaab_Employees_DB',    // كل حسابات المستخدمين/الموظفين بدون استثناء
@@ -328,23 +330,45 @@ async function reauthorizeBackupFolder() {
     if (typeof showAutoBackupsModal === 'function') showAutoBackupsModal();
 }
 
+function _abGetFsMode() {
+    try { return localStorage.getItem(_AB_FS_MODE_KEY) || 'override'; }
+    catch { return 'override'; }
+}
+function _abSetFsMode(mode) {
+    try { localStorage.setItem(_AB_FS_MODE_KEY, mode === 'accumulate' ? 'accumulate' : 'override'); } catch {}
+}
+
 async function _abWriteToFolder(snap) {
     try {
         const handle = await _abGetFolderHandle();
         if (!handle) return false;
         const perm = await _abQueryPerm(handle);
         if (perm !== 'granted') return false; // لا نطلب إذناً خارج user-gesture
-        const ts = new Date(snap.ts);
-        const pad = (n) => String(n).padStart(2, '0');
-        const safeReason = String(snap.reason || 'auto').replace(/[^a-zA-Z0-9_-]/g, '');
-        const fname = `shaab_backup_${ts.getFullYear()}-${pad(ts.getMonth()+1)}-${pad(ts.getDate())}_` +
-                      `${pad(ts.getHours())}-${pad(ts.getMinutes())}-${pad(ts.getSeconds())}_${safeReason}.json`;
+
+        const mode = _abGetFsMode();
+        let fname;
+        if (mode === 'accumulate') {
+            const ts = new Date(snap.ts);
+            const pad = (n) => String(n).padStart(2, '0');
+            const safeReason = String(snap.reason || 'auto').replace(/[^a-zA-Z0-9_-]/g, '');
+            fname = `shaab_backup_${ts.getFullYear()}-${pad(ts.getMonth()+1)}-${pad(ts.getDate())}_` +
+                    `${pad(ts.getHours())}-${pad(ts.getMinutes())}-${pad(ts.getSeconds())}_${safeReason}.json`;
+        } else {
+            // override: ملف واحد ثابت يُكتب فوقه في كل مرة
+            fname = _AB_FS_FIXED_NAME;
+        }
         const fileHandle = await handle.getFileHandle(fname, { create: true });
         const writable   = await fileHandle.createWritable();
         await writable.write(JSON.stringify(snap, null, 2));
         await writable.close();
         return true;
     } catch (e) { console.warn('[autoBackup] folder write failed:', e); return false; }
+}
+
+function toggleFsMode() {
+    const cur = _abGetFsMode();
+    _abSetFsMode(cur === 'override' ? 'accumulate' : 'override');
+    if (typeof showAutoBackupsModal === 'function') showAutoBackupsModal();
 }
 
 /* ── Manual snapshot ── */
@@ -563,6 +587,14 @@ function showAutoBackupsModal() {
                 <button onclick="pickBackupFolder()" style="padding:7px 12px;border:none;border-radius:8px;background:linear-gradient(135deg,#6a1b9a,#4a148c);color:#fff;cursor:pointer;font-family:'Cairo';font-weight:700;font-size:12px;">🗂️ اختيار / تغيير</button>
                 <button onclick="reauthorizeBackupFolder()" style="padding:7px 12px;border:none;border-radius:8px;background:var(--bg-input);color:var(--text-main);border:1px solid var(--border);cursor:pointer;font-family:'Cairo';font-weight:700;font-size:12px;">🔓 تجديد الإذن</button>
                 <button onclick="clearBackupFolder()" style="padding:7px 12px;border:none;border-radius:8px;background:rgba(211,47,47,0.18);color:#ef9a9a;cursor:pointer;font-family:'Cairo';font-weight:700;font-size:12px;">إلغاء الربط</button>
+            </div>
+
+            <!-- شريط نمط الكتابة -->
+            <div style="padding:10px 22px;border-bottom:1px solid var(--border);display:flex;gap:10px;align-items:center;flex-wrap:wrap;font-size:12px;">
+                <div style="color:var(--text-dim);">📝 نمط الحفظ على القرص:</div>
+                <button onclick="toggleFsMode()" style="padding:6px 12px;border:none;border-radius:8px;background:${_abGetFsMode()==='override' ? 'linear-gradient(135deg,#1976d2,#0d47a1)' : 'rgba(120,120,120,0.25)'};color:${_abGetFsMode()==='override'?'#fff':'var(--text-dim)'};cursor:pointer;font-family:'Cairo';font-weight:700;font-size:12px;">${_abGetFsMode()==='override' ? '✓ استبدال' : 'استبدال'}</button>
+                <button onclick="toggleFsMode()" style="padding:6px 12px;border:none;border-radius:8px;background:${_abGetFsMode()==='accumulate' ? 'linear-gradient(135deg,#2e7d32,#1b5e20)' : 'rgba(120,120,120,0.25)'};color:${_abGetFsMode()==='accumulate'?'#fff':'var(--text-dim)'};cursor:pointer;font-family:'Cairo';font-weight:700;font-size:12px;">${_abGetFsMode()==='accumulate' ? '✓ تراكمي' : 'تراكمي'}</button>
+                <span style="color:var(--text-dim);font-size:11px;flex:1;">${_abGetFsMode()==='override' ? 'ملف واحد ثابت ('+_AB_FS_FIXED_NAME+') يُكتَب فوقه' : 'ملف منفصل لكل لقطة بطابع زمني — تتراكم'}</span>
             </div>
 
             <!-- قائمة النسخ -->
