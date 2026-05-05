@@ -95,7 +95,7 @@ function showEmergencyComposeModal() {
                 <label style="display:block;margin-bottom:6px;font-size:13px;color:var(--text-dim);">نص التنبيه:</label>
                 <textarea id="_emText" rows="4" placeholder="اكتب التنبيه المختصر هنا..." style="width:100%;padding:10px 12px;background:var(--bg-input);color:var(--text-main);border:1px solid var(--border);border-radius:10px;font-family:Cairo;resize:vertical;font-size:14px;"></textarea>
                 <div style="font-size:11px;color:#ffb74d;margin-top:8px;line-height:1.6;">
-                    ⚠️ سيُعرض كنافذة منبثقة <b>تمنع التفاعل مع الموقع</b> مع صوت تحذيري متكرّر، حتى يضغط الموظف "موافق".<br>
+                    ⚠️ سيُعرض كنافذة منبثقة <b>صامتة</b> تمنع التفاعل مع الموقع حتى يضغط الموظف "موافق".<br>
                     التنبيه <b>لا يُحفَظ</b> في رسائل الموظف.
                 </div>
                 <div style="display:flex;gap:8px;justify-content:flex-end;margin-top:14px;">
@@ -122,7 +122,7 @@ function _emSend() {
 
     const recipientLabel = toEmpId === '*' ? 'جميع الموظفين'
         : ((employees || []).find(e => String(e.empId) === String(toEmpId)) || {}).name || toEmpId;
-    if (!confirm('إرسال التنبيه إلى ' + recipientLabel + '؟\n\nسيُعرض فوراً كنافذة منبثقة مع صوت تحذيري.')) return;
+    if (!confirm('إرسال التنبيه إلى ' + recipientLabel + '؟\n\nسيُعرض فوراً كنافذة منبثقة صامتة.')) return;
 
     const msg = {
         id:        Date.now() + ':' + Math.random().toString(36).slice(2, 8),
@@ -206,14 +206,9 @@ function _emShowAlertModal(msg) {
                 <div style="display:flex;justify-content:center;margin-top:24px;">
                     <button onclick="acknowledgeEmergency('${_emEscape(msg.id)}')" style="padding:14px 44px;border:none;border-radius:12px;background:linear-gradient(135deg,#fff,#eeeeee);color:#b71c1c;cursor:pointer;font-family:Cairo;font-weight:800;font-size:17px;box-shadow:0 4px 20px rgba(0,0,0,0.4);">✓ موافق</button>
                 </div>
-                <div style="text-align:center;font-size:11px;color:#ff8a80;margin-top:14px;">سيستمر الصوت حتى تضغط "موافق"</div>
             </div>
         </div>`;
     document.body.appendChild(overlay);
-
-    _emPlayBeep();
-    if (_emSoundTimer) clearInterval(_emSoundTimer);
-    _emSoundTimer = setInterval(_emPlayBeep, _EM_AUDIO_LOOP_MS);
 }
 
 function acknowledgeEmergency(msgId) {
@@ -228,7 +223,6 @@ function acknowledgeEmergency(msgId) {
     }
     const o = document.getElementById('_emAlertOverlay');
     if (o) o.remove();
-    if (_emSoundTimer) { clearInterval(_emSoundTimer); _emSoundTimer = null; }
     _emShowingMsgId = null;
     setTimeout(_emCheckPending, 200); // تنبيه آخر إن وُجد
 }
