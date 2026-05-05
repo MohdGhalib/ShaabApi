@@ -10,7 +10,7 @@ const _AB_STORE_KEY      = 'Shaab_AutoBackups';
 const _AB_AUTO_KEY       = 'Shaab_AutoBackup_Auto';   // '1' = on, '0'/null = off
 const _AB_MAX_SNAPSHOTS  = 100;
 const _AB_DEBOUNCE_MS    = 1500;
-const _AB_AUTOSYNC_MS    = 60_000;                    // كل دقيقة
+const _AB_AUTOSYNC_MS    = 15 * 60_000;               // كل 15 دقيقة
 const _AB_FS_DB_NAME     = 'Shaab_AutoBackup_FS';     // IndexedDB لتخزين folder handle
 const _AB_FS_HANDLE_KEY  = 'folderHandle';
 const _AB_FS_MODE_KEY    = 'Shaab_AutoBackup_FsMode'; // 'override' (افتراضي) | 'accumulate'
@@ -96,10 +96,53 @@ function _abDigest(snap) {
     } catch { return { montasiat:0, inquiries:0, complaints:0, employees:0 }; }
 }
 
+/* حارس فقدان البيانات — يمنع كتابة snapshot فارغ فوق النسخ الجيدة
+   يُرجع سبب الفقدان (string) أو false إذا البيانات صحية. */
+function _abDetectDataLoss(snap, prevSnap) {
+    if (!prevSnap || !prevSnap.data || !snap || !snap.data) return false;
+    try {
+        const prevDb  = JSON.parse(prevSnap.data['Shaab_Master_DB']    || '{}');
+        const newDb   = JSON.parse(snap.data['Shaab_Master_DB']        || '{}');
+        const prevEmp = JSON.parse(prevSnap.data['Shaab_Employees_DB'] || '[]');
+        const newEmp  = JSON.parse(snap.data['Shaab_Employees_DB']     || '[]');
+
+        // 1. الموظفون اختفوا
+        if (Array.isArray(prevEmp) && prevEmp.length > 0 &&
+            (!Array.isArray(newEmp) || newEmp.length === 0))
+            return 'الموظفون فارغون (' + prevEmp.length + ' → 0)';
+
+        // 2. المنتسيات اختفت
+        const prevM = Array.isArray(prevDb.montasiat) ? prevDb.montasiat.length : 0;
+        const newM  = Array.isArray(newDb.montasiat)  ? newDb.montasiat.length  : 0;
+        if (prevM > 0 && newM === 0)
+            return 'المنتسيات فارغة (' + prevM + ' → 0)';
+
+        // 3. انخفاض حاد في الحجم > 50% (يلتقط أي اختفاء كبير لم تغطه القاعدتان أعلاه)
+        if (prevSnap.size > 2048 && snap.size < prevSnap.size * 0.5)
+            return 'انخفاض حاد في الحجم (' + prevSnap.size + ' → ' + snap.size + ')';
+
+        return false;
+    } catch { return false; }
+}
+
+let _abLastBlockedAt = 0; // طابع زمني لآخر منع — يظهر في الواجهة
+let _abLastBlockedReason = '';
+
 function _abTakeSnapshot(reason) {
     try {
         const arr  = _abReadAll();
         const snap = _abMakeSnapshot(reason);
+
+        // حارس فقدان البيانات — إن كانت اللقطة تبدو فارغة بعد بيانات جيدة، ارفض الحفظ
+        const last = arr.length > 0 ? arr[arr.length - 1] : null;
+        const lossReason = _abDetectDataLoss(snap, last);
+        if (lossReason) {
+            _abLastBlockedAt = Date.now();
+            _abLastBlockedReason = lossReason;
+            console.warn('[autoBackup] 🛑 BLOCKED snapshot — ' + lossReason);
+            return null;
+        }
+
         // dedupe — تخطٍّ النسخ المتطابقة لأهم مفتاحَين
         if (arr.length > 0) {
             const last       = arr[arr.length - 1];
@@ -578,7 +621,9 @@ function showAutoBackupsModal() {
         ? 'linear-gradient(135deg,#2e7d32,#1b5e20)'
         : 'rgba(120,120,120,0.25)';
     const toggleColor = autoOn ? '#fff' : 'var(--text-dim)';
-    const toggleLabel = autoOn ? '🟢 المزامنة التلقائية كل دقيقة: مفعّلة' : '⚪ المزامنة التلقائية كل دقيقة: متوقّفة';
+    const autoMin = Math.round(_AB_AUTOSYNC_MS / 60000);
+    const toggleLabel = autoOn ? '🟢 المزامنة التلقائية كل ' + autoMin + ' دقيقة: مفعّلة' : '⚪ المزامنة التلقائية كل ' + autoMin + ' دقيقة: متوقّفة';
+    const blockedNote = _abLastBlockedAt ? `<span style="color:#ef9a9a;">⚠ آخر منع: ${_abFormatTs(_abLastBlockedAt)} (${_abLastBlockedReason})</span>` : '';
 
     overlay.innerHTML = `
         <div style="background:var(--bg-card);color:var(--text-main);border:1px solid var(--border);border-radius:18px;width:680px;max-width:96vw;max-height:90vh;display:flex;flex-direction:column;box-shadow:0 20px 60px rgba(0,0,0,0.55);">
@@ -604,6 +649,7 @@ function showAutoBackupsModal() {
                 <div style="font-size:11px;color:var(--text-dim);">
                     آخر مزامنة: <span id="_abLastSyncLabel" style="color:var(--text-main);font-weight:700;">${_abFormatTs(_abLastSyncTs)}</span>
                 </div>
+                ${blockedNote ? '<div style="font-size:11px;flex-basis:100%;">' + blockedNote + '</div>' : ''}
             </div>
 
             <!-- شريط مجلد الحفظ على القرص -->
@@ -628,7 +674,8 @@ function showAutoBackupsModal() {
                 <div style="font-size:11px;color:var(--text-dim);margin-bottom:10px;line-height:1.7;">
                     عدد النسخ: <b style="color:var(--text-main);">${arr.length}</b> / ${_AB_MAX_SNAPSHOTS} (الأحدث في الأعلى)
                     · تشمل كل البيانات: المنتسيات، الاستفسارات، الشكاوى، <b>جميع الحسابات</b>، الجلسات، فترات الراحة، قائمة الأسعار<br>
-                    <span style="color:#81d4fa;">⚡ النسخ تُلتقَط تلقائياً <b>فقط عند تغيير فعلي</b> (حفظ محلي أو تحديث وارد من جهاز آخر) — لا تتراكم نسخ مكرّرة.</span>
+                    <span style="color:#81d4fa;">⚡ النسخ تُلتقَط تلقائياً <b>فقط عند تغيير فعلي</b> (حفظ محلي أو تحديث وارد من جهاز آخر) — لا تتراكم نسخ مكرّرة.</span><br>
+                    <span style="color:#ffb74d;">🛡️ <b>حارس فقدان البيانات</b>: لقطة تُظهر اختفاء الموظفين/المنتسيات أو انخفاض حاد في الحجم تُرفَض تلقائياً لحماية النسخ القديمة.</span>
                 </div>
                 ${rowsHtml}
             </div>
