@@ -10,15 +10,27 @@
 const _SA_WHITELIST = ['0785110515'];
 
 function isSuperAdmin() {
-    if (typeof currentUser === 'undefined' || !currentUser) return false;
-    if (currentUser.isAdmin) return true; // الحساب الافتراضي admin
-    // ابحث في كل الحقول النصية بـ currentUser — أيّ حقل يطابق الـ whitelist يكفي
+    if (typeof currentUser === 'undefined' || !currentUser) {
+        console.log('[SA] currentUser is null/undefined — هل أنت مسجّل دخول؟');
+        return false;
+    }
+    if (currentUser.isAdmin) {
+        console.log('[SA] ✓ isAdmin=true → super admin');
+        return true;
+    }
+    console.log('[SA] currentUser =', JSON.parse(JSON.stringify(currentUser)));
+    console.log('[SA] whitelist =', _SA_WHITELIST);
     for (const key in currentUser) {
         const v = currentUser[key];
         if (typeof v !== 'string' && typeof v !== 'number') continue;
         const s = String(v).trim();
-        if (s && _SA_WHITELIST.indexOf(s) !== -1) return true;
+        if (s && _SA_WHITELIST.indexOf(s) !== -1) {
+            console.log('[SA] ✓ match on field "' + key + '" = "' + s + '"');
+            return true;
+        }
     }
+    console.log('[SA] ✗ no field matched. القيم المفحوصة:',
+        Object.entries(currentUser).map(([k,v]) => k + '=' + (typeof v === 'object' ? '[obj]' : String(v))).join(', '));
     return false;
 }
 
