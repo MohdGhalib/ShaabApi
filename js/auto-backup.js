@@ -476,8 +476,9 @@ async function manualSyncAndBackup() {
 
 /* ── مزامنة تلقائية كل دقيقة ── */
 function isAutoBackupOn() {
-    try { return localStorage.getItem(_AB_AUTO_KEY) === '1'; }
-    catch { return false; }
+    // الافتراضي: مفعَّل (null/undefined → on). فقط '0' الصريح يوقفه.
+    try { return localStorage.getItem(_AB_AUTO_KEY) !== '0'; }
+    catch { return true; }
 }
 
 function startAutoBackup() {
