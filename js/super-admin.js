@@ -9,28 +9,26 @@
 // قائمة بيضاء — تُطابَق ضد empId/phone/phoneNumber/mobile للموظف
 const _SA_WHITELIST = ['0785110515'];
 
+let _saLoggedDecision = false;
 function isSuperAdmin() {
-    if (typeof currentUser === 'undefined' || !currentUser) {
-        console.log('[SA] currentUser is null/undefined — هل أنت مسجّل دخول؟');
-        return false;
-    }
+    if (typeof currentUser === 'undefined' || !currentUser) return false;
     if (currentUser.isAdmin) {
-        console.log('[SA] ✓ isAdmin=true → super admin');
+        if (!_saLoggedDecision) { console.log('[SA] ✓ isAdmin=true'); _saLoggedDecision = true; }
         return true;
     }
-    console.log('[SA] currentUser =', JSON.parse(JSON.stringify(currentUser)));
-    console.log('[SA] whitelist =', _SA_WHITELIST);
     for (const key in currentUser) {
         const v = currentUser[key];
         if (typeof v !== 'string' && typeof v !== 'number') continue;
         const s = String(v).trim();
         if (s && _SA_WHITELIST.indexOf(s) !== -1) {
-            console.log('[SA] ✓ match on field "' + key + '" = "' + s + '"');
+            if (!_saLoggedDecision) { console.log('[SA] ✓ match field=' + key); _saLoggedDecision = true; }
             return true;
         }
     }
-    console.log('[SA] ✗ no field matched. القيم المفحوصة:',
-        Object.entries(currentUser).map(([k,v]) => k + '=' + (typeof v === 'object' ? '[obj]' : String(v))).join(', '));
+    if (!_saLoggedDecision) {
+        console.log('[SA] ✗ not super admin. user=', JSON.parse(JSON.stringify(currentUser)), 'whitelist=', _SA_WHITELIST);
+        _saLoggedDecision = true;
+    }
     return false;
 }
 

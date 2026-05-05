@@ -170,8 +170,14 @@ function _emCheckPending() {
     });
     if (!pending) {
         if (list.length > 0) {
-            console.log('[emergency] no pending for me. messages in db:',
-                list.map(m => ({ id: m.id, to: m.toEmpId, from: m.fromEmpId, ackd: !!(m.acknowledgedBy && m.acknowledgedBy[myId]) })));
+            const summary = list.map(m => ({
+                id: m.id,
+                to: m.toEmpId,
+                from: m.fromEmpId,
+                ackd_by_me: !!(m.acknowledgedBy && m.acknowledgedBy[myId]),
+                ack_count:  Object.keys(m.acknowledgedBy || {}).length
+            }));
+            console.log('[emergency] no pending for me. messages JSON:', JSON.stringify(summary));
         }
         return;
     }
