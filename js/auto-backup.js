@@ -11,6 +11,8 @@ const _AB_AUTO_KEY       = 'Shaab_AutoBackup_Auto';   // '1' = on, '0'/null = of
 const _AB_MAX_SNAPSHOTS  = 30;
 const _AB_DEBOUNCE_MS    = 1500;
 const _AB_AUTOSYNC_MS    = 60_000;                    // كل دقيقة
+const _AB_FS_DB_NAME     = 'Shaab_AutoBackup_FS';     // IndexedDB لتخزين folder handle
+const _AB_FS_HANDLE_KEY  = 'folderHandle';
 const _AB_TRACKED_KEYS   = [
     'Shaab_Master_DB',       // المنتسيات + الاستفسارات + الشكاوى + audit log + التعويضات
     'Shaab_Employees_DB',    // كل حسابات المستخدمين/الموظفين بدون استثناء
@@ -22,6 +24,7 @@ const _AB_TRACKED_KEYS   = [
 let _abTimer       = null;   // debounce لـ snapshot بعد التعديلات
 let _abAutoTimer   = null;   // تايمر المزامنة التلقائية (دقيقة)
 let _abLastSyncTs  = 0;      // طابع زمني لآخر مزامنة ناجحة
+let _abFolderInfo  = { name: null, hasPermission: false };  // حالة المجلد المختار
 
 function _abReadAll() {
     try { return JSON.parse(localStorage.getItem(_AB_STORE_KEY) || '[]'); }
@@ -105,6 +108,8 @@ function _abTakeSnapshot(reason) {
         arr.push(snap);
         while (arr.length > _AB_MAX_SNAPSHOTS) arr.shift();
         _abWriteAll(arr);
+        // best-effort: اكتب نسخة على المجلد الذي اختاره المستخدم (إن وُجد + إذن ممنوح)
+        if (typeof _abWriteToFolder === 'function') _abWriteToFolder(snap);
         return snap;
     } catch (e) { console.warn('[autoBackup] snapshot failed:', e); return null; }
 }
@@ -152,6 +157,157 @@ function _abFormatTs(ts) {
     const dateStr = d.toLocaleDateString('ar-EG');
     const timeStr = d.toLocaleTimeString('en-US', { hour:'2-digit', minute:'2-digit', second:'2-digit', hour12:true });
     return dateStr + ' — ' + timeStr;
+}
+
+/* ══════════════════════════════════════════════════════
+   مجلد الحفظ الدائم (File System Access API)
+   - المستخدم يختار مجلداً مرة واحدة
+   - الـ handle يُخزَّن في IndexedDB ويستمر بين الجلسات
+   - كل snapshot يُكتب كملف .json في ذلك المجلد
+   - مدعوم في Chrome/Edge؛ في Safari/Firefox: زر مخفي مع رسالة
+   ══════════════════════════════════════════════════════ */
+function _abOpenFsDb() {
+    return new Promise((resolve, reject) => {
+        try {
+            const req = indexedDB.open(_AB_FS_DB_NAME, 1);
+            req.onupgradeneeded = () => req.result.createObjectStore('handles');
+            req.onsuccess = () => resolve(req.result);
+            req.onerror   = () => reject(req.error);
+        } catch (e) { reject(e); }
+    });
+}
+
+async function _abGetFolderHandle() {
+    try {
+        const db = await _abOpenFsDb();
+        return await new Promise((resolve, reject) => {
+            const tx  = db.transaction('handles', 'readonly');
+            const req = tx.objectStore('handles').get(_AB_FS_HANDLE_KEY);
+            req.onsuccess = () => resolve(req.result || null);
+            req.onerror   = () => reject(req.error);
+        });
+    } catch { return null; }
+}
+
+async function _abSaveFolderHandle(handle) {
+    try {
+        const db = await _abOpenFsDb();
+        return await new Promise((resolve, reject) => {
+            const tx = db.transaction('handles', 'readwrite');
+            tx.objectStore('handles').put(handle, _AB_FS_HANDLE_KEY);
+            tx.oncomplete = () => resolve(true);
+            tx.onerror    = () => reject(tx.error);
+        });
+    } catch { return false; }
+}
+
+async function _abClearFolderHandleFromDb() {
+    try {
+        const db = await _abOpenFsDb();
+        return await new Promise((resolve, reject) => {
+            const tx = db.transaction('handles', 'readwrite');
+            tx.objectStore('handles').delete(_AB_FS_HANDLE_KEY);
+            tx.oncomplete = () => resolve(true);
+            tx.onerror    = () => reject(tx.error);
+        });
+    } catch { return false; }
+}
+
+async function _abQueryPerm(handle) {
+    try { return await handle.queryPermission({ mode: 'readwrite' }); }
+    catch { return 'prompt'; }
+}
+async function _abRequestPerm(handle) {
+    try { return await handle.requestPermission({ mode: 'readwrite' }); }
+    catch { return 'denied'; }
+}
+
+async function _abRefreshFolderInfo() {
+    const handle = await _abGetFolderHandle();
+    if (!handle) {
+        _abFolderInfo = { name: null, hasPermission: false };
+    } else {
+        const status = await _abQueryPerm(handle);
+        _abFolderInfo = { name: handle.name, hasPermission: status === 'granted' };
+    }
+    const lbl = document.getElementById('_abFolderLabel');
+    if (lbl) {
+        if (_abFolderInfo.name) {
+            const tag = _abFolderInfo.hasPermission
+                ? '<span style="color:#81c784;">✓ جاهز</span>'
+                : '<span style="color:#ffb74d;">⚠ يحتاج إذن</span>';
+            lbl.innerHTML = `📁 <b style="color:var(--text-main);">${_abFolderInfo.name}</b> · ${tag}`;
+        } else {
+            lbl.innerHTML = '<span style="color:var(--text-dim);">لم يُحدَّد مجلد بعد</span>';
+        }
+    }
+}
+
+async function pickBackupFolder() {
+    if (!('showDirectoryPicker' in window)) {
+        alert('متصفّحك لا يدعم حفظ المجلد. استعمل Chrome أو Edge أحدث إصدار.\n\nبديلاً: استعمل زر "⬇ تنزيل" لكل نسخة على حدة.');
+        return;
+    }
+    try {
+        const handle = await window.showDirectoryPicker({ mode: 'readwrite' });
+        // request permission مباشرةً (نحن داخل user-gesture)
+        const perm = await _abRequestPerm(handle);
+        if (perm !== 'granted') {
+            alert('لم يُمنح الإذن للكتابة في المجلد.');
+            return;
+        }
+        await _abSaveFolderHandle(handle);
+        await _abRefreshFolderInfo();
+        // كتابة آخر snapshot كاختبار
+        const arr = _abReadAll();
+        if (arr.length > 0) await _abWriteToFolder(arr[arr.length - 1]);
+        alert('تم اختيار المجلد: ' + handle.name + '\n\n✓ سيتم حفظ كل النسخ القادمة فيه تلقائياً (بالإضافة لذاكرة المتصفح).');
+        if (typeof showAutoBackupsModal === 'function') showAutoBackupsModal();
+    } catch (e) {
+        if (e.name !== 'AbortError') alert('فشل اختيار المجلد: ' + e.message);
+    }
+}
+
+async function clearBackupFolder() {
+    if (!confirm('إلغاء ربط مجلد الحفظ؟ لن تُحفَظ النسخ القادمة على القرص (تبقى في المتصفح فقط).')) return;
+    await _abClearFolderHandleFromDb();
+    await _abRefreshFolderInfo();
+    if (typeof showAutoBackupsModal === 'function') showAutoBackupsModal();
+}
+
+async function reauthorizeBackupFolder() {
+    const handle = await _abGetFolderHandle();
+    if (!handle) { pickBackupFolder(); return; }
+    const result = await _abRequestPerm(handle);
+    if (result === 'granted') {
+        await _abRefreshFolderInfo();
+        // اكتب آخر snapshot كاختبار
+        const arr = _abReadAll();
+        if (arr.length > 0) await _abWriteToFolder(arr[arr.length - 1]);
+        alert('✓ تم تجديد الإذن. سيستمر الحفظ التلقائي على القرص.');
+    } else {
+        alert('لم يُمنح الإذن. حاول مرة أخرى أو اختر مجلداً جديداً.');
+    }
+    if (typeof showAutoBackupsModal === 'function') showAutoBackupsModal();
+}
+
+async function _abWriteToFolder(snap) {
+    try {
+        const handle = await _abGetFolderHandle();
+        if (!handle) return false;
+        const perm = await _abQueryPerm(handle);
+        if (perm !== 'granted') return false; // لا نطلب إذناً خارج user-gesture
+        const ts = new Date(snap.ts);
+        const pad = (n) => String(n).padStart(2, '0');
+        const safeReason = String(snap.reason || 'auto').replace(/[^a-zA-Z0-9_-]/g, '');
+        const fname = `shaab_backup_${ts.getFullYear()}-${pad(ts.getMonth()+1)}-${pad(ts.getDate())}_` +
+                      `${pad(ts.getHours())}-${pad(ts.getMinutes())}-${pad(ts.getSeconds())}_${safeReason}.json`;
+        const fileHandle = await handle.getFileHandle(fname, { create: true });
+        const writable   = await fileHandle.createWritable();
+        await writable.write(JSON.stringify(snap, null, 2));
+        await writable.close();
+        return true;
+    } catch (e) { console.warn('[autoBackup] folder write failed:', e); return false; }
 }
 
 /* ── Manual snapshot ── */
@@ -361,6 +517,15 @@ function showAutoBackupsModal() {
                 </div>
             </div>
 
+            <!-- شريط مجلد الحفظ على القرص -->
+            <div style="padding:12px 22px;border-bottom:1px solid var(--border);display:flex;gap:10px;align-items:center;flex-wrap:wrap;background:rgba(33,150,243,0.05);">
+                <div style="font-size:12px;color:var(--text-dim);min-width:135px;">💾 مجلد الحفظ على القرص:</div>
+                <div id="_abFolderLabel" style="font-size:12px;flex:1;min-width:140px;color:var(--text-dim);">جارٍ الفحص...</div>
+                <button onclick="pickBackupFolder()" style="padding:7px 12px;border:none;border-radius:8px;background:linear-gradient(135deg,#6a1b9a,#4a148c);color:#fff;cursor:pointer;font-family:'Cairo';font-weight:700;font-size:12px;">🗂️ اختيار / تغيير</button>
+                <button onclick="reauthorizeBackupFolder()" style="padding:7px 12px;border:none;border-radius:8px;background:var(--bg-input);color:var(--text-main);border:1px solid var(--border);cursor:pointer;font-family:'Cairo';font-weight:700;font-size:12px;">🔓 تجديد الإذن</button>
+                <button onclick="clearBackupFolder()" style="padding:7px 12px;border:none;border-radius:8px;background:rgba(211,47,47,0.18);color:#ef9a9a;cursor:pointer;font-family:'Cairo';font-weight:700;font-size:12px;">إلغاء الربط</button>
+            </div>
+
             <!-- قائمة النسخ -->
             <div style="padding:14px 22px;overflow-y:auto;flex:1;">
                 <div style="font-size:11px;color:var(--text-dim);margin-bottom:10px;">
@@ -371,6 +536,8 @@ function showAutoBackupsModal() {
             </div>
         </div>`;
     document.body.appendChild(overlay);
+    // تحديث حالة المجلد بشكل غير متزامن
+    _abRefreshFolderInfo();
 }
 
 function closeAutoBackupsModal() {
