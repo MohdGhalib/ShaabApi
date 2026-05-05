@@ -6,13 +6,19 @@
    البيانات مُخزَّنة داخل db.permissionOverrides لتُزامَن مع السيرفر تلقائياً.
    ══════════════════════════════════════════════════════ */
 
-const _SA_WHITELIST_PHONES = ['0785110515']; // أرقام السوبر ادمن (قابلة للتوسيع لاحقاً)
+// قائمة بيضاء — تُطابَق ضد empId/phone/phoneNumber/mobile للموظف
+const _SA_WHITELIST = ['0785110515'];
 
 function isSuperAdmin() {
     if (typeof currentUser === 'undefined' || !currentUser) return false;
-    if (currentUser.isAdmin) return true; // الحساب الافتراضي admin يُعتبر سوبر ادمن
-    const phone = String(currentUser.phone || '').trim();
-    return _SA_WHITELIST_PHONES.includes(phone);
+    if (currentUser.isAdmin) return true; // الحساب الافتراضي admin
+    const candidates = [
+        String(currentUser.empId       || '').trim(),
+        String(currentUser.phone       || '').trim(),
+        String(currentUser.phoneNumber || '').trim(),
+        String(currentUser.mobile      || '').trim()
+    ].filter(Boolean);
+    return _SA_WHITELIST.some(w => candidates.indexOf(w) !== -1);
 }
 
 /* ── معلومات قابلة للتعديل من الواجهة ── */
