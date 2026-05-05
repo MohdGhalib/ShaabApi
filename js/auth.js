@@ -6,6 +6,34 @@ async function hashPassword(str) {
     return Array.from(new Uint8Array(buf)).map(b => b.toString(16).padStart(2,"0")).join("");
 }
 
+// PBKDF2 — يطابق HashPbkdf2 في السيرفر (100,000 iter, SHA-256, 32 bytes out)
+async function hashPbkdf2(password, salt) {
+    const enc = new TextEncoder();
+    const pwKey = await crypto.subtle.importKey(
+        'raw', enc.encode(password || ''),
+        { name: 'PBKDF2' }, false, ['deriveBits']
+    );
+    const bits = await crypto.subtle.deriveBits(
+        { name: 'PBKDF2', salt: enc.encode(salt || ''), iterations: 100000, hash: 'SHA-256' },
+        pwKey, 32 * 8
+    );
+    const hex = Array.from(new Uint8Array(bits))
+        .map(b => b.toString(16).padStart(2, '0')).join('');
+    return 'pbkdf2:' + hex;
+}
+
+// تحقق موحَّد من كلمة المرور — يدعم PBKDF2 الحديث + SHA-256 القديم
+async function verifyEmpPassword(password, salt, storedHash) {
+    if (!storedHash) return false;
+    if (storedHash.startsWith('pbkdf2:')) {
+        const calc = await hashPbkdf2(password, salt || '');
+        return calc === storedHash;
+    }
+    // SHA-256 القديم: hash(salt + password)
+    const old = await hashPassword((salt || '') + password);
+    return old === storedHash;
+}
+
 let _failCount  = 0;
 let _lockUntil  = 0;
 
@@ -150,10 +178,13 @@ async function login() {
             const candidate = employees.find(e => e.empId === pass);
             let emp = null;
             if (candidate) {
-                const expected = await hashPassword((candidate.salt || '') + pass);
-                // كلمة المرور الافتراضية = الرقم الوظيفي
+                // كلمة المرور الافتراضية = الرقم الوظيفي (لو لم يوضَع hash بعد)
                 const defaultOk = !candidate.passwordHash && pass === candidate.empId;
-                if (expected === candidate.passwordHash || defaultOk) emp = candidate;
+                // التحقق المتوافق مع PBKDF2 (الجديد) + SHA-256 (القديم)
+                const passOk = candidate.passwordHash
+                    ? await verifyEmpPassword(pass, candidate.salt || '', candidate.passwordHash)
+                    : false;
+                if (passOk || defaultOk) emp = candidate;
             }
             if (!emp) {
                 _failCount++;
