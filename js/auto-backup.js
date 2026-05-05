@@ -1,22 +1,27 @@
 /* ══════════════════════════════════════════════════════
-   Auto-Backup System
-   - Captures a localStorage snapshot whenever data changes
+   Auto-Backup System  (v2)
+   - Captures a snapshot of all system DBs (live values, not stale localStorage)
+   - Manual backup, sync-then-backup, and auto-sync every minute (manager-only)
    - Rolling buffer of last N snapshots
-   - Manager UI: list / restore / download / clear
+   - Manager UI: list / restore / download / clear / import / auto-toggle
    ══════════════════════════════════════════════════════ */
 
 const _AB_STORE_KEY      = 'Shaab_AutoBackups';
+const _AB_AUTO_KEY       = 'Shaab_AutoBackup_Auto';   // '1' = on, '0'/null = off
 const _AB_MAX_SNAPSHOTS  = 30;
 const _AB_DEBOUNCE_MS    = 1500;
+const _AB_AUTOSYNC_MS    = 60_000;                    // كل دقيقة
 const _AB_TRACKED_KEYS   = [
-    'Shaab_Master_DB',
-    'Shaab_Employees_DB',
-    'Shaab_Breaks_DB',
-    'Shaab_Sessions_DB',
-    'Shaab_PriceList_DB'
+    'Shaab_Master_DB',       // المنتسيات + الاستفسارات + الشكاوى + audit log + التعويضات
+    'Shaab_Employees_DB',    // كل حسابات المستخدمين/الموظفين بدون استثناء
+    'Shaab_Breaks_DB',       // فترات الراحة
+    'Shaab_Sessions_DB',     // الجلسات
+    'Shaab_PriceList_DB'     // قائمة الأسعار
 ];
 
-let _abTimer = null;
+let _abTimer       = null;   // debounce لـ snapshot بعد التعديلات
+let _abAutoTimer   = null;   // تايمر المزامنة التلقائية (دقيقة)
+let _abLastSyncTs  = 0;      // طابع زمني لآخر مزامنة ناجحة
 
 function _abReadAll() {
     try { return JSON.parse(localStorage.getItem(_AB_STORE_KEY) || '[]'); }
@@ -35,13 +40,31 @@ function _abWriteAll(arr) {
     return false;
 }
 
-function _abMakeSnapshot(reason) {
-    const data = {};
-    let totalSize = 0;
-    for (const k of _AB_TRACKED_KEYS) {
-        const v = localStorage.getItem(k);
-        if (v != null) { data[k] = v; totalSize += v.length; }
+/* ── قراءة البيانات الحيّة (من المتغيرات في الذاكرة، أو localStorage كـ fallback) ── */
+function _abReadLiveData() {
+    const out  = {};
+    const live = (typeof IS_LOCAL !== 'undefined' && !IS_LOCAL);
+
+    if (live) {
+        try { if (typeof db        !== 'undefined' && db        != null) out['Shaab_Master_DB']    = JSON.stringify(db); } catch {}
+        try { if (typeof employees !== 'undefined' && employees != null) out['Shaab_Employees_DB'] = JSON.stringify(employees); } catch {}
+        try { if (typeof breaks    !== 'undefined' && breaks    != null) out['Shaab_Breaks_DB']    = JSON.stringify(breaks); } catch {}
+        try { if (typeof sessions  !== 'undefined' && sessions  != null) out['Shaab_Sessions_DB']  = JSON.stringify(sessions); } catch {}
+        try { if (typeof priceList !== 'undefined' && priceList != null) out['Shaab_PriceList_DB'] = JSON.stringify(priceList); } catch {}
     }
+    // fallback لأي مفتاح ناقص
+    for (const k of _AB_TRACKED_KEYS) {
+        if (out[k]) continue;
+        const v = localStorage.getItem(k);
+        if (v != null) out[k] = v;
+    }
+    return out;
+}
+
+function _abMakeSnapshot(reason) {
+    const data = _abReadLiveData();
+    let totalSize = 0;
+    for (const k in data) totalSize += (data[k] || '').length;
     return {
         ts:     Date.now(),
         iso:    new Date().toISOString(),
@@ -55,32 +78,35 @@ function _abMakeSnapshot(reason) {
 
 function _abDigest(snap) {
     try {
-        const db = JSON.parse(snap.data['Shaab_Master_DB'] || '{}');
+        const dbo = JSON.parse(snap.data['Shaab_Master_DB']    || '{}');
         const emp = JSON.parse(snap.data['Shaab_Employees_DB'] || '[]');
         return {
-            montasiat:   (db.montasiat || []).length,
-            inquiries:   (db.inquiries || []).length,
-            complaints:  (db.complaints || []).length,
-            employees:   Array.isArray(emp) ? emp.length : 0
+            montasiat:  (dbo.montasiat  || []).length,
+            inquiries:  (dbo.inquiries  || []).length,
+            complaints: (dbo.complaints || []).length,
+            employees:  Array.isArray(emp) ? emp.length : 0
         };
     } catch { return { montasiat:0, inquiries:0, complaints:0, employees:0 }; }
 }
 
 function _abTakeSnapshot(reason) {
     try {
-        const arr = _abReadAll();
+        const arr  = _abReadAll();
         const snap = _abMakeSnapshot(reason);
-        // dedupe — skip if identical to last snapshot
+        // dedupe — تخطٍّ النسخ المتطابقة لأهم مفتاحَين
         if (arr.length > 0) {
-            const last = arr[arr.length - 1];
-            const sameMaster = last.data && last.data['Shaab_Master_DB'] === snap.data['Shaab_Master_DB'];
-            const sameEmp    = (last.data && last.data['Shaab_Employees_DB']) === snap.data['Shaab_Employees_DB'];
-            if (sameMaster && sameEmp) return;
+            const last       = arr[arr.length - 1];
+            const sameMaster = last.data && last.data['Shaab_Master_DB']    === snap.data['Shaab_Master_DB'];
+            const sameEmp    = last.data && last.data['Shaab_Employees_DB'] === snap.data['Shaab_Employees_DB'];
+            // للنسخ التلقائية فقط نتخطى عند التطابق؛ النسخ اليدوية والمزامنة تُحفظ دائماً
+            const isAuto     = !reason || reason === 'auto' || reason.startsWith('save:') || reason === 'startup';
+            if (isAuto && sameMaster && sameEmp) return null;
         }
         arr.push(snap);
         while (arr.length > _AB_MAX_SNAPSHOTS) arr.shift();
         _abWriteAll(arr);
-    } catch (e) { console.warn('[autoBackup] snapshot failed:', e); }
+        return snap;
+    } catch (e) { console.warn('[autoBackup] snapshot failed:', e); return null; }
 }
 
 function _abScheduleSnapshot(reason) {
@@ -90,7 +116,6 @@ function _abScheduleSnapshot(reason) {
 
 /* ── hook into existing data mutations ── */
 (function _abInstallHooks() {
-    // Wrap _push (called by save / saveEmployees / saveBreaks / saveSessions / savePriceList)
     let installed = false;
     const tryInstall = () => {
         if (installed) return;
@@ -103,17 +128,14 @@ function _abScheduleSnapshot(reason) {
         };
         installed = true;
     };
-    // _push lives in data.js which loads before this file, but be defensive
     if (typeof window._push === 'function') tryInstall();
     else {
         const t = setInterval(() => { tryInstall(); if (installed) clearInterval(t); }, 500);
         setTimeout(() => clearInterval(t), 30000);
     }
 
-    // Take an initial snapshot once data is in localStorage
     setTimeout(() => _abTakeSnapshot('startup'), 4000);
 
-    // Snapshot on window unload (best-effort)
     window.addEventListener('beforeunload', () => { try { _abTakeSnapshot('unload'); } catch {} });
 })();
 
@@ -125,15 +147,70 @@ function _abFormatBytes(n) {
 }
 
 function _abFormatTs(ts) {
+    if (!ts) return '—';
     const d = new Date(ts);
     const dateStr = d.toLocaleDateString('ar-EG');
     const timeStr = d.toLocaleTimeString('en-US', { hour:'2-digit', minute:'2-digit', second:'2-digit', hour12:true });
     return dateStr + ' — ' + timeStr;
 }
 
-/* ── Manual snapshot (button) ── */
+/* ── Manual snapshot ── */
 function takeManualBackup() {
     _abTakeSnapshot('manual');
+    if (typeof showAutoBackupsModal === 'function') showAutoBackupsModal();
+}
+
+/* ── مزامنة لحظية + نسخة احتياطية ── */
+async function syncAndBackup(reason) {
+    const tag = reason || 'sync';
+    try {
+        if (typeof loadAllData === 'function') {
+            await loadAllData();
+        }
+        _abLastSyncTs = Date.now();
+    } catch (e) {
+        console.warn('[autoBackup] sync failed:', e);
+        // نأخذ snapshot رغم فشل المزامنة (من البيانات الحالية)
+    }
+    _abTakeSnapshot(tag);
+    // تحديث الواجهة إن كانت مفتوحة
+    const lbl = document.getElementById('_abLastSyncLabel');
+    if (lbl) lbl.textContent = _abFormatTs(_abLastSyncTs);
+}
+
+async function manualSyncAndBackup() {
+    const btn = document.getElementById('_abSyncBtn');
+    if (btn) { btn.disabled = true; btn.textContent = '⏳ جاري المزامنة...'; }
+    try { await syncAndBackup('manual-sync'); }
+    finally {
+        if (btn) { btn.disabled = false; btn.textContent = '🔄 مزامنة + نسخة الآن'; }
+        if (typeof showAutoBackupsModal === 'function') showAutoBackupsModal();
+    }
+}
+
+/* ── مزامنة تلقائية كل دقيقة ── */
+function isAutoBackupOn() {
+    try { return localStorage.getItem(_AB_AUTO_KEY) === '1'; }
+    catch { return false; }
+}
+
+function startAutoBackup() {
+    stopAutoBackup();
+    try { localStorage.setItem(_AB_AUTO_KEY, '1'); } catch {}
+    _abAutoTimer = setInterval(() => {
+        if (document.hidden) return; // تجنّب المزامنة عندما تكون الصفحة مخفية
+        syncAndBackup('autosync');
+    }, _AB_AUTOSYNC_MS);
+}
+
+function stopAutoBackup() {
+    if (_abAutoTimer) { clearInterval(_abAutoTimer); _abAutoTimer = null; }
+    try { localStorage.setItem(_AB_AUTO_KEY, '0'); } catch {}
+}
+
+function toggleAutoBackup() {
+    if (isAutoBackupOn()) stopAutoBackup();
+    else                  startAutoBackup();
     if (typeof showAutoBackupsModal === 'function') showAutoBackupsModal();
 }
 
@@ -151,10 +228,8 @@ function restoreAutoBackup(idx) {
                 '⚠️ ستحلّ هذه النسخة محلّ البيانات الحالية وسيُرفع التغيير للسيرفر.';
     if (!confirm(msg)) return;
 
-    // Take a safety snapshot first
     _abTakeSnapshot('pre-restore');
 
-    // Write each key back to localStorage and push to server via _push
     for (const k of _AB_TRACKED_KEYS) {
         const v = (snap.data || {})[k];
         if (v != null) {
@@ -221,6 +296,7 @@ function importAutoBackupFile(input) {
 function showAutoBackupsModal() {
     closeAutoBackupsModal();
     const arr = _abReadAll();
+    const autoOn = isAutoBackupOn();
     const overlay = document.createElement('div');
     overlay.id = '_abOverlay';
     overlay.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.6);z-index:100001;display:flex;align-items:center;justify-content:center;font-family:"Cairo";padding:16px;';
@@ -230,7 +306,6 @@ function showAutoBackupsModal() {
     if (arr.length === 0) {
         rowsHtml = '<div style="text-align:center;color:var(--text-dim);padding:30px;">لا توجد نسخ احتياطية بعد</div>';
     } else {
-        // newest first
         for (let i = arr.length - 1; i >= 0; i--) {
             const s = arr[i];
             const d = _abDigest(s);
@@ -254,23 +329,43 @@ function showAutoBackupsModal() {
         }
     }
 
+    const toggleBg = autoOn
+        ? 'linear-gradient(135deg,#2e7d32,#1b5e20)'
+        : 'rgba(120,120,120,0.25)';
+    const toggleColor = autoOn ? '#fff' : 'var(--text-dim)';
+    const toggleLabel = autoOn ? '🟢 المزامنة التلقائية كل دقيقة: مفعّلة' : '⚪ المزامنة التلقائية كل دقيقة: متوقّفة';
+
     overlay.innerHTML = `
-        <div style="background:var(--bg-card);color:var(--text-main);border:1px solid var(--border);border-radius:18px;width:640px;max-width:96vw;max-height:88vh;display:flex;flex-direction:column;box-shadow:0 20px 60px rgba(0,0,0,0.55);">
+        <div style="background:var(--bg-card);color:var(--text-main);border:1px solid var(--border);border-radius:18px;width:680px;max-width:96vw;max-height:90vh;display:flex;flex-direction:column;box-shadow:0 20px 60px rgba(0,0,0,0.55);">
             <div style="display:flex;justify-content:space-between;align-items:center;padding:18px 22px;border-bottom:1px solid var(--border);">
-                <h3 style="margin:0;color:var(--text-main);font-size:17px;">📦 النسخ الاحتياطية المحلية</h3>
+                <h3 style="margin:0;color:var(--text-main);font-size:17px;">📦 النسخ الاحتياطية الكاملة للنظام</h3>
                 <button onclick="closeAutoBackupsModal()" style="background:none;border:none;color:var(--text-dim);cursor:pointer;font-size:18px;">✕</button>
             </div>
-            <div style="padding:14px 22px;border-bottom:1px solid var(--border);display:flex;gap:8px;flex-wrap:wrap;">
-                <button onclick="takeManualBackup()" style="padding:9px 14px;border:none;border-radius:10px;background:linear-gradient(135deg,#1976d2,#0d47a1);color:#fff;cursor:pointer;font-family:'Cairo';font-weight:700;font-size:13px;">+ نسخة جديدة الآن</button>
+
+            <!-- شريط الإجراءات السريعة -->
+            <div style="padding:14px 22px;border-bottom:1px solid var(--border);display:flex;gap:8px;flex-wrap:wrap;align-items:center;">
+                <button id="_abSyncBtn" onclick="manualSyncAndBackup()" style="padding:9px 14px;border:none;border-radius:10px;background:linear-gradient(135deg,#1976d2,#0d47a1);color:#fff;cursor:pointer;font-family:'Cairo';font-weight:700;font-size:13px;">🔄 مزامنة + نسخة الآن</button>
+                <button onclick="takeManualBackup()" style="padding:9px 14px;border:none;border-radius:10px;background:var(--bg-input);color:var(--text-main);border:1px solid var(--border);cursor:pointer;font-family:'Cairo';font-weight:700;font-size:13px;">+ نسخة محلية فقط</button>
                 <label style="padding:9px 14px;border:1px solid var(--border);border-radius:10px;background:var(--bg-input);color:var(--text-main);cursor:pointer;font-family:'Cairo';font-weight:700;font-size:13px;">
                     📂 استيراد ملف
                     <input type="file" accept="application/json,.json" style="display:none;" onchange="importAutoBackupFile(this)">
                 </label>
                 <button onclick="clearAllAutoBackups()" style="padding:9px 14px;border:none;border-radius:10px;background:rgba(211,47,47,0.18);color:#ef9a9a;cursor:pointer;font-family:'Cairo';font-weight:700;font-size:13px;margin-right:auto;">حذف الكل</button>
             </div>
+
+            <!-- شريط المزامنة التلقائية -->
+            <div style="padding:12px 22px;border-bottom:1px solid var(--border);display:flex;gap:10px;align-items:center;flex-wrap:wrap;">
+                <button onclick="toggleAutoBackup()" style="padding:8px 14px;border:none;border-radius:10px;background:${toggleBg};color:${toggleColor};cursor:pointer;font-family:'Cairo';font-weight:700;font-size:12px;">${toggleLabel}</button>
+                <div style="font-size:11px;color:var(--text-dim);">
+                    آخر مزامنة: <span id="_abLastSyncLabel" style="color:var(--text-main);font-weight:700;">${_abFormatTs(_abLastSyncTs)}</span>
+                </div>
+            </div>
+
+            <!-- قائمة النسخ -->
             <div style="padding:14px 22px;overflow-y:auto;flex:1;">
                 <div style="font-size:11px;color:var(--text-dim);margin-bottom:10px;">
                     عدد النسخ: <b style="color:var(--text-main);">${arr.length}</b> / ${_AB_MAX_SNAPSHOTS} (الأحدث في الأعلى)
+                    · تشمل كل البيانات: المنتسيات، الاستفسارات، الشكاوى، <b>جميع الحسابات</b>، الجلسات، فترات الراحة، قائمة الأسعار
                 </div>
                 ${rowsHtml}
             </div>
@@ -283,18 +378,24 @@ function closeAutoBackupsModal() {
     if (o) o.remove();
 }
 
-/* ── Inject sidebar entry for managers ── */
+/* ── زر عائم للمدير + بدء التايمر التلقائي عند تسجيل الدخول ── */
 (function _abInjectSidebarEntry() {
     function isManager() {
         return typeof currentUser !== 'undefined' && currentUser &&
                (currentUser.isAdmin || currentUser.role === 'cc_manager');
     }
+    let autoStarted = false;
     function tryInject() {
-        if (document.getElementById('_abFloatBtn')) return;
         if (!isManager()) return;
+        // بدء تلقائي للمزامنة إذا كان التفضيل مفعّلاً
+        if (!autoStarted && isAutoBackupOn()) {
+            startAutoBackup();
+            autoStarted = true;
+        }
+        if (document.getElementById('_abFloatBtn')) return;
         const btn = document.createElement('button');
         btn.id = '_abFloatBtn';
-        btn.title = 'النسخ الاحتياطية المحلية';
+        btn.title = 'النسخ الاحتياطية الكاملة للنظام';
         btn.innerText = '📦';
         btn.style.cssText = 'position:fixed;bottom:18px;left:18px;z-index:9998;width:46px;height:46px;border-radius:50%;border:1px solid var(--border);background:var(--bg-card);color:var(--text-main);cursor:pointer;font-size:20px;box-shadow:0 4px 14px rgba(0,0,0,0.35);transition:transform 0.18s;';
         btn.onmouseenter = () => { btn.style.transform = 'scale(1.08)'; };
@@ -302,10 +403,9 @@ function closeAutoBackupsModal() {
         btn.onclick = showAutoBackupsModal;
         document.body.appendChild(btn);
     }
-    // Poll until logged-in & manager check passes
     const t = setInterval(() => {
         tryInject();
-        if (document.getElementById('_abFloatBtn')) clearInterval(t);
+        if (document.getElementById('_abFloatBtn') && autoStarted) clearInterval(t);
     }, 1000);
     setTimeout(() => clearInterval(t), 120000);
 })();
