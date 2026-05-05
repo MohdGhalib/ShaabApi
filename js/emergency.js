@@ -135,7 +135,13 @@ function _emSend() {
     };
     db.emergencyMessages.push(msg);
     _emPurgeOld();
-    if (typeof save === 'function') save();
+    console.log('[emergency] 📤 sending msg:', msg, '· total in db:', db.emergencyMessages.length);
+    if (typeof save === 'function') {
+        save();
+        console.log('[emergency] ✓ save() called → db pushed to server');
+    } else {
+        console.warn('[emergency] ⚠ save() غير معرَّفة!');
+    }
     closeEmergencyComposeModal();
     if (typeof showEmergencySentModal === 'function') showEmergencySentModal();
     else alert('✓ أُرسل التنبيه.');
@@ -145,21 +151,31 @@ function _emSend() {
    جانب الاستقبال
    ══════════════════════════════════════════════════════ */
 function _emCheckPending() {
-    if (typeof currentUser === 'undefined' || !currentUser || !currentUser.empId) return;
-    if (_emShowingMsgId) return; // نافذة مفتوحة بالفعل
+    if (typeof currentUser === 'undefined' || !currentUser || !currentUser.empId) {
+        console.log('[emergency] check skipped — no currentUser.empId');
+        return;
+    }
+    if (_emShowingMsgId) { console.log('[emergency] already showing msg', _emShowingMsgId); return; }
     _emEnsureField();
-    if (!Array.isArray(db.emergencyMessages) || db.emergencyMessages.length === 0) return;
+    const list = Array.isArray(db && db.emergencyMessages) ? db.emergencyMessages : [];
+    console.log('[emergency] 🔍 check — myId="' + String(currentUser.empId) + '" total msgs=' + list.length);
 
     const myId   = String(currentUser.empId);
     const sender = currentUser.isAdmin || currentUser.role === 'cc_manager';
-    const pending = db.emergencyMessages.find(m => {
-        // المرسِل لا يرى تنبيهه الذي أرسله للكل
-        if (sender && String(m.fromEmpId) === myId) return false;
+    const pending = list.find(m => {
+        if (sender && String(m.fromEmpId) === myId) return false; // not own broadcast
         const isMine = m.toEmpId === '*' || String(m.toEmpId) === myId;
         if (!isMine) return false;
         return !(m.acknowledgedBy && m.acknowledgedBy[myId]);
     });
-    if (!pending) return;
+    if (!pending) {
+        if (list.length > 0) {
+            console.log('[emergency] no pending for me. messages in db:',
+                list.map(m => ({ id: m.id, to: m.toEmpId, from: m.fromEmpId, ackd: !!(m.acknowledgedBy && m.acknowledgedBy[myId]) })));
+        }
+        return;
+    }
+    console.log('[emergency] 🚨 pending FOUND:', pending);
     _emShowAlertModal(pending);
 }
 
