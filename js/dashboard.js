@@ -81,15 +81,28 @@ function renderDashboard() {
                    color:#ef5350;border-radius:7px;padding:3px 11px;font-family:'Cairo';font-size:11px;
                    font-weight:700;white-space:nowrap;">عرض ←</button>`;
 
+    const _detailFor = (x) => {
+        if (x.type === 'اصناف محمص الشعب' && x.roastItemName)
+            return (x.roastSubType ? '['+x.roastSubType+'] ' : '') + x.roastItemName + (x.notes ? ' — ' + x.notes : '');
+        if (x.type === 'نقدي' && x.missingValue)
+            return x.missingValue + (x.notes ? ' — ' + x.notes : '');
+        if (x.type === 'متعدد الأصناف' && Array.isArray(x.items))
+            return x.items.length + ' صنف' + (x.notes ? ' — ' + x.notes : '');
+        return x.notes || '';
+    };
+
     const recentMGrid = _gridTable(
         ['22%','38%','18%','12%','10%'],
         ['الفرع','التفاصيل','الحالة','أضافه',''],
-        recentM.map(x => `
+        recentM.map(x => {
+            const detail = _detailFor(x);
+            return `
             <div style="${dCell}"><b>${sanitize(x.branch)}</b><br><small style="color:var(--text-dim)">${sanitize(x.city)}</small></div>
-            <div style="${dCell}"><span class="text-box-cell" style="font-size:12px;">${sanitize((x.notes||'').substring(0,50))}${(x.notes||'').length>50?'…':''}</span></div>
+            <div style="${dCell}"><span class="text-box-cell" style="font-size:12px;">${sanitize(detail.substring(0,60))}${detail.length>60?'…':''}</span></div>
             <div style="${dCell}"><span class="status-badge ${x.status==='تم التسليم'?'done':x.status==='مرفوضة'?'rejected':x.status==='قيد الانتظار'?'not-delivered':'pending'}">${x.status==='قيد الانتظار'?'لم يتم التسليم':sanitize(x.status)}</span></div>
             <div style="${dCell}"><small>${sanitize(x.addedBy||'—')}</small></div>
-            <div style="${dCell};text-align:center;">${viewBtn('m', x.id)}</div>`)
+            <div style="${dCell};text-align:center;">${viewBtn('m', x.id)}</div>`;
+        })
     );
 
     const recentCGrid = _gridTable(
