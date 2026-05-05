@@ -87,7 +87,7 @@ function renderDashboard() {
         recentM.map(x => {
             const isRoast = x.type === 'اصناف محمص الشعب';
             const detailsCell = isRoast
-                ? `<span style="color:var(--text-dim);font-size:11px;">—</span>`
+                ? ''
                 : `<span class="text-box-cell" style="font-size:12px;">${sanitize((x.notes||'').substring(0,50))}${(x.notes||'').length>50?'…':''}</span>`;
             return `
             <div style="${dCell}"><b>${sanitize(x.branch)}</b><br><small style="color:var(--text-dim)">${sanitize(x.city)}</small></div>
