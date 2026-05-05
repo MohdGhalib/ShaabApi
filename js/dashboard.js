@@ -84,12 +84,18 @@ function renderDashboard() {
     const recentMGrid = _gridTable(
         ['22%','38%','18%','12%','10%'],
         ['الفرع','التفاصيل','الحالة','أضافه',''],
-        recentM.map(x => `
+        recentM.map(x => {
+            const isRoast = x.type === 'اصناف محمص الشعب';
+            const detailsCell = isRoast
+                ? `<span style="color:var(--text-dim);font-size:11px;">—</span>`
+                : `<span class="text-box-cell" style="font-size:12px;">${sanitize((x.notes||'').substring(0,50))}${(x.notes||'').length>50?'…':''}</span>`;
+            return `
             <div style="${dCell}"><b>${sanitize(x.branch)}</b><br><small style="color:var(--text-dim)">${sanitize(x.city)}</small></div>
-            <div style="${dCell}"><span class="text-box-cell" style="font-size:12px;">${sanitize((x.notes||'').substring(0,50))}${(x.notes||'').length>50?'…':''}</span></div>
+            <div style="${dCell}">${detailsCell}</div>
             <div style="${dCell}"><span class="status-badge ${x.status==='تم التسليم'?'done':x.status==='مرفوضة'?'rejected':x.status==='قيد الانتظار'?'not-delivered':'pending'}">${x.status==='قيد الانتظار'?'لم يتم التسليم':sanitize(x.status)}</span></div>
             <div style="${dCell}"><small>${sanitize(x.addedBy||'—')}</small></div>
-            <div style="${dCell};text-align:center;">${viewBtn('m', x.id)}</div>`)
+            <div style="${dCell};text-align:center;">${viewBtn('m', x.id)}</div>`;
+        })
     );
 
     const recentCGrid = _gridTable(
