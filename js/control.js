@@ -268,6 +268,10 @@ async function openNotifyModal(id) {
     document.getElementById('notifyPersonName').value = '';
     const ccTa = document.getElementById('notifyCcActions');
     if (ccTa) ccTa.value = '';
+    // أخفِ صفّ "اسم الشخص الذي تم تبليغه" لشكاوى سوء التعامل (لأنه قسم التبليغ لا يظهر)
+    const item = db.complaints.find(x => x.id === id);
+    const pnRow = document.getElementById('notifyPersonNameRow');
+    if (pnRow) pnRow.style.display = (item && item.type === 'سوء تعامل') ? 'none' : 'flex';
     await _loadLogo();
     refreshNotifyCard();
     document.getElementById('notifyModal').classList.remove('hidden');
