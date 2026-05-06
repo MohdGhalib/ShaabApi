@@ -307,10 +307,14 @@ async function exportControlNotifyImages() {
             scale: 2, useCORS: true, backgroundColor: '#ffffff', logging: false
         });
 
-        _triggerDownload(base, 'نسخة مدراء الأفرع');
-
-        const samer = _appendStatusCanvas(base, item.auditStatus || '—');
-        _triggerDownload(samer, 'نسخة سامر');
+        if (item.type === 'سوء تعامل') {
+            // نسخة واحدة فقط لشكاوى سوء التعامل
+            _triggerDownload(base, 'شكوى سوء تعامل');
+        } else {
+            _triggerDownload(base, 'نسخة مدراء الأفرع');
+            const samer = _appendStatusCanvas(base, item.auditStatus || '—');
+            _triggerDownload(samer, 'نسخة سامر');
+        }
 
     } catch (e) {
         alert('تعذّر التصدير، تأكد من أن المتصفح محدّث.');
@@ -318,7 +322,7 @@ async function exportControlNotifyImages() {
     } finally {
         document.body.removeChild(clone);
         btn.disabled    = false;
-        btn.textContent = 'تصدير الصورتين ⬇️';
+        btn.textContent = item.type === 'سوء تعامل' ? 'تصدير الصورة ⬇️' : 'تصدير الصورتين ⬇️';
     }
 }
 
@@ -420,6 +424,7 @@ function refreshNotifyCard() {
             exportBtn.disabled = false;
             exportBtn.style.opacity = '1';
             exportBtn.style.cursor  = 'pointer';
+            exportBtn.textContent = 'تصدير الصورة ⬇️';
         }
         document.getElementById('notifyCard').innerHTML = `
             <div style="text-align:center;margin-bottom:24px;padding-bottom:18px;border-bottom:3px solid #c62828;">
@@ -444,13 +449,13 @@ function refreshNotifyCard() {
                 <div style="color:#222;font-size:17px;font-weight:700;line-height:1.8;">${sanitize(item.notes)}</div>
             </div>
 
-            <div style="margin-bottom:22px;padding:16px;background:#fff8e1;border:2px solid #f57f17;border-radius:8px;text-align:center;">
-                <div style="font-weight:800;color:#e65100;margin-bottom:8px;font-size:16px;">🔎 حالة الملاحظة عند قسم السيطرة</div>
-                <div style="color:#bf360c;font-size:20px;font-weight:800;line-height:1.6;">جاري التحقق من الحالة</div>
+            <div style="margin-bottom:14px;padding-top:14px;border-top:2px solid #eee;text-align:center;font-size:15px;font-weight:700;color:#444;">
+                👤 اسم الموظف المدخل للشكوى: <strong style="font-size:17px;color:#222;">${sanitize(item.addedBy || '—')}</strong>
             </div>
 
-            <div style="padding-top:14px;border-top:2px solid #eee;text-align:center;font-size:15px;font-weight:700;color:#444;">
-                👤 اسم الموظف المدخل للشكوى: <strong style="font-size:17px;color:#222;">${sanitize(item.addedBy || '—')}</strong>
+            <div style="padding:14px 16px;border-radius:8px;text-align:center;background:#fff8e1;border:2px solid #f57f17;">
+                <div style="font-size:12px;color:#999;margin-bottom:6px;">حالة الملاحظة</div>
+                <div style="font-size:18px;font-weight:800;color:#bf360c;">جاري تدقيق الملاحظة من قسم السيطرة</div>
             </div>
         `;
         return;
