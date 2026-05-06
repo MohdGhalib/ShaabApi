@@ -684,7 +684,7 @@ function _renderTableI(get) {
                 ${x.invoiceValue ? `<span>💰 ${sanitize(x.invoiceValue)}</span>` : ''}
                 ${x.moveNumber   ? `<span>🔢 ${sanitize(x.moveNumber)}</span>` : ''}
                 ${x.noteDate     ? `<span>📅 ${sanitize(x.noteDate)}</span>` : ''}
-                ${x.file         ? `<a href="${x.file}" target="_blank" class="btn-attach" style="padding:2px 8px;font-size:11px;">📎 الفاتورة</a>` : ''}
+                ${x.file         ? `<button onclick="openInvoiceFile('${x.id}')" class="btn-attach" style="padding:2px 8px;font-size:11px;border:none;cursor:pointer;font-family:Cairo;">📎 الفاتورة</button>` : ''}
               </div>` : '';
         const _itemBadge = x.itemName
             ? `<div style="margin-top:5px;font-size:12px;font-weight:700;"><span style="color:#80deea;">📦 اسم الصنف:</span> <span style="color:#90caf9;">${sanitize(x.itemName)}</span></div>` : '';
@@ -775,7 +775,7 @@ function _renderTableC(get, isAdmin) {
             ? `<div><span class="linked-inq" onclick="jumpToInquiry(${x.linkedInqSeq})" title="انتقل للاستفسار المرتبط">🔗 استفسار #${x.linkedInqSeq}</span></div>`
             : '';
 
-        const fileLink = x.file ? `<br><a href="${x.file}" target="_blank" class="btn-attach">📎 عرض المرفق</a>` : '';
+        const fileLink = x.file ? `<br><button onclick="openInvoiceFile('${x.id}')" class="btn-attach" style="border:none;cursor:pointer;font-family:Cairo;">📎 عرض المرفق</button>` : '';
 
         const ctStr  = x.callTime ? _formatCallTime(x.callTime) : '';
         const hasMore = !!(ctStr || x.noteDate || x.moveNumber || x.invoiceValue);

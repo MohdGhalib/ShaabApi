@@ -278,6 +278,77 @@ async function openNotifyModal(id) {
     document.getElementById('notifyModal').classList.remove('hidden');
 }
 
+/* ══════════════════════════════════════════════════════
+   فتح الفاتورة المرفقة بالشكوى (تجاوز حظر data: URLs في المتصفحات)
+   ══════════════════════════════════════════════════════ */
+function openInvoiceFile(id) {
+    const item = (db.complaints || []).find(x => String(x.id) === String(id));
+    if (!item || !item.file) { alert('لا توجد فاتورة مرفقة.'); return; }
+
+    // إن لم يكن data URL، استعمله مباشرة
+    if (!String(item.file).startsWith('data:')) {
+        window.open(item.file, '_blank');
+        return;
+    }
+
+    let url, mime;
+    try {
+        const arr = item.file.split(',');
+        const mimeMatch = arr[0].match(/:(.*?);/);
+        mime = mimeMatch ? mimeMatch[1] : 'application/octet-stream';
+        const bstr = atob(arr[1]);
+        const u8 = new Uint8Array(bstr.length);
+        for (let i = 0; i < bstr.length; i++) u8[i] = bstr.charCodeAt(i);
+        url = URL.createObjectURL(new Blob([u8], { type: mime }));
+    } catch (e) {
+        console.error('invoice decode failed', e);
+        alert('تعذّر قراءة ملف الفاتورة.');
+        return;
+    }
+
+    if (mime.startsWith('image/')) {
+        _showInvoiceImageModal(url);
+        // الـ blob URL يبقى لفتح "تنزيل" داخل الـ modal — نُحرّره عند الإغلاق
+    } else {
+        // PDF أو ملف آخر — افتحه في tab جديد
+        const win = window.open(url, '_blank');
+        if (!win || win.closed) {
+            // popup blocked → fallback: تنزيل
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = 'invoice' + (mime === 'application/pdf' ? '.pdf' : '');
+            document.body.appendChild(a); a.click(); a.remove();
+        }
+        setTimeout(() => URL.revokeObjectURL(url), 60_000);
+    }
+}
+
+function _showInvoiceImageModal(url) {
+    closeInvoiceModal();
+    const overlay = document.createElement('div');
+    overlay.id = '_invoiceOverlay';
+    overlay.dataset.blobUrl = url;
+    overlay.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.88);z-index:100050;display:flex;align-items:center;justify-content:center;padding:20px;font-family:Cairo;';
+    overlay.onclick = (e) => { if (e.target === overlay) closeInvoiceModal(); };
+    overlay.innerHTML = `
+        <div style="position:relative;max-width:96vw;max-height:94vh;display:flex;flex-direction:column;align-items:center;gap:12px;">
+            <img src="${url}" style="max-width:96vw;max-height:84vh;object-fit:contain;border-radius:8px;background:#fff;box-shadow:0 8px 40px rgba(0,0,0,0.5);">
+            <div style="display:flex;gap:10px;">
+                <a href="${url}" download="invoice.png" style="padding:9px 18px;background:linear-gradient(135deg,#1976d2,#0d47a1);color:#fff;border-radius:8px;text-decoration:none;font-weight:700;font-size:13px;">⬇ تنزيل</a>
+                <button onclick="closeInvoiceModal()" style="padding:9px 18px;background:rgba(255,255,255,0.15);color:#fff;border:1px solid rgba(255,255,255,0.4);border-radius:8px;cursor:pointer;font-family:Cairo;font-weight:700;font-size:13px;">إغلاق</button>
+            </div>
+        </div>`;
+    document.body.appendChild(overlay);
+}
+
+function closeInvoiceModal() {
+    const o = document.getElementById('_invoiceOverlay');
+    if (!o) return;
+    const url = o.dataset.blobUrl;
+    o.remove();
+    if (url) setTimeout(() => { try { URL.revokeObjectURL(url); } catch {} }, 1000);
+}
+
 /* ── حالة محرر نص الشكوى (HTML مع تنسيق ولون) ── */
 let _notifyNotesHtml = '';
 
