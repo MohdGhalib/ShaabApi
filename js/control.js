@@ -186,6 +186,7 @@ function saveAudit(id) {
         if (statusEl) db.complaints[idx].auditStatus = statusEl.value;
         db.complaints[idx].auditBy   = currentUser.name;
         db.complaints[idx].auditTime = now();
+        if (typeof _logAudit === 'function') _logAudit('auditComplaint', db.complaints[idx].branch || '—', val.substring(0, 80));
         save();
     }
 }
@@ -198,6 +199,7 @@ function assignToControlEmployee(id) {
     if (item && emp) {
         item.assignedToEmpId = empId;
         item.assignedToName  = emp.name;
+        if (typeof _logAudit === 'function') _logAudit('assignControlEmp', item.branch || '—', `إسناد لـ ${emp.name}`);
         save();
     }
 }
@@ -210,6 +212,7 @@ function saveControlEmpReply(id) {
         item.controlEmpReply     = val;
         item.controlEmpReplyBy   = currentUser.name;
         item.controlEmpReplyTime = now();
+        if (typeof _logAudit === 'function') _logAudit('controlEmpReply', item.branch || '—', val.substring(0, 80));
         save();
     }
 }
@@ -224,6 +227,7 @@ function approveControlEmpReply(id) {
     item.auditBy                  = currentUser.name;
     item.auditTime                = now();
     item.controlEmpReplyApproved  = true;
+    if (typeof _logAudit === 'function') _logAudit('approveControlEmpReply', item.branch || '—', (item.controlEmpReply || '').substring(0, 80));
     save();
 }
 
@@ -782,6 +786,7 @@ function assignToControlSub(id) {
         item.controlSubReply          = null;
         item.controlSubReplyReturned  = false;
         item.controlSubReplyApproved  = false;
+        if (typeof _logAudit === 'function') _logAudit('assignControlSub', item.branch || '—', `إسناد لـ ${emp.name}`);
         save();
     }
 }
@@ -798,6 +803,7 @@ function saveControlSubReply(id) {
         item.auditBy                 = currentUser.name;
         item.auditTime               = now();
         item.controlSubReplyApproved = true;
+        if (typeof _logAudit === 'function') _logAudit('controlSubReply', item.branch || '—', val.substring(0, 80));
         save();
     }
 }
@@ -812,6 +818,7 @@ function approveControlSubReply(id) {
     item.auditBy                 = currentUser.name;
     item.auditTime               = now();
     item.controlSubReplyApproved = true;
+    if (typeof _logAudit === 'function') _logAudit('approveControlSubReply', item.branch || '—', (item.controlSubReply || '').substring(0, 80));
     save();
 }
 
@@ -820,6 +827,7 @@ function returnControlSubReply(id) {
     if (item) {
         item.controlSubReplyReturned = true;
         item.controlSubReply         = null;
+        if (typeof _logAudit === 'function') _logAudit('returnSubReply', item.branch || '—', `إرجاع لـ ${item.assignedToSubName || '—'}`);
         save();
     }
 }
@@ -827,6 +835,7 @@ function returnControlSubReply(id) {
 function deleteControlSubReply(id) {
     const item = db.complaints.find(x => x.id === id);
     if (item) {
+        const _wasName = item.assignedToSubName || '—';
         item.assignedToSubId         = null;
         item.assignedToSubName       = null;
         item.controlSubReply         = null;
@@ -834,6 +843,7 @@ function deleteControlSubReply(id) {
         item.controlSubReplyTime     = null;
         item.controlSubReplyReturned = false;
         item.controlSubReplyApproved = false;
+        if (typeof _logAudit === 'function') _logAudit('deleteSubReply', item.branch || '—', `إلغاء إسناد ${_wasName}`);
         save();
     }
 }
@@ -844,6 +854,7 @@ function saveControlSubReplyEdit(id) {
     const item = db.complaints.find(x => x.id === id);
     if (item) {
         item.controlSubReply = val;
+        if (typeof _logAudit === 'function') _logAudit('editControlSubReply', item.branch || '—', val.substring(0, 80));
         save();
     }
 }
@@ -858,7 +869,9 @@ function saveAuditStatusEdit(id) {
     if (!val) return alert("يرجى تحديد حالة الملاحظة");
     const item = db.complaints.find(x => x.id === id);
     if (item) {
+        const old = item.auditStatus || '—';
         item.auditStatus = val;
+        if (typeof _logAudit === 'function') _logAudit('editAuditStatus', item.branch || '—', `${old} → ${val}`);
         save();
     }
 }
@@ -868,15 +881,19 @@ function toggleCountComplaint(id) {
     if (!item) return;
     const role    = currentUser?.role;
     const isAdmin = currentUser?.isAdmin;
+    let _action = '';
     if (role === 'control_employee') {
         const _addedByEmp = employees.find(e => e.name === item.addedBy);
         const _blocked = ['مدير الكول سنتر','موظف كول سنتر','موظف ميديا'].includes(_addedByEmp?.title);
         if (_blocked) return;
         item.countedByControl = !item.countedByControl;
+        _action = item.countedByControl ? 'احتساب (سيطرة)' : 'تراجع عن الاحتساب (سيطرة)';
     } else if (role === 'cc_manager' || isAdmin) {
         item.countedByCC = !item.countedByCC;
         item.countedByCCSource = item.countedByCC ? 'control' : null;
+        _action = item.countedByCC ? 'احتساب (كول سنتر)' : 'تراجع عن الاحتساب (كول سنتر)';
     }
+    if (_action && typeof _logAudit === 'function') _logAudit('toggleCountComplaint', item.branch || '—', _action);
     save();
 }
 
