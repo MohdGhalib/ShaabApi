@@ -436,7 +436,7 @@ function refreshNotifyCard() {
         document.getElementById('notifyCard').innerHTML = `
             <div style="text-align:center;margin-bottom:24px;padding-bottom:18px;border-bottom:3px solid #c62828;">
                 ${_logoBase64 ? `<img src="${_logoBase64}" style="width:90px;height:90px;object-fit:contain;display:block;margin:0 auto 10px;filter:drop-shadow(0 2px 8px rgba(198,40,40,0.25));">` : ''}
-                <div style="font-size:30px;font-weight:800;color:#c62828;letter-spacing:1px;">شكوى سوء تعامل</div>
+                <div style="font-size:30px;font-weight:800;color:#c62828;">شكوى سوء تعامل</div>
                 <div style="font-size:14px;font-weight:700;color:#888;margin-top:4px;">محامص الشعب — قسم متابعة الشكاوى</div>
             </div>
 
