@@ -502,6 +502,10 @@
                 <label style="font-size:13px;color:var(--text-dim);white-space:nowrap;">اسم الشخص الذي تم تبليغه:</label>
                 <input type="text" id="notifyPersonName" placeholder="اكتب الاسم هنا..." oninput="refreshNotifyCard()" style="flex:1;min-width:200px;">
             </div>
+            <div style="display:flex;gap:12px;align-items:flex-start;flex-wrap:wrap;margin-top:12px;">
+                <label style="font-size:13px;color:var(--text-dim);white-space:nowrap;padding-top:8px;">إجراءات الكول سنتر:</label>
+                <textarea id="notifyCcActions" rows="2" placeholder="اكتب الإجراءات التي قام بها قسم الكول سنتر..." oninput="refreshNotifyCard()" style="flex:1;min-width:240px;resize:vertical;font-family:'Cairo';"></textarea>
+            </div>
         </div>
         <div id="notifyCard" style="background:#fff;padding:28px 32px;direction:rtl;font-family:'Cairo',sans-serif;max-height:55vh;overflow-y:auto;color:#222;">
         </div>
@@ -722,7 +726,7 @@
 <script src="js/ui.js?v=40"></script>
 <script src="js/missing-items.js?v=55"></script>
 <script src="js/inquiries.js?v=29"></script>
-<script src="js/control.js?v=41"></script>
+<script src="js/control.js?v=42"></script>
 <script src="js/employees.js?v=35"></script>
 <script src="js/breaks.js?v=23"></script>
 <script src="js/stats.js?v=101"></script>

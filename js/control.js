@@ -266,6 +266,8 @@ async function _loadLogo() {
 async function openNotifyModal(id) {
     _notifyItemId = id;
     document.getElementById('notifyPersonName').value = '';
+    const ccTa = document.getElementById('notifyCcActions');
+    if (ccTa) ccTa.value = '';
     await _loadLogo();
     refreshNotifyCard();
     document.getElementById('notifyModal').classList.remove('hidden');
@@ -408,6 +410,7 @@ function refreshNotifyCard() {
     const item = db.complaints.find(x => x.id === _notifyItemId);
     if (!item) return;
     const personName  = document.getElementById('notifyPersonName').value.trim();
+    const ccActions   = (document.getElementById('notifyCcActions')?.value || '').trim();
     const auditStatus = item.auditStatus || '—';
 
     const exportBtn = document.getElementById('exportNotifyBtn');
@@ -448,6 +451,11 @@ function refreshNotifyCard() {
                 <div style="font-weight:800;color:#c62828;margin-bottom:7px;font-size:16px;">📋 نص الشكوى المرسلة</div>
                 <div style="color:#222;font-size:17px;font-weight:700;line-height:1.8;">${sanitize(item.notes)}</div>
             </div>
+
+            ${ccActions ? `<div style="margin-bottom:18px;padding:14px 16px;background:#e3f2fd;border-right:4px solid #1565c0;border-radius:6px;">
+                <div style="font-weight:800;color:#0d47a1;margin-bottom:7px;font-size:16px;">📞 إجراءات الكول سنتر</div>
+                <div style="color:#222;font-size:17px;font-weight:700;line-height:1.8;white-space:pre-wrap;">${sanitize(ccActions)}</div>
+            </div>` : ''}
 
             <div style="margin-bottom:14px;padding-top:14px;border-top:2px solid #eee;text-align:center;font-size:15px;font-weight:700;color:#444;">
                 👤 اسم الموظف المدخل للشكوى: <strong style="font-size:17px;color:#222;">${sanitize(item.addedBy || '—')}</strong>
