@@ -350,7 +350,7 @@ function _showInvoiceModal(url, mime, item) {
             <div style="position:relative;display:flex;align-items:center;justify-content:center;max-width:100%;max-height:100%;">
                 <img src="${url}"
                      onerror="this.style.display='none';this.nextElementSibling.style.display='flex';"
-                     style="max-width:min(100%,720px);max-height:min(100%,68vh);width:auto;height:auto;object-fit:contain;border-radius:12px;background:#fff;box-shadow:0 12px 40px rgba(0,0,0,0.45);display:block;">
+                     style="max-width:min(100%,720px);width:auto;height:auto;object-fit:contain;border-radius:12px;background:#fff;box-shadow:0 12px 40px rgba(0,0,0,0.45);display:block;">
                 <div style="display:none;flex-direction:column;align-items:center;padding:50px 40px;text-align:center;background:#fff;border-radius:12px;color:#333;min-width:320px;box-shadow:0 12px 40px rgba(0,0,0,0.45);">
                     <div style="font-size:64px;margin-bottom:12px;">⚠️</div>
                     <div style="font-size:15px;font-weight:800;">تعذّر عرض الفاتورة</div>
@@ -386,7 +386,7 @@ function _showInvoiceModal(url, mime, item) {
                 </div>
                 <button class="_invClose" onclick="closeInvoiceModal()" style="background:rgba(0,0,0,0.3);border:none;color:#fff;width:36px;height:36px;border-radius:50%;cursor:pointer;font-size:16px;font-weight:700;display:flex;align-items:center;justify-content:center;">✕</button>
             </div>
-            <div style="flex:1 1 auto;min-height:0;overflow:hidden;padding:18px;display:flex;align-items:center;justify-content:center;background:rgba(0,0,0,0.35);">
+            <div style="flex:1 1 auto;min-height:0;overflow-y:auto;overflow-x:hidden;padding:18px;display:flex;align-items:flex-start;justify-content:center;background:rgba(0,0,0,0.35);">
                 ${preview}
             </div>
             <div style="flex:0 0 auto;padding:14px 22px;display:flex;gap:12px;justify-content:center;background:rgba(0,0,0,0.55);border-top:1px solid rgba(255,255,255,0.05);">
