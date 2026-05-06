@@ -532,8 +532,17 @@ function restoreAutoBackup(idx) {
             } catch (e) { console.warn('restore push failed for', k, e); }
         }
     }
-    alert('تمّت الاستعادة محلياً. ستُحدَّث الصفحة لقراءة البيانات من جديد.');
-    setTimeout(() => location.reload(), 600);
+    // تحديث ناعم بدون reload — يحافظ على الجلسة (مهم في وضع file://)
+    setTimeout(async () => {
+        try {
+            if (typeof loadAllData === 'function') await loadAllData();
+            if (typeof renderAll   === 'function') renderAll();
+            alert('✓ تمّت الاستعادة وتحديث البيانات بنجاح.');
+        } catch (e) {
+            console.warn('[autoBackup] restore refresh failed:', e);
+            if (confirm('تعذّر تحديث الواجهة. تحديث الصفحة الآن؟')) location.reload();
+        }
+    }, 300);
 }
 
 /* ── Download snapshot as JSON file ── */
