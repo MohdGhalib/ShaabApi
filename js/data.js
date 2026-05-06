@@ -807,16 +807,48 @@ function _userIsTyping() {
     if (ae.isContentEditable) return true;
     return false;
 }
+function _hasOpenOverlay() {
+    // أي modal مفتوح: invoice / notify / super-admin / إلخ
+    return !!(document.getElementById('_invoiceOverlay') ||
+              document.querySelector('.modal-overlay:not(.hidden)'));
+}
+function _captureFormState() {
+    const state = {};
+    document.querySelectorAll('textarea, input').forEach(el => {
+        if (!el.id) return;
+        if (el.type === 'hidden' || el.type === 'file' || el.type === 'button') return;
+        if (el.type === 'checkbox' || el.type === 'radio') {
+            if (el.checked) state[el.id] = { type:'check', val:true };
+        } else if (el.value) {
+            state[el.id] = { type:'val', val:el.value };
+        }
+    });
+    return state;
+}
+function _restoreFormState(state) {
+    if (!state) return;
+    for (const id in state) {
+        const el = document.getElementById(id);
+        if (!el) continue;
+        const s = state[id];
+        if (s.type === 'check') { if (!el.checked) el.checked = true; }
+        else if (s.type === 'val' && !el.value) { el.value = s.val; }
+    }
+}
 function safeRenderAll() {
-    if (_userIsTyping()) { _renderDeferred = true; return; }
+    if (_userIsTyping() || _hasOpenOverlay()) { _renderDeferred = true; return; }
+    const snap = _captureFormState();
     if (typeof renderAll === 'function') renderAll();
+    _restoreFormState(snap);
     _renderDeferred = false;
 }
 document.addEventListener('focusout', () => {
     setTimeout(() => {
-        if (_renderDeferred && !_userIsTyping()) {
+        if (_renderDeferred && !_userIsTyping() && !_hasOpenOverlay()) {
             _renderDeferred = false;
+            const snap = _captureFormState();
             if (typeof renderAll === 'function') renderAll();
+            _restoreFormState(snap);
         }
     }, 300);
 });
