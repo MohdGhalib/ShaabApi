@@ -427,19 +427,51 @@ function closeInvoiceModal() {
 
 /* ── حالة محرر نص الشكوى (HTML مع تنسيق ولون) ── */
 let _notifyNotesHtml = '';
+let _notifySavedRange = null;
 
 function _onNotifyNotesEdit() {
     const el = document.getElementById('_notifyNotesEditor');
     if (el) _notifyNotesHtml = el.innerHTML;
 }
 
+function _saveEditorSelection() {
+    const sel = window.getSelection();
+    if (!sel || sel.rangeCount === 0) return;
+    const range = sel.getRangeAt(0);
+    const editor = document.getElementById('_notifyNotesEditor');
+    if (editor && editor.contains(range.commonAncestorContainer)) {
+        _notifySavedRange = range.cloneRange();
+    }
+}
+
+function _restoreEditorSelection() {
+    if (!_notifySavedRange) return false;
+    const sel = window.getSelection();
+    sel.removeAllRanges();
+    sel.addRange(_notifySavedRange);
+    return true;
+}
+
 function _notifyApplyFormat(cmd, value) {
     const el = document.getElementById('_notifyNotesEditor');
     if (!el) return;
     el.focus();
+    _restoreEditorSelection(); // أعد التحديد المحفوظ بعد فقد التركيز
     try { document.execCommand(cmd, false, value || null); } catch {}
     _onNotifyNotesEdit();
 }
+
+// راقب تغيّر التحديد عالمياً واحفظه إن كان داخل المحرّر
+document.addEventListener('selectionchange', () => {
+    const sel = window.getSelection();
+    if (!sel || sel.rangeCount === 0) return;
+    const editor = document.getElementById('_notifyNotesEditor');
+    if (!editor) return;
+    const range = sel.getRangeAt(0);
+    if (editor.contains(range.commonAncestorContainer)) {
+        _notifySavedRange = range.cloneRange();
+    }
+});
 
 function _notifyResetNotes() {
     _notifyNotesHtml = '';
