@@ -346,10 +346,10 @@ function _showInvoiceModal(url, mime, item) {
     if (tryAsImage) {
         downloadName = 'invoice.' + ((mime.split('/')[1] || 'png').replace('jpeg','jpg'));
         const fallbackHtml = `<div style="padding:50px 40px;text-align:center;background:#fff;border-radius:12px;color:#333;min-width:320px;"><div style="font-size:64px;margin-bottom:12px;">⚠️</div><div style="font-size:15px;font-weight:700;">تعذّر عرض الفاتورة</div><div style="font-size:12px;color:#888;margin-top:8px;">اضغط "تنزيل" لمحاولة فتحها على جهازك</div></div>`;
-        preview = `<img src="${url}" onerror="this.outerHTML=${JSON.stringify(fallbackHtml)};" style="max-width:100%;max-height:68vh;object-fit:contain;border-radius:12px;background:#fff;box-shadow:0 12px 40px rgba(0,0,0,0.45);">`;
+        preview = `<img src="${url}" onerror="this.outerHTML=${JSON.stringify(fallbackHtml)};" style="max-width:100%;max-height:100%;width:auto;height:auto;object-fit:contain;border-radius:12px;background:#fff;box-shadow:0 12px 40px rgba(0,0,0,0.45);display:block;">`;
     } else if (mime === 'application/pdf') {
         downloadName = 'invoice.pdf';
-        preview = `<iframe src="${url}" style="width:100%;height:70vh;border:none;border-radius:12px;background:#fff;box-shadow:0 12px 40px rgba(0,0,0,0.45);"></iframe>`;
+        preview = `<iframe src="${url}" style="width:100%;height:100%;min-height:55vh;border:none;border-radius:12px;background:#fff;box-shadow:0 12px 40px rgba(0,0,0,0.45);"></iframe>`;
     } else {
         preview = `<div style="padding:60px 50px;text-align:center;background:#fff;border-radius:12px;color:#333;min-width:320px;box-shadow:0 12px 40px rgba(0,0,0,0.45);">
             <div style="font-size:72px;line-height:1;margin-bottom:18px;">📄</div>
@@ -368,20 +368,20 @@ function _showInvoiceModal(url, mime, item) {
             #_invoiceOverlay ._invBtn:hover { transform: translateY(-2px); }
             #_invoiceOverlay ._invClose:hover { background: rgba(0,0,0,0.55) !important; }
         </style>
-        <div style="background:linear-gradient(180deg,#1e1e2e 0%,#161620 100%);color:#fff;border:1px solid rgba(255,255,255,0.08);border-radius:20px;width:920px;max-width:96vw;max-height:94vh;display:flex;flex-direction:column;overflow:hidden;box-shadow:0 30px 120px rgba(0,0,0,0.7);">
-            <div style="display:flex;justify-content:space-between;align-items:center;padding:18px 24px;background:linear-gradient(135deg,#c62828 0%,#b71c1c 100%);border-bottom:1px solid rgba(255,255,255,0.08);">
+        <div style="background:linear-gradient(180deg,#1e1e2e 0%,#161620 100%);color:#fff;border:1px solid rgba(255,255,255,0.08);border-radius:20px;width:920px;max-width:96vw;height:92vh;display:flex;flex-direction:column;overflow:hidden;box-shadow:0 30px 120px rgba(0,0,0,0.7);">
+            <div style="flex:0 0 auto;display:flex;justify-content:space-between;align-items:center;padding:14px 22px;background:linear-gradient(135deg,#c62828 0%,#b71c1c 100%);border-bottom:1px solid rgba(255,255,255,0.08);">
                 <div style="display:flex;flex-direction:column;gap:3px;">
-                    <div style="font-size:17px;font-weight:800;display:flex;align-items:center;gap:10px;">📎 الفاتورة المرفقة</div>
+                    <div style="font-size:16px;font-weight:800;display:flex;align-items:center;gap:10px;">📎 الفاتورة المرفقة</div>
                     ${branchLabel ? `<div style="font-size:12px;color:rgba(255,255,255,0.85);font-weight:600;">${branchLabel}</div>` : ''}
                 </div>
-                <button class="_invClose" onclick="closeInvoiceModal()" style="background:rgba(0,0,0,0.3);border:none;color:#fff;width:38px;height:38px;border-radius:50%;cursor:pointer;font-size:17px;font-weight:700;display:flex;align-items:center;justify-content:center;">✕</button>
+                <button class="_invClose" onclick="closeInvoiceModal()" style="background:rgba(0,0,0,0.3);border:none;color:#fff;width:36px;height:36px;border-radius:50%;cursor:pointer;font-size:16px;font-weight:700;display:flex;align-items:center;justify-content:center;">✕</button>
             </div>
-            <div style="flex:1;overflow:auto;padding:24px;display:flex;align-items:center;justify-content:center;background:rgba(0,0,0,0.35);">
+            <div style="flex:1 1 auto;min-height:0;overflow:hidden;padding:18px;display:flex;align-items:center;justify-content:center;background:rgba(0,0,0,0.35);">
                 ${preview}
             </div>
-            <div style="padding:16px 24px;display:flex;gap:12px;justify-content:center;background:rgba(0,0,0,0.5);border-top:1px solid rgba(255,255,255,0.05);">
-                <a class="_invBtn" href="${url}" download="${downloadName}" style="padding:12px 32px;background:linear-gradient(135deg,#1976d2,#0d47a1);color:#fff;border-radius:11px;text-decoration:none;font-weight:800;font-size:14px;display:inline-flex;align-items:center;gap:8px;box-shadow:0 6px 18px rgba(25,118,210,0.45);font-family:Cairo;">⬇ تنزيل الفاتورة</a>
-                <button class="_invBtn" onclick="closeInvoiceModal()" style="padding:12px 32px;background:rgba(255,255,255,0.08);color:#fff;border:1px solid rgba(255,255,255,0.2);border-radius:11px;cursor:pointer;font-family:Cairo;font-weight:800;font-size:14px;">✕ إغلاق</button>
+            <div style="flex:0 0 auto;padding:14px 22px;display:flex;gap:12px;justify-content:center;background:rgba(0,0,0,0.55);border-top:1px solid rgba(255,255,255,0.05);">
+                <a class="_invBtn" href="${url}" download="${downloadName}" style="padding:11px 30px;background:linear-gradient(135deg,#1976d2,#0d47a1);color:#fff;border-radius:11px;text-decoration:none;font-weight:800;font-size:14px;display:inline-flex;align-items:center;gap:8px;box-shadow:0 6px 18px rgba(25,118,210,0.45);font-family:Cairo;">⬇ تنزيل الفاتورة</a>
+                <button class="_invBtn" onclick="closeInvoiceModal()" style="padding:11px 30px;background:rgba(255,255,255,0.08);color:#fff;border:1px solid rgba(255,255,255,0.2);border-radius:11px;cursor:pointer;font-family:Cairo;font-weight:800;font-size:14px;">✕ إغلاق</button>
             </div>
         </div>`;
     document.body.appendChild(overlay);
