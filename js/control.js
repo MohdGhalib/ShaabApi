@@ -286,26 +286,48 @@ function openInvoiceFile(id) {
               || (db.inquiries  || []).find(x => String(x.id) === String(id));
     if (!item || !item.file) { alert('لا توجد فاتورة مرفقة.'); return; }
 
-    let url, mime;
-    if (!String(item.file).startsWith('data:')) {
-        url = item.file;
-        mime = 'application/octet-stream';
-    } else {
+    let f = String(item.file).trim();
+    let mime = 'application/octet-stream';
+
+    // 1) data URL قياسي (الصيغة الجديدة)
+    if (f.startsWith('data:')) {
+        const m = f.match(/^data:([^;,]+)/);
+        if (m) mime = m[1].trim();
+    }
+    // 2) http(s) أو رابط نسبي → استدلال من الامتداد
+    else if (/^https?:\/\//i.test(f) || f.startsWith('/')) {
+        const ext = (f.match(/\.([a-z0-9]+)(\?|#|$)/i) || [])[1];
+        if (ext) {
+            const e = ext.toLowerCase();
+            if (['png','jpg','jpeg','gif','webp','bmp','svg'].includes(e)) {
+                mime = 'image/' + (e === 'jpg' ? 'jpeg' : e);
+            } else if (e === 'pdf') mime = 'application/pdf';
+        }
+    }
+    // 3) base64 خام بدون data: prefix → نضع image/png افتراضياً
+    else if (/^[A-Za-z0-9+/=\s]{40,}$/.test(f)) {
+        f = 'data:image/png;base64,' + f.replace(/\s/g, '');
+        mime = 'image/png';
+    }
+
+    // الصور: data URL يعمل مباشرة في <img> (بلا تحويل)
+    // PDF/data: نحوّل إلى Blob URL لتفادي حظر iframe على data:
+    let displayUrl = f;
+    if (mime === 'application/pdf' && f.startsWith('data:')) {
         try {
-            const arr = item.file.split(',');
-            const mimeMatch = arr[0].match(/:(.*?);/);
-            mime = mimeMatch ? mimeMatch[1] : 'application/octet-stream';
+            const arr = f.split(',');
             const bstr = atob(arr[1]);
             const u8 = new Uint8Array(bstr.length);
             for (let i = 0; i < bstr.length; i++) u8[i] = bstr.charCodeAt(i);
-            url = URL.createObjectURL(new Blob([u8], { type: mime }));
-        } catch (e) {
-            console.error('invoice decode failed', e);
-            alert('تعذّر قراءة ملف الفاتورة.');
-            return;
-        }
+            displayUrl = URL.createObjectURL(new Blob([u8], { type: mime }));
+        } catch (e) { console.warn('[invoice] blob conv failed', e); }
     }
-    _showInvoiceModal(url, mime, item);
+
+    console.log('[invoice] mime=', mime,
+        '· urlType=', displayUrl.startsWith('blob:') ? 'blob' : (displayUrl.startsWith('data:') ? 'data' : 'http'),
+        '· urlLen=', displayUrl.length,
+        '· originalPrefix=', String(item.file).substring(0, 30));
+    _showInvoiceModal(displayUrl, mime, item);
 }
 
 function _showInvoiceModal(url, mime, item) {
@@ -318,9 +340,13 @@ function _showInvoiceModal(url, mime, item) {
 
     let preview;
     let downloadName = 'invoice';
-    if (mime.startsWith('image/')) {
-        downloadName = 'invoice.' + (mime.split('/')[1] || 'png');
-        preview = `<img src="${url}" style="max-width:100%;max-height:68vh;object-fit:contain;border-radius:12px;background:#fff;box-shadow:0 12px 40px rgba(0,0,0,0.45);">`;
+    const tryAsImage = mime.startsWith('image/') ||
+                       (mime === 'application/octet-stream' && (url.startsWith('data:') || url.startsWith('blob:') || /\.(png|jpe?g|gif|webp|bmp|svg)(\?|$)/i.test(url)));
+
+    if (tryAsImage) {
+        downloadName = 'invoice.' + ((mime.split('/')[1] || 'png').replace('jpeg','jpg'));
+        const fallbackHtml = `<div style="padding:50px 40px;text-align:center;background:#fff;border-radius:12px;color:#333;min-width:320px;"><div style="font-size:64px;margin-bottom:12px;">⚠️</div><div style="font-size:15px;font-weight:700;">تعذّر عرض الفاتورة</div><div style="font-size:12px;color:#888;margin-top:8px;">اضغط "تنزيل" لمحاولة فتحها على جهازك</div></div>`;
+        preview = `<img src="${url}" onerror="this.outerHTML=${JSON.stringify(fallbackHtml)};" style="max-width:100%;max-height:68vh;object-fit:contain;border-radius:12px;background:#fff;box-shadow:0 12px 40px rgba(0,0,0,0.45);">`;
     } else if (mime === 'application/pdf') {
         downloadName = 'invoice.pdf';
         preview = `<iframe src="${url}" style="width:100%;height:70vh;border:none;border-radius:12px;background:#fff;box-shadow:0 12px 40px rgba(0,0,0,0.45);"></iframe>`;
