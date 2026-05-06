@@ -148,11 +148,11 @@ function _abTakeSnapshot(reason) {
             const last       = arr[arr.length - 1];
             const sameMaster = last.data && last.data['Shaab_Master_DB']    === snap.data['Shaab_Master_DB'];
             const sameEmp    = last.data && last.data['Shaab_Employees_DB'] === snap.data['Shaab_Employees_DB'];
-            // أي نسخة تلقائية (timer/SSE/polling/save) تُتخطّى عند التطابق
-            // فقط النسخ اليدوية الصريحة (manual / manual-sync / pre-restore / unload) تُحفَظ دائماً
+            // dedup للنسخ المُحفَّزة بحدث (save/SSE/polling/startup) — لا تُكتَب لو لم يتغيّر شيء
+            // autosync (التايمر كل 15د) يُحفَظ دائماً ليكون "نبضة حياة" حتى بدون تغيير
             const isAuto = !reason || reason === 'auto' || reason.startsWith('save:') ||
-                           reason === 'startup'  || reason === 'autosync' ||
-                           reason === 'sync'     || reason === 'remote-load';
+                           reason === 'startup' ||
+                           reason === 'sync'    || reason === 'remote-load';
             if (isAuto && sameMaster && sameEmp) return null;
         }
         arr.push(snap);
@@ -484,8 +484,13 @@ function isAutoBackupOn() {
 function startAutoBackup() {
     stopAutoBackup();
     try { localStorage.setItem(_AB_AUTO_KEY, '1'); } catch {}
+    console.log('[autoBackup] ✓ autosync timer started — every', _AB_AUTOSYNC_MS/60000, 'minutes');
     _abAutoTimer = setInterval(() => {
-        if (document.hidden) return; // تجنّب المزامنة عندما تكون الصفحة مخفية
+        if (document.hidden) {
+            console.log('[autoBackup] ⏸ tick skipped — tab hidden');
+            return;
+        }
+        console.log('[autoBackup] ⏰ autosync tick @', new Date().toLocaleTimeString());
         syncAndBackup('autosync');
     }, _AB_AUTOSYNC_MS);
 }
