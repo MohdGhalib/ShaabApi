@@ -635,7 +635,7 @@ function editMontasiaBranch(id) {
                     الحالي: <b style="color:var(--text-main);">${item.city || '—'}</b> / <b style="color:var(--text-main);">${item.branch || '—'}</b>
                 </div>
                 <label style="display:block;margin-bottom:5px;font-size:12px;color:var(--text-dim);">المحافظة:</label>
-                <select id="_ebCity" onchange="if(typeof updateBranches==='function')updateBranches('_ebCity','_ebBranch')" style="width:100%;padding:8px 10px;background:var(--bg-input);color:var(--text-main);border:1px solid var(--border);border-radius:8px;font-family:Cairo;margin-bottom:12px;"></select>
+                <select id="_ebCity" style="width:100%;padding:8px 10px;background:var(--bg-input);color:var(--text-main);border:1px solid var(--border);border-radius:8px;font-family:Cairo;margin-bottom:12px;"></select>
                 <label style="display:block;margin-bottom:5px;font-size:12px;color:var(--text-dim);">الفرع:</label>
                 <select id="_ebBranch" style="width:100%;padding:8px 10px;background:var(--bg-input);color:var(--text-main);border:1px solid var(--border);border-radius:8px;font-family:Cairo;"></select>
                 <div style="display:flex;gap:8px;justify-content:flex-end;margin-top:16px;">
@@ -646,13 +646,28 @@ function editMontasiaBranch(id) {
         </div>`;
     document.body.appendChild(overlay);
 
-    // املأ قائمة المدن من dropdown موجود في نفس الصفحة (mCityAdd / searchCityM)
-    const srcCity = document.getElementById('mCityAdd') || document.getElementById('searchCityM') || document.getElementById('mCityFilter');
-    const cityEl  = document.getElementById('_ebCity');
-    if (srcCity && cityEl) cityEl.innerHTML = srcCity.innerHTML;
-    if (cityEl) cityEl.value = item.city || '';
-    if (typeof updateBranches === 'function') updateBranches('_ebCity', '_ebBranch');
-    const brEl = document.getElementById('_ebBranch');
+    // املأ قائمة المحافظات من COUNTRIES_DATA — نطاق دولة المنتسية
+    const cityEl = document.getElementById('_ebCity');
+    const brEl   = document.getElementById('_ebBranch');
+    const country = item.country || 'الأردن';
+    const cdata = (typeof COUNTRIES_DATA !== 'undefined') ? COUNTRIES_DATA[country] : null;
+    const regions = cdata && cdata.regions ? cdata.regions : {};
+
+    if (cityEl) {
+        cityEl.innerHTML = '<option value="">— اختر —</option>' +
+            Object.keys(regions).map(c => `<option value="${c}">${c}</option>`).join('');
+        cityEl.value = item.city || '';
+    }
+
+    // ربط تغيير المحافظة لتحديث الفروع — نستخدم نفس COUNTRIES_DATA لضمان النتيجة
+    const repopulateBranches = () => {
+        if (!brEl || !cityEl) return;
+        const branches = regions[cityEl.value] || [];
+        brEl.innerHTML = '<option value="">— اختر —</option>' +
+            branches.map(b => `<option value="${b}">${b}</option>`).join('');
+    };
+    if (cityEl) cityEl.onchange = repopulateBranches;
+    repopulateBranches();
     if (brEl) brEl.value = item.branch || '';
 }
 
