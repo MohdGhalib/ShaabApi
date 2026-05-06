@@ -521,16 +521,33 @@ function restoreAutoBackup(idx) {
                 '⚠️ ستحلّ هذه النسخة محلّ البيانات الحالية وسيُرفع التغيير للسيرفر.';
     if (!confirm(msg)) return;
 
-    _abTakeSnapshot('pre-restore');
+    // التقط نسخة أمان قبل الاستعادة (قد تفشل لو localStorage ممتلئ — مقبول)
+    const preSnap = _abMakeSnapshot('pre-restore');
 
+    // فرّغ buffer النسخ الاحتياطية لإتاحة مساحة كافية لكتابة snapshot المستعاد
+    try { localStorage.removeItem(_AB_STORE_KEY); console.log('[autoBackup] 🧹 cleared backups buffer to free space for restore'); } catch {}
+
+    let _writeErrors = [];
     for (const k of _AB_TRACKED_KEYS) {
         const v = (snap.data || {})[k];
         if (v != null) {
             try {
                 if (typeof _push === 'function') _push(k, v);
                 else localStorage.setItem(k, v);
-            } catch (e) { console.warn('restore push failed for', k, e); }
+            } catch (e) {
+                console.warn('restore push failed for', k, e);
+                _writeErrors.push(k + ': ' + (e && e.name === 'QuotaExceededError' ? 'مساحة ممتلئة' : (e.message || 'فشل')));
+            }
         }
+    }
+
+    // أعد كتابة pre-restore فقط في الـ buffer (للتراجع لاحقاً إن أردت)
+    if (preSnap) {
+        try { _abWriteAll([preSnap]); } catch {}
+    }
+
+    if (_writeErrors.length > 0) {
+        alert('⚠️ فشل كتابة بعض البيانات:\n' + _writeErrors.join('\n') + '\n\nقد تحتاج لمسح بيانات المتصفّح.');
     }
     // تحديث ناعم بدون reload — يحافظ على الجلسة (مهم في وضع file://)
     setTimeout(async () => {
