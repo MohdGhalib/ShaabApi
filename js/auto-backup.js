@@ -535,8 +535,25 @@ function restoreAutoBackup(idx) {
     // تحديث ناعم بدون reload — يحافظ على الجلسة (مهم في وضع file://)
     setTimeout(async () => {
         try {
-            if (typeof loadAllData === 'function') await loadAllData();
-            if (typeof renderAll   === 'function') renderAll();
+            // قراءة مباشرة من localStorage (تتجاوز قفل _isLoading في loadAllData)
+            const _readLS = (k, dflt) => {
+                try { const v = localStorage.getItem(k); return v ? JSON.parse(v) : dflt; }
+                catch { return dflt; }
+            };
+            if (typeof IS_LOCAL !== 'undefined' && IS_LOCAL) {
+                if (typeof db        !== 'undefined') db        = _readLS('Shaab_Master_DB',    { montasiat:[], inquiries:[], complaints:[] });
+                if (typeof employees !== 'undefined') employees = _readLS('Shaab_Employees_DB', []);
+                if (typeof breaks    !== 'undefined') breaks    = _readLS('Shaab_Breaks_DB',    []);
+                if (typeof sessions  !== 'undefined') sessions  = _readLS('Shaab_Sessions_DB',  []);
+                const _pl = _readLS('Shaab_PriceList_DB', null);
+                if (typeof priceList !== 'undefined' && _pl) priceList = _pl;
+                console.log('[autoBackup] ✓ restore: data read from localStorage —',
+                    'montasiat:', (db.montasiat||[]).length,
+                    '· employees:', (employees||[]).length);
+            } else if (typeof loadAllData === 'function') {
+                await loadAllData();
+            }
+            if (typeof renderAll === 'function') renderAll();
             alert('✓ تمّت الاستعادة وتحديث البيانات بنجاح.');
         } catch (e) {
             console.warn('[autoBackup] restore refresh failed:', e);
