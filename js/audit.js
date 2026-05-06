@@ -21,6 +21,7 @@ const AUDIT_ACTION_LABELS = {
     'editControlSubReply':   'تعديل رد موظف سيطرة',
     'editAuditStatus':       'تعديل حالة الملاحظة',
     'toggleCountComplaint':  'احتساب/تراجع شكوى',
+    'editComplaintField':    'تعديل حقل شكوى',
     'deliverMontasia':       'تسليم منتسية',
     'approveMontasia':       'الموافقة على منتسية',
     'approveMontasiaMobile': 'موافقة منتسية (موبايل)',

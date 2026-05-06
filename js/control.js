@@ -864,6 +864,24 @@ function toggleAuditStatusEdit(id) {
     if (box) box.style.display = box.style.display === 'none' ? 'block' : 'none';
 }
 
+/* ══════════════════════════════════════════════════════
+   تعديل حقل في شكوى (لمدير الكول سنتر/المدير)
+   ══════════════════════════════════════════════════════ */
+function editComplaintField(id, key, label) {
+    if (currentUser?.role !== 'cc_manager' && !currentUser?.isAdmin) return;
+    const item = (db.complaints || []).find(x => String(x.id) === String(id));
+    if (!item) return;
+    const oldVal = item[key] != null ? String(item[key]) : '';
+    const newVal = prompt(`تعديل: ${label}\n(القيمة الحالية: ${oldVal || '—'})`, oldVal);
+    if (newVal === null) return; // المستخدم ألغى
+    const trimmed = String(newVal).trim();
+    if (trimmed === oldVal) return;
+    item[key] = trimmed;
+    const _short = (s) => (s || '—').substring(0, 30);
+    if (typeof _logAudit === 'function') _logAudit('editComplaintField', item.branch || '—', `${label}: ${_short(oldVal)} → ${_short(trimmed)}`);
+    if (typeof save === 'function') save();
+}
+
 function saveAuditStatusEdit(id) {
     const val = document.getElementById(`auditStatusEdit-${id}`)?.value;
     if (!val) return alert("يرجى تحديد حالة الملاحظة");

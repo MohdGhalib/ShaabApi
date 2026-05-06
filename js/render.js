@@ -819,17 +819,23 @@ function _renderTableC(get, isAdmin) {
 
         const ctStr  = x.callTime ? _formatCallTime(x.callTime) : '';
         const hasMore = !!(ctStr || x.noteDate || x.moveNumber || x.invoiceValue);
-        const _row = (label, val, last) =>
+        const _canEditFields = isCCMgrC || isAdmin;
+        const _editIcon = (key, label) => _canEditFields
+            ? ` <button onclick="editComplaintField(${x.id}, '${key}', '${label.replace(/'/g, "\\'")}')" title="تعديل ${label}" style="background:none;border:none;cursor:pointer;color:var(--text-dim);padding:0 4px;font-size:11px;">✏️</button>`
+            : '';
+        const _row = (label, val, last, key) =>
             `<div style="display:flex;${last ? '' : 'border-bottom:1px solid rgba(255,255,255,0.07);'}">
-                <span style="background:rgba(255,255,255,0.06);padding:9px 14px;color:var(--text-dim);font-weight:700;min-width:140px;text-align:right;">${label}</span>
+                <span style="background:rgba(255,255,255,0.06);padding:9px 14px;color:var(--text-dim);font-weight:700;min-width:140px;text-align:right;">${label}${key ? _editIcon(key, label) : ''}</span>
                 <span style="padding:9px 14px;color:var(--text-main);">${val}</span>
             </div>`;
+        // عرض كل الحقول لمدير الكول سنتر/المدير حتى لو فارغة (مع علامة تعديل لكل حقل)
+        const _showAll = _canEditFields;
         const extraInfoHtml = `<div style="margin-top:10px;border:1px solid rgba(255,255,255,0.1);border-radius:12px;overflow:hidden;font-size:13px;">
-            ${_row('📝 التفاصيل', sanitize(x.notes), !hasMore)}
-            ${ctStr        ? _row('🕐 وقت تلقي الاتصال', sanitize(ctStr),       !(x.noteDate||x.moveNumber||x.invoiceValue)) : ''}
-            ${x.noteDate   ? _row('📅 تاريخ الملاحظة',   sanitize(x.noteDate),  !(x.moveNumber||x.invoiceValue))             : ''}
-            ${x.moveNumber ? _row('🔢 رقم الحركة',        sanitize(x.moveNumber),!x.invoiceValue)                            : ''}
-            ${x.invoiceValue?_row('💰 قيمة الفاتورة',     sanitize(x.invoiceValue), true)                                    : ''}
+            ${_row('📝 التفاصيل', sanitize(x.notes || '—'), !(_showAll || hasMore), 'notes')}
+            ${(_showAll || ctStr)        ? _row('🕐 وقت تلقي الاتصال', sanitize(ctStr || '—'),         !(_showAll || x.noteDate||x.moveNumber||x.invoiceValue), 'callTime')     : ''}
+            ${(_showAll || x.noteDate)   ? _row('📅 تاريخ الملاحظة',    sanitize(x.noteDate || '—'),    !(_showAll || x.moveNumber||x.invoiceValue),             'noteDate')     : ''}
+            ${(_showAll || x.moveNumber) ? _row('🔢 رقم الحركة',         sanitize(x.moveNumber || '—'),  !(_showAll || x.invoiceValue),                           'moveNumber')   : ''}
+            ${(_showAll || x.invoiceValue)?_row('💰 قيمة الفاتورة',      sanitize(x.invoiceValue || '—'),true,                                                    'invoiceValue') : ''}
         </div>`;
 
         let cStatusBadge = '';
