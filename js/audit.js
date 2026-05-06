@@ -8,6 +8,7 @@ const AUDIT_ACTION_LABELS = {
     'editMontasiaType':      'تعديل نوع منتسية',
     'editMontasiaStatus':    'تعديل حالة منتسية',
     'editMontasiaNotes':     'تعديل تفاصيل منتسية',
+    'editMontasiaBranch':    'تعديل فرع منتسية',
     'deliverMontasia':       'تسليم منتسية',
     'approveMontasia':       'الموافقة على منتسية',
     'approveMontasiaMobile': 'موافقة منتسية (موبايل)',

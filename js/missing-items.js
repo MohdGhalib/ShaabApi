@@ -612,6 +612,73 @@ function saveEditMontasia(id) {
     }
 }
 
+/* ══ تعديل المحافظة + الفرع لمنتسية موجودة (cc_manager) ══ */
+function editMontasiaBranch(id) {
+    if (currentUser?.role !== 'cc_manager' && !currentUser?.isAdmin) return;
+    const item = (db.montasiat || []).find(x => x.id === id);
+    if (!item) return;
+    closeEditMontasiaBranchModal();
+
+    const overlay = document.createElement('div');
+    overlay.id = '_ebOverlay';
+    overlay.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.6);z-index:100002;display:flex;align-items:center;justify-content:center;font-family:Cairo;padding:16px;';
+    overlay.onclick = (e) => { if (e.target === overlay) closeEditMontasiaBranchModal(); };
+
+    overlay.innerHTML = `
+        <div style="background:var(--bg-card);color:var(--text-main);border:1px solid var(--border);border-radius:14px;width:380px;max-width:96vw;display:flex;flex-direction:column;box-shadow:0 20px 60px rgba(0,0,0,0.5);">
+            <div style="padding:14px 18px;border-bottom:1px solid var(--border);display:flex;justify-content:space-between;align-items:center;background:linear-gradient(135deg,#1976d2,#0d47a1);color:#fff;border-radius:14px 14px 0 0;">
+                <h3 style="margin:0;font-size:15px;">📍 تعديل المحافظة والفرع</h3>
+                <button onclick="closeEditMontasiaBranchModal()" style="background:none;border:none;color:#fff;cursor:pointer;font-size:18px;">✕</button>
+            </div>
+            <div style="padding:16px 18px;">
+                <div style="font-size:11px;color:var(--text-dim);margin-bottom:10px;background:var(--bg-input);padding:8px 10px;border-radius:8px;">
+                    الحالي: <b style="color:var(--text-main);">${item.city || '—'}</b> / <b style="color:var(--text-main);">${item.branch || '—'}</b>
+                </div>
+                <label style="display:block;margin-bottom:5px;font-size:12px;color:var(--text-dim);">المحافظة:</label>
+                <select id="_ebCity" onchange="if(typeof updateBranches==='function')updateBranches('_ebCity','_ebBranch')" style="width:100%;padding:8px 10px;background:var(--bg-input);color:var(--text-main);border:1px solid var(--border);border-radius:8px;font-family:Cairo;margin-bottom:12px;"></select>
+                <label style="display:block;margin-bottom:5px;font-size:12px;color:var(--text-dim);">الفرع:</label>
+                <select id="_ebBranch" style="width:100%;padding:8px 10px;background:var(--bg-input);color:var(--text-main);border:1px solid var(--border);border-radius:8px;font-family:Cairo;"></select>
+                <div style="display:flex;gap:8px;justify-content:flex-end;margin-top:16px;">
+                    <button onclick="closeEditMontasiaBranchModal()" style="padding:8px 14px;border:1px solid var(--border);border-radius:8px;background:var(--bg-input);color:var(--text-main);cursor:pointer;font-family:Cairo;font-weight:700;font-size:12px;">إلغاء</button>
+                    <button onclick="saveMontasiaBranch(${id})" style="padding:8px 18px;border:none;border-radius:8px;background:linear-gradient(135deg,#2e7d32,#1b5e20);color:#fff;cursor:pointer;font-family:Cairo;font-weight:700;font-size:12px;">💾 حفظ</button>
+                </div>
+            </div>
+        </div>`;
+    document.body.appendChild(overlay);
+
+    // املأ قائمة المدن من dropdown موجود في نفس الصفحة (mCityAdd / searchCityM)
+    const srcCity = document.getElementById('mCityAdd') || document.getElementById('searchCityM') || document.getElementById('mCityFilter');
+    const cityEl  = document.getElementById('_ebCity');
+    if (srcCity && cityEl) cityEl.innerHTML = srcCity.innerHTML;
+    if (cityEl) cityEl.value = item.city || '';
+    if (typeof updateBranches === 'function') updateBranches('_ebCity', '_ebBranch');
+    const brEl = document.getElementById('_ebBranch');
+    if (brEl) brEl.value = item.branch || '';
+}
+
+function closeEditMontasiaBranchModal() {
+    const o = document.getElementById('_ebOverlay');
+    if (o) o.remove();
+}
+
+function saveMontasiaBranch(id) {
+    if (currentUser?.role !== 'cc_manager' && !currentUser?.isAdmin) return;
+    const item = (db.montasiat || []).find(x => x.id === id);
+    if (!item) return;
+    const newCity   = (document.getElementById('_ebCity')?.value   || '').trim();
+    const newBranch = (document.getElementById('_ebBranch')?.value || '').trim();
+    if (!newCity || !newBranch) return alert('يرجى اختيار المحافظة والفرع');
+    if (item.city === newCity && item.branch === newBranch) { closeEditMontasiaBranchModal(); return; }
+    const oldRef = `${item.city || '—'} / ${item.branch || '—'}`;
+    item.city   = newCity;
+    item.branch = newBranch;
+    if (typeof _logAudit === 'function')
+        _logAudit('editMontasiaBranch', `${newCity} / ${newBranch}`, `${oldRef} → ${newCity} / ${newBranch}`);
+    if (typeof save === 'function') save();
+    if (typeof renderAll === 'function') renderAll();
+    closeEditMontasiaBranchModal();
+}
+
 /* ══ تصدير / استيراد Excel ══ */
 function exportMontasiat() {
     const get = id => { const el = document.getElementById(id); return el ? el.value : ''; };

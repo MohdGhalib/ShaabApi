@@ -482,7 +482,7 @@ function _renderTableM(get, isAdmin) {
                 <div style="display:inline-flex;align-items:center;">${_statusBadge}${_statusPencil}</div>
             </div>${_statusEditPanel}`;
         return `<tr data-id="${x.id}">
-            <td><b>${x.branch}</b>${x.branchEmp?`<br><span style="font-size:13px;color:var(--text-dim);font-weight:700;">👤 ${sanitize(x.branchEmp)}</span>`:''}${mobileTag}</td>
+            <td><b>${x.branch}</b>${_isCCMgr?` <button onclick="editMontasiaBranch(${x.id})" title="تعديل الفرع/المحافظة" style="background:none;border:none;cursor:pointer;color:var(--text-dim);padding:0 4px;font-size:12px;">✏️</button>`:''}${x.branchEmp?`<br><span style="font-size:13px;color:var(--text-dim);font-weight:700;">👤 ${sanitize(x.branchEmp)}</span>`:''}${mobileTag}</td>
             <td style="text-align:center;">${_typeCell}</td>
             <td><span class="text-box-cell">${sanitize(x.notes)}</span>${extraInfo}${photoCell}${editBox}</td>
             <td style="vertical-align:top;text-align:center;">${_statusCell}</td>
