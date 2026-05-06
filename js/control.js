@@ -282,7 +282,9 @@ async function openNotifyModal(id) {
    فتح الفاتورة المرفقة بالشكوى (تجاوز حظر data: URLs في المتصفحات)
    ══════════════════════════════════════════════════════ */
 function openInvoiceFile(id) {
-    const item = (db.complaints || []).find(x => String(x.id) === String(id));
+    // ابحث في الشكاوى أولاً ثم في الاستفسارات (نفس id قد يقع في أيٍّ منهما)
+    const item = (db.complaints || []).find(x => String(x.id) === String(id))
+              || (db.inquiries  || []).find(x => String(x.id) === String(id));
     if (!item || !item.file) { alert('لا توجد فاتورة مرفقة.'); return; }
 
     // إن لم يكن data URL، استعمله مباشرة

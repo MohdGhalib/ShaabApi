@@ -7,6 +7,26 @@ function filterTable() {
     renderAll();
 }
 
+/* بحث نصّي شامل لمنتسية: يفحص ملاحظات + اسم الصنف + قيمة + تفاصيل الأصناف المتعددة */
+function _matchTextM(x, q) {
+    if (!q) return true;
+    const fields = [
+        x.notes,
+        x.roastItemName, x.roastItemValue, x.roastItemWeight,
+        x.missingValue,
+        x.branchEmp, x.branch, x.city
+    ];
+    if (Array.isArray(x.items)) {
+        for (const it of x.items) {
+            if (it) fields.push(it.name, it.value, it.weight, it.notes);
+        }
+    }
+    for (const v of fields) {
+        if (v != null && String(v).toLowerCase().includes(q)) return true;
+    }
+    return false;
+}
+
 /* ── مساعد: تنسيق وقت الاتصال ── */
 function _formatCallTime(callTime) {
     try {
@@ -347,7 +367,7 @@ function _renderTableM(get, isAdmin) {
         (!f.city        || x.city===f.city) &&
         (!f.branch      || x.branch===f.branch) &&
         (!f.date        || x.iso.startsWith(f.date)) &&
-        (!f.text        || x.notes.toLowerCase().includes(f.text)) &&
+        (!f.text        || _matchTextM(x, f.text)) &&
         (!f.addedBy     || (x.addedBy||'').includes(f.addedBy)) &&
         (!f.deliveredBy || (x.deliveredBy||'').includes(f.deliveredBy)) &&
         (!f.type        || (x.type||'')=== f.type) &&
@@ -560,7 +580,7 @@ function _renderTableO(get) {
         (!f.city    || x.city===f.city) &&
         (!f.branch  || x.branch===f.branch) &&
         (!f.date    || x.iso.startsWith(f.date)) &&
-        (!f.text    || x.notes.toLowerCase().includes(f.text)) &&
+        (!f.text    || (x.notes||'').toLowerCase().includes(f.text)) &&
         (!f.addedBy || (x.addedBy||'').includes(f.addedBy)) &&
         (!f.type    || (x.type||'')=== f.type) &&
         (!f.subType || (x.roastSubType||'') === f.subType)
