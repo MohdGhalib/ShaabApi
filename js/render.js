@@ -158,10 +158,14 @@ function _buildAuditHtml(x, isControl, isControlEmployee, isControlSub, controlE
         </div>`;
     }
 
-    if (x.audit) {
+    const _isMistreat = x.type === 'سوء تعامل';
+    if (x.audit || _isMistreat) {
+        const _leftText = x.audit
+            ? 'رد قسم السيطرة: ' + sanitize(x.audit)
+            : '<span style="color:#ffb74d;font-weight:700;">⏳ جاري التحقق من الحالة لدى قسم السيطرة</span>';
         return `<div class="final-audit-text">
             <div style="display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:8px;">
-                <div>رد قسم السيطرة: ${sanitize(x.audit)}</div>
+                <div>${_leftText}</div>
                 <button class="btn-notify" onclick="openNotifyModal(${x.id})">📣 تبليغ</button>
             </div>
             ${x.auditStatus ? `<div style="margin-top:10px;padding-top:10px;border-top:1px solid var(--border);display:flex;align-items:center;gap:10px;">

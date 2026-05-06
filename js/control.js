@@ -440,7 +440,7 @@ function refreshNotifyCard() {
 
             <div style="margin-bottom:14px;padding:14px 16px;background:#f0f4ff;border-right:4px solid #1565c0;border-radius:6px;">
                 <div style="font-weight:800;color:#1565c0;margin-bottom:7px;font-size:16px;">💬 رد قسم الكول سنتر</div>
-                <div style="color:#222;font-size:17px;font-weight:700;line-height:1.8;">${sanitize(item.audit)}</div>
+                <div style="color:#222;font-size:17px;font-weight:700;line-height:1.8;">${(item.audit || '').trim() ? sanitize(item.audit) : '— لم يُكتَب رد بعد —'}</div>
             </div>
 
             <div style="margin-bottom:14px;padding:14px 16px;background:#fff8e1;border-right:4px solid #f57f17;border-radius:6px;">
