@@ -7,6 +7,21 @@ function filterTable() {
     renderAll();
 }
 
+/* استخراج تاريخ التسليم من x.dt كصيغة YYYY-MM-DD لمطابقة فلتر التاريخ */
+function _getDeliveryIso(x) {
+    if (!x || !x.dt) return '';
+    const s = String(x.dt);
+    // الصيغة 1: "2026/05/06 — 14:30"
+    const m1 = s.match(/^(\d{4})\/(\d{1,2})\/(\d{1,2})/);
+    if (m1) return `${m1[1]}-${String(m1[2]).padStart(2,'0')}-${String(m1[3]).padStart(2,'0')}`;
+    // الصيغة 2: locale string "5/12/2026, 3:45 PM"
+    const d = new Date(s);
+    if (!isNaN(d.getTime())) {
+        return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
+    }
+    return '';
+}
+
 /* بحث نصّي شامل لمنتسية: يفحص ملاحظات + اسم الصنف + قيمة + تفاصيل الأصناف المتعددة */
 function _matchTextM(x, q) {
     if (!q) return true;
@@ -204,10 +219,11 @@ function resetSearch(t) {
         const disp=document.getElementById(fieldId+'-display'); if(disp){ disp.textContent='📅 اختر التاريخ'; disp.classList.remove('selected'); }
     };
     if (t==='M') {
-        clear(['searchCountryM','searchCityM','searchTextM','searchAddedByM','searchDeliveredByM','searchTypeM','searchSectionM','searchRoastSubM']);
+        clear(['searchCountryM','searchCityM','searchTextM','searchTypeM','searchSectionM','searchRoastSubM']);
         if (typeof updateCities === 'function') updateCities('searchCountryM','searchCityM','searchBranchM');
         else document.getElementById('searchBranchM').innerHTML='<option value="">الكل</option>';
         clearDate('searchDateM');
+        clearDate('searchDeliverDateM');
         // إخفاء قائمة فروع القسم لمدير قسم السيطرة
         const _sbWrap = document.getElementById('mSectionBranchWrap');
         if (_sbWrap) _sbWrap.style.display = 'none';
@@ -339,10 +355,9 @@ function _renderTableM(get, isAdmin) {
         country:     get("searchCountryM"),
         city:        get("searchCityM"),
         branch:      get("searchBranchM"),
-        date:        get("searchDateM"),
+        date:        get("searchDateM"),         // وقت التبليغ
+        deliverDate: get("searchDeliverDateM"),  // وقت التسليم
         text:        get("searchTextM").toLowerCase(),
-        addedBy:     get("searchAddedByM"),
-        deliveredBy: get("searchDeliveredByM"),
         type:        get("searchTypeM"),
         subType:     get("searchRoastSubM")
     };
@@ -368,8 +383,7 @@ function _renderTableM(get, isAdmin) {
         (!f.branch      || x.branch===f.branch) &&
         (!f.date        || x.iso.startsWith(f.date)) &&
         (!f.text        || _matchTextM(x, f.text)) &&
-        (!f.addedBy     || (x.addedBy||'').includes(f.addedBy)) &&
-        (!f.deliveredBy || (x.deliveredBy||'').includes(f.deliveredBy)) &&
+        (!f.deliverDate || _getDeliveryIso(x).startsWith(f.deliverDate)) &&
         (!f.type        || (x.type||'')=== f.type) &&
         (!f.subType     || (x.roastSubType||'') === f.subType) &&
         (!selectedSectionM || selectedSectionBranchesM.includes(x.branch))

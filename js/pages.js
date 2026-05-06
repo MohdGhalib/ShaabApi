@@ -61,10 +61,9 @@ m: `
     <div><label>الدولة</label><select id="searchCountryM" onchange="updateCities('searchCountryM','searchCityM','searchBranchM');filterTable();"></select></div>
     <div><label data-region-label-for="searchCityM">المحافظة</label><select id="searchCityM" onchange="updateBranches('searchCityM','searchBranchM');filterTable();"></select></div>
     <div><label>الفرع</label><select id="searchBranchM" onchange="filterTable()"><option value="">الكل</option></select></div>
-    <div><label>التاريخ</label><div class="date-picker-wrap" onclick="openDatePicker('searchDateM')"><span class="date-display" id="searchDateM-display">📅 اختر التاريخ</span><input type="hidden" id="searchDateM"></div></div>
+    <div><label>وقت التبليغ</label><div class="date-picker-wrap" onclick="openDatePicker('searchDateM')"><span class="date-display" id="searchDateM-display">📅 اختر التاريخ</span><input type="hidden" id="searchDateM"></div></div>
+    <div><label>وقت التسليم</label><div class="date-picker-wrap" onclick="openDatePicker('searchDeliverDateM')"><span class="date-display" id="searchDeliverDateM-display">📅 اختر التاريخ</span><input type="hidden" id="searchDeliverDateM"></div></div>
     <div><label>بحث بالنص</label><input type="text" id="searchTextM" placeholder="بحث في التفاصيل..." oninput="filterTable()"></div>
-    <div><label>موظف الاستلام</label><select id="searchAddedByM" onchange="filterTable()"><option value="">الكل</option></select></div>
-    <div><label>موظف التسليم</label><select id="searchDeliveredByM" onchange="filterTable()"><option value="">الكل</option></select></div>
     <div><label>نوع المنتسية</label><select id="searchTypeM" onchange="filterTable();_toggleRoastSubFilter('M')"><option value="">الكل</option><option value="نقدي">نقدي</option><option value="اصناف محمص الشعب">أصناف محامص الشعب</option><option value="أخرى">أخرى</option><option value="متعدد الأصناف">📋 متعدد الأصناف</option></select></div>
     <div id="searchRoastSubMWrap" style="display:none;"><label>طريقة التسجيل</label><select id="searchRoastSubM" onchange="filterTable()"><option value="">الكل</option><option value="وزن">وزن</option><option value="قيمة">قيمة</option></select></div>
     <button class="btn" style="background:var(--bg-input);color:var(--text-dim);align-self:end;" onclick="resetSearch('M')">تفريغ</button>
