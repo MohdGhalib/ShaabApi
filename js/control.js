@@ -599,6 +599,26 @@ function refreshNotifyCard() {
     const auditStatus = item.auditStatus || '—';
     // اسم الموظف القابل للتعديل (لمدير الكول سنتر) — يستبدل الاسم الافتراضي
     const empNameInput = (document.getElementById('notifyEmpName')?.value || '').trim();
+    // مدير الكول سنتر / المدير → يحصل على محرّر نصّ غني (Bold/لون/توسيط/إلخ)
+    const isMgr = currentUser?.role === 'cc_manager' || currentUser?.isAdmin;
+    const _notesBlock = isMgr ? `
+        <div class="_notifyToolbar" style="display:flex;gap:4px;margin-bottom:8px;flex-wrap:wrap;background:#f5f5f5;padding:6px;border-radius:6px;border:1px dashed #ccc;">
+            <button onmousedown="event.preventDefault()" onclick="_notifyApplyFormat('bold')"        title="عريض" style="padding:4px 10px;border:1px solid #bbb;border-radius:5px;background:#fff;cursor:pointer;font-weight:800;font-family:Cairo;font-size:13px;">B</button>
+            <button onmousedown="event.preventDefault()" onclick="_notifyApplyFormat('italic')"      title="مائل" style="padding:4px 10px;border:1px solid #bbb;border-radius:5px;background:#fff;cursor:pointer;font-style:italic;font-family:Cairo;font-size:13px;">I</button>
+            <button onmousedown="event.preventDefault()" onclick="_notifyApplyFormat('underline')"   title="تسطير" style="padding:4px 10px;border:1px solid #bbb;border-radius:5px;background:#fff;cursor:pointer;text-decoration:underline;font-family:Cairo;font-size:13px;">U</button>
+            <span style="border-left:1px solid #ddd;margin:0 4px;"></span>
+            <button onmousedown="event.preventDefault()" onclick="_notifyApplyFormat('justifyRight')"  title="محاذاة يمين" style="padding:4px 10px;border:1px solid #bbb;border-radius:5px;background:#fff;cursor:pointer;font-family:Cairo;font-size:13px;">⇥</button>
+            <button onmousedown="event.preventDefault()" onclick="_notifyApplyFormat('justifyCenter')" title="توسيط"      style="padding:4px 10px;border:1px solid #bbb;border-radius:5px;background:#fff;cursor:pointer;font-family:Cairo;font-size:13px;">↔</button>
+            <button onmousedown="event.preventDefault()" onclick="_notifyApplyFormat('justifyLeft')"   title="محاذاة يسار" style="padding:4px 10px;border:1px solid #bbb;border-radius:5px;background:#fff;cursor:pointer;font-family:Cairo;font-size:13px;">⇤</button>
+            <span style="border-left:1px solid #ddd;margin:0 4px;"></span>
+            <label style="display:flex;align-items:center;gap:4px;font-size:11px;color:#666;cursor:pointer;">🎨 لون
+                <input type="color" onchange="_notifyApplyFormat('foreColor', this.value)" style="width:28px;height:24px;border:1px solid #bbb;border-radius:4px;cursor:pointer;padding:0;">
+            </label>
+            <span style="border-left:1px solid #ddd;margin:0 4px;"></span>
+            <button onmousedown="event.preventDefault()" onclick="_notifyResetNotes()" title="إعادة تعيين" style="padding:4px 10px;border:1px solid #f44336;border-radius:5px;background:#ffebee;color:#c62828;cursor:pointer;font-family:Cairo;font-size:12px;font-weight:700;">↺ إعادة</button>
+        </div>
+        <div id="_notifyNotesEditor" contenteditable="true" oninput="_onNotifyNotesEdit()" style="color:#222;font-size:17px;font-weight:700;line-height:1.8;padding:8px 10px;min-height:40px;background:#fff;border:1px dashed #c62828;border-radius:5px;outline:none;">${_notifyNotesHtml || sanitize(item.notes)}</div>
+    ` : `<div style="color:#222;font-size:17px;font-weight:700;line-height:1.8;">${sanitize(item.notes)}</div>`;
 
     const exportBtn = document.getElementById('exportNotifyBtn');
     if (exportBtn) {
@@ -636,23 +656,7 @@ function refreshNotifyCard() {
 
             <div style="margin-bottom:18px;padding:14px 16px;background:#fff3f3;border-right:4px solid #c62828;border-radius:6px;">
                 <div style="font-weight:800;color:#c62828;margin-bottom:7px;font-size:16px;">📋 نص الشكوى المرسلة</div>
-                <div class="_notifyToolbar" style="display:flex;gap:4px;margin-bottom:8px;flex-wrap:wrap;background:#f5f5f5;padding:6px;border-radius:6px;border:1px dashed #ccc;">
-                    <button onmousedown="event.preventDefault()" onclick="_notifyApplyFormat('bold')"        title="عريض" style="padding:4px 10px;border:1px solid #bbb;border-radius:5px;background:#fff;cursor:pointer;font-weight:800;font-family:Cairo;font-size:13px;">B</button>
-                    <button onmousedown="event.preventDefault()" onclick="_notifyApplyFormat('italic')"      title="مائل" style="padding:4px 10px;border:1px solid #bbb;border-radius:5px;background:#fff;cursor:pointer;font-style:italic;font-family:Cairo;font-size:13px;">I</button>
-                    <button onmousedown="event.preventDefault()" onclick="_notifyApplyFormat('underline')"   title="تسطير" style="padding:4px 10px;border:1px solid #bbb;border-radius:5px;background:#fff;cursor:pointer;text-decoration:underline;font-family:Cairo;font-size:13px;">U</button>
-                    <span style="border-left:1px solid #ddd;margin:0 4px;"></span>
-                    <button onmousedown="event.preventDefault()" onclick="_notifyApplyFormat('justifyRight')"  title="محاذاة يمين"   style="padding:4px 10px;border:1px solid #bbb;border-radius:5px;background:#fff;cursor:pointer;font-family:Cairo;font-size:13px;">⇥</button>
-                    <button onmousedown="event.preventDefault()" onclick="_notifyApplyFormat('justifyCenter')" title="توسيط"        style="padding:4px 10px;border:1px solid #bbb;border-radius:5px;background:#fff;cursor:pointer;font-family:Cairo;font-size:13px;">↔</button>
-                    <button onmousedown="event.preventDefault()" onclick="_notifyApplyFormat('justifyLeft')"   title="محاذاة يسار"   style="padding:4px 10px;border:1px solid #bbb;border-radius:5px;background:#fff;cursor:pointer;font-family:Cairo;font-size:13px;">⇤</button>
-                    <span style="border-left:1px solid #ddd;margin:0 4px;"></span>
-                    <label style="display:flex;align-items:center;gap:4px;font-size:11px;color:#666;cursor:pointer;">
-                        🎨 لون
-                        <input type="color" onchange="_notifyApplyFormat('foreColor', this.value)" style="width:28px;height:24px;border:1px solid #bbb;border-radius:4px;cursor:pointer;padding:0;">
-                    </label>
-                    <span style="border-left:1px solid #ddd;margin:0 4px;"></span>
-                    <button onmousedown="event.preventDefault()" onclick="_notifyResetNotes()" title="إعادة تعيين النص الأصلي" style="padding:4px 10px;border:1px solid #f44336;border-radius:5px;background:#ffebee;color:#c62828;cursor:pointer;font-family:Cairo;font-size:12px;font-weight:700;">↺ إعادة</button>
-                </div>
-                <div id="_notifyNotesEditor" contenteditable="true" oninput="_onNotifyNotesEdit()" style="color:#222;font-size:17px;font-weight:700;line-height:1.8;padding:8px 10px;min-height:40px;background:#fff;border:1px dashed #c62828;border-radius:5px;outline:none;">${_notifyNotesHtml || sanitize(item.notes)}</div>
+                ${_notesBlock}
             </div>
 
             ${ccActions ? `<div style="margin-bottom:18px;padding:14px 16px;background:#e3f2fd;border-right:4px solid #1565c0;border-radius:6px;">
@@ -697,7 +701,7 @@ function refreshNotifyCard() {
 
         <div style="margin-bottom:14px;padding:14px 16px;background:#fff3f3;border-right:4px solid #c62828;border-radius:6px;">
             <div style="font-weight:800;color:#c62828;margin-bottom:7px;font-size:16px;">📋 نص الشكوى المرسلة</div>
-            <div style="color:#222;font-size:17px;font-weight:700;line-height:1.8;">${sanitize(item.notes)}</div>
+            ${_notesBlock}
         </div>
 
         <div style="margin-bottom:14px;padding:14px 16px;background:#f0f4ff;border-right:4px solid #1565c0;border-radius:6px;">
