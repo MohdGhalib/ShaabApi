@@ -345,13 +345,23 @@ function _showInvoiceModal(url, mime, item) {
 
     if (tryAsImage) {
         downloadName = 'invoice.' + ((mime.split('/')[1] || 'png').replace('jpeg','jpg'));
-        const fallbackHtml = `<div style="padding:50px 40px;text-align:center;background:#fff;border-radius:12px;color:#333;min-width:320px;"><div style="font-size:64px;margin-bottom:12px;">⚠️</div><div style="font-size:15px;font-weight:700;">تعذّر عرض الفاتورة</div><div style="font-size:12px;color:#888;margin-top:8px;">اضغط "تنزيل" لمحاولة فتحها على جهازك</div></div>`;
-        preview = `<img src="${url}" onerror="this.outerHTML=${JSON.stringify(fallbackHtml)};" style="max-width:100%;max-height:100%;width:auto;height:auto;object-fit:contain;border-radius:12px;background:#fff;box-shadow:0 12px 40px rgba(0,0,0,0.45);display:block;">`;
+        // الصورة بحجم معقول (لا upscale) + fallback في عنصر منفصل
+        preview = `
+            <div style="position:relative;display:flex;align-items:center;justify-content:center;max-width:100%;max-height:100%;">
+                <img src="${url}"
+                     onerror="this.style.display='none';this.nextElementSibling.style.display='flex';"
+                     style="max-width:min(100%,720px);max-height:min(100%,68vh);width:auto;height:auto;object-fit:contain;border-radius:12px;background:#fff;box-shadow:0 12px 40px rgba(0,0,0,0.45);display:block;">
+                <div style="display:none;flex-direction:column;align-items:center;padding:50px 40px;text-align:center;background:#fff;border-radius:12px;color:#333;min-width:320px;box-shadow:0 12px 40px rgba(0,0,0,0.45);">
+                    <div style="font-size:64px;margin-bottom:12px;">⚠️</div>
+                    <div style="font-size:15px;font-weight:800;">تعذّر عرض الفاتورة</div>
+                    <div style="font-size:12px;color:#888;margin-top:8px;">اضغط "تنزيل" لمحاولة فتحها على جهازك</div>
+                </div>
+            </div>`;
     } else if (mime === 'application/pdf') {
         downloadName = 'invoice.pdf';
-        preview = `<iframe src="${url}" style="width:100%;height:100%;min-height:55vh;border:none;border-radius:12px;background:#fff;box-shadow:0 12px 40px rgba(0,0,0,0.45);"></iframe>`;
+        preview = `<iframe src="${url}" style="width:min(100%,800px);height:min(100%,68vh);border:none;border-radius:12px;background:#fff;box-shadow:0 12px 40px rgba(0,0,0,0.45);"></iframe>`;
     } else {
-        preview = `<div style="padding:60px 50px;text-align:center;background:#fff;border-radius:12px;color:#333;min-width:320px;box-shadow:0 12px 40px rgba(0,0,0,0.45);">
+        preview = `<div style="padding:60px 50px;text-align:center;background:#fff;border-radius:12px;color:#333;min-width:320px;max-width:480px;box-shadow:0 12px 40px rgba(0,0,0,0.45);">
             <div style="font-size:72px;line-height:1;margin-bottom:18px;">📄</div>
             <div style="font-size:18px;font-weight:800;">ملف مرفق</div>
             <div style="font-size:12px;color:#888;margin-top:6px;">${sanitize(mime)}</div>
