@@ -458,7 +458,12 @@ async function syncAndBackup(reason) {
         console.warn('[autoBackup] sync failed:', e);
         // نأخذ snapshot رغم فشل المزامنة (من البيانات الحالية)
     }
-    _abTakeSnapshot(tag);
+    const snap = _abTakeSnapshot(tag);
+    if (snap) {
+        console.log('[autoBackup] ✓ snapshot saved (' + tag + ') · size=', snap.size, 'B');
+    } else {
+        console.log('[autoBackup] ⊘ snapshot rejected (' + tag + ') — dedup or data-loss guard');
+    }
     // تحديث الواجهة إن كانت مفتوحة
     const lbl = document.getElementById('_abLastSyncLabel');
     if (lbl) lbl.textContent = _abFormatTs(_abLastSyncTs);
@@ -484,13 +489,9 @@ function isAutoBackupOn() {
 function startAutoBackup() {
     stopAutoBackup();
     try { localStorage.setItem(_AB_AUTO_KEY, '1'); } catch {}
-    console.log('[autoBackup] ✓ autosync timer started — every', _AB_AUTOSYNC_MS/60000, 'minutes');
+    console.log('[autoBackup] ✓ autosync timer started — every', _AB_AUTOSYNC_MS/60000, 'minutes (runs even when tab hidden)');
     _abAutoTimer = setInterval(() => {
-        if (document.hidden) {
-            console.log('[autoBackup] ⏸ tick skipped — tab hidden');
-            return;
-        }
-        console.log('[autoBackup] ⏰ autosync tick @', new Date().toLocaleTimeString());
+        console.log('[autoBackup] ⏰ autosync tick @', new Date().toLocaleTimeString(), '· hidden:', document.hidden);
         syncAndBackup('autosync');
     }, _AB_AUTOSYNC_MS);
 }
