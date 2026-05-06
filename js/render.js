@@ -7,14 +7,20 @@ function filterTable() {
     renderAll();
 }
 
-/* استخراج تاريخ التسليم من x.dt كصيغة YYYY-MM-DD لمطابقة فلتر التاريخ */
+/* استخراج تاريخ التسليم من x.dt كصيغة YYYY-MM-DD — يدعم 3 صيغ تخزين */
 function _getDeliveryIso(x) {
     if (!x || !x.dt) return '';
-    const s = String(x.dt);
-    // الصيغة 1: "2026/05/06 — 14:30"
-    const m1 = s.match(/^(\d{4})\/(\d{1,2})\/(\d{1,2})/);
-    if (m1) return `${m1[1]}-${String(m1[2]).padStart(2,'0')}-${String(m1[3]).padStart(2,'0')}`;
-    // الصيغة 2: locale string "5/12/2026, 3:45 PM"
+    const s = String(x.dt).trim();
+
+    // الصيغة 1: YYYY/M/D — "2026/05/06 — 14:30"  (يدوي via confirmAddMontasia)
+    let m = s.match(/^(\d{4})\/(\d{1,2})\/(\d{1,2})/);
+    if (m) return `${m[1]}-${String(m[2]).padStart(2,'0')}-${String(m[3]).padStart(2,'0')}`;
+
+    // الصيغة 2: D/M/YYYY — "6/5/2026، 14:30 PM"  (تلقائي via now())
+    m = s.match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})/);
+    if (m) return `${m[3]}-${String(m[2]).padStart(2,'0')}-${String(m[1]).padStart(2,'0')}`;
+
+    // الصيغة 3: أي شيء آخر يقبله Date constructor (ISO، locale string)
     const d = new Date(s);
     if (!isNaN(d.getTime())) {
         return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
