@@ -273,6 +273,19 @@ async function openNotifyModal(id) {
     const item = db.complaints.find(x => x.id === id);
     const pnRow = document.getElementById('notifyPersonNameRow');
     if (pnRow) pnRow.style.display = (item && item.type === 'سوء تعامل') ? 'none' : 'flex';
+
+    // حقل "اسم الموظف" — متاح لمدير الكول سنتر والمدير العام فقط
+    const isMgr = currentUser?.role === 'cc_manager' || currentUser?.isAdmin;
+    const empRow   = document.getElementById('notifyEmpNameRow');
+    const empInput = document.getElementById('notifyEmpName');
+    if (empInput) {
+        const defaultName = (item && item.type === 'سوء تعامل')
+            ? (item.addedBy || '—')
+            : (currentUser?.name || '');
+        empInput.value = defaultName;
+    }
+    if (empRow) empRow.style.display = isMgr ? 'flex' : 'none';
+
     await _loadLogo();
     refreshNotifyCard();
     document.getElementById('notifyModal').classList.remove('hidden');
@@ -584,6 +597,8 @@ function refreshNotifyCard() {
     const personName  = document.getElementById('notifyPersonName').value.trim();
     const ccActions   = (document.getElementById('notifyCcActions')?.value || '').trim();
     const auditStatus = item.auditStatus || '—';
+    // اسم الموظف القابل للتعديل (لمدير الكول سنتر) — يستبدل الاسم الافتراضي
+    const empNameInput = (document.getElementById('notifyEmpName')?.value || '').trim();
 
     const exportBtn = document.getElementById('exportNotifyBtn');
     if (exportBtn) {
@@ -646,7 +661,7 @@ function refreshNotifyCard() {
             </div>` : ''}
 
             <div style="margin-bottom:14px;padding-top:14px;border-top:2px solid #eee;text-align:center;font-size:15px;font-weight:700;color:#444;">
-                👤 اسم الموظف المدخل للشكوى: <strong style="font-size:17px;color:#222;">${sanitize(item.addedBy || '—')}</strong>
+                👤 اسم الموظف المدخل للشكوى: <strong style="font-size:17px;color:#222;">${sanitize(empNameInput || item.addedBy || '—')}</strong>
             </div>
 
             <div style="padding:14px 16px;border-radius:8px;text-align:center;background:#fff8e1;border:2px solid #f57f17;">
@@ -704,7 +719,7 @@ function refreshNotifyCard() {
         </div>
 
         <div style="margin-bottom:10px;padding-top:14px;border-top:2px solid #eee;font-size:17px;font-weight:700;color:#333;">
-            👤 <strong style="font-size:18px;">اسم الموظف: ${sanitize(currentUser.name)}</strong>
+            👤 <strong style="font-size:18px;">اسم الموظف: ${sanitize(empNameInput || currentUser.name)}</strong>
         </div>
 
         <div id="controlNotifyStatus" style="padding:12px 16px;border-radius:8px;text-align:center;
