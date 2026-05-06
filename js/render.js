@@ -559,12 +559,7 @@ function _renderTableM(get, isAdmin) {
                        }`
                     : `<span style="color:var(--text-dim);font-size:12px;">—</span>`
                 }
-                ${isCtrlEmpM && x.isLateDelivery
-                    ? (x.countedByControl
-                        ? `<div style="display:flex;gap:4px;align-items:center;"><span style="padding:4px 7px;font-size:10px;font-family:'Cairo';border-radius:7px;border:1px solid rgba(46,125,50,0.4);background:rgba(46,125,50,0.15);color:#81c784;font-weight:700;">✓ تم الاحتساب</span><button onclick="toggleCountMontasia(${x.id})" style="padding:4px 7px;font-size:10px;font-family:'Cairo';cursor:pointer;border-radius:7px;border:1px solid rgba(211,47,47,0.4);background:rgba(211,47,47,0.1);color:#ef9a9a;font-weight:700;">تراجع</button></div>`
-                        : `<button onclick="toggleCountMontasia(${x.id})" style="padding:4px 10px;font-size:10px;font-family:'Cairo';cursor:pointer;border-radius:7px;border:1px solid rgba(255,152,0,0.35);background:rgba(255,152,0,0.08);color:#ffb74d;font-weight:700;">📊 احتساب تقييم</button>`)
-                    : ''
-                }
+                ${''/* زر "احتساب تقييم" مُزال نهائياً من حساب مدير قسم السيطرة */}
                 </div>
             </td>
             <td>${actions}</td>
