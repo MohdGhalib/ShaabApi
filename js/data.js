@@ -798,6 +798,29 @@ function _checkNewAssignments() {
     });
 }
 
+/* ── renderAll آمن: لا يُعيد الرسم إذا كان المستخدم يكتب في input/textarea/contenteditable ── */
+let _renderDeferred = false;
+function _userIsTyping() {
+    const ae = document.activeElement;
+    if (!ae) return false;
+    if (ae.tagName === 'INPUT' || ae.tagName === 'TEXTAREA') return true;
+    if (ae.isContentEditable) return true;
+    return false;
+}
+function safeRenderAll() {
+    if (_userIsTyping()) { _renderDeferred = true; return; }
+    if (typeof renderAll === 'function') renderAll();
+    _renderDeferred = false;
+}
+document.addEventListener('focusout', () => {
+    setTimeout(() => {
+        if (_renderDeferred && !_userIsTyping()) {
+            _renderDeferred = false;
+            if (typeof renderAll === 'function') renderAll();
+        }
+    }, 300);
+});
+
 /* ── SSE: اتصال فوري بالسيرفر لاستقبال التحديثات ── */
 let _sseActive = false;
 
@@ -814,7 +837,7 @@ function _initSSE() {
             await new Promise(r => { const id = setInterval(() => { if (!_isSaving) { clearInterval(id); r(); } }, 200); });
         }
         _snapshotComplaints();
-        try { await loadAllData(); renderAll(); _checkNewAssignments(); } catch(e) {}
+        try { await loadAllData(); safeRenderAll(); _checkNewAssignments(); } catch(e) {}
     });
     es.addEventListener('new-complaint', (e) => {
         const role    = currentUser?.role;
