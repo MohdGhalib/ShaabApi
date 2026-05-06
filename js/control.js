@@ -415,6 +415,12 @@ function refreshNotifyCard() {
 
     // ── تنسيق خاص لشكاوى سوء التعامل ──
     if (item.type === 'سوء تعامل') {
+        // زر التصدير لا يحتاج personName في هذا التنسيق
+        if (exportBtn) {
+            exportBtn.disabled = false;
+            exportBtn.style.opacity = '1';
+            exportBtn.style.cursor  = 'pointer';
+        }
         document.getElementById('notifyCard').innerHTML = `
             <div style="text-align:center;margin-bottom:24px;padding-bottom:18px;border-bottom:3px solid #c62828;">
                 ${_logoBase64 ? `<img src="${_logoBase64}" style="width:90px;height:90px;object-fit:contain;display:block;margin:0 auto 10px;filter:drop-shadow(0 2px 8px rgba(198,40,40,0.25));">` : ''}
@@ -433,40 +439,18 @@ function refreshNotifyCard() {
                 </tr>` : ''}
             </table>
 
-            <div style="margin-bottom:14px;padding:14px 16px;background:#fff3f3;border-right:4px solid #c62828;border-radius:6px;">
+            <div style="margin-bottom:18px;padding:14px 16px;background:#fff3f3;border-right:4px solid #c62828;border-radius:6px;">
                 <div style="font-weight:800;color:#c62828;margin-bottom:7px;font-size:16px;">📋 نص الشكوى المرسلة</div>
                 <div style="color:#222;font-size:17px;font-weight:700;line-height:1.8;">${sanitize(item.notes)}</div>
             </div>
 
-            <div style="margin-bottom:14px;padding:14px 16px;background:#f0f4ff;border-right:4px solid #1565c0;border-radius:6px;">
-                <div style="font-weight:800;color:#1565c0;margin-bottom:7px;font-size:16px;">💬 رد قسم الكول سنتر</div>
-                <div style="color:#222;font-size:17px;font-weight:700;line-height:1.8;">${(item.audit || '').trim() ? sanitize(item.audit) : '— لم يُكتَب رد بعد —'}</div>
+            <div style="margin-bottom:22px;padding:16px;background:#fff8e1;border:2px solid #f57f17;border-radius:8px;text-align:center;">
+                <div style="font-weight:800;color:#e65100;margin-bottom:8px;font-size:16px;">🔎 حالة الملاحظة عند قسم السيطرة</div>
+                <div style="color:#bf360c;font-size:20px;font-weight:800;line-height:1.6;">جاري التحقق من الحالة</div>
             </div>
 
-            <div style="margin-bottom:14px;padding:14px 16px;background:#fff8e1;border-right:4px solid #f57f17;border-radius:6px;">
-                <div style="font-weight:800;color:#e65100;margin-bottom:7px;font-size:16px;">🔎 رد قسم السيطرة</div>
-                <div style="color:#e65100;font-size:17px;font-weight:800;line-height:1.8;">جاري التحقق من الحالة</div>
-            </div>
-
-            <div style="margin-bottom:18px;padding:14px 16px;background:#fff8e1;border-right:4px solid #f57f17;border-radius:6px;">
-                <div style="font-weight:800;color:#e65100;margin-bottom:7px;font-size:16px;">📣 التبليغ</div>
-                <div style="font-size:17px;font-weight:700;color:#333;line-height:1.8;">
-                    تم تبليغ مدير الفرع / مدير المنطقة:${personName ? ` <strong>${sanitize(personName)}</strong>` : ''}
-                </div>
-            </div>
-
-            <div style="margin-bottom:10px;padding-top:14px;border-top:2px solid #eee;font-size:17px;font-weight:700;color:#333;">
-                👤 <strong style="font-size:18px;">اسم الموظف: ${sanitize(currentUser.name)}</strong>
-            </div>
-
-            <div id="controlNotifyStatus" style="padding:12px 16px;border-radius:8px;text-align:center;
-                 background:${auditStatus==='مكتوبة'?'#e8f5e9':auditStatus==='غير مكتوبة'?'#ffebee':'#f0f4ff'};
-                 border:2px solid ${auditStatus==='مكتوبة'?'#2e7d32':auditStatus==='غير مكتوبة'?'#c62828':'#1565c0'};">
-                <div style="font-size:11px;color:#999;margin-bottom:4px;">حالة الملاحظة</div>
-                <div style="font-size:18px;font-weight:800;
-                     color:${auditStatus==='مكتوبة'?'#1b5e20':auditStatus==='غير مكتوبة'?'#b71c1c':'#0d47a1'};">
-                    ${auditStatus}
-                </div>
+            <div style="padding-top:14px;border-top:2px solid #eee;text-align:center;font-size:15px;font-weight:700;color:#444;">
+                👤 اسم الموظف المدخل للشكوى: <strong style="font-size:17px;color:#222;">${sanitize(item.addedBy || '—')}</strong>
             </div>
         `;
         return;
