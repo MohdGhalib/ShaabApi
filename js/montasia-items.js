@@ -406,7 +406,7 @@ function saveMultiItemEdit(id) {
     rec.roastItemWeight = '';
 
     if (typeof _logAudit === 'function') {
-        _logAudit('editMontasiaItems', rec.branch || '—', `${beforeCount} → ${collected.items.length} أصناف`);
+        _logAudit('editMontasiaItems', rec.branch || '—', `${beforeCount} → ${collected.items.length} أصناف`, 'montasia', rec.id);
     }
     if (typeof save === 'function') save();
     if (typeof renderAll === 'function') renderAll();

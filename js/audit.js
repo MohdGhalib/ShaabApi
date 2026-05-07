@@ -46,6 +46,29 @@ const AUDIT_ACTION_LABELS = {
 };
 function _auditActionLabel(a) { return AUDIT_ACTION_LABELS[a] || a; }
 
+/* ── Jump from audit row to the actual record (montasi/inquiry/complaint) ── */
+function _jumpFromAudit(refType, refId) {
+    if (!refType || refId == null) return;
+    const tabMap   = { montasia:'m', inquiry:'i', complaint:'c' };
+    const tableMap = { montasia:'#tableM', inquiry:'#tableI', complaint:'#tableC' };
+    const tab = tabMap[refType], table = tableMap[refType];
+    if (!tab || !table || typeof switchTab !== 'function') return;
+    switchTab(tab);
+    setTimeout(() => {
+        const row = document.querySelector(`${table} tbody tr[data-id="${refId}"]`);
+        if (!row) {
+            alert('السجل غير موجود — قد يكون محذوفاً أو خارج عوامل التصفية الحالية.');
+            return;
+        }
+        document.querySelectorAll(`${table} tbody tr`).forEach(r => { r.style.outline = ''; r.style.boxShadow = ''; });
+        row.style.outline   = '3px solid #64b5f6';
+        row.style.boxShadow = '0 0 18px rgba(100,181,246,0.5)';
+        row.style.borderRadius = '8px';
+        row.scrollIntoView({ behavior:'smooth', block:'center' });
+        setTimeout(() => { row.style.outline = ''; row.style.boxShadow = ''; }, 4000);
+    }, 250);
+}
+
 const _lastAuditFilter = { emp:'', country:'', city:'', branch:'', date:'', action:'' };
 let _auditPage = 1;
 const _AUDIT_SIZE_KEY = '_shaabAuditPgSize';
@@ -161,14 +184,29 @@ function _buildAuditTable() {
     const headers = ['العملية','الفرع','التفاصيل','الموظف','رقم الموظف','الوقت']
         .map(h => `<div style="${hCell}">${h}</div>`).join('');
 
+    const _isCCMgr = currentUser?.role === 'cc_manager' || currentUser?.isAdmin;
     const dataRows = slice.length
-        ? slice.map(entry => `
-            <div style="${dCell}"><span class="emp-badge" style="font-size:12px;">${sanitize(_auditActionLabel(entry.action))}</span></div>
-            <div style="${dCell}">${sanitize(entry.entity || '—')}</div>
-            <div style="${dCell}"><span class="text-box-cell" style="font-size:12px;">${sanitize(entry.summary || '—')}</span></div>
+        ? slice.map(entry => {
+            const canJump = _isCCMgr && entry.refType && entry.refId != null;
+            const linkAttr = canJump ? `onclick="_jumpFromAudit('${entry.refType}', ${entry.refId})"` : '';
+            const linkStyle = canJump
+                ? 'cursor:pointer;background:rgba(100,181,246,0.06);transition:background .15s;'
+                : '';
+            const hoverHandlers = canJump
+                ? 'onmouseover="this.style.background=\'rgba(100,181,246,0.18)\'" onmouseout="this.style.background=\'rgba(100,181,246,0.06)\'"'
+                : '';
+            const labelText = sanitize(_auditActionLabel(entry.action));
+            const actionCell = canJump
+                ? `<span class="emp-badge" style="font-size:12px;">${labelText} ↗</span>`
+                : `<span class="emp-badge" style="font-size:12px;">${labelText}</span>`;
+            return `
+            <div style="${dCell}${linkStyle}" ${linkAttr} ${hoverHandlers} ${canJump ? 'title="انقر للانتقال للسجل"' : ''}>${actionCell}</div>
+            <div style="${dCell}${linkStyle}" ${linkAttr} ${hoverHandlers}>${sanitize(entry.entity || '—')}</div>
+            <div style="${dCell}${linkStyle}" ${linkAttr} ${hoverHandlers}><span class="text-box-cell" style="font-size:12px;">${sanitize(entry.summary || '—')}</span></div>
             <div style="${dCell}"><small style="color:var(--text-main);">${typeof _empNameHTML==='function'?_empNameHTML(entry.by || '—'):sanitize(entry.by || '—')}</small></div>
             <div style="${dCell}"><small style="color:var(--text-dim);">${sanitize(entry.empId || '—')}</small></div>
-            <div style="${dCell}"><small style="color:var(--text-dim);">${_toLatinDigits(entry.time || '—')}</small></div>`).join('')
+            <div style="${dCell}"><small style="color:var(--text-dim);">${_toLatinDigits(entry.time || '—')}</small></div>`;
+        }).join('')
         : `<div style="grid-column:1/-1;padding:20px;text-align:center;color:var(--text-dim);">لا توجد سجلات مطابقة</div>`;
 
     const sizeOpts = [10, 20, 50, 100].map(n => `<option value="${n}" ${n===_auditPgSize?'selected':''}>${n}</option>`).join('');

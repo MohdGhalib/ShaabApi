@@ -163,7 +163,7 @@ function saveMontasiaType(id) {
     }
     Object.assign(item, _extras);
     if (_newNotes !== null) item.notes = _newNotes;
-    if (typeof _logAudit === 'function') _logAudit('editMontasiaType', item.branch || '—', `${item.notes?.slice(0,40) || ''} → ${newType}`);
+    if (typeof _logAudit === 'function') _logAudit('editMontasiaType', item.branch || '—', `${item.notes?.slice(0,40) || ''} → ${newType}`, 'montasia', item.id);
     save();
     renderAll();
 }
@@ -202,7 +202,7 @@ function saveMontasiaStatus(id) {
             item.dt = '';
             item.deliveredBy = '';
         }
-        if (typeof _logAudit === 'function') _logAudit('editMontasiaStatus', item.branch || '—', `${item.notes?.slice(0,40) || ''} → ${newStatus}`);
+        if (typeof _logAudit === 'function') _logAudit('editMontasiaStatus', item.branch || '—', `${item.notes?.slice(0,40) || ''} → ${newStatus}`, 'montasia', item.id);
         save();
     }
     renderAll();
@@ -339,7 +339,7 @@ function confirmAddMontasia() {
         } else {
             _auditDetail = rec.notes || '';
         }
-        _logAudit('addMontasia', rec.branch || '—', `${rec.type} — ${(_auditDetail||'').substring(0,80)}`);
+        _logAudit('addMontasia', rec.branch || '—', `${rec.type} — ${(_auditDetail||'').substring(0,80)}`, 'montasia', rec.id);
     }
     save();
     document.getElementById("mNotes").value = "";
@@ -488,7 +488,7 @@ function confirmDeliver() {
 
     item.status      = 'تم التسليم';
     item.deliveredBy = currentUser.name;
-    if (typeof _logAudit === 'function') _logAudit('deliverMontasia', item.branch || '—', `${(item.notes||'').substring(0,40)}`);
+    if (typeof _logAudit === 'function') _logAudit('deliverMontasia', item.branch || '—', `${(item.notes||'').substring(0,40)}`, 'montasia', item.id);
     save();
     cancelDeliver();
 }
@@ -503,7 +503,7 @@ function approveMontasia(id) {
     const item = db.montasiat.find(x => x.id===id);
     if (item) {
         item.status='قيد الانتظار';
-        if (typeof _logAudit === 'function') _logAudit('approveMontasia', item.branch || '—', `${(item.notes||'').substring(0,40)}`);
+        if (typeof _logAudit === 'function') _logAudit('approveMontasia', item.branch || '—', `${(item.notes||'').substring(0,40)}`, 'montasia', item.id);
         save();
     }
 }
@@ -515,7 +515,7 @@ function approveMontasiaFromMobile(id) {
     item.status     = 'قيد الانتظار';
     item.approvedBy = currentUser ? currentUser.name : '—';
     item.approvedAt = now();
-    if (typeof _logAudit === 'function') _logAudit('approveMontasiaMobile', item.branch || '—', `${(item.notes||'').substring(0,40)}`);
+    if (typeof _logAudit === 'function') _logAudit('approveMontasiaMobile', item.branch || '—', `${(item.notes||'').substring(0,40)}`, 'montasia', item.id);
     save();
 }
 
@@ -607,7 +607,7 @@ function saveEditMontasia(id) {
     const item = db.montasiat.find(x => x.id===id);
     if (item) {
         item.notes=newText; item.editedBy=currentUser.name;
-        if (typeof _logAudit === 'function') _logAudit('editMontasiaNotes', item.branch || '—', `${(newText||'').substring(0,40)}`);
+        if (typeof _logAudit === 'function') _logAudit('editMontasiaNotes', item.branch || '—', `${(newText||'').substring(0,40)}`, 'montasia', item.id);
         save();
     }
 }
@@ -688,7 +688,7 @@ function saveMontasiaBranch(id) {
     item.city   = newCity;
     item.branch = newBranch;
     if (typeof _logAudit === 'function')
-        _logAudit('editMontasiaBranch', `${newCity} / ${newBranch}`, `${oldRef} → ${newCity} / ${newBranch}`);
+        _logAudit('editMontasiaBranch', `${newCity} / ${newBranch}`, `${oldRef} → ${newCity} / ${newBranch}`, 'montasia', item.id);
     if (typeof save === 'function') save();
     if (typeof renderAll === 'function') renderAll();
     closeEditMontasiaBranchModal();

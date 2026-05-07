@@ -10,18 +10,20 @@ let priceList   = [];
 let currentUser = null;
 
 /* ── سجل التدقيق ── */
-function _logAudit(action, entity, summary) {
+function _logAudit(action, entity, summary, refType, refId) {
     if (!db.auditLog) db.auditLog = [];
     db.auditLog.push({
         action,
         entity,
         summary,
-        by:    currentUser ? currentUser.name : '—',
-        empId: currentUser?.empId || '',
-        role:  currentUser?.role  || '',
-        time:  now(),
-        iso:   iso(),
-        ts:    Date.now()
+        by:      currentUser ? currentUser.name : '—',
+        empId:   currentUser?.empId || '',
+        role:    currentUser?.role  || '',
+        refType: refType || null,        // 'montasia' | 'inquiry' | 'complaint' | null
+        refId:   refId   != null ? refId : null,
+        time:    now(),
+        iso:     iso(),
+        ts:      Date.now()
     });
     // الاحتفاظ بسجلات آخر 7 أيام لكل موظف
     const cutoff = Date.now() - 7 * 24 * 60 * 60 * 1000;

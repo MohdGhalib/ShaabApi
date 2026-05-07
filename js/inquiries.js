@@ -142,7 +142,7 @@ function addInquiry() {
                 const r2 = new FileReader();
                 r2.onload = e2 => {
                     db.inquiries.unshift({ ...recWithFile, qualityPhoto: e2.target.result });
-                    if (typeof _logAudit === 'function') _logAudit('addInquiry', baseRec.branch || '—', `${baseRec.type} — ${(baseRec.notes||baseRec.itemName||baseRec.offerName||'').substring(0,40)}`);
+                    if (typeof _logAudit === 'function') _logAudit('addInquiry', baseRec.branch || '—', `${baseRec.type} — ${(baseRec.notes||baseRec.itemName||baseRec.offerName||'').substring(0,40)}`, 'inquiry', baseRec.id);
                     _afterSave();
                 };
                 r2.readAsDataURL(f);
@@ -151,7 +151,7 @@ function addInquiry() {
         } else {
             db.inquiries.unshift({ ...recWithFile, qualityPhoto: null });
         }
-        if (typeof _logAudit === 'function') _logAudit('addInquiry', baseRec.branch || '—', `${baseRec.type} — ${(baseRec.notes||baseRec.itemName||baseRec.offerName||'').substring(0,40)}`);
+        if (typeof _logAudit === 'function') _logAudit('addInquiry', baseRec.branch || '—', `${baseRec.type} — ${(baseRec.notes||baseRec.itemName||baseRec.offerName||'').substring(0,40)}`, 'inquiry', baseRec.id);
         _afterSave();
     };
 
