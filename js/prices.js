@@ -264,7 +264,7 @@ function _buildPriceTextSingle(item) {
 function _buildPriceTextMulti(items) {
     if (items.length === 1) return _buildPriceTextSingle(items[0]);
     const lines = items.map(_formatItemLine).join('\n');
-    return 'اهلا وسهلا فيك ,, السعر الحالي للأصناف الذي تم الاستفسار عنه من خلالكم هو :\n' + lines;
+    return 'اهلا وسهلا فيك ,, السعر الحالي للأصناف الذي تم الاستفسار عنها من خلالكم هو :\n' + lines;
 }
 
 function _showPriceCardSingle(realIdx) {
