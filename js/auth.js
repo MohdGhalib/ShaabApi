@@ -109,6 +109,7 @@ function recordLogin() {
         empName: currentUser.name,
         loginIso: _now,
         logoutIso: null,
+        lastSeen: Date.now(),  // تهيئة فورية حتى يظهر الموظف "متصل" قبل أول heartbeat tick
         date: iso()
     });
     saveSessions();
