@@ -71,7 +71,7 @@ function restoreMontasia(id) {
     delete item.deleted;
     delete item.deletedBy;
     delete item.deletedAtTs;
-    _logAudit('restoreMontasia', item.branch || '—', `${item.branch} — ${(item.notes||'').substring(0,40)}`);
+    _logAudit('restoreMontasia', item.branch || '—', `${item.branch} — ${(typeof _montasiaSummary==='function' ? _montasiaSummary(item) : (item.notes||'')).substring(0,80)}`);
     save();
     renderTrash();
 }

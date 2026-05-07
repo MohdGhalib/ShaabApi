@@ -163,7 +163,7 @@ function saveMontasiaType(id) {
     }
     Object.assign(item, _extras);
     if (_newNotes !== null) item.notes = _newNotes;
-    if (typeof _logAudit === 'function') _logAudit('editMontasiaType', item.branch || '—', `${item.notes?.slice(0,40) || ''} → ${newType}`, 'montasia', item.id);
+    if (typeof _logAudit === 'function') _logAudit('editMontasiaType', item.branch || '—', `${_montasiaSummary(item).substring(0,40)} → ${newType}`, 'montasia', item.id);
     save();
     renderAll();
 }
@@ -202,7 +202,7 @@ function saveMontasiaStatus(id) {
             item.dt = '';
             item.deliveredBy = '';
         }
-        if (typeof _logAudit === 'function') _logAudit('editMontasiaStatus', item.branch || '—', `${item.notes?.slice(0,40) || ''} → ${newStatus}`, 'montasia', item.id);
+        if (typeof _logAudit === 'function') _logAudit('editMontasiaStatus', item.branch || '—', `${_montasiaSummary(item).substring(0,40)} → ${newStatus}`, 'montasia', item.id);
         save();
     }
     renderAll();
@@ -329,17 +329,7 @@ function confirmAddMontasia() {
     db.montasiat.unshift(rec);
     if (typeof _skipMontasiaNotif !== 'undefined') _skipMontasiaNotif = true;
     if (typeof _logAudit === 'function') {
-        let _auditDetail = '';
-        if (rec.type === 'اصناف محمص الشعب' && rec.roastItemName) {
-            _auditDetail = (rec.roastSubType ? '['+rec.roastSubType+'] ' : '') + rec.roastItemName;
-        } else if (rec.type === 'نقدي' && rec.missingValue) {
-            _auditDetail = rec.missingValue + (rec.notes ? ' — ' + rec.notes : '');
-        } else if (rec.type === 'متعدد الأصناف' && Array.isArray(rec.items)) {
-            _auditDetail = rec.items.length + ' صنف' + (rec.notes ? ' — ' + rec.notes : '');
-        } else {
-            _auditDetail = rec.notes || '';
-        }
-        _logAudit('addMontasia', rec.branch || '—', `${rec.type} — ${(_auditDetail||'').substring(0,80)}`, 'montasia', rec.id);
+        _logAudit('addMontasia', rec.branch || '—', `${rec.type} — ${_montasiaSummary(rec).substring(0,80)}`, 'montasia', rec.id);
     }
     save();
     document.getElementById("mNotes").value = "";
@@ -488,7 +478,7 @@ function confirmDeliver() {
 
     item.status      = 'تم التسليم';
     item.deliveredBy = currentUser.name;
-    if (typeof _logAudit === 'function') _logAudit('deliverMontasia', item.branch || '—', `${(item.notes||'').substring(0,40)}`, 'montasia', item.id);
+    if (typeof _logAudit === 'function') _logAudit('deliverMontasia', item.branch || '—', `${_montasiaSummary(item).substring(0,80)}`, 'montasia', item.id);
     save();
     cancelDeliver();
 }
@@ -503,7 +493,7 @@ function approveMontasia(id) {
     const item = db.montasiat.find(x => x.id===id);
     if (item) {
         item.status='قيد الانتظار';
-        if (typeof _logAudit === 'function') _logAudit('approveMontasia', item.branch || '—', `${(item.notes||'').substring(0,40)}`, 'montasia', item.id);
+        if (typeof _logAudit === 'function') _logAudit('approveMontasia', item.branch || '—', `${_montasiaSummary(item).substring(0,80)}`, 'montasia', item.id);
         save();
     }
 }
@@ -515,7 +505,7 @@ function approveMontasiaFromMobile(id) {
     item.status     = 'قيد الانتظار';
     item.approvedBy = currentUser ? currentUser.name : '—';
     item.approvedAt = now();
-    if (typeof _logAudit === 'function') _logAudit('approveMontasiaMobile', item.branch || '—', `${(item.notes||'').substring(0,40)}`, 'montasia', item.id);
+    if (typeof _logAudit === 'function') _logAudit('approveMontasiaMobile', item.branch || '—', `${_montasiaSummary(item).substring(0,80)}`, 'montasia', item.id);
     save();
 }
 
@@ -590,7 +580,7 @@ function deleteMontasia(id) {
             item.deleted      = true;
             item.deletedBy    = currentUser ? currentUser.name : '—';
             item.deletedAtTs  = Date.now();
-            _logAudit('deleteMontasia', item.branch || '—', `${item.branch} — ${(item.notes||'').substring(0,40)}`);
+            _logAudit('deleteMontasia', item.branch || '—', `${item.branch} — ${_montasiaSummary(item).substring(0,80)}`);
             save();
         }
     );
@@ -677,6 +667,25 @@ function closeEditMontasiaBranchModal() {
 }
 
 /* ══ تعديل وقت/موظف الاستلام والتسليم لمنتسية موجودة (cc_manager) ══ */
+function _montasiaSummary(item) {
+    if (!item) return '';
+    if (item.type === 'اصناف محمص الشعب') {
+        const sub  = item.roastSubType    ? '['+item.roastSubType+'] '       : '';
+        const name = item.roastItemName   ? item.roastItemName               : '';
+        const val  = item.roastItemValue  ? ' — قيمة: ' + item.roastItemValue  : '';
+        const wt   = item.roastItemWeight ? ' — وزن: '  + item.roastItemWeight : '';
+        const out  = (sub + name + val + wt).trim();
+        if (out) return out;
+    } else if (item.type === 'متعدد الأصناف' && Array.isArray(item.items)) {
+        const n = item.items.length;
+        const head = item.items.slice(0, 2).map(it => it && it.name ? it.name : '').filter(Boolean).join('، ');
+        return n + ' صنف' + (head ? ' — ' + head : '') + (item.notes ? ' — ' + item.notes : '');
+    } else if (item.type === 'نقدي' && item.missingValue) {
+        return item.missingValue + (item.notes ? ' — ' + item.notes : '');
+    }
+    return item.notes || '';
+}
+
 function _fmtMontasiaTimeFromInputs(dateStr, timeStr) {
     if (!dateStr || !timeStr) return '';
     const [y, mo, d] = dateStr.split('-');
