@@ -140,31 +140,9 @@ function _abTakeSnapshot(reason) {
             _abLastBlockedAt = Date.now();
             _abLastBlockedReason = lossReason;
             console.warn('[autoBackup] 🛑 BLOCKED snapshot — ' + lossReason);
-            // ── قفل النظام عند الفقدان الكامل (المنتسيات أو الموظفون) ──
-            // أنماط الفقدان الكامل: "المنتسيات فارغة" / "الموظفون فارغون"
-            const isTotalLoss = /فارغة|فارغون/.test(lossReason);
-            if (isTotalLoss && typeof window.triggerSystemLockdown === 'function') {
-                // حارس 1: لا تقفل النظام أثناء حالات الانتقال (خروج/دخول/قبل المصادقة)
-                // عند logout يصير setToken(null) ثم reload — loadAllData يصفّر الذاكرة لأن _token null
-                // فالـ snapshot يقرأ ذاكرة فارغة وهذا ليس فقدان بيانات حقيقي
-                const userActive = (typeof currentUser !== 'undefined' && currentUser);
-                // حارس 2: تحقق إن الفقدان حقيقي وليس فقط ذاكرة عابرة — افحص localStorage
-                let lsHasData = false;
-                try {
-                    const lsDb  = JSON.parse(localStorage.getItem('Shaab_Master_DB')    || '{}');
-                    const lsEmp = JSON.parse(localStorage.getItem('Shaab_Employees_DB') || '[]');
-                    lsHasData = (Array.isArray(lsDb.montasiat) && lsDb.montasiat.length > 0) ||
-                                (Array.isArray(lsEmp)         && lsEmp.length         > 0);
-                } catch {}
-
-                if (!userActive) {
-                    console.warn('[autoBackup] ⚠️ data-loss detected without active user — likely logout/login transition. Skipping lockdown.');
-                } else if (lsHasData) {
-                    console.warn('[autoBackup] ⚠️ in-memory empty but localStorage still has data — transient state. Skipping lockdown.');
-                } else {
-                    try { window.triggerSystemLockdown(lossReason); } catch (e) { console.warn('[autoBackup] lockdown trigger failed:', e); }
-                }
-            }
+            // ملاحظة: القفل التلقائي للنظام عند فقدان البيانات أُلغي بناءً على طلب المستخدم
+            // الـ snapshot الفارغ ما زال يُرفض (لا يُحفظ فوق نسخة جيدة)، لكن لا يتفعّل قفل النظام تلقائياً
+            // القفل اليدوي للسوبر أدمن من زر "🔒 قفل النظام يدوياً" لا يزال متاحاً
             return null;
         }
 

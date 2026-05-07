@@ -382,27 +382,18 @@ async function _lkPromptManualLock() {
     _lkInjectUnlockButton();
 }
 
-/* ── Auto-recovery: امسح القفل التلقائي إن كانت البيانات سليمة فعلاً
-   (يحمي من false positives عابرة مثل الخروج/الدخول)
-   ❌ القفل اليدوي (manual:true) لا يُمسح تلقائياً — يحتاج زر الفك ── */
+/* ── Auto-recovery: امسح أي قفل تلقائي قديم
+   القفل التلقائي عند فقدان البيانات ألغي — فأي قفل auto موجود هو حتماً قديم/خاطئ
+   ❌ القفل اليدوي (manual:true) لا يُمسح تلقائياً — يحتاج زر الفك من السوبر أدمن ── */
 async function _lkAutoClearStaleLockdown() {
     if (!isSystemLocked()) return false;
     const ls = _lkReadLS();
     if (!ls) return false;
     if (ls.manual) return false; // قفل يدوي صريح — لا تتدخل
-    // فحص البيانات الفعلية في localStorage
-    let lsHasData = false;
-    try {
-        const lsDb  = JSON.parse(localStorage.getItem('Shaab_Master_DB')    || '{}');
-        const lsEmp = JSON.parse(localStorage.getItem('Shaab_Employees_DB') || '[]');
-        lsHasData = (Array.isArray(lsDb.montasiat) && lsDb.montasiat.length > 0) ||
-                    (Array.isArray(lsEmp)         && lsEmp.length         > 0);
-    } catch {}
-    if (!lsHasData) return false;
-    // البيانات موجودة — القفل كان false positive، امسحه
+    // أي قفل auto الآن قديم — امسحه بدون شرط
     _lkClearLS();
     try { await _lkClearIdb(); } catch {}
-    console.warn('[lockdown] 🔓 stale auto-lockdown cleared — data is intact (' + (ls.reason || '') + ')');
+    console.warn('[lockdown] 🔓 stale auto-lockdown cleared (auto-lockdown feature disabled)');
     return true;
 }
 

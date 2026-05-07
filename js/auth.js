@@ -129,6 +129,12 @@ function doLogout() {
     setToken(null);
     // مسح توقيتات المشاهدة عند تسجيل الخروج
     try { localStorage.removeItem('_shaabLastSeen'); } catch {}
+    // مسح جلسة السوبر أدمن — إذا كان مسجّل دخول كسوبر أدمن، إنهاء امتيازه عند الخروج
+    // هذا يمنع ظهور زر "إلغاء قفل النظام" بعد الخروج ما لم يعد دخول السوبر أدمن
+    try { sessionStorage.removeItem('Shaab_SuperAdminSession'); } catch {}
+    // إزالة أزرار القفل/الفك إن وُجدت في الواجهة قبل التحديث
+    try { const lb = document.getElementById('_lkLockBtn');   if (lb) lb.remove(); } catch {}
+    try { const ub = document.getElementById('_lkUnlockBtn'); if (ub) ub.remove(); } catch {}
     location.reload();
 }
 
