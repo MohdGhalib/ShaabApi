@@ -436,6 +436,8 @@ function _renderTableM(get, isAdmin) {
                        ? `<span style="padding:2px 8px;border-radius:6px;font-size:11px;font-weight:700;background:rgba(255,152,0,0.20);color:#ffb74d;">⚖️ وزن</span>`
                        : x.roastSubType==='قيمة'
                        ? `<span style="padding:2px 8px;border-radius:6px;font-size:11px;font-weight:700;background:rgba(186,104,200,0.22);color:#e1bee7;">💵 قيمة</span>`
+                       : x.roastSubType==='وزن وقيمة'
+                       ? `<span style="padding:2px 8px;border-radius:6px;font-size:11px;font-weight:700;background:rgba(255,167,38,0.22);color:#ffcc80;">🌰 وزن وقيمة</span>`
                        : ''}
                </div>`
             : x.type==='متعدد الأصناف'
