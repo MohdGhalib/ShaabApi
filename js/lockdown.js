@@ -382,9 +382,36 @@ async function _lkPromptManualLock() {
     _lkInjectUnlockButton();
 }
 
+/* ── Auto-recovery: امسح القفل التلقائي إن كانت البيانات سليمة فعلاً
+   (يحمي من false positives عابرة مثل الخروج/الدخول)
+   ❌ القفل اليدوي (manual:true) لا يُمسح تلقائياً — يحتاج زر الفك ── */
+async function _lkAutoClearStaleLockdown() {
+    if (!isSystemLocked()) return false;
+    const ls = _lkReadLS();
+    if (!ls) return false;
+    if (ls.manual) return false; // قفل يدوي صريح — لا تتدخل
+    // فحص البيانات الفعلية في localStorage
+    let lsHasData = false;
+    try {
+        const lsDb  = JSON.parse(localStorage.getItem('Shaab_Master_DB')    || '{}');
+        const lsEmp = JSON.parse(localStorage.getItem('Shaab_Employees_DB') || '[]');
+        lsHasData = (Array.isArray(lsDb.montasiat) && lsDb.montasiat.length > 0) ||
+                    (Array.isArray(lsEmp)         && lsEmp.length         > 0);
+    } catch {}
+    if (!lsHasData) return false;
+    // البيانات موجودة — القفل كان false positive، امسحه
+    _lkClearLS();
+    try { await _lkClearIdb(); } catch {}
+    console.warn('[lockdown] 🔓 stale auto-lockdown cleared — data is intact (' + (ls.reason || '') + ')');
+    return true;
+}
+
 /* ── Boot: فحص القفل عند تحميل الصفحة ── */
 async function _lkBoot() {
     try {
+        // 1. محاولة استعادة تلقائية لقفل خاطئ (auto-trigger مع بيانات سليمة)
+        await _lkAutoClearStaleLockdown();
+        // 2. فحص الحالة الفعلية الآن
         const locked = await isSystemLockedAsync();
         const isSA   = _lkIsSuperAdminSession();
         if (locked) {
