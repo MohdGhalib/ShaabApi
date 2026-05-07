@@ -919,11 +919,18 @@ function _initSSE() {
         const isAdmin = currentUser?.isAdmin;
         let info = {};
         try { info = JSON.parse(e.data); } catch {}
+        // بدون معرف لا يمكن منع التكرار → تجاهل
+        if (!info.id) return;
         // تجاهل الشكاوى القديمة المُعاد بثّها (أكثر من 60 ثانية)
-        if (info.id && (Date.now() - info.id) > 60_000) return;
-        // دفاع إضافي: تجاهل إذا تم تنبيه نفس الـ id من قبل
-        if (info.id && _wasNotified('c', info.id)) return;
-        if (info.id) _markNotified('c', info.id);
+        if ((Date.now() - info.id) > 60_000) return;
+        // دفاع: تجاهل إذا تم تنبيه نفس الـ id من قبل
+        if (_wasNotified('c', info.id)) return;
+        // فحص ضد إعادة البث: لو السجل موجود محلياً وتاريخ إنشائه قديم → تجاهل
+        try {
+            const rec = (db.complaints || []).find(c => c.id === info.id);
+            if (rec && rec.iso && (Date.now() - Date.parse(rec.iso)) > 5 * 60 * 1000) return;
+        } catch {}
+        _markNotified('c', info.id);
         // كول سنتر + ميديا + أدمن → popup + صوت عادي
         // الميديا: لا إشعار إذا كان هو من أضاف الشكوى
         if (isAdmin || role === 'cc_manager' || role === 'media') {
@@ -954,11 +961,19 @@ function _initSSE() {
             let info = {};
             try { info = JSON.parse(e.data); } catch {}
             if (info.addedBy && info.addedBy === currentUser?.name) return;
-            // تجاهل السجلات القديمة (id = Date.now() عند الإنشاء؛ نتجاهل ما يزيد عن 60 ثانية)
-            if (info.id && (Date.now() - info.id) > 60_000) return;
-            // دفاع إضافي: تجاهل إذا تم تنبيه نفس الـ id من قبل (يستمر بين الجلسات)
-            if (info.id && _wasNotified('m', info.id)) return;
-            if (info.id) _markNotified('m', info.id);
+            // بدون معرف لا يمكن منع التكرار → تجاهل لتفادي إشعارات مكررة
+            if (!info.id) return;
+            // تجاهل السجلات القديمة (id = Date.now() عند الإنشاء)
+            if ((Date.now() - info.id) > 60_000) return;
+            // دفاع: تجاهل إذا تم تنبيه نفس الـ id من قبل (يستمر بين الجلسات)
+            if (_wasNotified('m', info.id)) return;
+            // فحص ضد إعادة بث الأحداث القديمة عند الاتصال الجديد:
+            // لو السجل موجود محلياً وتاريخ إنشائه (iso) قديم → تجاهل
+            try {
+                const rec = (db.montasiat || []).find(m => m.id === info.id);
+                if (rec && rec.iso && (Date.now() - Date.parse(rec.iso)) > 5 * 60 * 1000) return;
+            } catch {}
+            _markNotified('m', info.id);
             _playSound();
             _showMontasiaPopup(info);
         }
