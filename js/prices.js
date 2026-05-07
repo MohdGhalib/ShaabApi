@@ -253,7 +253,7 @@ function savePrice(idx) {
 ══════════════════════════════════════════════════════ */
 function _formatItemLine(item) {
     const w = item.weight ? ` (${item.weight})` : '';
-    return `${item.name}${w} بسعر ${item.price}`;
+    return `${item.name}${w} بسعر ${item.price} دينار`;
 }
 
 function _buildPriceTextSingle(item) {
