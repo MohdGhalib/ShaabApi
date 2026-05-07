@@ -1045,6 +1045,178 @@ function editComplaintField(id, key, label) {
     if (typeof save === 'function') save();
 }
 
+/* ══════════════════════════════════════════════════════
+   تعديل الفرع/الوقت/الموظف لشكوى — مدير الكول سنتر/المدير
+   ══════════════════════════════════════════════════════ */
+function _ecFmtTime(dateStr, timeStr) {
+    const [y, mo, d] = dateStr.split('-');
+    const [hh, mm] = timeStr.split(':');
+    const h = parseInt(hh, 10);
+    const ampm = h >= 12 ? 'PM' : 'AM';
+    const h12 = h % 12 || 12;
+    return `${parseInt(d, 10)}/${parseInt(mo, 10)}/${y}، ${h12}:${mm}:00 ${ampm}`;
+}
+function _ecParseTime(rawStr, isoStr) {
+    let dateStr = '', timeStr = '';
+    if (isoStr && /^\d{4}-\d{2}-\d{2}$/.test(isoStr)) dateStr = isoStr;
+    if (!rawStr) return { date: dateStr, time: timeStr };
+    const s = String(rawStr);
+    const dm = s.match(/(\d{1,4})[\/\-](\d{1,2})[\/\-](\d{1,4})/);
+    if (!dateStr && dm) {
+        let y, mo, d;
+        if (dm[1].length === 4) { y = dm[1]; mo = dm[2]; d = dm[3]; }
+        else { d = dm[1]; mo = dm[2]; y = dm[3]; }
+        dateStr = `${y}-${String(mo).padStart(2, '0')}-${String(d).padStart(2, '0')}`;
+    }
+    const tm = s.match(/(\d{1,2}):(\d{2})(?::\d{2})?\s*(AM|PM|am|pm)?/);
+    if (tm) {
+        let h = parseInt(tm[1], 10);
+        const m = tm[2];
+        const ap = (tm[3] || '').toUpperCase();
+        if (ap === 'PM' && h < 12) h += 12;
+        else if (ap === 'AM' && h === 12) h = 0;
+        timeStr = `${String(h).padStart(2, '0')}:${m}`;
+    }
+    return { date: dateStr, time: timeStr };
+}
+
+function closeEditComplaintModal() {
+    const o = document.getElementById('_ecOverlay');
+    if (o) o.remove();
+}
+
+function _openEditComplaintModal(id, mode) {
+    if (currentUser?.role !== 'cc_manager' && !currentUser?.isAdmin) return;
+    const item = (db.complaints || []).find(x => String(x.id) === String(id));
+    if (!item) return;
+    closeEditComplaintModal();
+
+    let title = '', headerGrad = 'linear-gradient(135deg,#1976d2,#0d47a1)', bodyHtml = '';
+    if (mode === 'branch') {
+        title = '📍 تعديل المحافظة والفرع';
+        bodyHtml = `
+            <div style="font-size:11px;color:var(--text-dim);margin-bottom:10px;background:var(--bg-input);padding:8px 10px;border-radius:8px;">
+                الحالي: <b style="color:var(--text-main);">${sanitize(item.city || '—')}</b> / <b style="color:var(--text-main);">${sanitize(item.branch || '—')}</b>
+            </div>
+            <label style="display:block;margin-bottom:5px;font-size:12px;color:var(--text-dim);">المحافظة:</label>
+            <select id="_ecCity" style="width:100%;padding:8px 10px;background:var(--bg-input);color:var(--text-main);border:1px solid var(--border);border-radius:8px;font-family:Cairo;margin-bottom:12px;box-sizing:border-box;"></select>
+            <label style="display:block;margin-bottom:5px;font-size:12px;color:var(--text-dim);">الفرع:</label>
+            <select id="_ecBranch" style="width:100%;padding:8px 10px;background:var(--bg-input);color:var(--text-main);border:1px solid var(--border);border-radius:8px;font-family:Cairo;box-sizing:border-box;"></select>`;
+    } else if (mode === 'time') {
+        title = '🕐 تعديل وقت الشكوى';
+        const parsed = _ecParseTime(item.time, item.iso);
+        bodyHtml = `
+            <div style="font-size:11px;color:var(--text-dim);margin-bottom:10px;background:var(--bg-input);padding:8px 10px;border-radius:8px;">
+                الحالي: <b style="color:var(--text-main);">${sanitize(item.time || '—')}</b>
+            </div>
+            <label style="display:block;margin-bottom:5px;font-size:12px;color:var(--text-dim);">التاريخ:</label>
+            <input id="_ecDate" type="date" value="${parsed.date}" style="width:100%;padding:8px 10px;background:var(--bg-input);color:var(--text-main);border:1px solid var(--border);border-radius:8px;font-family:Cairo;margin-bottom:10px;box-sizing:border-box;">
+            <label style="display:block;margin-bottom:5px;font-size:12px;color:var(--text-dim);">الوقت:</label>
+            <input id="_ecTime" type="time" value="${parsed.time}" style="width:100%;padding:8px 10px;background:var(--bg-input);color:var(--text-main);border:1px solid var(--border);border-radius:8px;font-family:Cairo;box-sizing:border-box;">`;
+    } else if (mode === 'addedBy') {
+        title = '👤 تعديل اسم الموظف';
+        const _ccTitles = ['مدير الكول سنتر', 'موظف كول سنتر', 'موظف ميديا'];
+        const _cur = item.addedBy || '';
+        const _list = (typeof employees !== 'undefined' && Array.isArray(employees))
+            ? employees.filter(e => !e.deleted && _ccTitles.includes(e.title))
+            : [];
+        if (_cur && !_list.some(e => e.name === _cur)) _list.unshift({ name: _cur, title: '—' });
+        const opts = '<option value="">— اختر موظف —</option>' +
+            _list.map(e => `<option value="${sanitize(e.name)}" ${e.name === _cur ? 'selected' : ''}>${sanitize(e.name)}${e.title && e.title !== '—' ? ' — ' + sanitize(e.title) : ''}</option>`).join('');
+        bodyHtml = `
+            <div style="font-size:11px;color:var(--text-dim);margin-bottom:10px;background:var(--bg-input);padding:8px 10px;border-radius:8px;">
+                الحالي: <b style="color:var(--text-main);">${sanitize(_cur || '—')}</b>
+            </div>
+            <label style="display:block;margin-bottom:5px;font-size:12px;color:var(--text-dim);">الموظف (الكول سنتر/الميديا):</label>
+            <select id="_ecEmp" style="width:100%;padding:8px 10px;background:var(--bg-input);color:var(--text-main);border:1px solid var(--border);border-radius:8px;font-family:Cairo;box-sizing:border-box;">${opts}</select>`;
+    }
+
+    const overlay = document.createElement('div');
+    overlay.id = '_ecOverlay';
+    overlay.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.6);z-index:100002;display:flex;align-items:center;justify-content:center;font-family:Cairo;padding:16px;';
+    overlay.onclick = (e) => { if (e.target === overlay) closeEditComplaintModal(); };
+    overlay.innerHTML = `
+        <div style="background:var(--bg-card);color:var(--text-main);border:1px solid var(--border);border-radius:14px;width:400px;max-width:96vw;display:flex;flex-direction:column;box-shadow:0 20px 60px rgba(0,0,0,0.5);">
+            <div style="padding:14px 18px;border-bottom:1px solid var(--border);display:flex;justify-content:space-between;align-items:center;background:${headerGrad};color:#fff;border-radius:14px 14px 0 0;">
+                <h3 style="margin:0;font-size:15px;">${title}</h3>
+                <button onclick="closeEditComplaintModal()" style="background:none;border:none;color:#fff;cursor:pointer;font-size:18px;">✕</button>
+            </div>
+            <div style="padding:16px 18px;">
+                ${bodyHtml}
+                <div style="display:flex;gap:8px;justify-content:flex-end;margin-top:16px;">
+                    <button onclick="closeEditComplaintModal()" style="padding:8px 14px;border:1px solid var(--border);border-radius:8px;background:var(--bg-input);color:var(--text-main);cursor:pointer;font-family:Cairo;font-weight:700;font-size:12px;">إلغاء</button>
+                    <button onclick="saveEditComplaint(${id}, '${mode}')" style="padding:8px 18px;border:none;border-radius:8px;background:linear-gradient(135deg,#2e7d32,#1b5e20);color:#fff;cursor:pointer;font-family:Cairo;font-weight:700;font-size:12px;">💾 حفظ</button>
+                </div>
+            </div>
+        </div>`;
+    document.body.appendChild(overlay);
+
+    if (mode === 'branch') {
+        const cityEl = document.getElementById('_ecCity');
+        const brEl   = document.getElementById('_ecBranch');
+        const country = item.country || (typeof _countryForCity === 'function' ? _countryForCity(item.city) : 'الأردن');
+        const cdata = (typeof COUNTRIES_DATA !== 'undefined') ? COUNTRIES_DATA[country] : null;
+        const regions = cdata && cdata.regions ? cdata.regions : {};
+        if (cityEl) {
+            cityEl.innerHTML = '<option value="">— اختر —</option>' +
+                Object.keys(regions).map(c => `<option value="${c}">${c}</option>`).join('');
+            cityEl.value = item.city || '';
+        }
+        const repop = () => {
+            if (!brEl || !cityEl) return;
+            const branches = regions[cityEl.value] || [];
+            brEl.innerHTML = '<option value="">— اختر —</option>' +
+                branches.map(b => `<option value="${b}">${b}</option>`).join('');
+        };
+        if (cityEl) cityEl.onchange = repop;
+        repop();
+        if (brEl) brEl.value = item.branch || '';
+    }
+}
+
+function editComplaintBranch(id)  { _openEditComplaintModal(id, 'branch'); }
+function editComplaintTime(id)    { _openEditComplaintModal(id, 'time'); }
+function editComplaintAddedBy(id) { _openEditComplaintModal(id, 'addedBy'); }
+
+function saveEditComplaint(id, mode) {
+    if (currentUser?.role !== 'cc_manager' && !currentUser?.isAdmin) return;
+    const item = (db.complaints || []).find(x => String(x.id) === String(id));
+    if (!item) return;
+    if (mode === 'branch') {
+        const newCity   = (document.getElementById('_ecCity')?.value   || '').trim();
+        const newBranch = (document.getElementById('_ecBranch')?.value || '').trim();
+        if (!newCity || !newBranch) return alert('يرجى اختيار المحافظة والفرع');
+        if (item.city === newCity && item.branch === newBranch) { closeEditComplaintModal(); return; }
+        const oldRef = `${item.city || '—'} / ${item.branch || '—'}`;
+        item.city   = newCity;
+        item.branch = newBranch;
+        if (typeof _logAudit === 'function')
+            _logAudit('editComplaintBranch', `${newCity} / ${newBranch}`, `${oldRef} → ${newCity} / ${newBranch}`, 'complaint', item.id);
+    } else if (mode === 'time') {
+        const dateVal = (document.getElementById('_ecDate')?.value || '').trim();
+        const timeVal = (document.getElementById('_ecTime')?.value || '').trim();
+        if (!dateVal) return alert('يرجى تحديد التاريخ');
+        if (!timeVal) return alert('يرجى تحديد الوقت');
+        const newStr = _ecFmtTime(dateVal, timeVal);
+        const oldRef = item.time || '—';
+        item.time = newStr;
+        item.iso  = dateVal;
+        if (typeof _logAudit === 'function')
+            _logAudit('editComplaintTime', item.branch || '—', `${oldRef} → ${newStr}`, 'complaint', item.id);
+    } else if (mode === 'addedBy') {
+        const newEmp = (document.getElementById('_ecEmp')?.value || '').trim();
+        if (!newEmp) return alert('يرجى اختيار اسم الموظف');
+        if (newEmp === (item.addedBy || '')) { closeEditComplaintModal(); return; }
+        const oldRef = item.addedBy || '—';
+        item.addedBy = newEmp;
+        if (typeof _logAudit === 'function')
+            _logAudit('editComplaintAddedBy', item.branch || '—', `${oldRef} → ${newEmp}`, 'complaint', item.id);
+    }
+    if (typeof save === 'function') save();
+    if (typeof renderAll === 'function') renderAll();
+    closeEditComplaintModal();
+}
+
 function saveAuditStatusEdit(id) {
     const val = document.getElementById(`auditStatusEdit-${id}`)?.value;
     if (!val) return alert("يرجى تحديد حالة الملاحظة");

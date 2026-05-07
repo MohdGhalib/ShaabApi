@@ -951,13 +951,16 @@ function _renderTableC(get, isAdmin) {
             ? `<span style="display:inline-block;margin-top:4px;font-size:10px;padding:2px 7px;border-radius:6px;font-weight:700;background:${_ts.bg};color:${_ts.color};">${_ts.icon} ${x.type}${isFinancial && isLinked ? ' ✓' : ''}</span>`
             : '';
 
+        const _branchPencil  = _canEditFields ? ` <button onclick="editComplaintBranch(${x.id})"  title="تعديل الفرع/المحافظة" style="background:none;border:none;cursor:pointer;color:var(--text-dim);padding:0 4px;font-size:12px;">✏️</button>` : '';
+        const _addedByPencil = _canEditFields ? ` <button onclick="editComplaintAddedBy(${x.id})" title="تعديل اسم الموظف"      style="background:none;border:none;cursor:pointer;color:var(--text-dim);padding:0 4px;font-size:12px;">✏️</button>` : '';
+        const _timePencil    = _canEditFields ? ` <button onclick="editComplaintTime(${x.id})"    title="تعديل وقت الشكوى"      style="background:none;border:none;cursor:pointer;color:var(--text-dim);padding:0 4px;font-size:12px;">✏️</button>` : '';
         return `<tr data-id="${x.id}">
-            <td style="position:relative;padding-right:${barColor ? '14px' : ''}">${finBar}<b>${x.branch}</b><br><small>${x.city}</small><br>${cStatusBadge}${typeBadge}</td>
+            <td style="position:relative;padding-right:${barColor ? '14px' : ''}">${finBar}<b>${x.branch}</b>${_branchPencil}<br><small>${x.city}</small><br>${cStatusBadge}${typeBadge}</td>
             <td>
                 ${extraInfoHtml}${custHtml}${linkHtml}${fileLink}${auditHtml}${followupHtml}${returnEditBox}${adminEditBox}
             </td>
-            <td><small style="color:var(--text-main)">📥 ${typeof _empNameHTML==='function'?_empNameHTML(x.addedBy||'—'):sanitize(x.addedBy||'—')}</small></td>
-            <td><small>${_toLatinDigits(x.time)}</small></td>
+            <td><small style="color:var(--text-main)">📥 ${typeof _empNameHTML==='function'?_empNameHTML(x.addedBy||'—'):sanitize(x.addedBy||'—')}${_addedByPencil}</small></td>
+            <td><small>${_toLatinDigits(x.time)}${_timePencil}</small></td>
             <td>${adminActions}</td>
         </tr>`;
     }).join('');
