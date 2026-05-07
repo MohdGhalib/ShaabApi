@@ -247,8 +247,15 @@ function saveFollowupResult(id) {
     }
 }
 
-let _notifyItemId = null;
-let _logoBase64   = null;
+let _notifyItemId    = null;
+let _notifyIsInquiry = false;   // لو true: _notifyItemId يشير لاستفسار وليس شكوى
+let _logoBase64      = null;
+
+// helper موحّد لجلب عنصر التبليغ (شكوى أو استفسار)
+function _notifyGetItem() {
+    if (_notifyIsInquiry) return (db.inquiries || []).find(x => x.id === _notifyItemId);
+    return (db.complaints || []).find(x => x.id === _notifyItemId);
+}
 
 async function _loadLogo() {
     if (_logoBase64 !== null) return;
@@ -271,25 +278,34 @@ async function _loadLogo() {
     });
 }
 
-// مفتاح التبليغ للاستفسار (جودة صنف): يفتح المودال على الشكوى المرتبطة، أو ينبّه إن لم تُنشأ بعد
+// مفتاح التبليغ للاستفسار (جودة صنف):
+//  • إذا كانت هناك شكوى مرتبطة من السيطرة → نفتح المودال عليها (تظهر إجراءات السيطرة كذلك)
+//  • وإلا (ولنوع جودة صنف فقط) → نفتح المودال مباشرة على الاستفسار بدون انتظار السيطرة
+//  • للأنواع الأخرى التي تحتاج تدقيق السيطرة، نطلب إنشاء الشكوى أولاً
 function openNotifyModalForInquiry(inquiryId) {
     const inq = (db.inquiries || []).find(x => x.id === inquiryId);
     if (!inq) return alert('الاستفسار غير موجود');
     const linkedComp = (db.complaints || []).find(c => !c.deleted && String(c.linkedInqSeq) === String(inq.seq));
-    if (!linkedComp) {
-        return alert('لم تُنشأ الشكوى المرتبطة بعد.\n\nيُرجى إنشاؤها من قسم السيطرة أولاً عشان يصير زر التبليغ يعرض كامل التفاصيل.');
+    if (linkedComp) {
+        openNotifyModal(linkedComp.id, false);
+        return;
     }
-    openNotifyModal(linkedComp.id);
+    if (inq.complaintType !== 'جودة صنف') {
+        return alert('لم تُنشأ الشكوى المرتبطة بعد.\n\nيُرجى إنشاؤها من قسم السيطرة أولاً.');
+    }
+    // وضع الاستفسار المباشر — جودة صنف فقط
+    openNotifyModal(inq.id, true);
 }
 
-async function openNotifyModal(id) {
-    _notifyItemId = id;
+async function openNotifyModal(id, isInquiry) {
+    _notifyItemId    = id;
+    _notifyIsInquiry = !!isInquiry;
     _notifyNotesHtml = '';   // إعادة تعيين المحرر النصّي للشكوى
     document.getElementById('notifyPersonName').value = '';
     const ccTa = document.getElementById('notifyCcActions');
     if (ccTa) ccTa.value = '';
     // أخفِ صفّ "اسم الشخص الذي تم تبليغه" لشكاوى سوء التعامل (لأنه قسم التبليغ لا يظهر)
-    const item = db.complaints.find(x => x.id === id);
+    const item = _notifyGetItem();
     const pnRow = document.getElementById('notifyPersonNameRow');
     if (pnRow) pnRow.style.display = (item && item.type === 'سوء تعامل') ? 'none' : 'flex';
 
@@ -505,7 +521,7 @@ function closeNotifyModal() {
 async function exportControlNotifyImages() {
     const card = document.getElementById('notifyCard');
     const btn  = document.getElementById('exportNotifyBtn');
-    const item = db.complaints.find(x => x.id === _notifyItemId);
+    const item = _notifyGetItem();
     if (!card || !item) return;
 
     btn.disabled     = true;
@@ -707,7 +723,7 @@ function _qInitPhotoControls() {
 }
 
 function refreshNotifyCard() {
-    const item = db.complaints.find(x => x.id === _notifyItemId);
+    const item = _notifyGetItem();
     if (!item) return;
     const personName  = document.getElementById('notifyPersonName').value.trim();
     const ccActions   = (document.getElementById('notifyCcActions')?.value || '').trim();
