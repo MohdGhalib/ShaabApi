@@ -46,20 +46,88 @@ const AUDIT_ACTION_LABELS = {
 };
 function _auditActionLabel(a) { return AUDIT_ACTION_LABELS[a] || a; }
 
-/* ── Jump from audit row to the actual record (montasi/inquiry/complaint) ── */
-function _jumpFromAudit(refType, refId) {
-    if (!refType || refId == null) return;
+/* ── Map audit action → record type (للسجلات القديمة بلا refId) ── */
+const _AUDIT_ACTION_TO_TYPE = {
+    'addMontasia':           'montasia',
+    'deliverMontasia':       'montasia',
+    'approveMontasia':       'montasia',
+    'approveMontasiaMobile': 'montasia',
+    'editMontasiaType':      'montasia',
+    'editMontasiaStatus':    'montasia',
+    'editMontasiaNotes':     'montasia',
+    'editMontasiaBranch':    'montasia',
+    'editMontasiaItems':     'montasia',
+    'deleteMontasia':        'montasia',
+    'restoreMontasia':       'montasia',
+    'addInquiry':            'inquiry',
+    'editInquiry':           'inquiry',
+    'deleteInquiry':         'inquiry',
+    'restoreInquiry':        'inquiry',
+    'addComplaint':          'complaint',
+    'editComplaint':         'complaint',
+    'deleteComplaint':       'complaint',
+    'restoreComplaint':      'complaint',
+    'auditComplaint':        'complaint',
+    'editComplaintField':    'complaint',
+    'toggleCountComplaint':  'complaint',
+    'editAuditStatus':       'complaint',
+    'approveComplaint':      'complaint'
+};
+
+function _auditEntryRecordType(entry) {
+    if (entry.refType) return entry.refType;
+    return _AUDIT_ACTION_TO_TYPE[entry.action] || null;
+}
+
+/* ── Jump from audit row to the actual record (montasi/inquiry/complaint) ──
+   يدعم refId الصريح (السجلات الجديدة) وfallback بالطابع الزمني (للسجلات القديمة)
+   لأن كل سجل يُنشأ بـ id=Date.now() والـ audit.ts قريب جدًا من id السجل. */
+function _jumpFromAudit(refType, refId, fallbackAction, fallbackTs, fallbackEntity) {
+    let resolvedType = refType || (_AUDIT_ACTION_TO_TYPE[fallbackAction] || null);
+    let resolvedId   = (refId != null && refId !== '') ? refId : null;
+
+    if (!resolvedType) {
+        alert('هذا النوع من السجلات لا يدعم النقر للوصول.');
+        return;
+    }
     const tabMap   = { montasia:'m', inquiry:'i', complaint:'c' };
     const tableMap = { montasia:'#tableM', inquiry:'#tableI', complaint:'#tableC' };
-    const tab = tabMap[refType], table = tableMap[refType];
+    const tab = tabMap[resolvedType], table = tableMap[resolvedType];
     if (!tab || !table || typeof switchTab !== 'function') return;
+
+    // Fallback: لو ما عندنا refId، نبحث عن سجل قريب من ts
+    if (resolvedId == null && fallbackTs) {
+        const records = (resolvedType === 'montasia' ? (db.montasiat || []) :
+                         resolvedType === 'inquiry'  ? (db.inquiries || []) :
+                         resolvedType === 'complaint' ? (db.complaints || []) : []);
+        // نطاق ±60 ثانية من وقت السجل الإحصائي (audit ts ≈ record id بفارق صغير)
+        const candidates = records.filter(r => {
+            if (r.deleted) return false;
+            if (typeof r.id !== 'number') return false;
+            if (Math.abs(r.id - fallbackTs) > 60_000) return false;
+            if (fallbackEntity && r.branch && r.branch !== fallbackEntity) return false;
+            return true;
+        });
+        if (candidates.length === 0) {
+            alert('السجل غير موجود — قد يكون محذوفاً أو خارج النطاق الزمني.');
+            return;
+        }
+        candidates.sort((a, b) => Math.abs(a.id - fallbackTs) - Math.abs(b.id - fallbackTs));
+        resolvedId = candidates[0].id;
+    }
+
+    if (resolvedId == null) {
+        alert('تعذّر تحديد السجل — لا يوجد معرّف.');
+        return;
+    }
+
     switchTab(tab);
 
     // قد يحتاج الجدول وقتاً ليُرسَم — نحاول حتى 5 مرات
     let attempts = 0;
     const tryFind = () => {
         attempts++;
-        const row = document.querySelector(`${table} tbody tr[data-id="${refId}"]`);
+        const row = document.querySelector(`${table} tbody tr[data-id="${resolvedId}"]`);
         if (row) {
             document.querySelectorAll(`${table} tbody tr`).forEach(r => { r.style.outline = ''; r.style.boxShadow = ''; });
             row.style.outline      = '3px solid #64b5f6';
@@ -199,10 +267,19 @@ function _buildAuditTable() {
     const _isCCMgr = currentUser?.role === 'cc_manager' || currentUser?.isAdmin;
     const dataRows = slice.length
         ? slice.map(entry => {
-            const canJump = _isCCMgr && entry.refType && entry.refId != null;
+            // قابل للنقر إذا: (أ) فيه refType+refId، أو (ب) action معروف من خريطة الأنواع + ts متوفر
+            const inferredType = _auditEntryRecordType(entry);
+            const hasDirectRef = entry.refType && entry.refId != null;
+            const hasFallback  = !hasDirectRef && inferredType && entry.ts;
+            const canJump = _isCCMgr && (hasDirectRef || hasFallback);
             const labelText = sanitize(_auditActionLabel(entry.action));
+            // بناء استدعاء النقر — escape للـ entity بسيط (الفروع ما تحتوي اقتباس)
+            const safeEntity = String(entry.entity || '').replace(/'/g, '');
+            const onclickStr = hasDirectRef
+                ? `_jumpFromAudit('${entry.refType}', ${entry.refId}, '${entry.action || ''}', ${entry.ts || 0}, '${safeEntity}')`
+                : `_jumpFromAudit('', null, '${entry.action || ''}', ${entry.ts || 0}, '${safeEntity}')`;
             const actionCell = canJump
-                ? `<button onclick="_jumpFromAudit('${entry.refType}', ${entry.refId})"
+                ? `<button onclick="${onclickStr}"
                            title="فتح السجل في تبويبه"
                            style="padding:4px 11px;font-size:12px;font-family:'Cairo';font-weight:700;
                                   border:1px solid rgba(100,181,246,0.55);
