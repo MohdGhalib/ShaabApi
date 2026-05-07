@@ -140,6 +140,12 @@ function _abTakeSnapshot(reason) {
             _abLastBlockedAt = Date.now();
             _abLastBlockedReason = lossReason;
             console.warn('[autoBackup] 🛑 BLOCKED snapshot — ' + lossReason);
+            // ── قفل النظام عند الفقدان الكامل (المنتسيات أو الموظفون) ──
+            // أنماط الفقدان الكامل: "المنتسيات فارغة" / "الموظفون فارغون"
+            const isTotalLoss = /فارغة|فارغون/.test(lossReason);
+            if (isTotalLoss && typeof window.triggerSystemLockdown === 'function') {
+                try { window.triggerSystemLockdown(lossReason); } catch (e) { console.warn('[autoBackup] lockdown trigger failed:', e); }
+            }
             return null;
         }
 
@@ -507,18 +513,80 @@ function toggleAutoBackup() {
     if (typeof showAutoBackupsModal === 'function') showAutoBackupsModal();
 }
 
-/* ── Restore from snapshot ── */
+/* ── Merge-restore helpers ──
+   كل سجل في النظام يُنشأ بـ id = Date.now() — فالسجلات اللي id > snap.ts
+   مضافة بعد وقت الباكب، ويجب الاحتفاظ بها أثناء الاستعادة. */
+function _abMergeArrayById(baseArr, currentArr, snapTs) {
+    if (!Array.isArray(baseArr))    baseArr = [];
+    if (!Array.isArray(currentArr)) return baseArr;
+    const baseIds = new Set();
+    for (const r of baseArr) if (r && r.id != null) baseIds.add(r.id);
+    const extras = [];
+    for (const r of currentArr) {
+        if (!r || r.id == null) continue;
+        if (r.id > snapTs && !baseIds.has(r.id)) extras.push(r);
+    }
+    return baseArr.concat(extras);
+}
+
+function _abBuildMergedData(snap) {
+    const live = _abReadLiveData();
+    const out  = {};
+    const ts   = (snap && snap.ts) || 0;
+
+    // Shaab_Master_DB: كائن فيه عدة مصفوفات
+    try {
+        const baseDb = JSON.parse((snap.data && snap.data['Shaab_Master_DB']) || '{}');
+        const liveDb = JSON.parse(live['Shaab_Master_DB']                     || '{}');
+        const merged = Object.assign({}, baseDb);
+        for (const sk of ['montasiat','inquiries','complaints','compensations','auditLog']) {
+            merged[sk] = _abMergeArrayById(baseDb[sk], liveDb[sk], ts);
+        }
+        out['Shaab_Master_DB'] = JSON.stringify(merged);
+    } catch { out['Shaab_Master_DB'] = snap.data && snap.data['Shaab_Master_DB']; }
+
+    // مصفوفات مباشرة على المستوى الأعلى
+    for (const k of ['Shaab_Employees_DB','Shaab_Breaks_DB','Shaab_Sessions_DB']) {
+        try {
+            const baseArr = JSON.parse((snap.data && snap.data[k]) || '[]');
+            const liveArr = JSON.parse(live[k]                     || '[]');
+            out[k] = JSON.stringify(_abMergeArrayById(baseArr, liveArr, ts));
+        } catch { out[k] = snap.data && snap.data[k]; }
+    }
+
+    // قائمة الأسعار: إعدادات (ليست سجلات بـ id) — استبدال كامل
+    out['Shaab_PriceList_DB'] = snap.data && snap.data['Shaab_PriceList_DB'];
+
+    return out;
+}
+
+/* ── Restore from snapshot — استعادة ذكية تحتفظ بالسجلات المضافة بعد وقت الباكب ── */
 function restoreAutoBackup(idx) {
     const arr = _abReadAll();
     const snap = arr[idx];
     if (!snap) { alert('النسخة غير موجودة'); return; }
-    const dig = _abDigest(snap);
+
+    // ابنِ بيانات الدمج أولاً عشان نقدر نعرض عدد السجلات الجديدة في الحوار
+    const merged    = _abBuildMergedData(snap);
+    const baseDig   = _abDigest(snap);
+    const mergedDig = _abDigest({ data: merged });
+    const extra = {
+        montasiat:  Math.max(0, mergedDig.montasiat  - baseDig.montasiat),
+        inquiries:  Math.max(0, mergedDig.inquiries  - baseDig.inquiries),
+        complaints: Math.max(0, mergedDig.complaints - baseDig.complaints),
+        employees:  Math.max(0, mergedDig.employees  - baseDig.employees)
+    };
+    const totalExtra = extra.montasiat + extra.inquiries + extra.complaints + extra.employees;
+
     const msg = 'هل أنت متأكد من استعادة نسخة ' + _abFormatTs(snap.ts) + '؟\n\n' +
-                'منتسيات: ' + dig.montasiat + '\n' +
-                'استفسارات: ' + dig.inquiries + '\n' +
-                'شكاوى: ' + dig.complaints + '\n' +
-                'موظفون: ' + dig.employees + '\n\n' +
-                '⚠️ ستحلّ هذه النسخة محلّ البيانات الحالية وسيُرفع التغيير للسيرفر.';
+                'البيانات في النسخة:\n' +
+                '  • منتسيات: '   + baseDig.montasiat  + (extra.montasiat  ? '  (+ ' + extra.montasiat  + ' جديد)' : '') + '\n' +
+                '  • استفسارات: ' + baseDig.inquiries  + (extra.inquiries  ? '  (+ ' + extra.inquiries  + ' جديد)' : '') + '\n' +
+                '  • شكاوى: '    + baseDig.complaints + (extra.complaints ? '  (+ ' + extra.complaints + ' جديد)' : '') + '\n' +
+                '  • موظفون: '   + baseDig.employees  + (extra.employees  ? '  (+ ' + extra.employees  + ' جديد)' : '') + '\n\n' +
+                (totalExtra > 0
+                    ? '♻ سيُحتفظ بـ ' + totalExtra + ' سجل أُضيف بعد وقت الباكب — لن يُحذف شيء جديد.'
+                    : '♻ لا توجد سجلات جديدة بعد وقت الباكب — استعادة عادية.');
     if (!confirm(msg)) return;
 
     // التقط نسخة أمان قبل الاستعادة (قد تفشل لو localStorage ممتلئ — مقبول)
@@ -529,7 +597,7 @@ function restoreAutoBackup(idx) {
 
     let _writeErrors = [];
     for (const k of _AB_TRACKED_KEYS) {
-        const v = (snap.data || {})[k];
+        const v = merged[k];
         if (v != null) {
             try {
                 if (typeof _push === 'function') _push(k, v);
@@ -540,6 +608,7 @@ function restoreAutoBackup(idx) {
             }
         }
     }
+    console.log('[autoBackup] ♻ smart-restore: kept ' + totalExtra + ' record(s) added after snapshot');
 
     // أعد كتابة pre-restore فقط في الـ buffer (للتراجع لاحقاً إن أردت)
     if (preSnap) {

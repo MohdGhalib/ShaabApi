@@ -162,6 +162,28 @@ function _showLoginError(msg) {
 async function login() {
     const pass  = document.getElementById("passInput").value;
 
+    // ── فحص قفل النظام ──
+    // عند تفعيل القفل (فقدان البيانات)، يُسمح بالدخول فقط لكلمة مرور السوبر أدمن
+    if (typeof isSystemLocked === 'function' && isSystemLocked()) {
+        const SA_PWD = (typeof window._LK_SUPER_ADMIN_PWD === 'string') ? window._LK_SUPER_ADMIN_PWD : '0785110515';
+        if (pass !== SA_PWD) {
+            _showLoginError('🔒 النظام مقفل — تواصل مع محمد غالب: 0785110515');
+            return;
+        }
+        // كلمة مرور سوبر أدمن صحيحة — جلسة سوبر أدمن مباشرة
+        if (typeof window._lkSetSuperAdminSession === 'function') window._lkSetSuperAdminSession();
+        currentUser = { name:'سوبر أدمن', title:'سوبر أدمن', empId:'super-admin', isAdmin:true, role:'admin' };
+        document.getElementById("loginPage").style.display = "none";
+        document.getElementById("mainApp").style.display   = "flex";
+        try { if (typeof setProfileUI === 'function') setProfileUI(); } catch {}
+        try { if (typeof recordLogin === 'function') recordLogin(); } catch {}
+        try { if (typeof init === 'function') init(); } catch {}
+        try { if (typeof initSessionWatcher === 'function') initSessionWatcher(); } catch {}
+        try { if (typeof initClock === 'function') initClock(); } catch {}
+        try { if (typeof window._lkInjectUnlockButton === 'function') window._lkInjectUnlockButton(); } catch {}
+        return;
+    }
+
     if (IS_LOCAL) {
         // ── وضع التطوير المحلي (file://) — مصادقة محلية ──
         if (Date.now() < _lockUntil) {
