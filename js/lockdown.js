@@ -109,11 +109,12 @@ function getLockdownTs() {
 }
 
 /* ── Public: trigger / clear ── */
-async function triggerSystemLockdown(reason) {
+async function triggerSystemLockdown(reason, isManual) {
     if (isSystemLocked()) return; // already locked
     const payload = {
         locked: true,
         reason: reason || 'فقدان البيانات',
+        manual: !!isManual,
         ts:     Date.now(),
         iso:    new Date().toISOString()
     };
@@ -169,10 +170,39 @@ function _lkSetSuperAdminSession() {
     try { sessionStorage.setItem(_LK_SESSION_KEY, '1'); } catch {}
 }
 
+/* ── HTML escape helper ── */
+function _lkEsc(s) {
+    return String(s == null ? '' : s)
+        .replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;')
+        .replace(/"/g,'&quot;').replace(/'/g,'&#39;');
+}
+
 /* ── Overlay UI (غير قابل للإغلاق) ── */
 function _lkBuildOverlay() {
     const exist = document.getElementById('_lkOverlay');
     if (exist) return exist;
+    const ls       = _lkReadLS();
+    const isManual = !!(ls && ls.manual);
+    const reason   = (ls && ls.reason) || 'فقدان البيانات';
+
+    const title = isManual
+        ? 'النظام في وضع الإغلاق'
+        : 'تم رصد فقدان كامل للبيانات';
+    const introHtml = isManual
+        ? `<p style="font-size:15px;color:#e2e8f0;line-height:1.7;margin:0 0 12px 0;">رسالة من المسؤول:</p>
+           <div style="background:rgba(220,38,38,0.12);border-right:4px solid #dc2626;
+                       padding:14px 16px;border-radius:8px;margin:0 0 20px 0;
+                       text-align:right;font-size:15px;color:#fef2f2;line-height:1.7;
+                       white-space:pre-wrap;word-break:break-word;">${_lkEsc(reason)}</div>
+           <p style="font-size:14px;color:#94a3b8;line-height:1.6;margin:0 0 20px 0;">للاستفسار، الرجاء التواصل مع:</p>`
+        : `<p style="font-size:15px;color:#e2e8f0;line-height:1.7;margin:0 0 20px 0;">
+                النظام مقفل لحماية بياناتك ومنع إدخال أي معلومات جديدة.
+                <br>للمساعدة، الرجاء التواصل مع:
+           </p>`;
+    const footerHtml = isManual
+        ? `<div style="margin-top:16px;font-size:11px;color:#64748b;">قفل يدوي من المسؤول</div>`
+        : `<div style="margin-top:16px;font-size:11px;color:#64748b;">السبب: ${_lkEsc(reason)}</div>`;
+
     const o = document.createElement('div');
     o.id = '_lkOverlay';
     o.setAttribute('role','dialog');
@@ -187,13 +217,9 @@ function _lkBuildOverlay() {
                     box-shadow:0 20px 60px rgba(0,0,0,0.7);color:#fff;text-align:center;">
             <div style="font-size:64px;margin-bottom:8px;">🔒</div>
             <h2 style="font-size:24px;font-weight:800;color:#fca5a5;margin:0 0 12px 0;">
-                تم رصد فقدان كامل للبيانات
+                ${_lkEsc(title)}
             </h2>
-            <p style="font-size:15px;color:#e2e8f0;line-height:1.7;margin:0 0 20px 0;">
-                النظام مقفل لحماية بياناتك ومنع إدخال أي معلومات جديدة.
-                <br>
-                للمساعدة، الرجاء التواصل مع:
-            </p>
+            ${introHtml}
             <div style="background:rgba(220,38,38,0.15);border:1px solid rgba(220,38,38,0.4);
                         border-radius:12px;padding:16px;margin:0 0 24px 0;">
                 <div style="font-size:14px;color:#fca5a5;margin-bottom:6px;">${_LK_CONTACT_NAME}</div>
@@ -219,13 +245,10 @@ function _lkBuildOverlay() {
                     دخول
                 </button>
             </div>
-            <div style="margin-top:16px;font-size:11px;color:#64748b;">
-                السبب: <span id="_lkReason"></span>
-            </div>
+            ${footerHtml}
         </div>
     `;
     document.body.appendChild(o);
-    document.getElementById('_lkReason').textContent = getLockdownReason();
     document.getElementById('_lkBtn').onclick = _lkTryUnlock;
     document.getElementById('_lkPwd').addEventListener('keydown', (e) => {
         if (e.key === 'Enter') _lkTryUnlock();
@@ -293,11 +316,13 @@ function _lkStopWatchdog() {
 
 /* ── زر فك القفل (للسوبر أدمن فقط بعد الدخول) ── */
 function _lkInjectUnlockButton() {
+    // أزل زر القفل اليدوي إن كان موجوداً
+    const lb = document.getElementById('_lkLockBtn'); if (lb) lb.remove();
     if (document.getElementById('_lkUnlockBtn')) return;
     const btn = document.createElement('button');
     btn.id = '_lkUnlockBtn';
     btn.innerHTML = '🔓 إلغاء قفل النظام';
-    btn.title = 'النظام في وضع الحماية بسبب فقدان بيانات — اضغط بعد التأكد من استعادة كل شيء';
+    btn.title = 'النظام مقفل — اضغط بعد التأكد من استعادة البيانات أو لإنهاء الصيانة';
     btn.style.cssText = 'position:fixed;bottom:20px;left:20px;z-index:9998;' +
         'padding:12px 18px;background:linear-gradient(135deg,#16a34a,#15803d);' +
         'color:#fff;border:none;border-radius:12px;' +
@@ -305,7 +330,6 @@ function _lkInjectUnlockButton() {
         'cursor:pointer;box-shadow:0 8px 20px rgba(22,163,74,0.4);';
     btn.onclick = () => {
         const msg = '⚠️ هل أنت متأكد من إلغاء قفل النظام؟\n\n' +
-                    'لا تفك القفل قبل التأكد من سلامة البيانات واستعادتها بالكامل.\n' +
                     'بعد فك القفل سيتمكن جميع المستخدمين من الدخول وإدخال البيانات.';
         if (!confirm(msg)) return;
         clearSystemLockdown();
@@ -313,18 +337,66 @@ function _lkInjectUnlockButton() {
     document.body.appendChild(btn);
 }
 
+/* ── زر القفل اليدوي (للسوبر أدمن، لما النظام مفتوح) ── */
+function _lkInjectLockButton() {
+    if (document.getElementById('_lkLockBtn')) return;
+    if (isSystemLocked()) return;
+    if (!_lkIsSuperAdminSession()) return;
+    const btn = document.createElement('button');
+    btn.id = '_lkLockBtn';
+    btn.innerHTML = '🔒 قفل النظام يدوياً';
+    btn.title = 'قفل النظام لجميع المستخدمين مع رسالة مخصّصة';
+    btn.style.cssText = 'position:fixed;bottom:20px;left:20px;z-index:9998;' +
+        'padding:12px 18px;background:linear-gradient(135deg,#dc2626,#991b1b);' +
+        'color:#fff;border:none;border-radius:12px;' +
+        "font-family:'Cairo';font-weight:700;font-size:14px;" +
+        'cursor:pointer;box-shadow:0 8px 20px rgba(220,38,38,0.4);';
+    btn.onclick = _lkPromptManualLock;
+    document.body.appendChild(btn);
+}
+
+async function _lkPromptManualLock() {
+    const msg = prompt(
+        '🔒 قفل النظام يدوياً\n\n' +
+        'اكتب الرسالة التي ستظهر للمستخدمين:\n' +
+        '(سطور متعددة مدعومة)\n\n' +
+        'بعد التأكيد سيُمنع جميع المستخدمين من الدخول والتصفح.',
+        'النظام في صيانة مجدولة — يرجى المحاولة لاحقاً'
+    );
+    if (msg === null) return; // الغى المستخدم
+    const trimmed = (msg || '').trim();
+    if (!trimmed) { alert('الرجاء كتابة رسالة للمستخدمين'); return; }
+    const ok = confirm(
+        '⚠️ هل أنت متأكد من قفل النظام الآن؟\n\n' +
+        'الرسالة التي ستظهر للمستخدمين:\n' +
+        '─────────────────\n' +
+        trimmed + '\n' +
+        '─────────────────\n\n' +
+        'سيُمنع جميع المستخدمين من الدخول والتصفح فوراً.\n' +
+        'لإلغاء القفل لاحقاً استخدم زر "إلغاء قفل النظام".'
+    );
+    if (!ok) return;
+    await triggerSystemLockdown(trimmed, true);
+    // أزل زر القفل اليدوي وأظهر زر فك القفل
+    const lb = document.getElementById('_lkLockBtn'); if (lb) lb.remove();
+    _lkInjectUnlockButton();
+}
+
 /* ── Boot: فحص القفل عند تحميل الصفحة ── */
 async function _lkBoot() {
     try {
         const locked = await isSystemLockedAsync();
-        if (!locked) return;
-        if (_lkIsSuperAdminSession()) {
-            // السوبر أدمن سبق دخل — لا تظهر شاشة القفل، لكن أظهر زر الفك
-            _lkInjectUnlockButton();
-        } else {
-            _lkShowOverlay();
-            _lkStartWatchdog();
+        const isSA   = _lkIsSuperAdminSession();
+        if (locked) {
+            if (isSA) {
+                // السوبر أدمن سبق دخل — لا تظهر شاشة القفل، أظهر زر الفك
+                _lkInjectUnlockButton();
+            } else {
+                _lkShowOverlay();
+                _lkStartWatchdog();
+            }
         }
+        // ملاحظة: زر القفل اليدوي يُحقَن بعد دخول السوبر أدمن من auth.js مباشرة
     } catch (e) { console.warn('[lockdown] boot failed:', e); }
 }
 
@@ -343,4 +415,5 @@ window.getLockdownReason      = getLockdownReason;
 window._lkSetSuperAdminSession = _lkSetSuperAdminSession;
 window._lkIsSuperAdminSession  = _lkIsSuperAdminSession;
 window._lkInjectUnlockButton   = _lkInjectUnlockButton;
+window._lkInjectLockButton     = _lkInjectLockButton;
 window._LK_SUPER_ADMIN_PWD     = _LK_SUPER_ADMIN_PWD;
