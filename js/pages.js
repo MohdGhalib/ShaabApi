@@ -247,7 +247,7 @@ i: `
     <div><label>الفرع</label><select id="searchBranchI" onchange="filterTable()"><option value="">الكل</option></select></div>
     <div><label>التاريخ</label><div class="date-picker-wrap" onclick="openDatePicker('searchDateI')"><span class="date-display" id="searchDateI-display">📅 اختر التاريخ</span><input type="hidden" id="searchDateI"></div></div>
     <div><label>نوع الاستفسار</label>
-        <select id="searchTypeI" onchange="filterTable()">
+        <select id="searchTypeI" onchange="_toggleComplaintTypeFilterI();filterTable()">
             <option value="">الكل</option>
             <option value="شكوى">شكوى</option>
             <option value="استفسار عن أصناف">استفسار عن أصناف</option>
@@ -261,6 +261,14 @@ i: `
             <option value="طلبية">طلبية</option>
             <option value="تحويل لمولات او بوابة الشعب">تحويل لمولات او بوابة الشعب</option>
             <option value="أخرى">أخرى</option>
+        </select>
+    </div>
+    <div id="searchComplaintTypeIWrap" style="display:none;"><label>نوع الشكوى</label>
+        <select id="searchComplaintTypeI" onchange="filterTable()">
+            <option value="">الكل</option>
+            <option value="جودة صنف">جودة صنف</option>
+            <option value="مالية">💰 مالية</option>
+            <option value="سوء تعامل">سوء تعامل</option>
         </select>
     </div>
     <div><label>موظف الاستفسار</label><select id="searchAddedByI" onchange="filterTable()"><option value="">الكل</option></select></div>

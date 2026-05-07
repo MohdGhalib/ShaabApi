@@ -18,6 +18,17 @@ function toggleInquiryNotes() {
     }
 }
 
+/* ── إظهار فلتر "نوع الشكوى" في شريط بحث الاستفسارات عند اختيار "شكوى" فقط ── */
+function _toggleComplaintTypeFilterI() {
+    const sel    = document.getElementById('searchTypeI');
+    const wrap   = document.getElementById('searchComplaintTypeIWrap');
+    const subSel = document.getElementById('searchComplaintTypeI');
+    if (!wrap) return;
+    const show = sel && sel.value === 'شكوى';
+    wrap.style.display = show ? '' : 'none';
+    if (!show && subSel) subSel.value = '';
+}
+
 /* ── بحث مباشر داخل جدول الاستفسارات حسب الرقم المُدخَل في حقل العميل ──
    عند الكتابة في حقل رقم الهاتف بنموذج الإضافة، يفلتر الجدول لإظهار سجلات
    نفس الرقم فقط (للوصول لتاريخ مكالمات الزبون). يُفرَّغ تلقائياً عند الحفظ. */
