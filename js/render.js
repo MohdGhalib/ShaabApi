@@ -541,7 +541,7 @@ function _renderTableM(get, isAdmin) {
             <td style="text-align:center;vertical-align:top;">
                 <div style="display:flex;flex-direction:column;gap:4px;align-items:center;">
                     <span style="font-weight:700;color:var(--text-main);font-size:13px;">${typeof _empNameHTML==='function'?_empNameHTML(x.addedBy||'—'):sanitize(x.addedBy||'—')}</span>
-                    <small style="color:var(--text-dim);">${_toLatinDigits(_timeToAmPm(x.time))}</small>
+                    <small style="color:var(--text-dim);">${_toLatinDigits(_timeToAmPm(x.time))}${_isCCMgr?` <button onclick="editMontasiaReceipt(${x.id})" title="تعديل وقت/موظف الاستلام" style="background:none;border:none;cursor:pointer;color:var(--text-dim);padding:0 4px;font-size:12px;">✏️</button>`:''}</small>
                     ${x.addLateReason
                         ? `<button onclick="showAddLateNote(${x.id})" style="cursor:pointer;background:rgba(255,152,0,0.12);border:1px solid rgba(255,152,0,0.35);color:#ffb74d;border-radius:7px;padding:3px 10px;font-family:'Cairo';font-size:11px;font-weight:700;">👁 عرض</button>`
                         : ''
@@ -553,7 +553,7 @@ function _renderTableM(get, isAdmin) {
                 <div style="display:flex;flex-direction:column;gap:4px;align-items:center;">
                 ${x.dt && x.status !== 'قيد الانتظار'
                     ? `<span style="font-weight:700;color:var(--text-main);font-size:13px;">${typeof _empNameHTML==='function'?_empNameHTML(x.deliveredBy||'—'):sanitize(x.deliveredBy||'—')}</span>
-                       <small style="color:#a5d6a7;font-family:monospace;">⏱ ${_toLatinDigits(_timeToAmPm(x.dt))}</small>
+                       <small style="color:#a5d6a7;font-family:monospace;">⏱ ${_toLatinDigits(_timeToAmPm(x.dt))}${_isCCMgr?` <button onclick="editMontasiaDelivery(${x.id})" title="تعديل وقت/موظف التسليم" style="background:none;border:none;cursor:pointer;color:var(--text-dim);padding:0 4px;font-size:12px;">✏️</button>`:''}</small>
                        ${x.deliveryBranch && x.deliveryBranch !== x.branch
                            ? `<div style="font-size:12px;color:var(--accent-red);font-weight:700;">تم التسليم بفرع ${sanitize(x.deliveryBranch)}</div>`
                            : `<div style="font-size:12px;color:var(--text-dim);">تم التسليم بنفس الفرع</div>`

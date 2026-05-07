@@ -676,6 +676,134 @@ function closeEditMontasiaBranchModal() {
     if (o) o.remove();
 }
 
+/* ══ تعديل وقت/موظف الاستلام والتسليم لمنتسية موجودة (cc_manager) ══ */
+function _fmtMontasiaTimeFromInputs(dateStr, timeStr) {
+    if (!dateStr || !timeStr) return '';
+    const [y, mo, d] = dateStr.split('-');
+    const [hh, mm] = timeStr.split(':');
+    const h = parseInt(hh, 10);
+    const ampm = h >= 12 ? 'PM' : 'AM';
+    const h12 = h % 12 || 12;
+    return `${parseInt(d, 10)}/${parseInt(mo, 10)}/${y}، ${h12}:${mm}:00 ${ampm}`;
+}
+
+function _parseMontasiaTimeToInputs(rawStr, isoStr) {
+    let dateStr = '', timeStr = '';
+    if (isoStr && /^\d{4}-\d{2}-\d{2}$/.test(isoStr)) dateStr = isoStr;
+    if (!rawStr) return { date: dateStr, time: timeStr };
+    const s = String(rawStr);
+    const dm = s.match(/(\d{1,4})[\/\-](\d{1,2})[\/\-](\d{1,4})/);
+    if (!dateStr && dm) {
+        let y, mo, d;
+        if (dm[1].length === 4) { y = dm[1]; mo = dm[2]; d = dm[3]; }
+        else { d = dm[1]; mo = dm[2]; y = dm[3]; }
+        dateStr = `${y}-${String(mo).padStart(2, '0')}-${String(d).padStart(2, '0')}`;
+    }
+    const tm = s.match(/(\d{1,2}):(\d{2})(?::\d{2})?\s*(AM|PM|am|pm)?/);
+    if (tm) {
+        let h = parseInt(tm[1], 10);
+        const m = tm[2];
+        const ap = (tm[3] || '').toUpperCase();
+        if (ap === 'PM' && h < 12) h += 12;
+        else if (ap === 'AM' && h === 12) h = 0;
+        timeStr = `${String(h).padStart(2, '0')}:${m}`;
+    }
+    return { date: dateStr, time: timeStr };
+}
+
+function _openMontasiaTimeEditModal(id, mode) {
+    if (currentUser?.role !== 'cc_manager' && !currentUser?.isAdmin) return;
+    const item = (db.montasiat || []).find(x => x.id === id);
+    if (!item) return;
+    closeEditMontasiaTimeModal();
+
+    const isReceipt = mode === 'receipt';
+    const title = isReceipt ? '🕒 تعديل وقت/موظف الاستلام' : '🚚 تعديل وقت/موظف التسليم';
+    const headerGrad = isReceipt ? 'linear-gradient(135deg,#1976d2,#0d47a1)' : 'linear-gradient(135deg,#2e7d32,#1b5e20)';
+    const curTime = isReceipt ? (item.time || '—') : (item.dt || '—');
+    const curEmp = isReceipt ? (item.addedBy || '—') : (item.deliveredBy || '—');
+    const parsed = _parseMontasiaTimeToInputs(isReceipt ? item.time : item.dt, isReceipt ? item.iso : '');
+
+    const empOpts = (typeof employees !== 'undefined' && Array.isArray(employees))
+        ? employees.filter(e => !e.deleted).map(e => `<option value="${sanitize(e.name)}">`).join('')
+        : '';
+
+    const overlay = document.createElement('div');
+    overlay.id = '_emtOverlay';
+    overlay.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.6);z-index:100002;display:flex;align-items:center;justify-content:center;font-family:Cairo;padding:16px;';
+    overlay.onclick = (e) => { if (e.target === overlay) closeEditMontasiaTimeModal(); };
+
+    overlay.innerHTML = `
+        <div style="background:var(--bg-card);color:var(--text-main);border:1px solid var(--border);border-radius:14px;width:400px;max-width:96vw;display:flex;flex-direction:column;box-shadow:0 20px 60px rgba(0,0,0,0.5);">
+            <div style="padding:14px 18px;border-bottom:1px solid var(--border);display:flex;justify-content:space-between;align-items:center;background:${headerGrad};color:#fff;border-radius:14px 14px 0 0;">
+                <h3 style="margin:0;font-size:15px;">${title}</h3>
+                <button onclick="closeEditMontasiaTimeModal()" style="background:none;border:none;color:#fff;cursor:pointer;font-size:18px;">✕</button>
+            </div>
+            <div style="padding:16px 18px;">
+                <div style="font-size:11px;color:var(--text-dim);margin-bottom:10px;background:var(--bg-input);padding:8px 10px;border-radius:8px;line-height:1.7;">
+                    الحالي: <b style="color:var(--text-main);">${sanitize(curTime)}</b><br>
+                    الموظف: <b style="color:var(--text-main);">${sanitize(curEmp)}</b>
+                </div>
+                <label style="display:block;margin-bottom:5px;font-size:12px;color:var(--text-dim);">التاريخ:</label>
+                <input id="_emtDate" type="date" value="${parsed.date}" style="width:100%;padding:8px 10px;background:var(--bg-input);color:var(--text-main);border:1px solid var(--border);border-radius:8px;font-family:Cairo;margin-bottom:10px;box-sizing:border-box;">
+                <label style="display:block;margin-bottom:5px;font-size:12px;color:var(--text-dim);">الوقت:</label>
+                <input id="_emtTime" type="time" value="${parsed.time}" style="width:100%;padding:8px 10px;background:var(--bg-input);color:var(--text-main);border:1px solid var(--border);border-radius:8px;font-family:Cairo;margin-bottom:10px;box-sizing:border-box;">
+                <label style="display:block;margin-bottom:5px;font-size:12px;color:var(--text-dim);">اسم الموظف:</label>
+                <input id="_emtEmp" type="text" list="_emtEmpList" value="${sanitize(isReceipt ? (item.addedBy || '') : (item.deliveredBy || ''))}" placeholder="اكتب أو اختر اسم الموظف" style="width:100%;padding:8px 10px;background:var(--bg-input);color:var(--text-main);border:1px solid var(--border);border-radius:8px;font-family:Cairo;box-sizing:border-box;">
+                <datalist id="_emtEmpList">${empOpts}</datalist>
+                <div style="display:flex;gap:8px;justify-content:flex-end;margin-top:16px;">
+                    <button onclick="closeEditMontasiaTimeModal()" style="padding:8px 14px;border:1px solid var(--border);border-radius:8px;background:var(--bg-input);color:var(--text-main);cursor:pointer;font-family:Cairo;font-weight:700;font-size:12px;">إلغاء</button>
+                    <button onclick="saveMontasiaTimeEdit(${id}, '${isReceipt ? 'receipt' : 'delivery'}')" style="padding:8px 18px;border:none;border-radius:8px;background:linear-gradient(135deg,#2e7d32,#1b5e20);color:#fff;cursor:pointer;font-family:Cairo;font-weight:700;font-size:12px;">💾 حفظ</button>
+                </div>
+            </div>
+        </div>`;
+    document.body.appendChild(overlay);
+}
+
+function editMontasiaReceipt(id) { _openMontasiaTimeEditModal(id, 'receipt'); }
+function editMontasiaDelivery(id) { _openMontasiaTimeEditModal(id, 'delivery'); }
+
+function closeEditMontasiaTimeModal() {
+    const o = document.getElementById('_emtOverlay');
+    if (o) o.remove();
+}
+
+function saveMontasiaTimeEdit(id, mode) {
+    if (currentUser?.role !== 'cc_manager' && !currentUser?.isAdmin) return;
+    const item = (db.montasiat || []).find(x => x.id === id);
+    if (!item) return;
+    const isReceipt = mode === 'receipt';
+    const dateVal = (document.getElementById('_emtDate')?.value || '').trim();
+    const timeVal = (document.getElementById('_emtTime')?.value || '').trim();
+    const empVal  = (document.getElementById('_emtEmp')?.value  || '').trim();
+    if (!dateVal) return alert('يرجى تحديد التاريخ');
+    if (!timeVal) return alert('يرجى تحديد الوقت');
+    if (!empVal)  return alert('يرجى إدخال اسم الموظف');
+
+    if (!isReceipt && (item.status === 'قيد الانتظار' || item.status === 'بانتظار الموافقة' || item.status === 'قيد الاستلام')) {
+        return alert('لا يمكن تعديل وقت التسليم لمنتسية لم تُسلَّم بعد');
+    }
+
+    const newStr = _fmtMontasiaTimeFromInputs(dateVal, timeVal);
+    if (isReceipt) {
+        const oldRef = `${item.time || '—'} / ${item.addedBy || '—'}`;
+        item.time    = newStr;
+        item.iso     = dateVal;
+        item.addedBy = empVal;
+        if (typeof _logAudit === 'function')
+            _logAudit('editMontasiaReceipt', item.branch || '—', `${oldRef} → ${newStr} / ${empVal}`, 'montasia', item.id);
+    } else {
+        const oldRef = `${item.dt || '—'} / ${item.deliveredBy || '—'}`;
+        item.dt          = newStr;
+        item.deliveredBy = empVal;
+        if (typeof _logAudit === 'function')
+            _logAudit('editMontasiaDelivery', item.branch || '—', `${oldRef} → ${newStr} / ${empVal}`, 'montasia', item.id);
+    }
+    if (typeof save === 'function') save();
+    if (typeof renderAll === 'function') renderAll();
+    closeEditMontasiaTimeModal();
+}
+
 function saveMontasiaBranch(id) {
     if (currentUser?.role !== 'cc_manager' && !currentUser?.isAdmin) return;
     const item = (db.montasiat || []).find(x => x.id === id);
