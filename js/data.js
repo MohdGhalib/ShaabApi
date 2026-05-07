@@ -905,7 +905,9 @@ function _initSSE() {
     const es = new EventSource(`/api/sse?token=${encodeURIComponent(_token)}`);
     es.addEventListener('connected', () => {
         _sseActive = true;
-        _syncDelay = 120_000;
+        // 25s polling حتى مع SSE نشط — حتى تصل الرسائل/التحديثات التي لا تُبثّ كأحداث SSE
+        // (الأحداث المهمة كالشكاوى والمنتسيات تظل تصل لحظياً عبر SSE)
+        _syncDelay = 25_000;
     });
     es.addEventListener('reload', async () => {
         if (_isSaving) {

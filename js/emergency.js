@@ -309,27 +309,35 @@ window._emDiag = function() {
 
 /* ══════════════════════════════════════════════════════
    حقن الزر العائم 🚨 (cc_manager + admin فقط)
+   يعمل بشكل دوري بدون انتهاء صلاحية حتى يدعم تسجيل الدخول/الخروج المتكرر
    ══════════════════════════════════════════════════════ */
-(function _emInjectButton() {
-    function tryInject() {
-        if (!_emIsManager()) return;
-        if (document.getElementById('_emFloatBtn')) return;
-        const btn = document.createElement('button');
-        btn.id = '_emFloatBtn';
-        btn.title = 'إرسال تنبيه طارئ';
-        btn.innerText = '🚨';
-        // اختيار الموقع: بعد أزرار super-admin إن كانت ظاهرة، وإلا فوق زر النسخ مباشرة
-        const isSA = (typeof currentUser !== 'undefined' && currentUser && currentUser.isAdmin);
-        const bottomPx = isSA ? 186 : 74;
-        btn.style.cssText = `position:fixed;bottom:${bottomPx}px;left:18px;z-index:9998;width:46px;height:46px;border-radius:50%;border:1px solid #ff5252;background:linear-gradient(135deg,#c62828,#b71c1c);color:#fff;cursor:pointer;font-size:20px;box-shadow:0 4px 14px rgba(211,47,47,0.55);transition:transform 0.18s;`;
-        btn.onmouseenter = () => { btn.style.transform = 'scale(1.08)'; };
-        btn.onmouseleave = () => { btn.style.transform = 'scale(1)'; };
-        btn.onclick = showEmergencyComposeModal;
-        document.body.appendChild(btn);
+function _emEnsureButton() {
+    const existing = document.getElementById('_emFloatBtn');
+    if (!_emIsManager()) {
+        if (existing) existing.remove();
+        return;
     }
-    const t = setInterval(() => {
-        tryInject();
-        if (document.getElementById('_emFloatBtn')) clearInterval(t);
-    }, 1000);
-    setTimeout(() => clearInterval(t), 120000);
+    if (existing) return;
+    const btn = document.createElement('button');
+    btn.id = '_emFloatBtn';
+    btn.title = 'إرسال تنبيه طارئ';
+    btn.innerText = '🚨';
+    // اختيار الموقع: بعد أزرار super-admin إن كانت ظاهرة، وإلا فوق زر النسخ مباشرة
+    const isSA = (typeof currentUser !== 'undefined' && currentUser && currentUser.isAdmin);
+    const bottomPx = isSA ? 186 : 74;
+    btn.style.cssText = `position:fixed;bottom:${bottomPx}px;left:18px;z-index:9998;width:46px;height:46px;border-radius:50%;border:1px solid #ff5252;background:linear-gradient(135deg,#c62828,#b71c1c);color:#fff;cursor:pointer;font-size:20px;box-shadow:0 4px 14px rgba(211,47,47,0.55);transition:transform 0.18s;`;
+    btn.onmouseenter = () => { btn.style.transform = 'scale(1.08)'; };
+    btn.onmouseleave = () => { btn.style.transform = 'scale(1)'; };
+    btn.onclick = function() {
+        if (typeof showEmergencyComposeModal === 'function') showEmergencyComposeModal();
+        else if (typeof window !== 'undefined' && typeof window.showEmergencyComposeModal === 'function') window.showEmergencyComposeModal();
+        else alert('تعذّر فتح نافذة التنبيه الطارئ.');
+    };
+    document.body.appendChild(btn);
+}
+window._emEnsureButton = _emEnsureButton;
+(function _emInjectButton() {
+    _emEnsureButton();
+    setInterval(_emEnsureButton, 2000);
+    document.addEventListener('DOMContentLoaded', _emEnsureButton);
 })();
