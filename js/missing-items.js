@@ -724,9 +724,16 @@ function _openMontasiaTimeEditModal(id, mode) {
     const curEmp = isReceipt ? (item.addedBy || '—') : (item.deliveredBy || '—');
     const parsed = _parseMontasiaTimeToInputs(isReceipt ? item.time : item.dt, isReceipt ? item.iso : '');
 
-    const empOpts = (typeof employees !== 'undefined' && Array.isArray(employees))
-        ? employees.filter(e => !e.deleted).map(e => `<option value="${sanitize(e.name)}">`).join('')
-        : '';
+    const _ccTitles = ['مدير الكول سنتر', 'موظف كول سنتر'];
+    const _curEmpName = isReceipt ? (item.addedBy || '') : (item.deliveredBy || '');
+    const _ccList = (typeof employees !== 'undefined' && Array.isArray(employees))
+        ? employees.filter(e => !e.deleted && _ccTitles.includes(e.title))
+        : [];
+    if (_curEmpName && !_ccList.some(e => e.name === _curEmpName)) {
+        _ccList.unshift({ name: _curEmpName, title: '—' });
+    }
+    const empOpts = '<option value="">— اختر موظف —</option>' +
+        _ccList.map(e => `<option value="${sanitize(e.name)}" ${e.name === _curEmpName ? 'selected' : ''}>${sanitize(e.name)}${e.title && e.title !== '—' ? ' — ' + sanitize(e.title) : ''}</option>`).join('');
 
     const overlay = document.createElement('div');
     overlay.id = '_emtOverlay';
@@ -748,9 +755,8 @@ function _openMontasiaTimeEditModal(id, mode) {
                 <input id="_emtDate" type="date" value="${parsed.date}" style="width:100%;padding:8px 10px;background:var(--bg-input);color:var(--text-main);border:1px solid var(--border);border-radius:8px;font-family:Cairo;margin-bottom:10px;box-sizing:border-box;">
                 <label style="display:block;margin-bottom:5px;font-size:12px;color:var(--text-dim);">الوقت:</label>
                 <input id="_emtTime" type="time" value="${parsed.time}" style="width:100%;padding:8px 10px;background:var(--bg-input);color:var(--text-main);border:1px solid var(--border);border-radius:8px;font-family:Cairo;margin-bottom:10px;box-sizing:border-box;">
-                <label style="display:block;margin-bottom:5px;font-size:12px;color:var(--text-dim);">اسم الموظف:</label>
-                <input id="_emtEmp" type="text" list="_emtEmpList" value="${sanitize(isReceipt ? (item.addedBy || '') : (item.deliveredBy || ''))}" placeholder="اكتب أو اختر اسم الموظف" style="width:100%;padding:8px 10px;background:var(--bg-input);color:var(--text-main);border:1px solid var(--border);border-radius:8px;font-family:Cairo;box-sizing:border-box;">
-                <datalist id="_emtEmpList">${empOpts}</datalist>
+                <label style="display:block;margin-bottom:5px;font-size:12px;color:var(--text-dim);">اسم الموظف (الكول سنتر):</label>
+                <select id="_emtEmp" style="width:100%;padding:8px 10px;background:var(--bg-input);color:var(--text-main);border:1px solid var(--border);border-radius:8px;font-family:Cairo;box-sizing:border-box;">${empOpts}</select>
                 <div style="display:flex;gap:8px;justify-content:flex-end;margin-top:16px;">
                     <button onclick="closeEditMontasiaTimeModal()" style="padding:8px 14px;border:1px solid var(--border);border-radius:8px;background:var(--bg-input);color:var(--text-main);cursor:pointer;font-family:Cairo;font-weight:700;font-size:12px;">إلغاء</button>
                     <button onclick="saveMontasiaTimeEdit(${id}, '${isReceipt ? 'receipt' : 'delivery'}')" style="padding:8px 18px;border:none;border-radius:8px;background:linear-gradient(135deg,#2e7d32,#1b5e20);color:#fff;cursor:pointer;font-family:Cairo;font-weight:700;font-size:12px;">💾 حفظ</button>
