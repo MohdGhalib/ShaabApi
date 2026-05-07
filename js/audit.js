@@ -54,19 +54,31 @@ function _jumpFromAudit(refType, refId) {
     const tab = tabMap[refType], table = tableMap[refType];
     if (!tab || !table || typeof switchTab !== 'function') return;
     switchTab(tab);
-    setTimeout(() => {
+
+    // قد يحتاج الجدول وقتاً ليُرسَم — نحاول حتى 5 مرات
+    let attempts = 0;
+    const tryFind = () => {
+        attempts++;
         const row = document.querySelector(`${table} tbody tr[data-id="${refId}"]`);
-        if (!row) {
-            alert('السجل غير موجود — قد يكون محذوفاً أو خارج عوامل التصفية الحالية.');
+        if (row) {
+            document.querySelectorAll(`${table} tbody tr`).forEach(r => { r.style.outline = ''; r.style.boxShadow = ''; });
+            row.style.outline      = '3px solid #64b5f6';
+            row.style.boxShadow    = '0 0 18px rgba(100,181,246,0.5)';
+            row.style.borderRadius = '8px';
+            row.scrollIntoView({ behavior:'smooth', block:'center' });
+            setTimeout(() => { row.style.outline = ''; row.style.boxShadow = ''; }, 4000);
             return;
         }
-        document.querySelectorAll(`${table} tbody tr`).forEach(r => { r.style.outline = ''; r.style.boxShadow = ''; });
-        row.style.outline   = '3px solid #64b5f6';
-        row.style.boxShadow = '0 0 18px rgba(100,181,246,0.5)';
-        row.style.borderRadius = '8px';
-        row.scrollIntoView({ behavior:'smooth', block:'center' });
-        setTimeout(() => { row.style.outline = ''; row.style.boxShadow = ''; }, 4000);
-    }, 250);
+        if (attempts >= 5) {
+            alert('السجل غير موجود في الصفحة الحالية — قد يكون:\n' +
+                  '• محذوفاً\n' +
+                  '• خارج عوامل التصفية الحالية (امسح الفلاتر بزر "تفريغ")\n' +
+                  '• على صفحة لاحقة (انتقل بين الصفحات)');
+            return;
+        }
+        setTimeout(tryFind, 200);
+    };
+    setTimeout(tryFind, 250);
 }
 
 const _lastAuditFilter = { emp:'', country:'', city:'', branch:'', date:'', action:'' };
@@ -188,21 +200,23 @@ function _buildAuditTable() {
     const dataRows = slice.length
         ? slice.map(entry => {
             const canJump = _isCCMgr && entry.refType && entry.refId != null;
-            const linkAttr = canJump ? `onclick="_jumpFromAudit('${entry.refType}', ${entry.refId})"` : '';
-            const linkStyle = canJump
-                ? 'cursor:pointer;background:rgba(100,181,246,0.06);transition:background .15s;'
-                : '';
-            const hoverHandlers = canJump
-                ? 'onmouseover="this.style.background=\'rgba(100,181,246,0.18)\'" onmouseout="this.style.background=\'rgba(100,181,246,0.06)\'"'
-                : '';
             const labelText = sanitize(_auditActionLabel(entry.action));
             const actionCell = canJump
-                ? `<span class="emp-badge" style="font-size:12px;">${labelText} ↗</span>`
+                ? `<button onclick="_jumpFromAudit('${entry.refType}', ${entry.refId})"
+                           title="فتح السجل في تبويبه"
+                           style="padding:4px 11px;font-size:12px;font-family:'Cairo';font-weight:700;
+                                  border:1px solid rgba(100,181,246,0.55);
+                                  background:rgba(100,181,246,0.18);color:#64b5f6;
+                                  border-radius:8px;cursor:pointer;display:inline-flex;align-items:center;gap:4px;"
+                           onmouseover="this.style.background='rgba(100,181,246,0.35)'"
+                           onmouseout="this.style.background='rgba(100,181,246,0.18)'">
+                       ${labelText} <span style="font-size:13px;">↗</span>
+                   </button>`
                 : `<span class="emp-badge" style="font-size:12px;">${labelText}</span>`;
             return `
-            <div style="${dCell}${linkStyle}" ${linkAttr} ${hoverHandlers} ${canJump ? 'title="انقر للانتقال للسجل"' : ''}>${actionCell}</div>
-            <div style="${dCell}${linkStyle}" ${linkAttr} ${hoverHandlers}>${sanitize(entry.entity || '—')}</div>
-            <div style="${dCell}${linkStyle}" ${linkAttr} ${hoverHandlers}><span class="text-box-cell" style="font-size:12px;">${sanitize(entry.summary || '—')}</span></div>
+            <div style="${dCell}">${actionCell}</div>
+            <div style="${dCell}">${sanitize(entry.entity || '—')}</div>
+            <div style="${dCell}"><span class="text-box-cell" style="font-size:12px;">${sanitize(entry.summary || '—')}</span></div>
             <div style="${dCell}"><small style="color:var(--text-main);">${typeof _empNameHTML==='function'?_empNameHTML(entry.by || '—'):sanitize(entry.by || '—')}</small></div>
             <div style="${dCell}"><small style="color:var(--text-dim);">${sanitize(entry.empId || '—')}</small></div>
             <div style="${dCell}"><small style="color:var(--text-dim);">${_toLatinDigits(entry.time || '—')}</small></div>`;
