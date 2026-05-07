@@ -158,7 +158,7 @@ i: `
 <div class="card" id="addInquiryCard">
     <h3>تسجيل استفسار عميل</h3>
     <div style="display:grid;grid-template-columns:1fr 1fr;gap:15px;margin-bottom:15px;">
-        <input type="text" id="iPhone" placeholder="رقم الهاتف">
+        <input type="text" id="iPhone" placeholder="رقم الهاتف" oninput="_iLivePhoneSearch(this.value)">
         <select id="iCountryAdd" onchange="updateCities('iCountryAdd','iCityAdd','iBranchAdd');toggleUnspecifiedBranch()"></select>
     </div>
     <div style="display:grid;grid-template-columns:1fr 1fr;gap:15px;margin-bottom:15px;">

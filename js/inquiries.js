@@ -18,6 +18,18 @@ function toggleInquiryNotes() {
     }
 }
 
+/* ── بحث مباشر داخل جدول الاستفسارات حسب الرقم المُدخَل في حقل العميل ──
+   عند الكتابة في حقل رقم الهاتف بنموذج الإضافة، يفلتر الجدول لإظهار سجلات
+   نفس الرقم فقط (للوصول لتاريخ مكالمات الزبون). يُفرَّغ تلقائياً عند الحفظ. */
+function _iLivePhoneSearch(val) {
+    const v = (val || '').trim();
+    window._iLivePhoneFilter = v;
+    if (typeof filterTable === 'function') filterTable();
+    // مؤشر بصري لطي الجدول لنتائج هذا الرقم فقط
+    const tbl = document.getElementById('tableI');
+    if (tbl) tbl.style.outline = v ? '2px solid rgba(100,181,246,0.5)' : '';
+}
+
 function toggleComplaintFinancialBox() {
     const ct = document.getElementById("iComplaintType")?.value || '';
     const fin = document.getElementById("iFinancialBox");
@@ -113,6 +125,9 @@ function addInquiry() {
     const _afterSave = () => {
         save();
         document.getElementById("iPhone").value="";
+        // أزل فلتر البحث المباشر بالرقم وأعد الجدول للحالة الكاملة
+        window._iLivePhoneFilter = '';
+        const _tblI = document.getElementById('tableI'); if (_tblI) _tblI.style.outline = '';
         document.getElementById("iType").value="";
         document.getElementById("iNotes").value="";
         document.getElementById("iNotesBox").style.display="none";

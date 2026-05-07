@@ -249,6 +249,9 @@ function resetSearch(t) {
         if (typeof updateCities === 'function') updateCities('searchCountryI','searchCityI','searchBranchI');
         else document.getElementById('searchBranchI').innerHTML='<option value="">الكل</option>';
         clearDate('searchDateI');
+        // أزل أيضاً فلتر البحث المباشر بالرقم (إن كان نشطاً)
+        window._iLivePhoneFilter = '';
+        const _tblI = document.getElementById('tableI'); if (_tblI) _tblI.style.outline = '';
         _pg.I = 1;
     } else if (t==='C') {
         clear(['searchCountryC','searchCityC','searchTextC','searchTypeC','searchFinStatusC','searchAddedByC']);
@@ -657,21 +660,23 @@ function _renderTableI(get) {
     if (thActions) thActions.textContent = canManage ? 'إجراءات' : '';
 
     const f = {
-        country: get("searchCountryI"),
-        city:    get("searchCityI"),
-        branch:  get("searchBranchI"),
-        date:    get("searchDateI"),
-        type:    get("searchTypeI"),
-        addedBy: get("searchAddedByI")
+        country:   get("searchCountryI"),
+        city:      get("searchCityI"),
+        branch:    get("searchBranchI"),
+        date:      get("searchDateI"),
+        type:      get("searchTypeI"),
+        addedBy:   get("searchAddedByI"),
+        livePhone: (window._iLivePhoneFilter || '').trim()
     };
     const allRowsI = db.inquiries.filter(x =>
         !x.deleted &&
-        (!f.country || (x.country || _countryForCity(x.city))===f.country) &&
-        (!f.city    || x.city===f.city) &&
-        (!f.branch  || x.branch===f.branch) &&
-        (!f.date    || x.iso.startsWith(f.date)) &&
-        (!f.type    || x.type===f.type) &&
-        (!f.addedBy || (x.addedBy||'').includes(f.addedBy))
+        (!f.country   || (x.country || _countryForCity(x.city))===f.country) &&
+        (!f.city      || x.city===f.city) &&
+        (!f.branch    || x.branch===f.branch) &&
+        (!f.date      || x.iso.startsWith(f.date)) &&
+        (!f.type      || x.type===f.type) &&
+        (!f.addedBy   || (x.addedBy||'').includes(f.addedBy)) &&
+        (!f.livePhone || (x.phone||'').includes(f.livePhone))
     );
     if (!_pg.I) _pg.I = 1;
     const _sizeI = _pgSize.I || _DEFAULT_PAGE_SIZE;
