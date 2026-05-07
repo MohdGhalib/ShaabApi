@@ -192,6 +192,14 @@ i: `
             <option value="سوء تعامل">سوء تعامل</option>
         </select>
     </div>
+    <div id="iQualityPhotoBox" style="display:none;margin-bottom:15px;background:rgba(33,150,243,0.05);border:1px dashed rgba(100,181,246,0.35);border-radius:12px;padding:14px;">
+        <label style="font-size:13px;color:#90caf9;display:block;margin-bottom:8px;font-weight:700;">📷 صورة الصنف <span style="color:#ce93d8;font-size:10px;font-weight:400;">(اختياري — حد أقصى 5MB)</span></label>
+        <input type="file" id="iQualityPhoto" accept="image/*" style="display:none;" onchange="(function(i){var d=document.getElementById('iQualityPhotoLabel');if(d){if(i.files[0]){if(i.files[0].size>5*1024*1024){alert('الصورة أكبر من 5MB — اختر صورة أصغر');i.value='';d.textContent='لم تُختر صورة';d.style.color='var(--text-dim)';}else{d.textContent=i.files[0].name;d.style.color='#81c784';}}else{d.textContent='لم تُختر صورة';d.style.color='var(--text-dim)';}}})(this)">
+        <div style="display:flex;align-items:center;gap:8px;">
+            <button type="button" class="btn" style="padding:6px 14px;font-size:12px;background:var(--bg-input);color:var(--text-main);border:1px solid var(--border);border-radius:8px;white-space:nowrap;" onclick="document.getElementById('iQualityPhoto').click()">📷 اختر صورة</button>
+            <span id="iQualityPhotoLabel" style="font-size:12px;color:var(--text-dim);">لم تُختر صورة</span>
+        </div>
+    </div>
     <div id="iFinancialBox" style="display:none;margin-bottom:15px;background:rgba(198,40,40,0.05);border:1px dashed rgba(239,83,80,0.35);border-radius:12px;padding:14px;">
         <div style="font-size:13px;color:#ef9a9a;font-weight:700;margin-bottom:10px;">💰 بيانات الشكوى المالية</div>
         <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:12px;">

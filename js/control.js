@@ -43,9 +43,13 @@ function addControl() {
     const inheritedFile = fileInput?.dataset?.inheritedFile || '';
 
     const status = 'تمت الموافقة';
+    // وراثة صورة الصنف من الاستفسار المرتبط (لشكاوى "جودة صنف")
+    const inheritedQualityPhoto = (linkedInq && linkedInq.complaintType === 'جودة صنف' && linkedInq.qualityPhoto)
+        ? linkedInq.qualityPhoto : null;
     const base = { id:Date.now(), country: co || _countryForCity(c), city:c, branch:b, notes:n, audit:'', time:now(), iso:iso(),
         addedBy:currentUser.name, status, customer, linkedInqSeq: linkedSeq||null,
-        callTime, noteDate, moveNumber, invoiceValue, type: cType };
+        callTime, noteDate, moveNumber, invoiceValue, type: cType,
+        qualityPhoto: inheritedQualityPhoto };
 
     const _notifyComplaint = () => {
         if (!IS_LOCAL && (currentUser?.role === 'cc_employee' || currentUser?.role === 'media')) {
@@ -265,6 +269,17 @@ async function _loadLogo() {
         img.onerror = () => { _logoBase64 = ''; resolve(); };
         img.src = 'img/logo.png?' + Date.now();
     });
+}
+
+// مفتاح التبليغ للاستفسار (جودة صنف): يفتح المودال على الشكوى المرتبطة، أو ينبّه إن لم تُنشأ بعد
+function openNotifyModalForInquiry(inquiryId) {
+    const inq = (db.inquiries || []).find(x => x.id === inquiryId);
+    if (!inq) return alert('الاستفسار غير موجود');
+    const linkedComp = (db.complaints || []).find(c => !c.deleted && String(c.linkedInqSeq) === String(inq.seq));
+    if (!linkedComp) {
+        return alert('لم تُنشأ الشكوى المرتبطة بعد.\n\nيُرجى إنشاؤها من قسم السيطرة أولاً عشان يصير زر التبليغ يعرض كامل التفاصيل.');
+    }
+    openNotifyModal(linkedComp.id);
 }
 
 async function openNotifyModal(id) {
@@ -530,9 +545,12 @@ async function exportControlNotifyImages() {
             scale: 2, useCORS: true, backgroundColor: '#ffffff', logging: false
         });
 
-        if (item.type === 'سوء تعامل') {
-            // نسخة واحدة فقط لشكاوى سوء التعامل
-            _triggerDownload(base, 'شكوى سوء تعامل');
+        const isSingleImage = (item.type === 'سوء تعامل') ||
+                              (item.type === 'جودة صنف' || item.complaintType === 'جودة صنف');
+        if (isSingleImage) {
+            const fileName = (item.type === 'جودة صنف' || item.complaintType === 'جودة صنف')
+                ? 'شكوى جودة صنف' : 'شكوى سوء تعامل';
+            _triggerDownload(base, fileName);
         } else {
             _triggerDownload(base, 'نسخة مدراء الأفرع');
             const samer = _appendStatusCanvas(base, item.auditStatus || '—');
@@ -545,7 +563,9 @@ async function exportControlNotifyImages() {
     } finally {
         document.body.removeChild(clone);
         btn.disabled    = false;
-        btn.textContent = item.type === 'سوء تعامل' ? 'تصدير الصورة ⬇️' : 'تصدير الصورتين ⬇️';
+        const isSingle = (item.type === 'سوء تعامل') ||
+                         (item.type === 'جودة صنف' || item.complaintType === 'جودة صنف');
+        btn.textContent = isSingle ? 'تصدير الصورة ⬇️' : 'تصدير الصورتين ⬇️';
     }
 }
 
@@ -625,6 +645,65 @@ function _triggerDownload(canvas, name) {
     a.download = name + '.png';
     a.href     = canvas.toDataURL('image/png');
     a.click();
+}
+
+// ── حالة zoom/pan لصورة الصنف في شاشة التبليغ ──
+let _qPhotoState  = { scale: 1, tx: 0, ty: 0 };
+let _qDragState   = null;
+
+function _qApplyPhotoTransform() {
+    const img = document.getElementById('_qPhotoImg');
+    if (!img) return;
+    img.style.transform = `translate(${_qPhotoState.tx}px, ${_qPhotoState.ty}px) scale(${_qPhotoState.scale})`;
+}
+function _qPhotoZoom(delta) {
+    _qPhotoState.scale = Math.max(0.5, Math.min(5, _qPhotoState.scale + delta));
+    _qApplyPhotoTransform();
+}
+function _qPhotoReset() {
+    _qPhotoState = { scale: 1, tx: 0, ty: 0 };
+    _qApplyPhotoTransform();
+}
+function _qOnWheel(e) {
+    e.preventDefault();
+    const delta = e.deltaY < 0 ? 0.15 : -0.15;
+    _qPhotoState.scale = Math.max(0.5, Math.min(5, _qPhotoState.scale + delta));
+    _qApplyPhotoTransform();
+}
+function _qOnMouseDown(e) {
+    const wrap = document.getElementById('_qPhotoWrap');
+    if (!wrap) return;
+    _qDragState = {
+        startX: e.clientX, startY: e.clientY,
+        startTx: _qPhotoState.tx, startTy: _qPhotoState.ty
+    };
+    wrap.style.cursor = 'grabbing';
+    e.preventDefault();
+}
+function _qOnMouseMove(e) {
+    if (!_qDragState) return;
+    _qPhotoState.tx = _qDragState.startTx + (e.clientX - _qDragState.startX);
+    _qPhotoState.ty = _qDragState.startTy + (e.clientY - _qDragState.startY);
+    _qApplyPhotoTransform();
+}
+function _qOnMouseUp() {
+    if (!_qDragState) return;
+    _qDragState = null;
+    const wrap = document.getElementById('_qPhotoWrap');
+    if (wrap) wrap.style.cursor = 'grab';
+}
+function _qInitPhotoControls() {
+    const wrap = document.getElementById('_qPhotoWrap');
+    if (!wrap) return;
+    _qPhotoState = { scale: 1, tx: 0, ty: 0 };
+    _qApplyPhotoTransform();
+    wrap.onwheel     = _qOnWheel;
+    wrap.onmousedown = _qOnMouseDown;
+    if (!window._qHandlersInstalled) {
+        document.addEventListener('mousemove', _qOnMouseMove);
+        document.addEventListener('mouseup',   _qOnMouseUp);
+        window._qHandlersInstalled = true;
+    }
 }
 
 function refreshNotifyCard() {
@@ -709,6 +788,74 @@ function refreshNotifyCard() {
                 <div style="font-size:18px;font-weight:800;color:#bf360c;">جاري تدقيق الملاحظة من قسم السيطرة</div>
             </div>
         `;
+        return;
+    }
+
+    // ── تنسيق خاص لشكاوى جودة صنف (مماثل لسوء التعامل + مربع صورة الصنف) ──
+    if (item.type === 'جودة صنف' || item.complaintType === 'جودة صنف') {
+        if (exportBtn) {
+            exportBtn.disabled = false;
+            exportBtn.style.opacity = '1';
+            exportBtn.style.cursor  = 'pointer';
+            exportBtn.textContent = 'تصدير الصورة ⬇️';
+        }
+        const photoBlock = item.qualityPhoto ? `
+            <div style="margin-top:18px;padding:14px;background:#f5f5f5;border:2px solid #1976d2;border-radius:10px;">
+                <div style="font-weight:800;color:#0d47a1;margin-bottom:10px;font-size:15px;text-align:center;">📷 صورة الصنف</div>
+                <div style="display:flex;justify-content:center;gap:8px;margin-bottom:10px;flex-wrap:wrap;" data-html2canvas-ignore="true">
+                    <button type="button" onclick="_qPhotoZoom(0.2)"  style="padding:6px 14px;border:1px solid #1976d2;border-radius:6px;background:#fff;color:#1976d2;cursor:pointer;font-family:Cairo;font-weight:700;font-size:12px;">+ تكبير</button>
+                    <button type="button" onclick="_qPhotoZoom(-0.2)" style="padding:6px 14px;border:1px solid #1976d2;border-radius:6px;background:#fff;color:#1976d2;cursor:pointer;font-family:Cairo;font-weight:700;font-size:12px;">− تصغير</button>
+                    <button type="button" onclick="_qPhotoReset()"     style="padding:6px 14px;border:1px solid #f57c00;border-radius:6px;background:#fff;color:#f57c00;cursor:pointer;font-family:Cairo;font-weight:700;font-size:12px;">⟲ إعادة</button>
+                    <span style="font-size:10px;color:#666;align-self:center;margin-right:8px;">عجلة الفأرة للتكبير — اسحب لتحريك</span>
+                </div>
+                <div id="_qPhotoWrap" style="width:100%;height:340px;overflow:hidden;border-radius:8px;background:#000;cursor:grab;position:relative;">
+                    <img id="_qPhotoImg" src="${item.qualityPhoto}" style="position:absolute;top:0;left:0;width:100%;height:100%;object-fit:contain;transform-origin:center center;transform:translate(0px,0px) scale(1);user-select:none;-webkit-user-drag:none;pointer-events:none;" draggable="false">
+                </div>
+            </div>` : '';
+
+        document.getElementById('notifyCard').innerHTML = `
+            <div style="text-align:center;margin-bottom:24px;padding-bottom:18px;border-bottom:3px solid #1565c0;">
+                ${_logoBase64 ? `<img src="${_logoBase64}" style="width:90px;height:90px;object-fit:contain;display:block;margin:0 auto 10px;filter:drop-shadow(0 2px 8px rgba(21,101,192,0.25));">` : ''}
+                <div style="font-size:30px;font-weight:800;color:#1565c0;">شكوى جودة صنف</div>
+                <div style="font-size:14px;font-weight:700;color:#888;margin-top:4px;">محامص الشعب — قسم متابعة الشكاوى</div>
+            </div>
+
+            <table style="width:100%;border-collapse:collapse;margin-bottom:16px;font-size:17px;">
+                <tr style="border-bottom:1px solid #eee;">
+                    <td style="padding:10px 12px;font-weight:800;color:#333;width:38%;background:#fafafa;">الفرع</td>
+                    <td style="padding:10px 12px;font-weight:700;color:#222;">${item.branch} — ${item.city}</td>
+                </tr>
+                ${item.noteDate ? `<tr style="border-bottom:1px solid #eee;">
+                    <td style="padding:10px 12px;font-weight:800;color:#333;background:#fafafa;">تاريخ الملاحظة</td>
+                    <td style="padding:10px 12px;font-weight:700;color:#222;">${item.noteDate}</td>
+                </tr>` : ''}
+            </table>
+
+            <div style="margin-bottom:18px;padding:14px 16px;background:#e8f4ff;border-right:4px solid #1565c0;border-radius:6px;">
+                <div style="font-weight:800;color:#0d47a1;margin-bottom:7px;font-size:16px;">📋 نص الشكوى المرسلة من الكول سنتر</div>
+                ${_notesBlock}
+            </div>
+
+            ${ccActions ? `<div style="margin-bottom:18px;padding:14px 16px;background:#f0fff4;border-right:4px solid #2e7d32;border-radius:6px;">
+                <div style="font-weight:800;color:#2e7d32;margin-bottom:7px;font-size:16px;">📞 إجراءات مستلم الشكوى</div>
+                <div style="color:#222;font-size:17px;font-weight:700;line-height:1.8;white-space:pre-wrap;">${sanitize(ccActions)}</div>
+            </div>` : ''}
+
+            <div style="margin-bottom:14px;padding:14px 16px;background:#fff8e1;border-right:4px solid #f57f17;border-radius:6px;">
+                <div style="font-weight:800;color:#e65100;margin-bottom:7px;font-size:16px;">📣 التبليغ</div>
+                <div style="font-size:17px;font-weight:700;color:#333;line-height:1.8;">
+                    تم تبليغ مدير الفرع / مدير المنطقة:${personName ? ` <strong>${sanitize(personName)}</strong>` : ''}
+                </div>
+            </div>
+
+            ${photoBlock}
+
+            <div style="margin-top:14px;padding-top:14px;border-top:2px solid #eee;text-align:center;font-size:15px;font-weight:700;color:#444;">
+                👤 اسم الموظف المدخل للشكوى: <strong style="font-size:17px;color:#222;">${sanitize(empNameInput || item.addedBy || '—')}</strong>
+            </div>
+        `;
+        // ثبّت معالجات zoom/pan على الصورة (لو وُجدت)
+        if (item.qualityPhoto) setTimeout(_qInitPhotoControls, 50);
         return;
     }
 

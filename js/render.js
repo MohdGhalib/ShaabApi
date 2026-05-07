@@ -730,12 +730,16 @@ function _renderTableI(get) {
               </div>` : '';
         const _itemBadge = x.itemName
             ? `<div style="margin-top:5px;font-size:12px;font-weight:700;"><span style="color:#80deea;">📦 اسم الصنف:</span> <span style="color:#90caf9;">${sanitize(x.itemName)}</span></div>` : '';
+        // زر التبليغ لشكاوى "جودة صنف"
+        const notifyBtnI = (x.type === 'شكوى' && x.complaintType === 'جودة صنف')
+            ? `<button onclick="openNotifyModalForInquiry(${x.id})" title="فتح شاشة التبليغ" style="margin-right:6px;padding:3px 10px;font-size:11px;border:none;border-radius:6px;background:linear-gradient(135deg,#1976d2,#0d47a1);color:#fff;cursor:pointer;font-family:'Cairo';font-weight:700;vertical-align:middle;">📣 تبليغ</button>`
+            : '';
         return `<tr>
             <td><span class="seq-badge" title="الرقم التسلسلي">#${x.seq||'—'}</span></td>
             <td><b>${x.branch}</b><br><small>${x.city}</small></td>
             <td>${sanitize(x.phone)}</td>
             <td>
-                <span class="emp-badge">${x.type||'—'}</span>${ctBadge}
+                <span class="emp-badge">${x.type||'—'}</span>${ctBadge}${notifyBtnI}
                 ${_itemBadge}
                 ${x.notes?`<br><span class="text-box-cell" style="font-size:13px;color:var(--text-dim)">${sanitize(x.notes)}</span>`:''}
                 ${finFieldsHtml}

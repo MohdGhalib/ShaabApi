@@ -30,6 +30,13 @@ function toggleComplaintFinancialBox() {
         const _disp = document.getElementById('iNoteDate-display');
         if (_disp) { _disp.textContent = '📅 اختر التاريخ'; _disp.classList.remove('selected'); }
     }
+    // مربع رفع صورة الصنف لشكاوى "جودة صنف"
+    const qBox = document.getElementById("iQualityPhotoBox");
+    if (qBox) qBox.style.display = (ct === "جودة صنف") ? "block" : "none";
+    if (ct !== "جودة صنف") {
+        const _q = document.getElementById('iQualityPhoto');      if (_q) _q.value = '';
+        const _ql= document.getElementById('iQualityPhotoLabel'); if (_ql) { _ql.textContent = 'لم تُختر صورة'; _ql.style.color = 'var(--text-dim)'; }
+    }
 }
 
 function toggleUnspecifiedBranch() {
@@ -99,6 +106,10 @@ function addInquiry() {
         time: now(), iso: iso(), addedBy: currentUser.name
     };
 
+    // صورة الصنف لشكاوى "جودة صنف" — base64
+    let qualityPhotoInput = null;
+    if (ct === 'جودة صنف') qualityPhotoInput = document.getElementById('iQualityPhoto');
+
     const _afterSave = () => {
         save();
         document.getElementById("iPhone").value="";
@@ -109,6 +120,8 @@ function addInquiry() {
         const _ctBox = document.getElementById("iComplaintTypeBox"); if (_ctBox) _ctBox.style.display = "none";
         const _iName = document.getElementById("iItemName"); if (_iName) _iName.value = "";
         const _iBox  = document.getElementById("iItemNameBox"); if (_iBox) _iBox.style.display = "none";
+        const _qPh   = document.getElementById("iQualityPhoto"); if (_qPh) _qPh.value = "";
+        const _qPhL  = document.getElementById("iQualityPhotoLabel"); if (_qPhL) { _qPhL.textContent = 'لم تُختر صورة'; _qPhL.style.color = 'var(--text-dim)'; }
         toggleComplaintFinancialBox();
         if (ctryEl) ctryEl.value = "";
         document.getElementById("iCityAdd").value="";
@@ -118,18 +131,38 @@ function addInquiry() {
         toggleUnspecifiedBranch();
     };
 
+    // قراءة الفاتورة (للشكاوى المالية) ثم صورة الجودة (لشكاوى جودة صنف) ثم الحفظ
+    const _readQualityPhotoThenSave = (recWithFile) => {
+        if (qualityPhotoInput && qualityPhotoInput.files && qualityPhotoInput.files[0]) {
+            const f = qualityPhotoInput.files[0];
+            if (f.size > 5 * 1024 * 1024) {
+                alert('صورة الصنف أكبر من 5MB — لن تُرفق');
+                db.inquiries.unshift({ ...recWithFile, qualityPhoto: null });
+            } else {
+                const r2 = new FileReader();
+                r2.onload = e2 => {
+                    db.inquiries.unshift({ ...recWithFile, qualityPhoto: e2.target.result });
+                    if (typeof _logAudit === 'function') _logAudit('addInquiry', baseRec.branch || '—', `${baseRec.type} — ${(baseRec.notes||baseRec.itemName||baseRec.offerName||'').substring(0,40)}`);
+                    _afterSave();
+                };
+                r2.readAsDataURL(f);
+                return;
+            }
+        } else {
+            db.inquiries.unshift({ ...recWithFile, qualityPhoto: null });
+        }
+        if (typeof _logAudit === 'function') _logAudit('addInquiry', baseRec.branch || '—', `${baseRec.type} — ${(baseRec.notes||baseRec.itemName||baseRec.offerName||'').substring(0,40)}`);
+        _afterSave();
+    };
+
     if (fileInput && fileInput.files && fileInput.files[0]) {
         const reader = new FileReader();
         reader.onload = e => {
-            db.inquiries.unshift({ ...baseRec, file: e.target.result });
-            if (typeof _logAudit === 'function') _logAudit('addInquiry', baseRec.branch || '—', `${baseRec.type} — ${(baseRec.notes||baseRec.itemName||baseRec.offerName||'').substring(0,40)}`);
-            _afterSave();
+            _readQualityPhotoThenSave({ ...baseRec, file: e.target.result });
         };
         reader.readAsDataURL(fileInput.files[0]);
     } else {
-        db.inquiries.unshift({ ...baseRec, file: null });
-        if (typeof _logAudit === 'function') _logAudit('addInquiry', baseRec.branch || '—', `${baseRec.type} — ${(baseRec.notes||baseRec.itemName||baseRec.offerName||'').substring(0,40)}`);
-        _afterSave();
+        _readQualityPhotoThenSave({ ...baseRec, file: null });
     }
 }
 
