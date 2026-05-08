@@ -30,4 +30,11 @@
     <Content Remove="api\*.php" />
   </ItemGroup>
 
+  <!-- استبعاد مجلد المرآة العربي بالكامل من البناء (يُستخدم للتطوير المحلي فقط) -->
+  <ItemGroup>
+    <Compile Remove="نظام ادارة محامص الشعب\**\*.cs" />
+    <Content Remove="نظام ادارة محامص الشعب\**\*" />
+    <None Remove="نظام ادارة محامص الشعب\**\*" />
+  </ItemGroup>
+
 </Project>

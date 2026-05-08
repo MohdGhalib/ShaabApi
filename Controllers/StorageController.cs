@@ -99,6 +99,64 @@ public class StorageController : ControllerBase
 
         var existing = await _db.Storage.FindAsync(body.Key);
         var oldValue = existing?.StoreValue; // للمقارنة لاحقاً
+
+        // ── 🛡️ حارس فقدان البيانات + Logging مفصّل لـ Shaab_Master_DB ──
+        // يكشف كل عملية حفظ تُنقص الحجم بشكل مريب → يطبع تشخيص كامل ويرفض الكتابة الكارثية.
+        if (body.Key == "Shaab_Master_DB" && !string.IsNullOrEmpty(oldValue) && !string.IsNullOrEmpty(body.Value))
+        {
+            var oldSize = oldValue.Length;
+            var newSize = body.Value!.Length;
+            var sizeDelta = newSize - oldSize;
+            var pctChange = oldSize > 0 ? ((double)sizeDelta / oldSize) * 100 : 0;
+
+            var oldCounts = DbHelper.CountItems(oldValue);
+            var newCounts = DbHelper.CountItems(body.Value!);
+            var mDelta = newCounts.Montasiat  - oldCounts.Montasiat;
+            var iDelta = newCounts.Inquiries  - oldCounts.Inquiries;
+            var cDelta = newCounts.Complaints - oldCounts.Complaints;
+
+            // هوية المستخدم من JWT
+            var userEmpId = User.FindFirst("empId")?.Value
+                          ?? User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value
+                          ?? "?";
+            var userRole  = User.FindFirst("role")?.Value ?? "?";
+            var userName  = User.FindFirst("name")?.Value ?? "?";
+            var ip        = HttpContext.Connection.RemoteIpAddress?.ToString() ?? "?";
+            var ts        = DateTime.UtcNow.ToString("yyyy-MM-dd HH:mm:ss");
+
+            // كل حفظ يُسجَّل بالتفاصيل
+            Console.WriteLine($"[STORAGE] {ts} key=Master by={userEmpId}({userName}) role={userRole} ip={ip} " +
+                              $"size: {oldSize}→{newSize} ({sizeDelta:+#;-#;0}B, {pctChange:+0.0;-0.0;0}%) " +
+                              $"counts: M{oldCounts.Montasiat}→{newCounts.Montasiat}({mDelta:+#;-#;0}) " +
+                              $"I{oldCounts.Inquiries}→{newCounts.Inquiries}({iDelta:+#;-#;0}) " +
+                              $"C{oldCounts.Complaints}→{newCounts.Complaints}({cDelta:+#;-#;0})");
+
+            // 🚨 الحالة الكارثية: انكماش حاد + سجلات اختفت
+            // (الحذف الناعم لا يُنقص العدد — السجل يبقى مع deleted=true. اختفاء فعلي = طمس)
+            bool isCatastrophic = (mDelta < -5 || iDelta < -5 || cDelta < -5)
+                                  && pctChange < -10;
+
+            if (isCatastrophic)
+            {
+                Console.WriteLine($"[STORAGE] 🚨🚨🚨 BLOCKED CATASTROPHIC WRITE — STALE OVERWRITE DETECTED 🚨🚨🚨");
+                Console.WriteLine($"[STORAGE]   from={userEmpId}({userName}) role={userRole} ip={ip}");
+                Console.WriteLine($"[STORAGE]   would lose: M={Math.Abs(mDelta)} I={Math.Abs(iDelta)} C={Math.Abs(cDelta)}");
+                Console.WriteLine($"[STORAGE]   size shrink: {pctChange:0.0}%");
+                return Conflict(new {
+                    error = "Stale overwrite blocked",
+                    detail = "هذا الحفظ يُنقص البيانات بشكل مريب — مرفوض لحماية النظام. حدّث الصفحة وأعد المحاولة.",
+                    serverItems = new { newCounts.Montasiat, newCounts.Inquiries, newCounts.Complaints },
+                    yourItems   = new { oldCounts.Montasiat, oldCounts.Inquiries, oldCounts.Complaints }
+                });
+            }
+
+            // ⚠️ تحذير ناعم: انكماش بسيط لكن مريب
+            if (mDelta < 0 || iDelta < 0 || cDelta < 0)
+            {
+                Console.WriteLine($"[STORAGE] ⚠️ SHRINK WARN by={userEmpId}({userName}) — items decreased");
+            }
+        }
+
         if (existing is null)
         {
             _db.Storage.Add(new StorageEntry { StoreKey = body.Key, StoreValue = body.Value });
@@ -252,8 +310,25 @@ public record StorageRequest(string Key, string? Value);
 file static class DbHelper
 {
     public record MontasiaEvent(long Id, string EmpId, string Branch, string City = "", string Type = "", string Notes = "", string AddedBy = "");
+    public record ItemCounts(int Montasiat, int Inquiries, int Complaints);
 
     private record MontasiaInfo(string Status, string EmpId, string Branch, string City, string Type, string Notes, string AddedBy);
+
+    // عدّ السجلات في كل مجموعة (للكشف عن طمس البيانات)
+    public static ItemCounts CountItems(string? json)
+    {
+        if (string.IsNullOrEmpty(json)) return new ItemCounts(0, 0, 0);
+        try
+        {
+            using var doc = JsonDocument.Parse(json);
+            var root = doc.RootElement;
+            int CountArr(string key) =>
+                root.TryGetProperty(key, out var arr) && arr.ValueKind == JsonValueKind.Array
+                    ? arr.GetArrayLength() : 0;
+            return new ItemCounts(CountArr("montasiat"), CountArr("inquiries"), CountArr("complaints"));
+        }
+        catch { return new ItemCounts(0, 0, 0); }
+    }
 
     private static Dictionary<long, MontasiaInfo> _GetMontasiatMap(JsonElement root)
     {
