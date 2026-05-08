@@ -462,6 +462,12 @@ const IS_LOCAL = location.protocol === 'file:';
 let _token     = null;
 let _isLoading = false;
 let _isSaving  = false;          // يمنع SSE من تحميل بيانات قديمة أثناء الحفظ
+
+// 🔒 Optimistic Concurrency: إصدار كل مفتاح Storage على السيرفر
+// يُحدَّث عند كل loadAllData ناجح وعند كل _push ناجح
+// يُرسل مع كل POST كـ expectedVersion — لو السيرفر يرى version مختلف، يُرفض الحفظ
+let _versions = {};
+let _onConflictRetrying = false;   // علم لمنع loop لانهائي عند 409
 let _savingTimer = null;
 function setToken(t) {
     _token = t;
@@ -526,6 +532,11 @@ async function loadAllData() {
             breaks    = data['Shaab_Breaks_DB']    ? JSON.parse(data['Shaab_Breaks_DB'])    : [];
             sessions  = data['Shaab_Sessions_DB']  ? JSON.parse(data['Shaab_Sessions_DB'])  : [];
             priceList = data['Shaab_PriceList_DB'] ? JSON.parse(data['Shaab_PriceList_DB']) : structuredClone(DEFAULT_PRICE_LIST);
+
+            // 🔒 خزّن إصدارات المفاتيح من السيرفر للحفاظ على التزامن في الحفظ القادم
+            if (data['_versions'] && typeof data['_versions'] === 'object') {
+                _versions = Object.assign({}, data['_versions']);
+            }
         } catch(e) {
             console.error('loadAllData failed:', e);
             throw e;
@@ -586,30 +597,89 @@ async function loadAllData() {
     }
 }
 
-/* ── حفظ البيانات ── */
+/* ── حفظ البيانات ──
+   يرسل expectedVersion للسيرفر — لو السيرفر يحمل version أحدث، يرفض الحفظ بـ 409
+   ويُجبر الكلاينت على تحديث البيانات قبل إعادة المحاولة. هذا يمنع طمس البيانات. */
 function _push(key, value) {
     if (IS_LOCAL) {
         localStorage.setItem(key, value);
-    } else {
-        // ضبط علامة الحفظ الجاري لمنع SSE من تحميل بيانات قديمة
-        _isSaving = true;
-        clearTimeout(_savingTimer);
-        // ضمان: إعادة الضبط بعد 5 ثوانٍ كحد أقصى حتى لو فشل الطلب بصمت
-        _savingTimer = setTimeout(() => { _isSaving = false; }, 5000);
-        fetch('api/storage', {
-            method:  'POST',
-            headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${_token}` },
-            body:    JSON.stringify({ key, value })
-        }).then(r => {
-            _isSaving = false;
-            clearTimeout(_savingTimer);
-            if (!r.ok) _showSaveError();
-        }).catch(() => {
-            _isSaving = false;
-            clearTimeout(_savingTimer);
-            _showSaveError();
-        });
+        return;
     }
+    // ضبط علامة الحفظ الجاري لمنع SSE من تحميل بيانات قديمة
+    _isSaving = true;
+    clearTimeout(_savingTimer);
+    // 🔒 شبكة أمان طويلة فقط — نعتمد على then/catch لإعادة الضبط الفعلي
+    // (المدة القديمة 5 ثوانٍ كانت تسبب race condition)
+    _savingTimer = setTimeout(() => {
+        if (_isSaving) console.warn('[_push] safety release after 60s — fetch may have hung');
+        _isSaving = false;
+    }, 60_000);
+
+    const expectedVersion = (typeof _versions[key] === 'number') ? _versions[key] : 0;
+    const body = JSON.stringify({ key, value, expectedVersion });
+
+    fetch('api/storage', {
+        method:  'POST',
+        headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${_token}` },
+        body:    body
+    }).then(async r => {
+        _isSaving = false;
+        clearTimeout(_savingTimer);
+
+        if (r.status === 409) {
+            // ⚡ تعارض إصدار — السيرفر تغيّر، يجب التحديث ثم إعادة المحاولة
+            console.warn('[_push] version conflict on', key, '— refreshing and retrying');
+            try {
+                const conflictData = await r.json();
+                if (typeof conflictData.currentVersion === 'number') {
+                    _versions[key] = conflictData.currentVersion;
+                }
+            } catch {}
+            await _handleVersionConflict(key);
+            return;
+        }
+        if (!r.ok) { _showSaveError(); return; }
+
+        // ✓ نجح — احفظ الإصدار الجديد
+        try {
+            const data = await r.json();
+            if (typeof data.version === 'number') _versions[key] = data.version;
+        } catch {}
+    }).catch(() => {
+        _isSaving = false;
+        clearTimeout(_savingTimer);
+        _showSaveError();
+    });
+}
+
+/* عند تعارض الإصدارات: حدّث البيانات من السيرفر وأبلغ المستخدم
+   لا نعيد المحاولة تلقائياً (قد يكون التعارض بسبب تعديل متزامن — نريد للمستخدم رؤية الحالة الجديدة) */
+async function _handleVersionConflict(key) {
+    if (_onConflictRetrying) return;
+    _onConflictRetrying = true;
+    try {
+        await loadAllData();
+        if (typeof renderAll === 'function') renderAll();
+        _showConflictToast();
+    } catch (e) {
+        console.error('[_push] conflict refresh failed:', e);
+    } finally {
+        setTimeout(() => { _onConflictRetrying = false; }, 1000);
+    }
+}
+
+function _showConflictToast() {
+    let el = document.getElementById('_conflictToast');
+    if (!el) {
+        el = document.createElement('div');
+        el.id = '_conflictToast';
+        el.style.cssText = 'position:fixed;bottom:80px;left:50%;transform:translateX(-50%);background:#f57c00;color:#fff;padding:10px 22px;border-radius:10px;font-family:Cairo;font-size:14px;z-index:9999;box-shadow:0 4px 16px rgba(0,0,0,0.3);';
+        el.textContent   = '⚡ البيانات تحدّثت — أعد إجراء التعديل من جديد';
+        document.body.appendChild(el);
+    }
+    el.style.display = 'block';
+    clearTimeout(el._t);
+    el._t = setTimeout(() => { el.style.display = 'none'; }, 5000);
 }
 
 function _showSaveError() {
@@ -1273,17 +1343,20 @@ let _syncTimer = null;
 
 function _scheduleSync() {
     clearTimeout(_syncTimer);
+    // التبويبات المخفية تتزامن أيضاً (كانت مهملة سابقاً → سبباً رئيسياً لفقدان البيانات)
+    // لكن بمعدل أبطأ (دقيقة) لتوفير الموارد. التبويبات المرئية: _syncDelay الطبيعي.
+    const delay = document.hidden ? Math.max(_syncDelay, 60_000) : _syncDelay;
     _syncTimer = setTimeout(async () => {
-        if (!currentUser || document.hidden) { _scheduleSync(); return; }
+        if (!currentUser) { _scheduleSync(); return; }
         try {
             await loadAllData();
-            renderAll();
-            _syncDelay = 20_000;          // إعادة التأخير للقيمة الطبيعية عند النجاح
+            if (!document.hidden) renderAll();   // لا حاجة لإعادة الرسم لو التبويب مخفي
+            _syncDelay = 20_000;
         } catch(e) {
-            _syncDelay = Math.min(_syncDelay * 2, 300_000); // مضاعفة حتى 5 دقائق عند الفشل
+            _syncDelay = Math.min(_syncDelay * 2, 300_000);
         }
         _scheduleSync();
-    }, _syncDelay);
+    }, delay);
 }
 
 // مزامنة فورية عند عودة المستخدم للتبويب بعد غياب

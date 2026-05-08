@@ -75,6 +75,24 @@ using (var scope = app.Services.CreateScope())
     var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
     await db.Database.EnsureCreatedAsync();
 
+    // ── Migration: إضافة عمود version لجدول storage إن لم يكن موجوداً ──
+    // المعمار الجديد يستخدم Optimistic Concurrency لمنع طمس البيانات
+    try
+    {
+        await db.Database.ExecuteSqlRawAsync(
+            "ALTER TABLE storage ADD COLUMN version BIGINT NOT NULL DEFAULT 0"
+        );
+        Console.WriteLine("[startup] ✓ Added version column to storage table");
+    }
+    catch (Exception ex)
+    {
+        // العمود موجود مسبقاً — لا مشكلة
+        if (ex.Message.Contains("Duplicate column") || ex.Message.Contains("already exists"))
+            Console.WriteLine("[startup] ℹ version column already exists");
+        else
+            Console.WriteLine($"[startup] ⚠ ALTER TABLE failed: {ex.Message}");
+    }
+
     var row = await db.Storage.FindAsync("Shaab_Employees_DB");
     List<EmpRecord>? emps = null;
     if (row != null)

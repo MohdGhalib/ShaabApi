@@ -16,4 +16,9 @@ public class StorageEntry
 
     [Column("updated_at")]
     public DateTime UpdatedAt { get; set; }
+
+    // Optimistic concurrency token — يُزاد عند كل كتابة ناجحة
+    // الكلاينت يرسل expectedVersion للحفاظ على التزامن وتجنّب الكتابة فوق بيانات أحدث
+    [Column("version")]
+    public long Version { get; set; } = 0;
 }

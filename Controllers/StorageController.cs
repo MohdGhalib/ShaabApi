@@ -40,6 +40,8 @@ public class StorageController : ControllerBase
     }
 
     // GET /api/storage?keys=key1,key2,...
+    // الاستجابة: { key1: value, key2: value, _versions: { key1: 5, key2: 12 } }
+    // الكلاينتس القديمة تتجاهل _versions، الجديدة تستخدمها للحفاظ على التزامن.
     [HttpGet]
     public async Task<IActionResult> Get([FromQuery] string keys)
     {
@@ -47,7 +49,10 @@ public class StorageController : ControllerBase
             .Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)
             .ToList() ?? [];
 
-        var result = keyList.ToDictionary(k => k, _ => (string?)null);
+        var result   = new Dictionary<string, object?>();
+        var versions = new Dictionary<string, long>();
+
+        foreach (var k in keyList) { result[k] = null; versions[k] = 0; }
 
         if (keyList.Count > 0)
         {
@@ -56,9 +61,13 @@ public class StorageController : ControllerBase
                 .ToListAsync();
 
             foreach (var row in rows)
-                result[row.StoreKey] = row.StoreValue;
+            {
+                result[row.StoreKey]   = row.StoreValue;
+                versions[row.StoreKey] = row.Version;
+            }
         }
 
+        result["_versions"] = versions;
         return Ok(result);
     }
 
@@ -99,9 +108,39 @@ public class StorageController : ControllerBase
 
         var existing = await _db.Storage.FindAsync(body.Key);
         var oldValue = existing?.StoreValue; // للمقارنة لاحقاً
+        var currentVersion = existing?.Version ?? 0;
+
+        // ── 🔒 Optimistic Concurrency: فحص expectedVersion إن أرسلها الكلاينت ──
+        // soft mode: لو ما أرسل version (كلاينت قديم)، نقبل لكن نحذّر في log
+        // hard mode: لو أرسل version لا تطابق → 409 Conflict + الـ version الحالية
+        if (body.ExpectedVersion.HasValue)
+        {
+            if (body.ExpectedVersion.Value != currentVersion)
+            {
+                var userEmpId = User.FindFirst("empId")?.Value ?? "?";
+                Console.WriteLine($"[STORAGE] ⚡ VERSION CONFLICT key={body.Key} by={userEmpId} " +
+                                  $"expected={body.ExpectedVersion.Value} current={currentVersion}");
+                return Conflict(new
+                {
+                    error           = "version_conflict",
+                    message         = "البيانات على السيرفر تغيّرت — حدّث وأعد المحاولة",
+                    expectedVersion = body.ExpectedVersion.Value,
+                    currentVersion  = currentVersion
+                });
+            }
+        }
+        else if (body.Key == "Shaab_Master_DB")
+        {
+            // كلاينت قديم لم يرسل version على Master_DB — تسجيل تحذير فقط (soft mode)
+            var userEmpId = User.FindFirst("empId")?.Value ?? "?";
+            Console.WriteLine($"[STORAGE] ⚠ LEGACY WRITE (no version) key=Master by={userEmpId}");
+        }
 
         // ── 🛡️ حارس فقدان البيانات + Logging مفصّل لـ Shaab_Master_DB ──
         // يكشف كل عملية حفظ تُنقص الحجم بشكل مريب → يطبع تشخيص كامل ويرفض الكتابة الكارثية.
+        // ملاحظة: الحارس يثق بالكلاينتس التي ترسل expectedVersion صحيح
+        // (هؤلاء قد عاينوا البيانات الحالية، فالـ shrink منهم متعمَّد كـ auto-purge)
+        bool clientHasValidVersion = body.ExpectedVersion.HasValue && body.ExpectedVersion.Value == currentVersion;
         if (body.Key == "Shaab_Master_DB" && !string.IsNullOrEmpty(oldValue) && !string.IsNullOrEmpty(body.Value))
         {
             var oldSize = oldValue.Length;
@@ -136,8 +175,9 @@ public class StorageController : ControllerBase
             bool isCatastrophic = (mDelta < -5 || iDelta < -5 || cDelta < -5)
                                   && pctChange < -10;
 
-            if (isCatastrophic)
+            if (isCatastrophic && !clientHasValidVersion)
             {
+                // فقط نرفض لو الكلاينت لم يرسل version صحيحة (دليل أنه قد لا يكون رأى البيانات الحديثة)
                 Console.WriteLine($"[STORAGE] 🚨🚨🚨 BLOCKED CATASTROPHIC WRITE — STALE OVERWRITE DETECTED 🚨🚨🚨");
                 Console.WriteLine($"[STORAGE]   from={userEmpId}({userName}) role={userRole} ip={ip}");
                 Console.WriteLine($"[STORAGE]   would lose: M={Math.Abs(mDelta)} I={Math.Abs(iDelta)} C={Math.Abs(cDelta)}");
@@ -149,6 +189,11 @@ public class StorageController : ControllerBase
                     yourItems   = new { oldCounts.Montasiat, oldCounts.Inquiries, oldCounts.Complaints }
                 });
             }
+            if (isCatastrophic && clientHasValidVersion)
+            {
+                // عميل بـ version صحيحة لكن shrink كبير — على الأرجح auto-purge شرعي. نسجّله ولا نرفض.
+                Console.WriteLine($"[STORAGE] ℹ Catastrophic shrink ALLOWED (valid version) by={userEmpId} — likely auto-purge");
+            }
 
             // ⚠️ تحذير ناعم: انكماش بسيط لكن مريب
             if (mDelta < 0 || iDelta < 0 || cDelta < 0)
@@ -157,14 +202,24 @@ public class StorageController : ControllerBase
             }
         }
 
+        long newVersion;
         if (existing is null)
         {
-            _db.Storage.Add(new StorageEntry { StoreKey = body.Key, StoreValue = body.Value });
+            newVersion = 1;
+            _db.Storage.Add(new StorageEntry
+            {
+                StoreKey   = body.Key,
+                StoreValue = body.Value,
+                UpdatedAt  = DateTime.UtcNow,
+                Version    = newVersion
+            });
         }
         else
         {
+            newVersion = currentVersion + 1;
             existing.StoreValue = body.Value;
             existing.UpdatedAt  = DateTime.UtcNow;
+            existing.Version    = newVersion;
         }
 
         // كشف العناصر الجديدة في Shaab_Master_DB → إرسال FCM
@@ -184,7 +239,7 @@ public class StorageController : ControllerBase
         // إرسال حدث SSE لجميع المتصلين (fire-and-forget)
         _ = SseController.Broadcast("reload", "1");
 
-        return Ok(new { ok = true });
+        return Ok(new { ok = true, version = newVersion });
     }
 
     // آمن للاستدعاء من Task.Run — لا يستخدم DbContext
@@ -304,7 +359,7 @@ public class StorageController : ControllerBase
     }
 }
 
-public record StorageRequest(string Key, string? Value);
+public record StorageRequest(string Key, string? Value, long? ExpectedVersion = null);
 
 // ── مساعدة: كشف العناصر الجديدة وإرسال إشعار FCM ──────────────────────────
 file static class DbHelper
