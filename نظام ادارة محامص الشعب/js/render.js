@@ -545,7 +545,7 @@ function _renderTableM(get, isAdmin) {
         return `<tr data-id="${x.id}">
             <td><b>${x.branch}</b>${_isCCMgr?` <button onclick="editMontasiaBranch(${x.id})" title="تعديل الفرع/المحافظة" style="background:none;border:none;cursor:pointer;color:var(--text-dim);padding:0 4px;font-size:12px;">✏️</button>`:''}${x.branchEmp?`<br><span style="font-size:13px;color:var(--text-dim);font-weight:700;">👤 ${sanitize(x.branchEmp)}</span>`:''}${mobileTag}</td>
             <td style="text-align:center;">${_typeCell}</td>
-            <td><span class="text-box-cell">${sanitize(x.notes)}</span>${extraInfo}${photoCell}${editBox}</td>
+            <td><span class="text-box-cell">${sanitize(x.notes)}</span>${perm('editM')?` <button onclick="startEditMontasia(${x.id})" title="تعديل المدخلات" style="background:none;border:none;cursor:pointer;color:var(--text-dim);padding:0 4px;font-size:13px;vertical-align:middle;">✏️</button>`:''}${extraInfo}${photoCell}${editBox}</td>
             <td style="vertical-align:top;text-align:center;">${_statusCell}</td>
             <td style="text-align:center;vertical-align:top;">
                 <div style="display:flex;flex-direction:column;gap:4px;align-items:center;">
