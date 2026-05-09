@@ -165,6 +165,57 @@ function _updateBranchMontasiatPanel(city, br) {
         </div>`;
 }
 
+/* خريطة حقول معلومات الفرع */
+const _BRANCH_FIELDS = {
+    managerName:      { label: 'مدير الفرع',         type: 'text', icon: '👤' },
+    managerPhone:     { label: 'رقم مدير الفرع',     type: 'tel',  icon: '📞' },
+    areaManagerName:  { label: 'مدير المنطقة',       type: 'text', icon: '👤' },
+    areaManagerPhone: { label: 'رقم مدير المنطقة',   type: 'tel',  icon: '📞' },
+    openHour:         { label: 'موعد الافتتاح',      type: 'time', icon: '🕘' },
+    closeHour:        { label: 'موعد الإغلاق',       type: 'time', icon: '🕔' }
+};
+
+/* بناء رابط واتساب من رقم محلي/دولي
+   - يطبّع: 00 → بإزالة، 0 → 962، خلاف ذلك يُتركها كما هي */
+function _whatsappUrl(phone) {
+    if (!phone) return null;
+    let p = String(phone).replace(/[^\d]/g, '').trim();
+    if (!p) return null;
+    if (p.startsWith('00')) p = p.slice(2);
+    else if (p.startsWith('0')) p = '962' + p.slice(1);
+    return `https://web.whatsapp.com/send?phone=${p}`;
+}
+
+/* بناء صف عرض/تعديل لحقل واحد */
+function _renderBranchFieldRow(fieldKey, value, isCCMgr, extraBadge = '') {
+    const cfg = _BRANCH_FIELDS[fieldKey];
+    if (!cfg) return '';
+    const isPhone = cfg.type === 'tel';
+    const _waUrl  = isPhone ? _whatsappUrl(value) : null;
+    const _waBtn = (isPhone && _waUrl) ? `<a href="${_waUrl}" target="_blank" rel="noopener" title="فتح محادثة واتساب" style="text-decoration:none;background:rgba(37,211,102,0.15);color:#25d366;border:1px solid rgba(37,211,102,0.45);border-radius:6px;padding:1px 8px;font-size:13px;font-weight:700;line-height:1.5;">💬</a>` : '';
+    const _editBtn = isCCMgr ? `<button onclick="editBranchField('${fieldKey}')" title="تعديل ${sanitize(cfg.label)}" style="background:none;border:none;cursor:pointer;color:var(--text-dim);padding:0 4px;font-size:13px;">✏️</button>` : '';
+    const _displayVal = sanitize(value || '—');
+    return `
+        <div id="brView-${fieldKey}" style="display:flex;gap:8px;font-size:12px;line-height:1.7;border-bottom:1px solid rgba(255,255,255,0.05);padding:5px 0;align-items:center;">
+            <span style="color:var(--text-dim);min-width:120px;">${cfg.icon} ${cfg.label}:</span>
+            <span style="color:var(--text-main);font-weight:700;flex:1;">${_displayVal}</span>
+            <span style="display:flex;gap:4px;align-items:center;">
+                ${extraBadge}
+                ${_waBtn}
+                ${_editBtn}
+            </span>
+        </div>
+        ${isCCMgr ? `
+        <div id="brEdit-${fieldKey}" style="display:none;padding:6px 0;border-bottom:1px solid rgba(255,255,255,0.05);">
+            <label style="font-size:10px;color:var(--text-dim);display:block;margin-bottom:3px;">${cfg.icon} ${sanitize(cfg.label)}</label>
+            <div style="display:flex;gap:4px;align-items:stretch;">
+                <input id="brInp-${fieldKey}" type="${cfg.type}" value="${sanitize(value || '')}" style="flex:1;padding:5px 8px;font-size:12px;font-family:'Cairo';">
+                <button onclick="saveBranchField('${fieldKey}')" title="حفظ" style="padding:5px 11px;background:rgba(46,125,50,0.2);border:1px solid rgba(46,125,50,0.5);color:#a5d6a7;border-radius:6px;cursor:pointer;font-family:'Cairo';font-size:11px;font-weight:700;">💾</button>
+                <button onclick="cancelBranchField('${fieldKey}')" title="إلغاء" style="padding:5px 11px;background:rgba(120,120,120,0.1);border:1px solid var(--border);color:var(--text-dim);border-radius:6px;cursor:pointer;font-family:'Cairo';font-size:11px;">✗</button>
+            </div>
+        </div>` : ''}`;
+}
+
 function _updateBranchInfoPanel() {
     _ensureBranchBlinkStyle();
     const panel = document.getElementById('iBranchInfoPanel');
@@ -178,73 +229,74 @@ function _updateBranchInfoPanel() {
         _scheduleBranchPanelTick(false);
         return;
     }
-    const info     = _getBranchInfo(city, br);
-    const isCCMgr  = currentUser?.role === 'cc_manager' || currentUser?.isAdmin;
+    const info        = _getBranchInfo(city, br);
+    const isCCMgr     = currentUser?.role === 'cc_manager' || currentUser?.isAdmin;
     const statusBadge = _renderBranchStatusBadge(info.openHour, info.closeHour);
     panel.style.display = 'block';
 
-    if (isCCMgr) {
-        const _input = (id, label, val, type) => `
-            <div style="display:flex;flex-direction:column;gap:3px;">
-                <label style="font-size:10px;color:var(--text-dim);">${label}</label>
-                <input id="${id}" type="${type||'text'}" value="${sanitize(val||'')}" style="padding:5px 8px;font-size:12px;font-family:'Cairo';box-sizing:border-box;width:100%;">
-            </div>`;
-        panel.innerHTML = `
-            <div style="background:linear-gradient(135deg,rgba(33,150,243,0.10),rgba(33,150,243,0.04));border:1px solid rgba(100,181,246,0.45);border-radius:14px;padding:14px;box-shadow:0 4px 12px rgba(0,0,0,0.18);">
-                <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;gap:8px;flex-wrap:wrap;">
-                    <span style="font-size:13px;font-weight:700;color:#90caf9;">🏢 ${sanitize(br)} / ${sanitize(city)}</span>
-                    ${statusBadge}
-                </div>
-                <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:10px;">
-                    ${_input('biMgrName',   'مدير الفرع',           info.managerName)}
-                    ${_input('biMgrPhone',  'رقم مدير الفرع',       info.managerPhone, 'tel')}
-                    ${_input('biAreaName',  'مدير المنطقة',         info.areaManagerName)}
-                    ${_input('biAreaPhone', 'رقم مدير المنطقة',     info.areaManagerPhone, 'tel')}
-                    <div style="display:flex;flex-direction:column;gap:3px;">
-                        <label style="font-size:10px;color:var(--text-dim);">🕘 موعد الافتتاح</label>
-                        <input id="biOpenHour" type="time" value="${sanitize(info.openHour||'')}" style="padding:5px 8px;font-size:12px;font-family:'Cairo';box-sizing:border-box;width:100%;">
-                    </div>
-                    <div style="display:flex;flex-direction:column;gap:3px;">
-                        <label style="font-size:10px;color:var(--text-dim);display:flex;justify-content:space-between;align-items:center;gap:6px;">
-                            <span>🕔 موعد الإغلاق</span>
-                            ${info.closeHour && _calcBranchStatus(info.openHour, info.closeHour) === 'closed' ? `<span class="branch-blink" style="color:#ef5350;font-weight:700;font-size:10px;">الفرع مغلق</span>` : ''}
-                            ${info.closeHour && _calcBranchStatus(info.openHour, info.closeHour) === 'closing-soon' ? `<span class="branch-blink" style="color:#ffb300;font-weight:700;font-size:10px;">يغلق قريباً</span>` : ''}
-                        </label>
-                        <input id="biCloseHour" type="time" value="${sanitize(info.closeHour||'')}" style="padding:5px 8px;font-size:12px;font-family:'Cairo';box-sizing:border-box;width:100%;">
-                    </div>
-                </div>
-                <button onclick="saveBranchInfo()" style="width:100%;padding:8px;background:linear-gradient(135deg,#2e7d32,#1b5e20);color:#fff;border:none;border-radius:8px;cursor:pointer;font-family:'Cairo';font-weight:700;font-size:12px;">
-                    💾 حفظ معلومات الفرع
-                </button>
-                ${info.updatedAt ? `<div style="margin-top:6px;font-size:10px;color:var(--text-dim);text-align:center;">آخر تعديل: ${sanitize(info.updatedAt)} — ${sanitize(info.updatedBy||'—')}</div>` : ''}
-            </div>`;
-    } else {
-        const _row = (k, v, extra='') => `
-            <div style="display:flex;gap:8px;font-size:12px;line-height:1.7;border-bottom:1px solid rgba(255,255,255,0.05);padding:5px 0;">
-                <span style="color:var(--text-dim);min-width:120px;">${k}</span>
-                <span style="color:var(--text-main);font-weight:700;flex:1;">${v}</span>
-                ${extra}
-            </div>`;
-        const _mgr  = info.managerName     ? `${sanitize(info.managerName)}${info.managerPhone?` — 📞 ${sanitize(info.managerPhone)}`:''}` : '—';
-        const _area = info.areaManagerName ? `${sanitize(info.areaManagerName)}${info.areaManagerPhone?` — 📞 ${sanitize(info.areaManagerPhone)}`:''}` : '—';
-        const _closedFlash = info.closeHour && _calcBranchStatus(info.openHour, info.closeHour) === 'closed'
-            ? `<span class="branch-blink" style="color:#ef5350;font-weight:700;font-size:11px;">الفرع مغلق</span>` : '';
-        const _soonFlash = info.closeHour && _calcBranchStatus(info.openHour, info.closeHour) === 'closing-soon'
-            ? `<span class="branch-blink" style="color:#ffb300;font-weight:700;font-size:11px;">يغلق قريباً</span>` : '';
-        panel.innerHTML = `
-            <div style="background:linear-gradient(135deg,rgba(33,150,243,0.10),rgba(33,150,243,0.03));border:1px solid rgba(100,181,246,0.35);border-radius:14px;padding:14px;box-shadow:0 4px 12px rgba(0,0,0,0.18);">
-                <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;gap:8px;flex-wrap:wrap;">
-                    <span style="font-size:13px;font-weight:700;color:#90caf9;">🏢 ${sanitize(br)} / ${sanitize(city)}</span>
-                    ${statusBadge}
-                </div>
-                ${_row('مدير الفرع:',   _mgr)}
-                ${_row('مدير المنطقة:', _area)}
-                ${_row('🕘 الافتتاح:',  sanitize(info.openHour||'—'))}
-                ${_row('🕔 الإغلاق:',   sanitize(info.closeHour||'—'), _closedFlash || _soonFlash)}
-            </div>`;
-    }
+    const _branchSt    = _calcBranchStatus(info.openHour, info.closeHour);
+    const _closedFlash = info.closeHour && _branchSt === 'closed'
+        ? `<span class="branch-blink" style="color:#ef5350;font-weight:700;font-size:11px;">الفرع مغلق</span>` : '';
+    const _soonFlash   = info.closeHour && _branchSt === 'closing-soon'
+        ? `<span class="branch-blink" style="color:#ffb300;font-weight:700;font-size:11px;">يغلق قريباً</span>` : '';
+
+    panel.innerHTML = `
+        <div style="background:linear-gradient(135deg,rgba(33,150,243,0.10),rgba(33,150,243,0.03));border:1px solid rgba(100,181,246,0.40);border-radius:14px;padding:14px;box-shadow:0 4px 12px rgba(0,0,0,0.18);">
+            <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;gap:8px;flex-wrap:wrap;">
+                <span style="font-size:13px;font-weight:700;color:#90caf9;">🏢 ${sanitize(br)} / ${sanitize(city)}</span>
+                ${statusBadge}
+            </div>
+            ${_renderBranchFieldRow('managerName',     info.managerName,     isCCMgr)}
+            ${_renderBranchFieldRow('managerPhone',    info.managerPhone,    isCCMgr)}
+            ${_renderBranchFieldRow('areaManagerName', info.areaManagerName, isCCMgr)}
+            ${_renderBranchFieldRow('areaManagerPhone',info.areaManagerPhone,isCCMgr)}
+            ${_renderBranchFieldRow('openHour',        info.openHour,        isCCMgr)}
+            ${_renderBranchFieldRow('closeHour',       info.closeHour,       isCCMgr, _closedFlash || _soonFlash)}
+            ${info.updatedAt ? `<div style="margin-top:8px;font-size:10px;color:var(--text-dim);text-align:center;">آخر تعديل: ${sanitize(info.updatedAt)} — ${sanitize(info.updatedBy||'—')}</div>` : ''}
+        </div>`;
     _updateBranchMontasiatPanel(city, br);
     _scheduleBranchPanelTick(true);
+}
+
+/* ── تعديل/حفظ/إلغاء بند واحد فقط ── */
+function editBranchField(fieldKey) {
+    const isCCMgr = currentUser?.role === 'cc_manager' || currentUser?.isAdmin;
+    if (!isCCMgr) return;
+    const v = document.getElementById(`brView-${fieldKey}`);
+    const e = document.getElementById(`brEdit-${fieldKey}`);
+    if (v) v.style.display = 'none';
+    if (e) e.style.display = 'block';
+    document.getElementById(`brInp-${fieldKey}`)?.focus();
+}
+
+function cancelBranchField(fieldKey) {
+    const v = document.getElementById(`brView-${fieldKey}`);
+    const e = document.getElementById(`brEdit-${fieldKey}`);
+    if (v) v.style.display = '';
+    if (e) e.style.display = 'none';
+}
+
+function saveBranchField(fieldKey) {
+    const isCCMgr = currentUser?.role === 'cc_manager' || currentUser?.isAdmin;
+    if (!isCCMgr) return alert('فقط مدير الكول سنتر يمكنه تعديل معلومات الفرع');
+    if (!_BRANCH_FIELDS[fieldKey]) return;
+    const city = document.getElementById('iCityAdd')?.value || '';
+    const br   = document.getElementById('iBranchAdd')?.value || '';
+    if (!city || !br || br === 'غير محدد' || city === 'غير محدد') return alert('يرجى اختيار محافظة وفرع صحيحين');
+
+    if (!db.branchInfo || typeof db.branchInfo !== 'object') db.branchInfo = {};
+    const k = _branchInfoKey(city, br);
+    if (!db.branchInfo[k]) db.branchInfo[k] = {};
+    const _val = (document.getElementById(`brInp-${fieldKey}`)?.value || '').trim();
+    db.branchInfo[k][fieldKey]   = _val;
+    db.branchInfo[k].updatedAt   = now();
+    db.branchInfo[k].updatedBy   = currentUser?.name || '—';
+
+    if (typeof _logAudit === 'function') {
+        _logAudit('saveBranchInfoField', br, `${city} | ${_BRANCH_FIELDS[fieldKey].label} → ${_val || '—'}`);
+    }
+    save();
+    _updateBranchInfoPanel();
 }
 
 /* تحديث تلقائي كل دقيقة لمزامنة حالة الفرع مع الوقت الحالي */
@@ -263,33 +315,6 @@ function _scheduleBranchPanelTick(active) {
         if (active && (active.tagName === 'INPUT' || active.tagName === 'TEXTAREA') && panel.contains(active)) return;
         _updateBranchInfoPanel();
     }, 60_000);
-}
-
-function saveBranchInfo() {
-    const isCCMgr = currentUser?.role === 'cc_manager' || currentUser?.isAdmin;
-    if (!isCCMgr) return alert('فقط مدير الكول سنتر يمكنه تعديل معلومات الفرع');
-    const city = document.getElementById('iCityAdd')?.value || '';
-    const br   = document.getElementById('iBranchAdd')?.value || '';
-    if (!city || !br || br === 'غير محدد' || city === 'غير محدد') return alert('يرجى اختيار محافظة وفرع صحيحين');
-
-    if (!db.branchInfo || typeof db.branchInfo !== 'object') db.branchInfo = {};
-    const k = _branchInfoKey(city, br);
-    db.branchInfo[k] = {
-        managerName:      (document.getElementById('biMgrName')?.value   || '').trim(),
-        managerPhone:     (document.getElementById('biMgrPhone')?.value  || '').trim(),
-        areaManagerName:  (document.getElementById('biAreaName')?.value  || '').trim(),
-        areaManagerPhone: (document.getElementById('biAreaPhone')?.value || '').trim(),
-        openHour:         document.getElementById('biOpenHour')?.value   || '',
-        closeHour:        document.getElementById('biCloseHour')?.value  || '',
-        updatedAt:        now(),
-        updatedBy:        currentUser?.name || '—'
-    };
-    if (typeof _logAudit === 'function') {
-        _logAudit('saveBranchInfo', br, `${city} — ${db.branchInfo[k].managerName||'—'} / ${db.branchInfo[k].areaManagerName||'—'}`);
-    }
-    save();
-    alert('✓ تم حفظ معلومات الفرع');
-    _updateBranchInfoPanel();
 }
 
 /* ── إظهار/إخفاء حقل رقم المنتسية حسب اختيار "نعم/لا" ── */
