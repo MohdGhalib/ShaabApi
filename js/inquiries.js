@@ -35,6 +35,8 @@ function toggleInquiryNotes() {
    معلومات الفرع المعروضة بجانب زر "حفظ الاستفسار"
    - يقرأها الجميع
    - يعدّلها مدير الكول سنتر (cc_manager / admin) فقط
+   - تعرض حالة الفرع: مفتوح / يغلق قريباً / مغلق (مع وميض أحمر)
+   - تعرض المنتسيات النشطة للفرع كل واحدة في بوكس
 ══════════════════════════════════════════════════════ */
 function _branchInfoKey(city, branch) {
     return `${(city||'').trim()}__${(branch||'').trim()}`;
@@ -45,7 +47,126 @@ function _getBranchInfo(city, branch) {
     return db.branchInfo[_branchInfoKey(city, branch)] || {};
 }
 
+/* حقن @keyframes للوميض مرة واحدة */
+function _ensureBranchBlinkStyle() {
+    if (document.getElementById('_branchBlinkStyle')) return;
+    const st = document.createElement('style');
+    st.id = '_branchBlinkStyle';
+    st.textContent = `
+        @keyframes _branchBlink { 0%,100% { opacity:1; } 50% { opacity:0.25; } }
+        .branch-blink { animation:_branchBlink 0.9s ease-in-out infinite; }
+        .branch-blink-dot { display:inline-block;width:9px;height:9px;border-radius:50%;background:#e53935;box-shadow:0 0 8px rgba(229,57,53,0.85);vertical-align:middle;margin-left:6px;animation:_branchBlink 0.9s ease-in-out infinite;}
+        .branch-blink-dot.warn { background:#ffb300;box-shadow:0 0 8px rgba(255,179,0,0.85); }
+    `;
+    document.head.appendChild(st);
+}
+
+/* حساب حالة الفرع حسب الوقت الحالي:
+   - 'open'   : ضمن أوقات الدوام
+   - 'closing-soon' : باقي ½ ساعة أو أقل على الإغلاق
+   - 'closed' : خارج أوقات الدوام
+   - null     : لا أوقات محددة */
+function _calcBranchStatus(openHour, closeHour) {
+    if (!openHour || !closeHour) return null;
+    const _toMin = s => { const [h,m] = String(s).split(':').map(n=>parseInt(n,10)); return (h||0)*60 + (m||0); };
+    const openMin  = _toMin(openHour);
+    const closeMin = _toMin(closeHour);
+    const d = new Date();
+    const nowMin = d.getHours()*60 + d.getMinutes();
+    let isOpen, minsToClose;
+    if (closeMin > openMin) {
+        // نفس اليوم
+        isOpen = nowMin >= openMin && nowMin < closeMin;
+        minsToClose = closeMin - nowMin;
+    } else {
+        // الإغلاق بعد منتصف الليل
+        isOpen = nowMin >= openMin || nowMin < closeMin;
+        minsToClose = nowMin >= openMin ? (24*60 - nowMin + closeMin) : (closeMin - nowMin);
+    }
+    if (!isOpen) return 'closed';
+    if (minsToClose <= 30) return 'closing-soon';
+    return 'open';
+}
+
+/* بناء شارة حالة الفرع */
+function _renderBranchStatusBadge(openHour, closeHour) {
+    const st = _calcBranchStatus(openHour, closeHour);
+    if (st === 'closed') {
+        return `<span style="display:inline-flex;align-items:center;gap:6px;padding:3px 10px;border-radius:8px;background:rgba(229,57,53,0.12);border:1px solid rgba(229,57,53,0.5);"><span class="branch-blink-dot"></span><span class="branch-blink" style="color:#ef5350;font-weight:700;font-size:11px;">🔒 الفرع مغلق</span></span>`;
+    }
+    if (st === 'closing-soon') {
+        return `<span style="display:inline-flex;align-items:center;gap:6px;padding:3px 10px;border-radius:8px;background:rgba(255,179,0,0.12);border:1px solid rgba(255,179,0,0.55);"><span class="branch-blink-dot warn"></span><span class="branch-blink" style="color:#ffb300;font-weight:700;font-size:11px;">⏰ الفرع يغلق قريباً</span></span>`;
+    }
+    if (st === 'open') {
+        return `<span style="display:inline-flex;align-items:center;gap:6px;padding:3px 10px;border-radius:8px;background:rgba(46,125,50,0.12);border:1px solid rgba(46,125,50,0.45);color:#a5d6a7;font-weight:700;font-size:11px;">🟢 الفرع مفتوح</span>`;
+    }
+    return '';
+}
+
+/* بناء بوكس منتسية واحد */
+function _renderMontasiaMiniBox(m) {
+    const _typeColor = m.type === 'نقدي' ? '#ffd54f'
+                     : m.type === 'اصناف محمص الشعب' ? '#c5e1a5'
+                     : m.type === 'متعدد الأصناف' ? '#a5d6a7'
+                     : '#90caf9';
+    const _statusColor = m.status === 'بانتظار الموافقة' ? '#ffb74d'
+                       : m.status === 'قيد الاستلام' ? '#80deea'
+                       : '#ef9a9a';
+    const _shortNotes = (m.notes || '').length > 80 ? (m.notes.slice(0, 80) + '…') : (m.notes || '');
+    const _extra = m.type === 'نقدي' && m.missingValue ? `<div style="font-size:11px;color:#ffd54f;margin-top:4px;">💵 ${sanitize(m.missingValue)}</div>` : '';
+    return `<div style="background:linear-gradient(135deg,rgba(255,255,255,0.04),rgba(255,255,255,0.01));border:1px solid rgba(255,255,255,0.12);border-radius:10px;padding:10px;min-width:220px;max-width:280px;flex:1 1 220px;">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:5px;gap:6px;">
+            <span style="font-family:monospace;font-size:11px;font-weight:700;background:rgba(100,181,246,0.18);color:#90caf9;padding:2px 8px;border-radius:5px;">#${sanitize(m.serial||'—')}</span>
+            <span style="font-size:10px;color:${_statusColor};font-weight:700;">${sanitize(m.status||'—')}</span>
+        </div>
+        <div style="font-size:10px;color:${_typeColor};font-weight:700;margin-bottom:4px;">${sanitize(m.type||'—')}</div>
+        ${_shortNotes ? `<div style="font-size:11px;color:var(--text-main);line-height:1.5;">${sanitize(_shortNotes)}</div>` : ''}
+        ${_extra}
+        <div style="font-size:10px;color:var(--text-dim);margin-top:5px;display:flex;justify-content:space-between;">
+            <span>📥 ${sanitize(m.addedBy||'—')}</span>
+            <span style="font-family:monospace;">${(typeof _toLatinDigits==='function' ? _toLatinDigits(m.time||'') : sanitize(m.time||''))}</span>
+        </div>
+    </div>`;
+}
+
+/* تحديث لوحة منتسيات الفرع المختار */
+function _updateBranchMontasiatPanel(city, br) {
+    const panel = document.getElementById('iBranchMontasiatPanel');
+    if (!panel) return;
+    if (!city || !br || br === 'غير محدد' || city === 'غير محدد') {
+        panel.style.display = 'none';
+        panel.innerHTML = '';
+        return;
+    }
+    const items = (db.montasiat || []).filter(x =>
+        !x.deleted &&
+        x.city === city &&
+        x.branch === br &&
+        (x.status === 'قيد الانتظار' || x.status === 'بانتظار الموافقة' || x.status === 'قيد الاستلام')
+    ).slice(0, 12); // حد أقصى 12 لكفاءة العرض
+
+    panel.style.display = 'block';
+    if (items.length === 0) {
+        panel.innerHTML = `
+            <div style="background:rgba(120,120,120,0.05);border:1px dashed rgba(255,255,255,0.18);border-radius:12px;padding:14px;text-align:center;color:var(--text-dim);font-size:12px;">
+                ✓ لا توجد منتسيات نشطة لهذا الفرع
+            </div>`;
+        return;
+    }
+    panel.innerHTML = `
+        <div style="display:flex;flex-direction:column;gap:8px;">
+            <div style="font-size:12px;color:#ce93d8;font-weight:700;display:flex;justify-content:space-between;align-items:center;">
+                <span>📦 منتسيات الفرع النشطة</span>
+                <span style="background:rgba(156,39,176,0.18);color:#ce93d8;padding:2px 8px;border-radius:6px;font-size:10px;">${items.length}</span>
+            </div>
+            <div style="display:flex;flex-wrap:wrap;gap:8px;">
+                ${items.map(_renderMontasiaMiniBox).join('')}
+            </div>
+        </div>`;
+}
+
 function _updateBranchInfoPanel() {
+    _ensureBranchBlinkStyle();
     const panel = document.getElementById('iBranchInfoPanel');
     if (!panel) return;
     const city = document.getElementById('iCityAdd')?.value || '';
@@ -53,10 +174,13 @@ function _updateBranchInfoPanel() {
     if (!city || !br || br === 'غير محدد' || city === 'غير محدد') {
         panel.style.display = 'none';
         panel.innerHTML = '';
+        _updateBranchMontasiatPanel('', '');
+        _scheduleBranchPanelTick(false);
         return;
     }
     const info     = _getBranchInfo(city, br);
     const isCCMgr  = currentUser?.role === 'cc_manager' || currentUser?.isAdmin;
+    const statusBadge = _renderBranchStatusBadge(info.openHour, info.closeHour);
     panel.style.display = 'block';
 
     if (isCCMgr) {
@@ -66,42 +190,79 @@ function _updateBranchInfoPanel() {
                 <input id="${id}" type="${type||'text'}" value="${sanitize(val||'')}" style="padding:5px 8px;font-size:12px;font-family:'Cairo';box-sizing:border-box;width:100%;">
             </div>`;
         panel.innerHTML = `
-            <div style="background:rgba(33,150,243,0.06);border:1px solid rgba(100,181,246,0.4);border-radius:12px;padding:12px;">
-                <div style="font-size:12px;font-weight:700;color:#90caf9;margin-bottom:8px;text-align:center;">
-                    🏢 معلومات الفرع — ${sanitize(br)} / ${sanitize(city)}
+            <div style="background:linear-gradient(135deg,rgba(33,150,243,0.10),rgba(33,150,243,0.04));border:1px solid rgba(100,181,246,0.45);border-radius:14px;padding:14px;box-shadow:0 4px 12px rgba(0,0,0,0.18);">
+                <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;gap:8px;flex-wrap:wrap;">
+                    <span style="font-size:13px;font-weight:700;color:#90caf9;">🏢 ${sanitize(br)} / ${sanitize(city)}</span>
+                    ${statusBadge}
                 </div>
-                <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:8px;">
+                <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:10px;">
                     ${_input('biMgrName',   'مدير الفرع',           info.managerName)}
                     ${_input('biMgrPhone',  'رقم مدير الفرع',       info.managerPhone, 'tel')}
                     ${_input('biAreaName',  'مدير المنطقة',         info.areaManagerName)}
                     ${_input('biAreaPhone', 'رقم مدير المنطقة',     info.areaManagerPhone, 'tel')}
-                    ${_input('biOpenHour',  'موعد الافتتاح',        info.openHour,  'time')}
-                    ${_input('biCloseHour', 'موعد الإغلاق',         info.closeHour, 'time')}
+                    <div style="display:flex;flex-direction:column;gap:3px;">
+                        <label style="font-size:10px;color:var(--text-dim);">🕘 موعد الافتتاح</label>
+                        <input id="biOpenHour" type="time" value="${sanitize(info.openHour||'')}" style="padding:5px 8px;font-size:12px;font-family:'Cairo';box-sizing:border-box;width:100%;">
+                    </div>
+                    <div style="display:flex;flex-direction:column;gap:3px;">
+                        <label style="font-size:10px;color:var(--text-dim);display:flex;justify-content:space-between;align-items:center;gap:6px;">
+                            <span>🕔 موعد الإغلاق</span>
+                            ${info.closeHour && _calcBranchStatus(info.openHour, info.closeHour) === 'closed' ? `<span class="branch-blink" style="color:#ef5350;font-weight:700;font-size:10px;">الفرع مغلق</span>` : ''}
+                            ${info.closeHour && _calcBranchStatus(info.openHour, info.closeHour) === 'closing-soon' ? `<span class="branch-blink" style="color:#ffb300;font-weight:700;font-size:10px;">يغلق قريباً</span>` : ''}
+                        </label>
+                        <input id="biCloseHour" type="time" value="${sanitize(info.closeHour||'')}" style="padding:5px 8px;font-size:12px;font-family:'Cairo';box-sizing:border-box;width:100%;">
+                    </div>
                 </div>
-                <button onclick="saveBranchInfo()" style="width:100%;padding:7px;background:linear-gradient(135deg,#2e7d32,#1b5e20);color:#fff;border:none;border-radius:8px;cursor:pointer;font-family:'Cairo';font-weight:700;font-size:12px;">
+                <button onclick="saveBranchInfo()" style="width:100%;padding:8px;background:linear-gradient(135deg,#2e7d32,#1b5e20);color:#fff;border:none;border-radius:8px;cursor:pointer;font-family:'Cairo';font-weight:700;font-size:12px;">
                     💾 حفظ معلومات الفرع
                 </button>
                 ${info.updatedAt ? `<div style="margin-top:6px;font-size:10px;color:var(--text-dim);text-align:center;">آخر تعديل: ${sanitize(info.updatedAt)} — ${sanitize(info.updatedBy||'—')}</div>` : ''}
             </div>`;
     } else {
-        const _row = (k, v) => `
-            <div style="display:flex;gap:8px;font-size:12px;line-height:1.7;border-bottom:1px solid rgba(255,255,255,0.05);padding:3px 0;">
-                <span style="color:var(--text-dim);min-width:115px;">${k}</span>
-                <span style="color:var(--text-main);font-weight:700;">${sanitize(v||'—')}</span>
+        const _row = (k, v, extra='') => `
+            <div style="display:flex;gap:8px;font-size:12px;line-height:1.7;border-bottom:1px solid rgba(255,255,255,0.05);padding:5px 0;">
+                <span style="color:var(--text-dim);min-width:120px;">${k}</span>
+                <span style="color:var(--text-main);font-weight:700;flex:1;">${v}</span>
+                ${extra}
             </div>`;
-        const _mgr  = info.managerName     ? `${info.managerName}${info.managerPhone?` — 📞 ${info.managerPhone}`:''}` : '—';
-        const _area = info.areaManagerName ? `${info.areaManagerName}${info.areaManagerPhone?` — 📞 ${info.areaManagerPhone}`:''}` : '—';
+        const _mgr  = info.managerName     ? `${sanitize(info.managerName)}${info.managerPhone?` — 📞 ${sanitize(info.managerPhone)}`:''}` : '—';
+        const _area = info.areaManagerName ? `${sanitize(info.areaManagerName)}${info.areaManagerPhone?` — 📞 ${sanitize(info.areaManagerPhone)}`:''}` : '—';
+        const _closedFlash = info.closeHour && _calcBranchStatus(info.openHour, info.closeHour) === 'closed'
+            ? `<span class="branch-blink" style="color:#ef5350;font-weight:700;font-size:11px;">الفرع مغلق</span>` : '';
+        const _soonFlash = info.closeHour && _calcBranchStatus(info.openHour, info.closeHour) === 'closing-soon'
+            ? `<span class="branch-blink" style="color:#ffb300;font-weight:700;font-size:11px;">يغلق قريباً</span>` : '';
         panel.innerHTML = `
-            <div style="background:rgba(33,150,243,0.06);border:1px solid rgba(100,181,246,0.25);border-radius:12px;padding:12px;">
-                <div style="font-size:12px;font-weight:700;color:#90caf9;margin-bottom:8px;text-align:center;">
-                    🏢 معلومات الفرع — ${sanitize(br)} / ${sanitize(city)}
+            <div style="background:linear-gradient(135deg,rgba(33,150,243,0.10),rgba(33,150,243,0.03));border:1px solid rgba(100,181,246,0.35);border-radius:14px;padding:14px;box-shadow:0 4px 12px rgba(0,0,0,0.18);">
+                <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;gap:8px;flex-wrap:wrap;">
+                    <span style="font-size:13px;font-weight:700;color:#90caf9;">🏢 ${sanitize(br)} / ${sanitize(city)}</span>
+                    ${statusBadge}
                 </div>
                 ${_row('مدير الفرع:',   _mgr)}
                 ${_row('مدير المنطقة:', _area)}
-                ${_row('🕘 الافتتاح:',  info.openHour)}
-                ${_row('🕔 الإغلاق:',   info.closeHour)}
+                ${_row('🕘 الافتتاح:',  sanitize(info.openHour||'—'))}
+                ${_row('🕔 الإغلاق:',   sanitize(info.closeHour||'—'), _closedFlash || _soonFlash)}
             </div>`;
     }
+    _updateBranchMontasiatPanel(city, br);
+    _scheduleBranchPanelTick(true);
+}
+
+/* تحديث تلقائي كل دقيقة لمزامنة حالة الفرع مع الوقت الحالي */
+let _branchPanelTickTimer = null;
+function _scheduleBranchPanelTick(active) {
+    if (_branchPanelTickTimer) { clearInterval(_branchPanelTickTimer); _branchPanelTickTimer = null; }
+    if (!active) return;
+    _branchPanelTickTimer = setInterval(() => {
+        const panel = document.getElementById('iBranchInfoPanel');
+        if (!panel || panel.style.display === 'none') {
+            if (_branchPanelTickTimer) { clearInterval(_branchPanelTickTimer); _branchPanelTickTimer = null; }
+            return;
+        }
+        // لا تُحدّث أثناء التحرير (cc_manager)
+        const active = document.activeElement;
+        if (active && (active.tagName === 'INPUT' || active.tagName === 'TEXTAREA') && panel.contains(active)) return;
+        _updateBranchInfoPanel();
+    }, 60_000);
 }
 
 function saveBranchInfo() {
