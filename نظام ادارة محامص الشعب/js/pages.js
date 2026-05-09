@@ -267,7 +267,7 @@ i: `
     </div>
     <div style="display:flex;gap:14px;align-items:flex-start;margin-top:5px;flex-wrap:wrap;">
         <button class="btn btn-main" style="flex:0 0 auto;align-self:stretch;" onclick="addInquiry()">حفظ الاستفسار</button>
-        <div id="iBranchInfoPanel" style="flex:0 0 400px;display:none;max-width:100%;margin-inline-start:auto;"></div>
+        <div id="iBranchInfoPanel" style="flex:1 1 540px;display:none;max-width:100%;margin-inline-start:auto;"></div>
     </div>
 </div>
 <div class="search-bar search-bar-i">

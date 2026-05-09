@@ -124,34 +124,23 @@ function _whatsappUrl(phone) {
     return `https://web.whatsapp.com/send?phone=${p}`;
 }
 
-/* بناء صف عرض/تعديل لحقل واحد */
-function _renderBranchFieldRow(fieldKey, value, isCCMgr, extraBadge = '') {
+/* بناء حقل عرض/تعديل مضمّن (inline) — مدمج في صف أفقي */
+function _renderBranchInlineField(fieldKey, value, isCCMgr) {
     const cfg = _BRANCH_FIELDS[fieldKey];
     if (!cfg) return '';
     const isPhone = cfg.type === 'tel';
     const _waUrl  = isPhone ? _whatsappUrl(value) : null;
-    const _waBtn = (isPhone && _waUrl) ? `<a href="${_waUrl}" target="WhatsAppWeb" rel="noopener" title="فتح محادثة واتساب" style="display:inline-flex;align-items:center;justify-content:center;width:26px;height:26px;background:#25D366;border-radius:50%;text-decoration:none;box-shadow:0 2px 6px rgba(37,211,102,0.45);transition:transform 0.15s ease;" onmouseover="this.style.transform='scale(1.1)'" onmouseout="this.style.transform='scale(1)'"><svg width="15" height="15" viewBox="0 0 24 24" fill="white"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z"/></svg></a>` : '';
-    const _editBtn = isCCMgr ? `<button onclick="editBranchField('${fieldKey}')" title="تعديل ${sanitize(cfg.label)}" style="background:none;border:none;cursor:pointer;color:var(--text-dim);padding:0 4px;font-size:13px;">✏️</button>` : '';
-    const _displayVal = sanitize(value || '—');
-    return `
-        <div id="brView-${fieldKey}" style="display:flex;gap:8px;font-size:12px;line-height:1.7;border-bottom:1px solid rgba(255,255,255,0.05);padding:5px 0;align-items:center;">
-            <span style="color:var(--text-dim);min-width:120px;">${cfg.icon} ${cfg.label}:</span>
-            <span style="color:var(--text-main);font-weight:700;flex:1;">${_displayVal}</span>
-            <span style="display:flex;gap:4px;align-items:center;">
-                ${extraBadge}
-                ${_waBtn}
-                ${_editBtn}
-            </span>
-        </div>
-        ${isCCMgr ? `
-        <div id="brEdit-${fieldKey}" style="display:none;padding:6px 0;border-bottom:1px solid rgba(255,255,255,0.05);">
-            <label style="font-size:10px;color:var(--text-dim);display:block;margin-bottom:3px;">${cfg.icon} ${sanitize(cfg.label)}</label>
-            <div style="display:flex;gap:4px;align-items:stretch;">
-                <input id="brInp-${fieldKey}" type="${cfg.type}" value="${sanitize(value || '')}" style="flex:1;padding:5px 8px;font-size:12px;font-family:'Cairo';">
-                <button onclick="saveBranchField('${fieldKey}')" title="حفظ" style="padding:5px 11px;background:rgba(46,125,50,0.2);border:1px solid rgba(46,125,50,0.5);color:#a5d6a7;border-radius:6px;cursor:pointer;font-family:'Cairo';font-size:11px;font-weight:700;">💾</button>
-                <button onclick="cancelBranchField('${fieldKey}')" title="إلغاء" style="padding:5px 11px;background:rgba(120,120,120,0.1);border:1px solid var(--border);color:var(--text-dim);border-radius:6px;cursor:pointer;font-family:'Cairo';font-size:11px;">✗</button>
-            </div>
-        </div>` : ''}`;
+    const _waBtn = (isPhone && _waUrl) ? `<a href="${_waUrl}" target="WhatsAppWeb" rel="noopener" title="فتح محادثة واتساب" style="display:inline-flex;align-items:center;justify-content:center;width:22px;height:22px;background:#25D366;border-radius:50%;text-decoration:none;box-shadow:0 1px 4px rgba(37,211,102,0.4);vertical-align:middle;transition:transform 0.15s ease;" onmouseover="this.style.transform='scale(1.12)'" onmouseout="this.style.transform='scale(1)'"><svg width="13" height="13" viewBox="0 0 24 24" fill="white"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z"/></svg></a>` : '';
+    const _editBtn = isCCMgr ? `<button onclick="editBranchField('${fieldKey}')" title="تعديل ${sanitize(cfg.label)}" style="background:none;border:none;cursor:pointer;color:var(--text-dim);padding:0 2px;font-size:12px;">✏️</button>` : '';
+    const _inputWidth = cfg.type === 'time' ? '110px' : (isPhone ? '130px' : '120px');
+    return `<span id="brView-${fieldKey}" style="display:inline-flex;align-items:center;gap:3px;">
+            <span style="color:var(--text-main);font-weight:700;">${sanitize(value || '—')}</span>
+            ${_editBtn}${_waBtn}
+        </span>${isCCMgr ? `<span id="brEdit-${fieldKey}" style="display:none;align-items:center;gap:3px;">
+            <input id="brInp-${fieldKey}" type="${cfg.type}" value="${sanitize(value || '')}" style="padding:3px 6px;font-size:11px;font-family:'Cairo';width:${_inputWidth};">
+            <button onclick="saveBranchField('${fieldKey}')" title="حفظ" style="padding:2px 7px;background:rgba(46,125,50,0.2);border:1px solid rgba(46,125,50,0.5);color:#a5d6a7;border-radius:5px;cursor:pointer;font-family:'Cairo';font-size:10px;font-weight:700;">💾</button>
+            <button onclick="cancelBranchField('${fieldKey}')" title="إلغاء" style="padding:2px 7px;background:rgba(120,120,120,0.1);border:1px solid var(--border);color:var(--text-dim);border-radius:5px;cursor:pointer;font-family:'Cairo';font-size:10px;">✗</button>
+        </span>` : ''}`;
 }
 
 function _updateBranchInfoPanel() {
@@ -172,17 +161,39 @@ function _updateBranchInfoPanel() {
     panel.style.display = 'block';
 
     panel.innerHTML = `
-        <div style="background:linear-gradient(135deg,rgba(33,150,243,0.10),rgba(33,150,243,0.03));border:1px solid rgba(100,181,246,0.40);border-radius:14px;padding:14px;box-shadow:0 4px 12px rgba(0,0,0,0.18);">
+        <div style="background:linear-gradient(135deg,rgba(33,150,243,0.10),rgba(33,150,243,0.03));border:1px solid rgba(100,181,246,0.40);border-radius:14px;padding:12px 14px;box-shadow:0 4px 12px rgba(0,0,0,0.18);">
             <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;gap:8px;flex-wrap:wrap;">
                 <span style="font-size:13px;font-weight:700;color:#90caf9;">🏢 ${sanitize(br)} / ${sanitize(city)}</span>
                 ${statusBadge}
             </div>
-            ${_renderBranchFieldRow('managerName',     info.managerName,     isCCMgr)}
-            ${_renderBranchFieldRow('managerPhone',    info.managerPhone,    isCCMgr)}
-            ${_renderBranchFieldRow('areaManagerName', info.areaManagerName, isCCMgr)}
-            ${_renderBranchFieldRow('areaManagerPhone',info.areaManagerPhone,isCCMgr)}
-            ${_renderBranchFieldRow('openHour',        info.openHour,        isCCMgr)}
-            ${_renderBranchFieldRow('closeHour',       info.closeHour,       isCCMgr)}
+            <div style="display:grid;grid-template-columns:minmax(0,2fr) minmax(0,1fr);gap:14px;align-items:start;">
+                <div style="display:flex;flex-direction:column;gap:7px;">
+                    <div style="display:flex;flex-wrap:wrap;align-items:center;gap:6px;font-size:12px;line-height:1.7;">
+                        <span style="color:var(--text-dim);">👤 مدير الفرع:</span>
+                        ${_renderBranchInlineField('managerName',  info.managerName,  isCCMgr)}
+                        <span style="color:rgba(255,255,255,0.18);">|</span>
+                        <span style="color:var(--text-dim);">📞</span>
+                        ${_renderBranchInlineField('managerPhone', info.managerPhone, isCCMgr)}
+                    </div>
+                    <div style="display:flex;flex-wrap:wrap;align-items:center;gap:6px;font-size:12px;line-height:1.7;">
+                        <span style="color:var(--text-dim);">👤 مدير المنطقة:</span>
+                        ${_renderBranchInlineField('areaManagerName',  info.areaManagerName,  isCCMgr)}
+                        <span style="color:rgba(255,255,255,0.18);">|</span>
+                        <span style="color:var(--text-dim);">📞</span>
+                        ${_renderBranchInlineField('areaManagerPhone', info.areaManagerPhone, isCCMgr)}
+                    </div>
+                </div>
+                <div style="display:flex;flex-direction:column;gap:7px;border-inline-start:1px solid rgba(255,255,255,0.08);padding-inline-start:14px;">
+                    <div style="display:flex;flex-wrap:wrap;align-items:center;gap:5px;font-size:12px;line-height:1.7;">
+                        <span style="color:var(--text-dim);">🕘 الافتتاح:</span>
+                        ${_renderBranchInlineField('openHour',  info.openHour,  isCCMgr)}
+                    </div>
+                    <div style="display:flex;flex-wrap:wrap;align-items:center;gap:5px;font-size:12px;line-height:1.7;">
+                        <span style="color:var(--text-dim);">🕔 الإغلاق:</span>
+                        ${_renderBranchInlineField('closeHour', info.closeHour, isCCMgr)}
+                    </div>
+                </div>
+            </div>
         </div>`;
     _scheduleBranchPanelTick(true);
 }
@@ -194,14 +205,14 @@ function editBranchField(fieldKey) {
     const v = document.getElementById(`brView-${fieldKey}`);
     const e = document.getElementById(`brEdit-${fieldKey}`);
     if (v) v.style.display = 'none';
-    if (e) e.style.display = 'block';
+    if (e) e.style.display = 'inline-flex';
     document.getElementById(`brInp-${fieldKey}`)?.focus();
 }
 
 function cancelBranchField(fieldKey) {
     const v = document.getElementById(`brView-${fieldKey}`);
     const e = document.getElementById(`brEdit-${fieldKey}`);
-    if (v) v.style.display = '';
+    if (v) v.style.display = 'inline-flex';
     if (e) e.style.display = 'none';
 }
 
