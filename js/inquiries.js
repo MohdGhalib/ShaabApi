@@ -183,7 +183,6 @@ function _updateBranchInfoPanel() {
             ${_renderBranchFieldRow('areaManagerPhone',info.areaManagerPhone,isCCMgr)}
             ${_renderBranchFieldRow('openHour',        info.openHour,        isCCMgr)}
             ${_renderBranchFieldRow('closeHour',       info.closeHour,       isCCMgr)}
-            ${info.updatedAt ? `<div style="margin-top:8px;font-size:10px;color:var(--text-dim);text-align:center;">آخر تعديل: ${sanitize(info.updatedAt)} — ${sanitize(info.updatedBy||'—')}</div>` : ''}
         </div>`;
     _scheduleBranchPanelTick(true);
 }
