@@ -166,33 +166,21 @@ function _updateBranchInfoPanel() {
                 <span style="font-size:13px;font-weight:700;color:#90caf9;">🏢 ${sanitize(br)} / ${sanitize(city)}</span>
                 ${statusBadge}
             </div>
-            <div style="display:grid;grid-template-columns:minmax(0,2fr) minmax(0,1fr);gap:14px;align-items:start;">
-                <div style="display:flex;flex-direction:column;gap:7px;">
-                    <div style="display:flex;flex-wrap:wrap;align-items:center;gap:6px;font-size:12px;line-height:1.7;">
-                        <span style="color:var(--text-dim);">👤 مدير الفرع:</span>
-                        ${_renderBranchInlineField('managerName',  info.managerName,  isCCMgr)}
-                        <span style="color:rgba(255,255,255,0.18);">|</span>
-                        <span style="color:var(--text-dim);">📞</span>
-                        ${_renderBranchInlineField('managerPhone', info.managerPhone, isCCMgr)}
-                    </div>
-                    <div style="display:flex;flex-wrap:wrap;align-items:center;gap:6px;font-size:12px;line-height:1.7;">
-                        <span style="color:var(--text-dim);">👤 مدير المنطقة:</span>
-                        ${_renderBranchInlineField('areaManagerName',  info.areaManagerName,  isCCMgr)}
-                        <span style="color:rgba(255,255,255,0.18);">|</span>
-                        <span style="color:var(--text-dim);">📞</span>
-                        ${_renderBranchInlineField('areaManagerPhone', info.areaManagerPhone, isCCMgr)}
-                    </div>
-                </div>
-                <div style="display:flex;flex-direction:column;gap:7px;border-inline-start:1px solid rgba(255,255,255,0.08);padding-inline-start:14px;">
-                    <div style="display:flex;flex-wrap:wrap;align-items:center;gap:5px;font-size:12px;line-height:1.7;">
-                        <span style="color:var(--text-dim);">🕘 الافتتاح:</span>
-                        ${_renderBranchInlineField('openHour',  info.openHour,  isCCMgr)}
-                    </div>
-                    <div style="display:flex;flex-wrap:wrap;align-items:center;gap:5px;font-size:12px;line-height:1.7;">
-                        <span style="color:var(--text-dim);">🕔 الإغلاق:</span>
-                        ${_renderBranchInlineField('closeHour', info.closeHour, isCCMgr)}
-                    </div>
-                </div>
+            <div style="display:grid;grid-template-columns:max-content max-content max-content;gap:8px 14px;align-items:center;font-size:12px;line-height:1.7;">
+                <span style="color:var(--text-dim);">👤 مدير الفرع:</span>
+                ${_renderBranchInlineField('managerName', info.managerName, isCCMgr)}
+                <span style="display:inline-flex;align-items:center;gap:5px;"><span style="color:var(--text-dim);">📞</span>${_renderBranchInlineField('managerPhone', info.managerPhone, isCCMgr)}</span>
+
+                <span style="color:var(--text-dim);">👤 مدير المنطقة:</span>
+                ${_renderBranchInlineField('areaManagerName', info.areaManagerName, isCCMgr)}
+                <span style="display:inline-flex;align-items:center;gap:5px;"><span style="color:var(--text-dim);">📞</span>${_renderBranchInlineField('areaManagerPhone', info.areaManagerPhone, isCCMgr)}</span>
+            </div>
+            <div style="margin-top:10px;padding-top:8px;border-top:1px solid rgba(255,255,255,0.08);display:grid;grid-template-columns:max-content max-content;gap:6px 12px;align-items:center;font-size:12px;line-height:1.7;">
+                <span style="color:var(--text-dim);">🕘 موعد الافتتاح:</span>
+                ${_renderBranchInlineField('openHour', info.openHour, isCCMgr)}
+
+                <span style="color:var(--text-dim);">🕔 موعد الإغلاق:</span>
+                ${_renderBranchInlineField('closeHour', info.closeHour, isCCMgr)}
             </div>
         </div>`;
     _scheduleBranchPanelTick(true);
