@@ -235,6 +235,7 @@ function saveBranchField(fieldKey) {
     const _val = (document.getElementById(`brInp-${fieldKey}`)?.value || '').trim();
     db.branchInfo[k][fieldKey]   = _val;
     db.branchInfo[k].updatedAt   = now();
+    db.branchInfo[k].updatedTs   = Date.now();
     db.branchInfo[k].updatedBy   = currentUser?.name || '—';
 
     if (typeof _logAudit === 'function') {

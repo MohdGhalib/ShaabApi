@@ -473,8 +473,31 @@ async function loadAllData() {
             ));
             if (_masterStr) {
                 try {
+                    // 🛡️ التقط التعديلات المحلية لمعلومات الفروع التي قد تكون أحدث من السيرفر
+                    // (لتجنّب فقدان تعديل قيد الحفظ عند تحديث من SSE/polling)
+                    const _localBranchInfo = (db && typeof db.branchInfo === 'object')
+                        ? JSON.parse(JSON.stringify(db.branchInfo))
+                        : null;
                     const _parsed = JSON.parse(_masterStr);
                     db = _parsed;
+                    // 🔄 طبّق التعديلات المحلية الأحدث فوق بيانات السيرفر (مقارنة بالـ timestamp)
+                    if (_localBranchInfo) {
+                        if (!db.branchInfo || typeof db.branchInfo !== 'object') db.branchInfo = {};
+                        for (const bk in _localBranchInfo) {
+                            const lv = _localBranchInfo[bk];
+                            if (!lv || typeof lv !== 'object') continue;
+                            const sv = db.branchInfo[bk];
+                            const lt = (lv.updatedTs || 0);
+                            const st = (sv && sv.updatedTs) || 0;
+                            // إن لم يحمل المحلي ختم زمني (بيانات قديمة) ولكن يحوي قيماً تختلف عن السيرفر،
+                            // ولم يكن السيرفر يحوي ختم زمني أيضاً، خذ المحلي (احتياط)
+                            if (lt > st) {
+                                db.branchInfo[bk] = lv;
+                            } else if (!lt && !st && JSON.stringify(lv) !== JSON.stringify(sv)) {
+                                db.branchInfo[bk] = lv;
+                            }
+                        }
+                    }
                 } catch (e) {
                     console.error('[DATA-GUARD] Master_DB parse failed — keeping local state:', e);
                     if (!db || typeof db !== 'object') db = { montasiat:[], inquiries:[], complaints:[] };
