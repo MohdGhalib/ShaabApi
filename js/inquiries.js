@@ -130,7 +130,7 @@ function _renderBranchFieldRow(fieldKey, value, isCCMgr, extraBadge = '') {
     if (!cfg) return '';
     const isPhone = cfg.type === 'tel';
     const _waUrl  = isPhone ? _whatsappUrl(value) : null;
-    const _waBtn = (isPhone && _waUrl) ? `<a href="${_waUrl}" target="_blank" rel="noopener" title="فتح محادثة واتساب" style="text-decoration:none;background:rgba(37,211,102,0.15);color:#25d366;border:1px solid rgba(37,211,102,0.45);border-radius:6px;padding:1px 8px;font-size:13px;font-weight:700;line-height:1.5;">💬</a>` : '';
+    const _waBtn = (isPhone && _waUrl) ? `<a href="${_waUrl}" target="WhatsAppWeb" rel="noopener" title="فتح محادثة واتساب" style="display:inline-flex;align-items:center;justify-content:center;width:26px;height:26px;background:#25D366;border-radius:50%;text-decoration:none;box-shadow:0 2px 6px rgba(37,211,102,0.45);transition:transform 0.15s ease;" onmouseover="this.style.transform='scale(1.1)'" onmouseout="this.style.transform='scale(1)'"><svg width="15" height="15" viewBox="0 0 24 24" fill="white"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z"/></svg></a>` : '';
     const _editBtn = isCCMgr ? `<button onclick="editBranchField('${fieldKey}')" title="تعديل ${sanitize(cfg.label)}" style="background:none;border:none;cursor:pointer;color:var(--text-dim);padding:0 4px;font-size:13px;">✏️</button>` : '';
     const _displayVal = sanitize(value || '—');
     return `
@@ -171,12 +171,6 @@ function _updateBranchInfoPanel() {
     const statusBadge = _renderBranchStatusBadge(info.openHour, info.closeHour);
     panel.style.display = 'block';
 
-    const _branchSt    = _calcBranchStatus(info.openHour, info.closeHour);
-    const _closedFlash = info.closeHour && _branchSt === 'closed'
-        ? `<span class="branch-blink" style="color:#ef5350;font-weight:700;font-size:11px;">الفرع مغلق</span>` : '';
-    const _soonFlash   = info.closeHour && _branchSt === 'closing-soon'
-        ? `<span class="branch-blink" style="color:#ffb300;font-weight:700;font-size:11px;">يغلق قريباً</span>` : '';
-
     panel.innerHTML = `
         <div style="background:linear-gradient(135deg,rgba(33,150,243,0.10),rgba(33,150,243,0.03));border:1px solid rgba(100,181,246,0.40);border-radius:14px;padding:14px;box-shadow:0 4px 12px rgba(0,0,0,0.18);">
             <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;gap:8px;flex-wrap:wrap;">
@@ -188,7 +182,7 @@ function _updateBranchInfoPanel() {
             ${_renderBranchFieldRow('areaManagerName', info.areaManagerName, isCCMgr)}
             ${_renderBranchFieldRow('areaManagerPhone',info.areaManagerPhone,isCCMgr)}
             ${_renderBranchFieldRow('openHour',        info.openHour,        isCCMgr)}
-            ${_renderBranchFieldRow('closeHour',       info.closeHour,       isCCMgr, _closedFlash || _soonFlash)}
+            ${_renderBranchFieldRow('closeHour',       info.closeHour,       isCCMgr)}
             ${info.updatedAt ? `<div style="margin-top:8px;font-size:10px;color:var(--text-dim);text-align:center;">آخر تعديل: ${sanitize(info.updatedAt)} — ${sanitize(info.updatedBy||'—')}</div>` : ''}
         </div>`;
     _scheduleBranchPanelTick(true);
