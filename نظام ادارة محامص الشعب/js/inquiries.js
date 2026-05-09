@@ -31,6 +31,106 @@ function toggleInquiryNotes() {
     }
 }
 
+/* ══════════════════════════════════════════════════════
+   معلومات الفرع المعروضة بجانب زر "حفظ الاستفسار"
+   - يقرأها الجميع
+   - يعدّلها مدير الكول سنتر (cc_manager / admin) فقط
+══════════════════════════════════════════════════════ */
+function _branchInfoKey(city, branch) {
+    return `${(city||'').trim()}__${(branch||'').trim()}`;
+}
+
+function _getBranchInfo(city, branch) {
+    if (!db.branchInfo || typeof db.branchInfo !== 'object') db.branchInfo = {};
+    return db.branchInfo[_branchInfoKey(city, branch)] || {};
+}
+
+function _updateBranchInfoPanel() {
+    const panel = document.getElementById('iBranchInfoPanel');
+    if (!panel) return;
+    const city = document.getElementById('iCityAdd')?.value || '';
+    const br   = document.getElementById('iBranchAdd')?.value || '';
+    if (!city || !br || br === 'غير محدد' || city === 'غير محدد') {
+        panel.style.display = 'none';
+        panel.innerHTML = '';
+        return;
+    }
+    const info     = _getBranchInfo(city, br);
+    const isCCMgr  = currentUser?.role === 'cc_manager' || currentUser?.isAdmin;
+    panel.style.display = 'block';
+
+    if (isCCMgr) {
+        const _input = (id, label, val, type) => `
+            <div style="display:flex;flex-direction:column;gap:3px;">
+                <label style="font-size:10px;color:var(--text-dim);">${label}</label>
+                <input id="${id}" type="${type||'text'}" value="${sanitize(val||'')}" style="padding:5px 8px;font-size:12px;font-family:'Cairo';box-sizing:border-box;width:100%;">
+            </div>`;
+        panel.innerHTML = `
+            <div style="background:rgba(33,150,243,0.06);border:1px solid rgba(100,181,246,0.4);border-radius:12px;padding:12px;">
+                <div style="font-size:12px;font-weight:700;color:#90caf9;margin-bottom:8px;text-align:center;">
+                    🏢 معلومات الفرع — ${sanitize(br)} / ${sanitize(city)}
+                </div>
+                <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:8px;">
+                    ${_input('biMgrName',   'مدير الفرع',           info.managerName)}
+                    ${_input('biMgrPhone',  'رقم مدير الفرع',       info.managerPhone, 'tel')}
+                    ${_input('biAreaName',  'مدير المنطقة',         info.areaManagerName)}
+                    ${_input('biAreaPhone', 'رقم مدير المنطقة',     info.areaManagerPhone, 'tel')}
+                    ${_input('biOpenHour',  'موعد الافتتاح',        info.openHour,  'time')}
+                    ${_input('biCloseHour', 'موعد الإغلاق',         info.closeHour, 'time')}
+                </div>
+                <button onclick="saveBranchInfo()" style="width:100%;padding:7px;background:linear-gradient(135deg,#2e7d32,#1b5e20);color:#fff;border:none;border-radius:8px;cursor:pointer;font-family:'Cairo';font-weight:700;font-size:12px;">
+                    💾 حفظ معلومات الفرع
+                </button>
+                ${info.updatedAt ? `<div style="margin-top:6px;font-size:10px;color:var(--text-dim);text-align:center;">آخر تعديل: ${sanitize(info.updatedAt)} — ${sanitize(info.updatedBy||'—')}</div>` : ''}
+            </div>`;
+    } else {
+        const _row = (k, v) => `
+            <div style="display:flex;gap:8px;font-size:12px;line-height:1.7;border-bottom:1px solid rgba(255,255,255,0.05);padding:3px 0;">
+                <span style="color:var(--text-dim);min-width:115px;">${k}</span>
+                <span style="color:var(--text-main);font-weight:700;">${sanitize(v||'—')}</span>
+            </div>`;
+        const _mgr  = info.managerName     ? `${info.managerName}${info.managerPhone?` — 📞 ${info.managerPhone}`:''}` : '—';
+        const _area = info.areaManagerName ? `${info.areaManagerName}${info.areaManagerPhone?` — 📞 ${info.areaManagerPhone}`:''}` : '—';
+        panel.innerHTML = `
+            <div style="background:rgba(33,150,243,0.06);border:1px solid rgba(100,181,246,0.25);border-radius:12px;padding:12px;">
+                <div style="font-size:12px;font-weight:700;color:#90caf9;margin-bottom:8px;text-align:center;">
+                    🏢 معلومات الفرع — ${sanitize(br)} / ${sanitize(city)}
+                </div>
+                ${_row('مدير الفرع:',   _mgr)}
+                ${_row('مدير المنطقة:', _area)}
+                ${_row('🕘 الافتتاح:',  info.openHour)}
+                ${_row('🕔 الإغلاق:',   info.closeHour)}
+            </div>`;
+    }
+}
+
+function saveBranchInfo() {
+    const isCCMgr = currentUser?.role === 'cc_manager' || currentUser?.isAdmin;
+    if (!isCCMgr) return alert('فقط مدير الكول سنتر يمكنه تعديل معلومات الفرع');
+    const city = document.getElementById('iCityAdd')?.value || '';
+    const br   = document.getElementById('iBranchAdd')?.value || '';
+    if (!city || !br || br === 'غير محدد' || city === 'غير محدد') return alert('يرجى اختيار محافظة وفرع صحيحين');
+
+    if (!db.branchInfo || typeof db.branchInfo !== 'object') db.branchInfo = {};
+    const k = _branchInfoKey(city, br);
+    db.branchInfo[k] = {
+        managerName:      (document.getElementById('biMgrName')?.value   || '').trim(),
+        managerPhone:     (document.getElementById('biMgrPhone')?.value  || '').trim(),
+        areaManagerName:  (document.getElementById('biAreaName')?.value  || '').trim(),
+        areaManagerPhone: (document.getElementById('biAreaPhone')?.value || '').trim(),
+        openHour:         document.getElementById('biOpenHour')?.value   || '',
+        closeHour:        document.getElementById('biCloseHour')?.value  || '',
+        updatedAt:        now(),
+        updatedBy:        currentUser?.name || '—'
+    };
+    if (typeof _logAudit === 'function') {
+        _logAudit('saveBranchInfo', br, `${city} — ${db.branchInfo[k].managerName||'—'} / ${db.branchInfo[k].areaManagerName||'—'}`);
+    }
+    save();
+    alert('✓ تم حفظ معلومات الفرع');
+    _updateBranchInfoPanel();
+}
+
 /* ── إظهار/إخفاء حقل رقم المنتسية حسب اختيار "نعم/لا" ── */
 function _toggleMontasiaSerialBox() {
     const yes = document.getElementById('iMontasiaExistsYes')?.checked;
@@ -278,6 +378,7 @@ function addInquiry() {
         else updateBranches("iCityAdd","iBranchAdd");
         populateLinkedInquirySelect();
         toggleUnspecifiedBranch();
+        _updateBranchInfoPanel();
     };
 
     // قراءة الفاتورة (للشكاوى المالية) ثم صورة الجودة (لشكاوى جودة صنف) ثم الحفظ

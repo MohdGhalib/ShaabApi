@@ -161,11 +161,11 @@ i: `
     <h3>تسجيل استفسار عميل</h3>
     <div style="display:grid;grid-template-columns:1fr 1fr;gap:15px;margin-bottom:15px;">
         <input type="text" id="iPhone" placeholder="رقم الهاتف" oninput="_iLivePhoneSearch(this.value)">
-        <select id="iCountryAdd" onchange="updateCities('iCountryAdd','iCityAdd','iBranchAdd');toggleUnspecifiedBranch()"></select>
+        <select id="iCountryAdd" onchange="updateCities('iCountryAdd','iCityAdd','iBranchAdd');toggleUnspecifiedBranch();_updateBranchInfoPanel()"></select>
     </div>
     <div style="display:grid;grid-template-columns:1fr 1fr;gap:15px;margin-bottom:15px;">
-        <select id="iCityAdd" onchange="updateBranches('iCityAdd','iBranchAdd');toggleUnspecifiedBranch()"></select>
-        <select id="iBranchAdd"></select>
+        <select id="iCityAdd" onchange="updateBranches('iCityAdd','iBranchAdd');toggleUnspecifiedBranch();_updateBranchInfoPanel()"></select>
+        <select id="iBranchAdd" onchange="_updateBranchInfoPanel()"></select>
     </div>
     <div style="margin-bottom:15px;">
         <label style="font-size:13px;color:var(--text-dim);display:block;margin-bottom:5px;">نوع الاستفسار</label>
@@ -265,7 +265,10 @@ i: `
         <label style="font-size:13px;color:var(--text-dim);display:block;margin-bottom:5px;">التفاصيل</label>
         <textarea id="iNotes" placeholder="اكتب التفاصيل هنا..." rows="3"></textarea>
     </div>
-    <button class="btn btn-main" style="margin-top:5px" onclick="addInquiry()">حفظ الاستفسار</button>
+    <div style="display:flex;gap:14px;align-items:flex-start;margin-top:5px;flex-wrap:wrap;">
+        <button class="btn btn-main" style="flex:0 0 auto;align-self:stretch;" onclick="addInquiry()">حفظ الاستفسار</button>
+        <div id="iBranchInfoPanel" style="flex:1 1 320px;display:none;min-width:280px;"></div>
+    </div>
 </div>
 <div class="search-bar search-bar-i">
     <div style="grid-column:1/-1;" class="search-section-title">🔍 خيارات البحث</div>

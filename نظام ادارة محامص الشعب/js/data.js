@@ -504,6 +504,7 @@ async function loadAllData() {
     if (!db.inqSeq) db.inqSeq = 1;
     if (!db.auditLog) db.auditLog = [];
     if (!db.compensations) db.compensations = [];
+    if (!db.branchInfo || typeof db.branchInfo !== 'object') db.branchInfo = {};
 
     // حذف تلقائي: إزالة العناصر المحذوفة منذ أكثر من 30 يوماً
     const _purgeCutoff = Date.now() - 30 * 24 * 60 * 60 * 1000;
