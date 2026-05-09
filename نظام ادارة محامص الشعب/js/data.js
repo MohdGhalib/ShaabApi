@@ -821,11 +821,33 @@ function _showSaveError() {
     el._t = setTimeout(() => { el.style.display = 'none'; }, 4000);
 }
 
+/* تجميع (debounce) لطلبات الحفظ المتتالية:
+   - الواجهة تتحدّث فوراً (renderAll + الشارات) — بدون تأخير محسوس
+   - الإرسال للسيرفر يُؤجَّل 300ms ويُدمج مع أي حفظ آخر يحدث في الفترة
+   - يحلّ مشكلة "ادخال اسم ثم نسخه ولصقه بسرعة" — كلا الحفظَين يُجمَّعان في طلب واحد فلا يحدث تعارض */
+let _saveDebounceTimer = null;
 function save() {
-    _push('Shaab_Master_DB', JSON.stringify(db));
     renderAll();
-    // تحديث الشارات مباشرةً بعد الحفظ بصرف النظر عن وضع التبويب الحالي
     if (typeof _updateBadges === 'function') _updateBadges();
+    if (_saveDebounceTimer) clearTimeout(_saveDebounceTimer);
+    _saveDebounceTimer = setTimeout(() => {
+        _saveDebounceTimer = null;
+        _push('Shaab_Master_DB', JSON.stringify(db));
+    }, 300);
+}
+
+/* أرسِل أي حفظ مؤجَّل فوراً — يُستدعى عند مغادرة الصفحة لتجنّب فقدان البيانات */
+function _flushPendingSave() {
+    if (_saveDebounceTimer) {
+        clearTimeout(_saveDebounceTimer);
+        _saveDebounceTimer = null;
+        _push('Shaab_Master_DB', JSON.stringify(db));
+    }
+}
+if (typeof window !== 'undefined') {
+    window.addEventListener('beforeunload', _flushPendingSave);
+    window.addEventListener('pagehide',     _flushPendingSave);
+    window.addEventListener('blur',         _flushPendingSave);
 }
 function saveEmployees() { _push('Shaab_Employees_DB', JSON.stringify(employees)); }
 function saveBreaks()    { _push('Shaab_Breaks_DB',    JSON.stringify(breaks));    }
