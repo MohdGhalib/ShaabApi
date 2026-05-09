@@ -183,10 +183,11 @@ function _updateBranchInfoPanel() {
                 ${statusBadge}
             </div>
             <div style="display:grid;grid-template-columns:max-content max-content max-content;gap:8px 14px;align-items:center;font-size:12px;line-height:1.7;">
+                ${(typeof getBranchRegion === 'function' && getBranchRegion(br) === 'فروع العقبة') ? '' : `
                 <span style="color:var(--text-dim);">👤 مدير الفرع:</span>
                 ${_renderBranchInlineField('managerName', info.managerName, isCCMgr)}
                 <span style="display:inline-flex;align-items:center;gap:5px;"><span style="color:var(--text-dim);">📞</span>${_renderBranchInlineField('managerPhone', info.managerPhone, isCCMgr)}</span>
-
+                `}
                 <span style="color:var(--text-dim);">👤 مدير المنطقة:</span>
                 ${_renderBranchInlineField('areaManagerName', info.areaManagerName, isCCMgr)}
                 <span style="display:inline-flex;align-items:center;gap:5px;"><span style="color:var(--text-dim);">📞</span>${_renderBranchInlineField('areaManagerPhone', info.areaManagerPhone, isCCMgr)}</span>
