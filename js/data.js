@@ -523,6 +523,37 @@ async function loadAllData() {
         _push('Shaab_Master_DB', JSON.stringify(db));
     }
 
+    // ترحيل تلقائي: ترقيم تسلسلي بصيغة YY-NNN للمنتسيات الموجودة بدون رقم
+    if (Array.isArray(db.montasiat) && db.montasiat.some(x => !x.serial && !x.deleted)) {
+        if (!db.montasiatSeqByYear || typeof db.montasiatSeqByYear !== 'object') db.montasiatSeqByYear = {};
+        // أولاً: استخرج أعلى رقم لكل سنة من المنتسيات التي لها سيريال أصلاً
+        for (const x of db.montasiat) {
+            if (x.serial && /^\d{2}-\d{3,}$/.test(x.serial)) {
+                const [yy, nn] = x.serial.split('-');
+                const n = parseInt(nn, 10);
+                if (!isNaN(n) && (!db.montasiatSeqByYear[yy] || n > db.montasiatSeqByYear[yy])) {
+                    db.montasiatSeqByYear[yy] = n;
+                }
+            }
+        }
+        // ثانياً: رتّب المنتسيات بدون سيريال تصاعدياً حسب iso ثم id
+        const _toBackfill = db.montasiat
+            .filter(x => !x.serial)
+            .sort((a, b) => {
+                const A = (a.iso || '0000-00-00') + '|' + (a.id || 0);
+                const B = (b.iso || '0000-00-00') + '|' + (b.id || 0);
+                return A.localeCompare(B);
+            });
+        for (const x of _toBackfill) {
+            const isoDate = x.iso || iso();
+            const yy = String(isoDate).substring(2, 4);
+            if (!db.montasiatSeqByYear[yy]) db.montasiatSeqByYear[yy] = 0;
+            db.montasiatSeqByYear[yy]++;
+            x.serial = `${yy}-${String(db.montasiatSeqByYear[yy]).padStart(3, '0')}`;
+        }
+        _push('Shaab_Master_DB', JSON.stringify(db));
+    }
+
     // ترحيل تلقائي: إضافة salt للموظفين القدامى (بعد تسجيل الدخول فقط)
     if (_token || IS_LOCAL) {
         const needsMigration = employees.some(e => !e.salt);

@@ -234,7 +234,7 @@ function resetSearch(t) {
         const disp=document.getElementById(fieldId+'-display'); if(disp){ disp.textContent='📅 اختر التاريخ'; disp.classList.remove('selected'); }
     };
     if (t==='M') {
-        clear(['searchCountryM','searchCityM','searchTextM','searchTypeM','searchSectionM','searchRoastSubM']);
+        clear(['searchCountryM','searchCityM','searchTextM','searchTypeM','searchSectionM','searchRoastSubM','searchReservedM']);
         if (typeof updateCities === 'function') updateCities('searchCountryM','searchCityM','searchBranchM');
         else document.getElementById('searchBranchM').innerHTML='<option value="">الكل</option>';
         clearDate('searchDateM');
@@ -380,7 +380,8 @@ function _renderTableM(get, isAdmin) {
         deliverDate: get("searchDeliverDateM"),  // وقت التسليم
         text:        get("searchTextM").toLowerCase(),
         type:        get("searchTypeM"),
-        subType:     get("searchRoastSubM")
+        subType:     get("searchRoastSubM"),
+        reservedOnly: get("searchReservedM")     // منتسيات مسجلة لزبائن (غير مسلّمة + محجوزة)
     };
     // فلتر الفرع لموظف/مدير الفرع ومدير المنطقة
     const _myRole = currentUser?.role;
@@ -407,7 +408,8 @@ function _renderTableM(get, isAdmin) {
         (!f.deliverDate || _getDeliveryIso(x).startsWith(f.deliverDate)) &&
         (!f.type        || (x.type||'')=== f.type) &&
         (!f.subType     || (x.roastSubType||'') === f.subType) &&
-        (!selectedSectionM || selectedSectionBranchesM.includes(x.branch))
+        (!selectedSectionM || selectedSectionBranchesM.includes(x.branch)) &&
+        (!f.reservedOnly || (!!x.reservedFor && x.status !== 'تم التسليم'))
     );
     if (!_pg.M) _pg.M = 1;
     const _sizeM = _pgSize.M || _DEFAULT_PAGE_SIZE;
@@ -545,7 +547,11 @@ function _renderTableM(get, isAdmin) {
         return `<tr data-id="${x.id}">
             <td><b>${x.branch}</b>${_isCCMgr?` <button onclick="editMontasiaBranch(${x.id})" title="تعديل الفرع/المحافظة" style="background:none;border:none;cursor:pointer;color:var(--text-dim);padding:0 4px;font-size:12px;">✏️</button>`:''}${x.branchEmp?`<br><span style="font-size:13px;color:var(--text-dim);font-weight:700;">👤 ${sanitize(x.branchEmp)}</span>`:''}${mobileTag}</td>
             <td style="text-align:center;">${_typeCell}</td>
-            <td><span class="text-box-cell">${sanitize(x.notes)}</span>${perm('editM')?` <button onclick="startEditMontasia(${x.id})" title="تعديل المدخلات" style="background:none;border:none;cursor:pointer;color:var(--text-dim);padding:0 4px;font-size:13px;vertical-align:middle;">✏️</button>`:''}${extraInfo}${photoCell}${editBox}</td>
+            <td>
+                ${x.serial ? `<div style="margin-bottom:4px;"><span style="display:inline-block;background:rgba(100,181,246,0.15);color:#90caf9;border:1px solid rgba(100,181,246,0.4);padding:2px 8px;border-radius:6px;font-size:11px;font-weight:700;font-family:monospace;">#${sanitize(x.serial)}</span></div>` : ''}
+                <span class="text-box-cell">${sanitize(x.notes)}</span>${perm('editM')?` <button onclick="startEditMontasia(${x.id})" title="تعديل المدخلات" style="background:none;border:none;cursor:pointer;color:var(--text-dim);padding:0 4px;font-size:13px;vertical-align:middle;">✏️</button>`:''}${extraInfo}${photoCell}${editBox}
+                ${x.reservedFor && x.reservedFor.inqSeq ? `<div style="margin-top:8px;"><button onclick="jumpToInquiry(${x.reservedFor.inqSeq})" title="انتقل لاستفسار الزبون" style="background:linear-gradient(135deg,rgba(46,125,50,0.18),rgba(46,125,50,0.10));border:1px solid rgba(46,125,50,0.45);color:#a5d6a7;border-radius:8px;padding:5px 12px;font-family:'Cairo';font-size:11px;font-weight:700;cursor:pointer;">👤 رقم الزبون${x.reservedFor.phone?` — ${sanitize(x.reservedFor.phone)}`:''}</button></div>` : ''}
+            </td>
             <td style="vertical-align:top;text-align:center;">${_statusCell}</td>
             <td style="text-align:center;vertical-align:top;">
                 <div style="display:flex;flex-direction:column;gap:4px;align-items:center;">
@@ -753,14 +759,26 @@ function _renderTableI(get) {
         const notifyBtnI = (x.type === 'شكوى' && x.complaintType === 'جودة صنف')
             ? `<button onclick="openNotifyModalForInquiry(${x.id})" title="فتح شاشة التبليغ" style="margin-right:6px;padding:3px 10px;font-size:11px;border:none;border-radius:6px;background:linear-gradient(135deg,#1976d2,#0d47a1);color:#fff;cursor:pointer;font-family:'Cairo';font-weight:700;vertical-align:middle;">📣 تبليغ</button>`
             : '';
+        // ─ روابط المنتسية لاستفسار "استفسار عن منتسيات" ─
+        const _hasMontasiaSerial = x.type === 'استفسار عن منتسيات' && x.montasiaSerial;
+        const _existsTag = x.type === 'استفسار عن منتسيات' && x.montasiaExists
+            ? `<span style="margin-right:6px;font-size:10px;padding:2px 7px;border-radius:6px;font-weight:700;background:${x.montasiaExists==='yes'?'rgba(46,125,50,0.15)':'rgba(120,120,120,0.15)'};color:${x.montasiaExists==='yes'?'#a5d6a7':'#bdbdbd'};">${x.montasiaExists==='yes'?'✓ المنتسية موجودة':'لا — لا توجد منتسية'}</span>`
+            : '';
+        const _serialHtml = _hasMontasiaSerial
+            ? `<div style="margin-top:6px;display:flex;gap:6px;flex-wrap:wrap;align-items:center;">
+                <button onclick="jumpToMontasia('${sanitize(x.montasiaSerial)}')" title="انتقل للمنتسية" style="background:linear-gradient(135deg,rgba(100,181,246,0.18),rgba(100,181,246,0.08));border:1px solid rgba(100,181,246,0.45);color:#90caf9;border-radius:8px;padding:4px 12px;font-family:monospace;font-size:11px;font-weight:700;cursor:pointer;">📦 منتسية #${sanitize(x.montasiaSerial)}</button>
+                ${!x.reservedMontasiaSerial ? `<button onclick="reserveMontasiaForInquiry(${x.id})" title="حجز المنتسية للزبون" style="background:linear-gradient(135deg,rgba(46,125,50,0.18),rgba(46,125,50,0.08));border:1px solid rgba(46,125,50,0.45);color:#a5d6a7;border-radius:8px;padding:4px 12px;font-family:'Cairo';font-size:11px;font-weight:700;cursor:pointer;">🔒 حجز للزبون</button>` : `<span style="background:rgba(46,125,50,0.12);border:1px solid rgba(46,125,50,0.4);color:#a5d6a7;border-radius:8px;padding:3px 10px;font-family:'Cairo';font-size:10px;font-weight:700;">✓ محجوزة للزبون</span>`}
+              </div>`
+            : '';
         return `<tr data-id="${x.id}">
             <td><span class="seq-badge" title="الرقم التسلسلي">#${x.seq||'—'}</span></td>
             <td><b>${x.branch}</b><br><small>${x.city}</small></td>
             <td>${sanitize(x.phone)}</td>
             <td>
-                <span class="emp-badge">${x.type||'—'}</span>${ctBadge}${notifyBtnI}
+                <span class="emp-badge">${x.type||'—'}</span>${ctBadge}${_existsTag}${notifyBtnI}
                 ${_itemBadge}
                 ${x.notes?`<br><span class="text-box-cell" style="font-size:13px;color:var(--text-dim)">${sanitize(x.notes)}</span>`:''}
+                ${_serialHtml}
                 ${finFieldsHtml}
                 ${editBox}
             </td>
