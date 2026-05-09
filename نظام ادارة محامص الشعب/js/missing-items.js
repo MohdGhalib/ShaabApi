@@ -1074,7 +1074,7 @@ function toggleCountMontasia(id) {
     renderAll();
 }
 
-/* ── توليد رقم تسلسلي للمنتسية بصيغة YY-NNN (سنة-تسلسل) ──
+/* ── توليد رقم تسلسلي للمنتسية بصيغة YYNNN (سنة + تسلسل بدون فواصل) ──
    يضمن عدم تكرار الرقم مع أي منتسية موجودة بالنظام (ضمن نفس السنة + اختلاف السنة يكفي للتمييز). */
 function _genMontasiaSerial(isoDate) {
     const _iso = isoDate || (typeof iso === 'function' ? iso() : new Date().toISOString().slice(0,10));
@@ -1084,23 +1084,32 @@ function _genMontasiaSerial(isoDate) {
         // أعِد بناء العداد من البيانات الفعلية لتفادي أي تعارض
         let max = 0;
         for (const x of (db.montasiat || [])) {
-            if (x.serial && typeof x.serial === 'string' && x.serial.startsWith(yy + '-')) {
-                const n = parseInt(x.serial.split('-')[1], 10);
-                if (!isNaN(n) && n > max) max = n;
+            if (x.serial && typeof x.serial === 'string') {
+                const norm = x.serial.replace(/-/g, '');
+                if (norm.startsWith(yy) && /^\d{5,}$/.test(norm)) {
+                    const n = parseInt(norm.substring(2), 10);
+                    if (!isNaN(n) && n > max) max = n;
+                }
             }
         }
         db.montasiatSeqByYear[yy] = max;
     }
     db.montasiatSeqByYear[yy]++;
-    return `${yy}-${String(db.montasiatSeqByYear[yy]).padStart(3, '0')}`;
+    return `${yy}${String(db.montasiatSeqByYear[yy]).padStart(3, '0')}`;
+}
+
+/* ── طبيع رقم منتسية: إزالة "-" والفراغات ── */
+function _normalizeMontasiaSerial(s) {
+    return String(s || '').replace(/[-\s]/g, '').trim();
 }
 
 /* ── الانتقال إلى المنتسية برقمها التسلسلي وتمييزها بصرياً ── */
 function jumpToMontasia(serial) {
     if (!serial) return;
+    const _norm = _normalizeMontasiaSerial(serial);
     if (typeof switchTab === 'function') switchTab('m');
     setTimeout(() => {
-        const target = (db.montasiat || []).find(x => !x.deleted && x.serial === serial);
+        const target = (db.montasiat || []).find(x => !x.deleted && _normalizeMontasiaSerial(x.serial) === _norm);
         if (!target) { alert('لم يتم العثور على المنتسية رقم ' + serial); return; }
         const rows = document.querySelectorAll('#tableM tbody tr');
         rows.forEach(r => {

@@ -64,7 +64,7 @@ m: `
     <div><label>وقت التبليغ</label><div class="date-picker-wrap" onclick="openDatePicker('searchDateM')"><span class="date-display" id="searchDateM-display">📅 اختر التاريخ</span><input type="hidden" id="searchDateM"></div></div>
     <div><label>وقت التسليم</label><div class="date-picker-wrap" onclick="openDatePicker('searchDeliverDateM')"><span class="date-display" id="searchDeliverDateM-display">📅 اختر التاريخ</span><input type="hidden" id="searchDeliverDateM"></div></div>
     <div><label>بحث بالنص</label><input type="text" id="searchTextM" placeholder="بحث في التفاصيل..." oninput="filterTable()"></div>
-    <div><label>رقم المنتسية</label><input type="text" id="searchSerialM" placeholder="مثلاً: 26-001" oninput="filterTable()" style="font-family:monospace;letter-spacing:1px;"></div>
+    <div><label>رقم المنتسية</label><input type="text" id="searchSerialM" placeholder="مثلاً: 26001" oninput="filterTable()" style="font-family:monospace;letter-spacing:1px;"></div>
     <div><label>نوع المنتسية</label><select id="searchTypeM" onchange="filterTable();_toggleRoastSubFilter('M')"><option value="">الكل</option><option value="نقدي">نقدي</option><option value="اصناف محمص الشعب">أصناف محامص الشعب</option><option value="أخرى">أخرى</option><option value="متعدد الأصناف">📋 متعدد الأصناف</option></select></div>
     <div id="searchRoastSubMWrap" style="display:none;"><label>طريقة التسجيل</label><select id="searchRoastSubM" onchange="filterTable()"><option value="">الكل</option><option value="وزن">وزن</option><option value="قيمة">قيمة</option></select></div>
     <div><label>تصفية خاصة</label><select id="searchReservedM" onchange="filterTable()"><option value="">— الكل —</option><option value="1">👤 منتسيات مسجلة لزبائن (غير مسلّمة)</option></select></div>
@@ -247,9 +247,9 @@ i: `
             </label>
         </div>
         <div id="iMontasiaSerialBox" style="display:none;margin-top:12px;">
-            <label style="font-size:12px;color:var(--text-dim);display:block;margin-bottom:5px;">رقم المنتسية (مثلاً 26-001)</label>
+            <label style="font-size:12px;color:var(--text-dim);display:block;margin-bottom:5px;">رقم المنتسية (مثلاً 26001)</label>
             <div style="display:flex;gap:8px;align-items:stretch;">
-                <input type="text" id="iMontasiaSerial" placeholder="مثلاً: 26-001"
+                <input type="text" id="iMontasiaSerial" placeholder="مثلاً: 26001"
                     style="flex:1;font-family:monospace;letter-spacing:1px;"
                     onkeydown="if(event.key==='Enter'){event.preventDefault();_searchMontasiaBySerialFromInquiry();}">
                 <button type="button" onclick="_searchMontasiaBySerialFromInquiry()"

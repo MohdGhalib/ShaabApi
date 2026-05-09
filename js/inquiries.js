@@ -54,7 +54,8 @@ function _searchMontasiaBySerialFromInquiry() {
     if (!inEl || !prv) return;
     const serial = (inEl.value || '').trim();
     if (!serial) { prv.style.display = 'none'; prv.innerHTML = ''; return alert('يرجى إدخال رقم المنتسية'); }
-    const m = (db.montasiat || []).find(x => !x.deleted && x.serial === serial);
+    const _norm = serial.replace(/[-\s]/g, '');
+    const m = (db.montasiat || []).find(x => !x.deleted && (x.serial||'').replace(/[-\s]/g,'') === _norm);
     if (!m) {
         prv.style.display = 'block';
         prv.innerHTML = `<div style="background:rgba(211,47,47,0.08);border:1px dashed rgba(211,47,47,0.4);border-radius:10px;padding:12px;color:#ef9a9a;font-size:13px;font-weight:700;text-align:center;">✗ لم يتم العثور على منتسية بالرقم: ${sanitize(serial)}</div>`;
@@ -210,11 +211,14 @@ function addInquiry() {
         if (!exYes && !exNo) return alert('يرجى تحديد: هل المنتسية موجودة؟ (نعم/لا)');
         _montasiaExistsAns = exYes ? 'yes' : 'no';
         if (exYes) {
-            _montasiaSerialInput = (document.getElementById('iMontasiaSerial')?.value || '').trim();
-            if (!_montasiaSerialInput) return alert('يرجى إدخال رقم المنتسية');
-            // تحقّق من وجود المنتسية بالرقم
-            const _foundM = (db.montasiat || []).find(x => !x.deleted && x.serial === _montasiaSerialInput);
-            if (!_foundM) return alert('رقم المنتسية غير موجود في النظام: ' + _montasiaSerialInput);
+            const _raw = (document.getElementById('iMontasiaSerial')?.value || '').trim();
+            if (!_raw) return alert('يرجى إدخال رقم المنتسية');
+            // طبيع الرقم (إزالة "-") ثم ابحث في القائمة بمقارنة طبيعية
+            _montasiaSerialInput = _raw.replace(/[-\s]/g, '');
+            const _foundM = (db.montasiat || []).find(x => !x.deleted && (x.serial||'').replace(/[-\s]/g,'') === _montasiaSerialInput);
+            if (!_foundM) return alert('رقم المنتسية غير موجود في النظام: ' + _raw);
+            // اعتمد القيمة المحفوظة في DB لضمان التطابق
+            _montasiaSerialInput = _foundM.serial;
         }
     }
     let invoiceValue='', moveNumber='', noteDate='';
