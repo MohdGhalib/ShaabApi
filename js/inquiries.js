@@ -39,7 +39,76 @@ function _toggleMontasiaSerialBox() {
     if (!yes) {
         const sIn = document.getElementById('iMontasiaSerial');
         if (sIn) sIn.value = '';
+        const prv = document.getElementById('iMontasiaPreview');
+        if (prv) { prv.style.display = 'none'; prv.innerHTML = ''; }
     }
+}
+
+/* ── البحث برقم المنتسية في نموذج الاستفسار ──
+   - يتحقق من وجود الرقم
+   - يعرض كامل التفاصيل في صندوق معاينة
+   - يثبّت الدولة/المحافظة/الفرع تلقائياً على نموذج الاستفسار */
+function _searchMontasiaBySerialFromInquiry() {
+    const inEl = document.getElementById('iMontasiaSerial');
+    const prv  = document.getElementById('iMontasiaPreview');
+    if (!inEl || !prv) return;
+    const serial = (inEl.value || '').trim();
+    if (!serial) { prv.style.display = 'none'; prv.innerHTML = ''; return alert('يرجى إدخال رقم المنتسية'); }
+    const m = (db.montasiat || []).find(x => !x.deleted && x.serial === serial);
+    if (!m) {
+        prv.style.display = 'block';
+        prv.innerHTML = `<div style="background:rgba(211,47,47,0.08);border:1px dashed rgba(211,47,47,0.4);border-radius:10px;padding:12px;color:#ef9a9a;font-size:13px;font-weight:700;text-align:center;">✗ لم يتم العثور على منتسية بالرقم: ${sanitize(serial)}</div>`;
+        return;
+    }
+    // ── تثبيت الدولة/المحافظة/الفرع تلقائياً
+    const ctryEl = document.getElementById('iCountryAdd');
+    const cityEl = document.getElementById('iCityAdd');
+    const brEl   = document.getElementById('iBranchAdd');
+    if (ctryEl && m.country) {
+        ctryEl.value = m.country;
+        if (typeof updateCities === 'function') updateCities('iCountryAdd','iCityAdd','iBranchAdd');
+    }
+    if (cityEl && m.city) {
+        cityEl.value = m.city;
+        if (typeof updateBranches === 'function') updateBranches('iCityAdd','iBranchAdd');
+    }
+    if (brEl && m.branch) brEl.value = m.branch;
+    if (typeof toggleUnspecifiedBranch === 'function') toggleUnspecifiedBranch();
+
+    // ── بناء صندوق التفاصيل الكاملة
+    const _row = (k, v) => v ? `<div style="display:flex;border-bottom:1px solid rgba(255,255,255,0.06);"><span style="background:rgba(255,255,255,0.05);padding:7px 12px;color:var(--text-dim);font-weight:700;min-width:130px;">${k}</span><span style="padding:7px 12px;color:var(--text-main);">${v}</span></div>` : '';
+    const _items = (Array.isArray(m.items) && m.items.length)
+        ? `<div style="padding:8px 12px;border-bottom:1px solid rgba(255,255,255,0.06);"><b>الأصناف:</b><ul style="margin:4px 0 0;padding-right:18px;">${m.items.map(it => `<li>${sanitize(it.name||'')}${it.value?` — قيمة: ${sanitize(it.value)}`:''}${it.weight?` — وزن: ${sanitize(it.weight)}`:''}${it.notes?` — ${sanitize(it.notes)}`:''}</li>`).join('')}</ul></div>`
+        : '';
+    const _statusColor = m.status === 'تم التسليم' ? '#a5d6a7' : m.status === 'مرفوضة' ? '#ef9a9a' : '#ffd54f';
+    const _reservedNote = m.reservedFor && m.reservedFor.inqSeq
+        ? `<div style="margin-top:8px;padding:8px 12px;background:rgba(255,152,0,0.08);border:1px dashed rgba(255,152,0,0.4);border-radius:8px;color:#ffb74d;font-size:12px;font-weight:700;text-align:center;">⚠️ هذه المنتسية محجوزة بالفعل لاستفسار آخر #${sanitize(m.reservedFor.inqSeq)} (${sanitize(m.reservedFor.phone||'—')})</div>`
+        : '';
+    prv.style.display = 'block';
+    prv.innerHTML = `
+        <div style="background:rgba(46,125,50,0.05);border:1px solid rgba(46,125,50,0.4);border-radius:12px;overflow:hidden;">
+            <div style="padding:10px 14px;background:linear-gradient(135deg,rgba(46,125,50,0.18),rgba(46,125,50,0.08));font-size:13px;font-weight:700;color:#a5d6a7;display:flex;justify-content:space-between;align-items:center;">
+                <span>✓ منتسية موجودة — #${sanitize(m.serial||'')}</span>
+                <span style="background:rgba(0,0,0,0.18);padding:3px 10px;border-radius:6px;font-family:monospace;color:${_statusColor};font-size:11px;">${sanitize(m.status||'—')}</span>
+            </div>
+            <div style="font-size:12px;line-height:1.7;">
+                ${_row('الفرع المبلِّغ', sanitize((m.branch||'—') + ' — ' + (m.city||'—')))}
+                ${_row('النوع', sanitize(m.type||'—'))}
+                ${_row('التفاصيل', sanitize(m.notes||''))}
+                ${_row('القيمة المالية المفقودة', sanitize(m.missingValue||''))}
+                ${_row('اسم الصنف', sanitize(m.roastItemName||''))}
+                ${_row('قيمة الصنف', sanitize(m.roastItemValue||''))}
+                ${_row('الوزن', sanitize(m.roastItemWeight||''))}
+                ${_items}
+                ${_row('موظف الفرع', sanitize(m.branchEmp||''))}
+                ${_row('وقت التبليغ', sanitize(m.time||''))}
+                ${_row('سجّل بواسطة', sanitize(m.addedBy||''))}
+            </div>
+            <div style="padding:10px 14px;background:rgba(100,181,246,0.06);border-top:1px solid rgba(100,181,246,0.25);font-size:12px;color:#90caf9;text-align:center;font-weight:700;">
+                📌 تم تثبيت الفرع <b style="color:#fff;">${sanitize(m.branch||'')} — ${sanitize(m.city||'')}</b> على نموذج الاستفسار
+            </div>
+            ${_reservedNote}
+        </div>`;
 }
 
 /* ── إظهار فلتر "نوع الشكوى" في شريط بحث الاستفسارات عند اختيار "شكوى" فقط ── */
@@ -197,6 +266,7 @@ function addInquiry() {
         const _mSrl  = document.getElementById('iMontasiaSerial');    if (_mSrl)  _mSrl.value    = '';
         const _mxBox = document.getElementById('iMontasiaExistsBox'); if (_mxBox) _mxBox.style.display = 'none';
         const _msBox = document.getElementById('iMontasiaSerialBox'); if (_msBox) _msBox.style.display = 'none';
+        const _mPrv  = document.getElementById('iMontasiaPreview');   if (_mPrv)  { _mPrv.style.display = 'none'; _mPrv.innerHTML = ''; }
         toggleComplaintFinancialBox();
         if (ctryEl) ctryEl.value = "";
         document.getElementById("iCityAdd").value="";

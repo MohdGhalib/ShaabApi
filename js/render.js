@@ -234,7 +234,7 @@ function resetSearch(t) {
         const disp=document.getElementById(fieldId+'-display'); if(disp){ disp.textContent='📅 اختر التاريخ'; disp.classList.remove('selected'); }
     };
     if (t==='M') {
-        clear(['searchCountryM','searchCityM','searchTextM','searchTypeM','searchSectionM','searchRoastSubM','searchReservedM']);
+        clear(['searchCountryM','searchCityM','searchTextM','searchSerialM','searchTypeM','searchSectionM','searchRoastSubM','searchReservedM']);
         if (typeof updateCities === 'function') updateCities('searchCountryM','searchCityM','searchBranchM');
         else document.getElementById('searchBranchM').innerHTML='<option value="">الكل</option>';
         clearDate('searchDateM');
@@ -379,6 +379,7 @@ function _renderTableM(get, isAdmin) {
         date:        get("searchDateM"),         // وقت التبليغ
         deliverDate: get("searchDeliverDateM"),  // وقت التسليم
         text:        get("searchTextM").toLowerCase(),
+        serial:      (get("searchSerialM") || '').trim().toLowerCase(),
         type:        get("searchTypeM"),
         subType:     get("searchRoastSubM"),
         reservedOnly: get("searchReservedM")     // منتسيات مسجلة لزبائن (غير مسلّمة + محجوزة)
@@ -405,6 +406,7 @@ function _renderTableM(get, isAdmin) {
         (!f.branch      || x.branch===f.branch) &&
         (!f.date        || x.iso.startsWith(f.date)) &&
         (!f.text        || _matchTextM(x, f.text)) &&
+        (!f.serial      || (x.serial||'').toLowerCase().includes(f.serial)) &&
         (!f.deliverDate || _getDeliveryIso(x).startsWith(f.deliverDate)) &&
         (!f.type        || (x.type||'')=== f.type) &&
         (!f.subType     || (x.roastSubType||'') === f.subType) &&
