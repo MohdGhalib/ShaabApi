@@ -103,68 +103,6 @@ function _renderBranchStatusBadge(openHour, closeHour) {
     return '';
 }
 
-/* بناء بوكس منتسية واحد */
-function _renderMontasiaMiniBox(m) {
-    const _typeColor = m.type === 'نقدي' ? '#ffd54f'
-                     : m.type === 'اصناف محمص الشعب' ? '#c5e1a5'
-                     : m.type === 'متعدد الأصناف' ? '#a5d6a7'
-                     : '#90caf9';
-    const _statusColor = m.status === 'بانتظار الموافقة' ? '#ffb74d'
-                       : m.status === 'قيد الاستلام' ? '#80deea'
-                       : '#ef9a9a';
-    const _shortNotes = (m.notes || '').length > 80 ? (m.notes.slice(0, 80) + '…') : (m.notes || '');
-    const _extra = m.type === 'نقدي' && m.missingValue ? `<div style="font-size:11px;color:#ffd54f;margin-top:4px;">💵 ${sanitize(m.missingValue)}</div>` : '';
-    return `<div style="background:linear-gradient(135deg,rgba(255,255,255,0.04),rgba(255,255,255,0.01));border:1px solid rgba(255,255,255,0.12);border-radius:10px;padding:10px;min-width:220px;max-width:280px;flex:1 1 220px;">
-        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:5px;gap:6px;">
-            <span style="font-family:monospace;font-size:11px;font-weight:700;background:rgba(100,181,246,0.18);color:#90caf9;padding:2px 8px;border-radius:5px;">#${sanitize(m.serial||'—')}</span>
-            <span style="font-size:10px;color:${_statusColor};font-weight:700;">${sanitize(m.status||'—')}</span>
-        </div>
-        <div style="font-size:10px;color:${_typeColor};font-weight:700;margin-bottom:4px;">${sanitize(m.type||'—')}</div>
-        ${_shortNotes ? `<div style="font-size:11px;color:var(--text-main);line-height:1.5;">${sanitize(_shortNotes)}</div>` : ''}
-        ${_extra}
-        <div style="font-size:10px;color:var(--text-dim);margin-top:5px;display:flex;justify-content:space-between;">
-            <span>📥 ${sanitize(m.addedBy||'—')}</span>
-            <span style="font-family:monospace;">${(typeof _toLatinDigits==='function' ? _toLatinDigits(m.time||'') : sanitize(m.time||''))}</span>
-        </div>
-    </div>`;
-}
-
-/* تحديث لوحة منتسيات الفرع المختار */
-function _updateBranchMontasiatPanel(city, br) {
-    const panel = document.getElementById('iBranchMontasiatPanel');
-    if (!panel) return;
-    if (!city || !br || br === 'غير محدد' || city === 'غير محدد') {
-        panel.style.display = 'none';
-        panel.innerHTML = '';
-        return;
-    }
-    const items = (db.montasiat || []).filter(x =>
-        !x.deleted &&
-        x.city === city &&
-        x.branch === br &&
-        (x.status === 'قيد الانتظار' || x.status === 'بانتظار الموافقة' || x.status === 'قيد الاستلام')
-    ).slice(0, 12); // حد أقصى 12 لكفاءة العرض
-
-    panel.style.display = 'block';
-    if (items.length === 0) {
-        panel.innerHTML = `
-            <div style="background:rgba(120,120,120,0.05);border:1px dashed rgba(255,255,255,0.18);border-radius:12px;padding:14px;text-align:center;color:var(--text-dim);font-size:12px;">
-                ✓ لا توجد منتسيات نشطة لهذا الفرع
-            </div>`;
-        return;
-    }
-    panel.innerHTML = `
-        <div style="display:flex;flex-direction:column;gap:8px;">
-            <div style="font-size:12px;color:#ce93d8;font-weight:700;display:flex;justify-content:space-between;align-items:center;">
-                <span>📦 منتسيات الفرع النشطة</span>
-                <span style="background:rgba(156,39,176,0.18);color:#ce93d8;padding:2px 8px;border-radius:6px;font-size:10px;">${items.length}</span>
-            </div>
-            <div style="display:flex;flex-wrap:wrap;gap:8px;">
-                ${items.map(_renderMontasiaMiniBox).join('')}
-            </div>
-        </div>`;
-}
-
 /* خريطة حقول معلومات الفرع */
 const _BRANCH_FIELDS = {
     managerName:      { label: 'مدير الفرع',         type: 'text', icon: '👤' },
@@ -225,7 +163,6 @@ function _updateBranchInfoPanel() {
     if (!city || !br || br === 'غير محدد' || city === 'غير محدد') {
         panel.style.display = 'none';
         panel.innerHTML = '';
-        _updateBranchMontasiatPanel('', '');
         _scheduleBranchPanelTick(false);
         return;
     }
@@ -254,7 +191,6 @@ function _updateBranchInfoPanel() {
             ${_renderBranchFieldRow('closeHour',       info.closeHour,       isCCMgr, _closedFlash || _soonFlash)}
             ${info.updatedAt ? `<div style="margin-top:8px;font-size:10px;color:var(--text-dim);text-align:center;">آخر تعديل: ${sanitize(info.updatedAt)} — ${sanitize(info.updatedBy||'—')}</div>` : ''}
         </div>`;
-    _updateBranchMontasiatPanel(city, br);
     _scheduleBranchPanelTick(true);
 }
 
