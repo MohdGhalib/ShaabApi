@@ -645,11 +645,12 @@ function _push(key, value) {
         }
         if (!r.ok) { _showSaveError(); return; }
 
-        // ✓ نجح — احفظ الإصدار الجديد
+        // ✓ نجح — احفظ الإصدار الجديد + أعِد ضبط عدّاد محاولات التعارض
         try {
             const data = await r.json();
             if (typeof data.version === 'number') _versions[key] = data.version;
         } catch {}
+        if (key === 'Shaab_Master_DB') _conflictRetryCount = 0;
     }).catch(() => {
         _isSaving = false;
         clearTimeout(_savingTimer);
@@ -657,20 +658,139 @@ function _push(key, value) {
     });
 }
 
-/* عند تعارض الإصدارات: حدّث البيانات من السيرفر وأبلغ المستخدم
-   لا نعيد المحاولة تلقائياً (قد يكون التعارض بسبب تعديل متزامن — نريد للمستخدم رؤية الحالة الجديدة) */
+/* عند تعارض الإصدارات:
+   - بالنسبة لـ Master_DB: ندمج تعديلات المستخدم المحلية فوق آخر بيانات السيرفر، ثم نُعيد الحفظ تلقائياً
+     (يحفظ المُدخَلات الجديدة + التعديلات + لا يُزعج المستخدم بإعادة الإدخال)
+   - حد أقصى 3 محاولات تلقائية لتجنّب الـ loop اللانهائي
+   - لو فشلت كل المحاولات أو فشل الدمج: نُحدّث ونُظهر الـ toast */
+let _conflictRetryCount = 0;
 async function _handleVersionConflict(key) {
     if (_onConflictRetrying) return;
     _onConflictRetrying = true;
     try {
-        await loadAllData();
-        if (typeof renderAll === 'function') renderAll();
-        _showConflictToast();
+        if (key === 'Shaab_Master_DB') {
+            if (_conflictRetryCount >= 3) {
+                _conflictRetryCount = 0;
+                await loadAllData();
+                if (typeof renderAll === 'function') renderAll();
+                _showConflictToast();
+                return;
+            }
+            // 1) خذ نسخة من البيانات المحلية (تحوي تعديل المستخدم)
+            let localBefore;
+            try { localBefore = JSON.parse(JSON.stringify(db)); }
+            catch (e) { console.error('[conflict] snapshot failed:', e); localBefore = null; }
+            // 2) حدّث db من السيرفر
+            await loadAllData();
+            // 3) ادمج تعديلات المستخدم فوق البيانات الجديدة
+            let mergedAnything = false;
+            if (localBefore) {
+                try { mergedAnything = _mergeLocalIntoServerDb(localBefore); }
+                catch (e) { console.error('[conflict] merge failed:', e); mergedAnything = false; }
+            }
+            if (typeof renderAll === 'function') renderAll();
+            if (mergedAnything) {
+                // 4) أعد الحفظ تلقائياً — لا نُزعج المستخدم
+                _conflictRetryCount++;
+                _onConflictRetrying = false;
+                save();
+                return;
+            }
+            // لا توجد تعديلات محلية تستحق الدمج — مجرد تحديث
+            _conflictRetryCount = 0;
+        } else {
+            // مفاتيح أخرى (employees / breaks / sessions / priceList): مجرد تحديث + toast
+            await loadAllData();
+            if (typeof renderAll === 'function') renderAll();
+            _showConflictToast();
+        }
     } catch (e) {
         console.error('[_push] conflict refresh failed:', e);
     } finally {
         setTimeout(() => { _onConflictRetrying = false; }, 1000);
     }
+}
+
+/* دمج التعديلات المحلية فوق نسخة السيرفر:
+   - مصفوفات السجلات (montasiat, inquiries, complaints, compensations, auditLog):
+       السجلات الموجودة محلياً وغير موجودة على السيرفر → أضِفها (إدخال جديد)
+       السجلات الموجودة في كليهما والمحلي تغيّر → خذ النسخة المحلية (تعديل المستخدم)
+       السجلات الموجودة على السيرفر وغير موجودة محلياً → اتركها (موظف آخر أضافها)
+   - العدادات (inqSeq, inquiriesnqSeq, montasiatSeqByYear): خذ الأكبر
+   - branchInfo: ادمج مفتاح بمفتاح، التغيير المحلي يفوز
+
+   يُرجع true لو دُمج شيء فعلاً (يحتاج إعادة حفظ). */
+function _mergeLocalIntoServerDb(localBefore) {
+    if (!localBefore || typeof localBefore !== 'object') return false;
+    if (!db || typeof db !== 'object') return false;
+    let merged = false;
+
+    // (1) مصفوفات السجلات
+    const arrKeys = ['montasiat', 'inquiries', 'complaints', 'compensations', 'auditLog'];
+    for (const k of arrKeys) {
+        const localArr = Array.isArray(localBefore[k]) ? localBefore[k] : [];
+        if (!Array.isArray(db[k])) db[k] = [];
+        const serverArr = db[k];
+        if (!localArr.length && !serverArr.length) continue;
+
+        const serverById = new Map();
+        for (const x of serverArr) if (x && x.id != null) serverById.set(x.id, x);
+
+        const newLocal = [];
+        for (const lx of localArr) {
+            if (!lx || lx.id == null) continue;
+            const sx = serverById.get(lx.id);
+            if (!sx) {
+                newLocal.push(lx); // إدخال جديد
+            } else {
+                // الاثنان لديه — قارن
+                if (JSON.stringify(lx) !== JSON.stringify(sx)) {
+                    serverById.set(lx.id, lx); // التعديل المحلي يفوز
+                    merged = true;
+                }
+            }
+        }
+        if (newLocal.length) merged = true;
+
+        // أعد بناء المصفوفة: العناصر الجديدة محلياً في الأمام (unshift)، ثم بقية السيرفر بترتيبها
+        db[k] = [
+            ...newLocal,
+            ...serverArr.map(x => (x && x.id != null) ? (serverById.get(x.id) || x) : x)
+        ];
+    }
+
+    // (2) العدادات الرقمية: خذ الأكبر
+    for (const k of ['inqSeq', 'inquiriesnqSeq']) {
+        if (typeof localBefore[k] === 'number') {
+            const newV = Math.max(db[k] || 0, localBefore[k]);
+            if (newV !== (db[k] || 0)) { db[k] = newV; merged = true; }
+        }
+    }
+    if (localBefore.montasiatSeqByYear && typeof localBefore.montasiatSeqByYear === 'object') {
+        if (!db.montasiatSeqByYear || typeof db.montasiatSeqByYear !== 'object') db.montasiatSeqByYear = {};
+        for (const yy in localBefore.montasiatSeqByYear) {
+            const newN = Math.max(db.montasiatSeqByYear[yy] || 0, localBefore.montasiatSeqByYear[yy] || 0);
+            if (newN !== (db.montasiatSeqByYear[yy] || 0)) {
+                db.montasiatSeqByYear[yy] = newN;
+                merged = true;
+            }
+        }
+    }
+
+    // (3) branchInfo: مفتاح بمفتاح
+    if (localBefore.branchInfo && typeof localBefore.branchInfo === 'object') {
+        if (!db.branchInfo || typeof db.branchInfo !== 'object') db.branchInfo = {};
+        for (const bk in localBefore.branchInfo) {
+            const lv = localBefore.branchInfo[bk];
+            const sv = db.branchInfo[bk];
+            if (JSON.stringify(lv) !== JSON.stringify(sv)) {
+                db.branchInfo[bk] = lv;
+                merged = true;
+            }
+        }
+    }
+
+    return merged;
 }
 
 function _showConflictToast() {
