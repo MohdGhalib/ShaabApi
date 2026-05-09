@@ -1103,6 +1103,100 @@ function _normalizeMontasiaSerial(s) {
     return String(s || '').replace(/[-\s]/g, '').trim();
 }
 
+/* ── فك حجز المنتسية (مدير الكول سنتر فقط) ──
+   - يزيل الربط من المنتسية (m.reservedFor)
+   - يزيل تفاصيل المنتسية من الاستفسار + يستعيد الفرع/المحافظة/الملاحظات الأصلية */
+function unreserveMontasia(montasiaId) {
+    const _isCCMgr = currentUser?.role === 'cc_manager' || currentUser?.isAdmin;
+    if (!_isCCMgr) return alert('فقط مدير الكول سنتر يمكنه فك حجز المنتسية');
+
+    const m = (db.montasiat || []).find(x => x.id === montasiaId);
+    if (!m) return alert('المنتسية غير موجودة');
+    if (!m.reservedFor || !m.reservedFor.inqId) return alert('هذه المنتسية غير محجوزة لزبون');
+
+    const inq = (db.inquiries || []).find(q => q.id === m.reservedFor.inqId);
+    const _custLine = `${m.reservedFor.phone || '—'}${m.reservedFor.name ? ' — ' + m.reservedFor.name : ''}`;
+
+    const overlay = document.createElement('div');
+    overlay.id = '_unreserveMontasiaConfirm';
+    overlay.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.72);z-index:9999;display:flex;align-items:center;justify-content:center;backdrop-filter:blur(4px);';
+    overlay.innerHTML = `
+        <div style="background:var(--bg-card);border:1px solid var(--border);border-radius:20px;
+                    padding:28px 26px;width:460px;max-width:94vw;box-shadow:0 30px 60px rgba(0,0,0,0.5);">
+            <div style="font-size:30px;text-align:center;margin-bottom:8px;">🔓</div>
+            <h3 style="margin:0 0 10px;color:var(--accent-red);text-align:center;">تأكيد فك حجز المنتسية</h3>
+            <div style="background:rgba(255,255,255,0.04);border:1px solid var(--border);border-radius:12px;
+                        padding:14px 16px;font-size:13px;line-height:1.9;color:var(--text-main);margin-bottom:14px;">
+                <div><b>رقم المنتسية:</b> ${sanitize(m.serial || '—')}</div>
+                <div><b>الفرع المبلِّغ:</b> ${sanitize(m.branch || '—')} — ${sanitize(m.city || '—')}</div>
+                <div><b>الزبون المحجوزة له:</b> ${sanitize(_custLine)}</div>
+                ${inq ? `<div><b>الاستفسار:</b> #${sanitize(inq.seq||'—')}</div>` : ''}
+            </div>
+            <div style="background:rgba(255,152,0,0.08);border:1px dashed rgba(255,152,0,0.45);border-radius:10px;
+                        padding:12px;font-size:12px;color:#ffb74d;text-align:center;font-weight:700;margin-bottom:14px;">
+                ⚠️ سيتم: حذف ربط الزبون من المنتسية + إزالة تفاصيل المنتسية من الاستفسار + استرجاع الفرع الأصلي للاستفسار
+            </div>
+            <div style="display:flex;gap:10px;justify-content:center;">
+                <button onclick="confirmUnreserveMontasia(${montasiaId})"
+                    style="padding:9px 22px;background:linear-gradient(135deg,#c62828,#8e0000);color:#fff;border:none;border-radius:10px;cursor:pointer;font-family:'Cairo';font-weight:700;">
+                    🔓 تأكيد فك الحجز
+                </button>
+                <button onclick="document.getElementById('_unreserveMontasiaConfirm')?.remove()"
+                    style="padding:9px 22px;background:rgba(120,120,120,0.12);color:var(--text-dim);border:1px solid var(--border);border-radius:10px;cursor:pointer;font-family:'Cairo';font-weight:700;">
+                    إلغاء
+                </button>
+            </div>
+        </div>`;
+    document.body.appendChild(overlay);
+}
+
+function confirmUnreserveMontasia(montasiaId) {
+    const _isCCMgr = currentUser?.role === 'cc_manager' || currentUser?.isAdmin;
+    if (!_isCCMgr) return alert('فقط مدير الكول سنتر يمكنه فك حجز المنتسية');
+
+    const ov = document.getElementById('_unreserveMontasiaConfirm');
+    if (ov) ov.remove();
+
+    const m = (db.montasiat || []).find(x => x.id === montasiaId);
+    if (!m || !m.reservedFor) return alert('المنتسية غير محجوزة أو غير موجودة');
+
+    const inqId  = m.reservedFor.inqId;
+    const inqSeq = m.reservedFor.inqSeq;
+    const inq    = (db.inquiries || []).find(q => q.id === inqId);
+
+    if (inq) {
+        // استرجاع القيم الأصلية إن وُجدت
+        if (typeof inq.preReserveCity    === 'string') inq.city    = inq.preReserveCity;
+        if (typeof inq.preReserveBranch  === 'string') inq.branch  = inq.preReserveBranch;
+        if (typeof inq.preReserveCountry === 'string' && inq.preReserveCountry) inq.country = inq.preReserveCountry;
+        if (typeof inq.preReserveNotes   === 'string') {
+            inq.notes = inq.preReserveNotes;
+        } else if (m.serial) {
+            // حذف سطر "[منتسية #SERIAL] ..." من الملاحظات (احتياطي)
+            const _esc = String(m.serial).replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+            inq.notes = (inq.notes || '').replace(new RegExp(`\\n?\\[منتسية #${_esc}\\][^\\n]*`, 'g'), '').trim();
+        }
+        delete inq.preReserveCity;
+        delete inq.preReserveBranch;
+        delete inq.preReserveCountry;
+        delete inq.preReserveNotes;
+        delete inq.reservedMontasiaSerial;
+        delete inq.reservedMontasiaId;
+        delete inq.reservedAt;
+        delete inq.reservedBy;
+    }
+
+    const _prevPhone = m.reservedFor.phone || '—';
+    delete m.reservedFor;
+
+    if (typeof _logAudit === 'function') {
+        _logAudit('unreserveMontasia', m.branch || '—', `فك حجز عن الزبون ${_prevPhone}${inqSeq?` | استفسار #${inqSeq}`:''}`, 'montasia', m.id);
+    }
+    save();
+    alert('✓ تم فك حجز المنتسية #' + m.serial + ' بنجاح');
+    if (typeof renderAll === 'function') renderAll();
+}
+
 /* ── الانتقال إلى المنتسية برقمها التسلسلي وتمييزها بصرياً ── */
 function jumpToMontasia(serial) {
     if (!serial) return;

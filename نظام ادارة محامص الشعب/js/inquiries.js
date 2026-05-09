@@ -542,6 +542,11 @@ function confirmReserveMontasia(inqId) {
     if (!m) return alert('لم يتم العثور على المنتسية');
 
     // 1) حدّث الاستفسار: الفرع/المحافظة + إضافة نص المنتسية للملاحظات
+    //    احفظ القيم الأصلية لاسترجاعها عند فك الحجز
+    inq.preReserveCity    = inq.city    || '';
+    inq.preReserveBranch  = inq.branch  || '';
+    inq.preReserveCountry = inq.country || '';
+    inq.preReserveNotes   = inq.notes   || '';
     inq.city   = m.city   || inq.city;
     inq.branch = m.branch || inq.branch;
     if (m.country) inq.country = m.country;
