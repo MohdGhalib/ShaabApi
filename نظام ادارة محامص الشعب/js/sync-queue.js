@@ -225,6 +225,15 @@ function _sqAgo(ts) {
 
 function _sqRenderUIImpl() {
     if (!document.body) return;
+
+    /* الزر مخصّص لمدير الكول سنتر فقط — الطابور والـ retry يعملان في الخلفية للجميع */
+    const _role = (typeof currentUser !== 'undefined' && currentUser) ? currentUser.role : null;
+    if (_role !== 'cc_manager') {
+        const old = document.getElementById('sqFloater');
+        if (old) old.remove();
+        return;
+    }
+
     let el = document.getElementById('sqFloater');
     if (!el) {
         el = document.createElement('div');
