@@ -646,6 +646,11 @@ function _push(key, value) {
     const expectedVersion = (typeof _versions[key] === 'number') ? _versions[key] : 0;
     const body = JSON.stringify({ key, value, expectedVersion });
 
+    /* 🛡️ Sync Queue: snapshot قبل الإرسال للسجلات الحرجة (Master_DB فقط) */
+    const _sqSnap = (key === 'Shaab_Master_DB' && typeof __sq_beforePush === 'function')
+        ? (() => { try { return __sq_beforePush(db); } catch { return null; } })()
+        : null;
+
     fetch('api/storage', {
         method:  'POST',
         headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${_token}` },
@@ -674,6 +679,11 @@ function _push(key, value) {
             if (typeof data.version === 'number') _versions[key] = data.version;
         } catch {}
         if (key === 'Shaab_Master_DB') _conflictRetryCount = 0;
+
+        /* 🛡️ Sync Queue: علّم السجلات المرسَلة كمؤكَّدة على السيرفر */
+        if (_sqSnap && typeof __sq_markConfirmed === 'function') {
+            try { __sq_markConfirmed(_sqSnap); } catch {}
+        }
     }).catch(() => {
         _isSaving = false;
         clearTimeout(_savingTimer);
