@@ -242,6 +242,8 @@ function saveBranchField(fieldKey) {
         _logAudit('saveBranchInfoField', br, `${city} | ${_BRANCH_FIELDS[fieldKey].label} → ${_val || '—'}`);
     }
     save();
+    // 🛡️ دفع فوري للسيرفر لتجنّب فقدان حقل سابق عند حفظ حقل تالٍ بسرعة
+    if (typeof _flushPendingSave === 'function') _flushPendingSave();
     _updateBranchInfoPanel();
 }
 
