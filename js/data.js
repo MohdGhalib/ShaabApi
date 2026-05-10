@@ -862,6 +862,11 @@ let _saveDebounceTimer = null;
 function save() {
     renderAll();
     if (typeof _updateBadges === 'function') _updateBadges();
+    /* 🛡️ Sync Queue: احفظ الطابور فوراً قبل الـ debounce لتجنّب فقدان الإدخالات
+       إذا أُغلق المتصفح أو حصل crash خلال نافذة الـ 300ms */
+    if (typeof __sq_beforePush === 'function') {
+        try { __sq_beforePush(db); } catch {}
+    }
     if (_saveDebounceTimer) clearTimeout(_saveDebounceTimer);
     _saveDebounceTimer = setTimeout(() => {
         _saveDebounceTimer = null;
