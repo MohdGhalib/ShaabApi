@@ -887,6 +887,29 @@ if (typeof window !== 'undefined') {
     window.addEventListener('pagehide',     _flushPendingSave);
     window.addEventListener('blur',         _flushPendingSave);
 }
+/* ── إعادة تحميل البيانات يدوياً مع feedback بصري للزر ── */
+async function reloadTable(btn) {
+    let _orig = null;
+    if (btn) {
+        _orig = btn.innerHTML;
+        btn.disabled = true;
+        btn.style.opacity = '0.7';
+        btn.innerHTML = '⏳ جاري التحديث...';
+    }
+    try {
+        if (typeof loadAllData === 'function') await loadAllData();
+        if (typeof renderAll === 'function') renderAll();
+    } catch (e) {
+        console.error('[reloadTable] failed:', e);
+    } finally {
+        if (btn) {
+            btn.disabled = false;
+            btn.style.opacity = '';
+            if (_orig != null) btn.innerHTML = _orig;
+        }
+    }
+}
+
 function saveEmployees() { _push('Shaab_Employees_DB', JSON.stringify(employees)); }
 function saveBreaks()    { _push('Shaab_Breaks_DB',    JSON.stringify(breaks));    }
 function saveSessions()  { _push('Shaab_Sessions_DB',  JSON.stringify(sessions));  }

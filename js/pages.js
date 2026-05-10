@@ -69,6 +69,7 @@ m: `
     <div id="searchRoastSubMWrap" style="display:none;"><label>طريقة التسجيل</label><select id="searchRoastSubM" onchange="filterTable()"><option value="">الكل</option><option value="وزن">وزن</option><option value="قيمة">قيمة</option></select></div>
     <div><label>تصفية خاصة</label><select id="searchReservedM" onchange="filterTable()"><option value="">— الكل —</option><option value="1">👤 منتسيات مسجلة لزبائن (غير مسلّمة)</option></select></div>
     <button class="btn" style="background:var(--bg-input);color:var(--text-dim);align-self:end;" onclick="resetSearch('M')">تفريغ</button>
+    <button class="btn" style="background:linear-gradient(135deg,rgba(21,101,192,0.18),rgba(21,101,192,0.08));border:1px solid rgba(21,101,192,0.5);color:#90caf9;align-self:end;font-weight:700;" onclick="reloadTable(this)" title="إعادة تحميل الجدول من السيرفر">🔄 تحديث</button>
 </div>
 <div id="mCtrlMgrFilters" class="search-bar search-bar-m" style="display:none;margin-bottom:18px;background:linear-gradient(135deg,rgba(106,27,154,0.10),rgba(21,101,192,0.06));border:1px dashed rgba(156,39,176,0.40);">
     <div style="grid-column:1/-1;" class="search-section-title">🛡️ فلاتر مدير قسم السيطرة</div>
@@ -303,6 +304,7 @@ i: `
     </div>
     <div><label>موظف الاستفسار</label><select id="searchAddedByI" onchange="filterTable()"><option value="">الكل</option></select></div>
     <button class="btn" style="background:var(--bg-input);color:var(--text-dim);align-self:end;" onclick="resetSearch('I')">تفريغ</button>
+    <button class="btn" style="background:linear-gradient(135deg,rgba(21,101,192,0.18),rgba(21,101,192,0.08));border:1px solid rgba(21,101,192,0.5);color:#90caf9;align-self:end;font-weight:700;" onclick="reloadTable(this)" title="إعادة تحميل الجدول من السيرفر">🔄 تحديث</button>
 </div>
 <div class="card">
     <table id="tableI">
@@ -392,6 +394,7 @@ c: `
     <div><label>الحالة المالية</label><select id="searchFinStatusC" onchange="filterTable()"><option value="">الكل</option><option value="مفتوحة">🔴 مفتوحة (غير محجوزة)</option><option value="مغلقة">🟢 مغلقة (محجوزة)</option></select></div>
     <div><label>اسم الموظف</label><select id="searchAddedByC" onchange="filterTable()"><option value="">الكل</option></select></div>
     <button class="btn" style="background:var(--bg-input);color:var(--text-dim);align-self:end;" onclick="resetSearch('C')">تفريغ</button>
+    <button class="btn" style="background:linear-gradient(135deg,rgba(21,101,192,0.18),rgba(21,101,192,0.08));border:1px solid rgba(21,101,192,0.5);color:#90caf9;align-self:end;font-weight:700;" onclick="reloadTable(this)" title="إعادة تحميل الجدول من السيرفر">🔄 تحديث</button>
 </div>
 <div class="card">
     <table id="tableC">
@@ -749,6 +752,7 @@ cu: `
         <div><label>التاريخ</label><div class="date-picker-wrap" onclick="calOnSelect=renderControlOpen;openDatePicker('searchDateCU')"><span class="date-display" id="searchDateCU-display">📅 اختر التاريخ</span><input type="hidden" id="searchDateCU"></div></div>
         <div><label>بحث بالنص</label><input type="text" id="searchTextCU" placeholder="بحث في التفاصيل..." oninput="renderControlOpen()"></div>
         <button class="btn" style="background:var(--bg-input);color:var(--text-dim);align-self:end;" onclick="resetSearch('CU')">تفريغ</button>
+        <button class="btn" style="background:linear-gradient(135deg,rgba(21,101,192,0.18),rgba(21,101,192,0.08));border:1px solid rgba(21,101,192,0.5);color:#90caf9;align-self:end;font-weight:700;" onclick="reloadTable(this)" title="إعادة تحميل الجدول من السيرفر">🔄 تحديث</button>
     </div>
     <table id="tableCU">
         <thead><tr>
