@@ -543,9 +543,41 @@ p: `
 <div class="card">
     <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:12px;margin-bottom:16px;">
         <h3 style="margin:0;">💰 قائمة الأسعار</h3>
-        <input type="text" id="priceSearchInput" placeholder="🔍 ابحث عن صنف..." oninput="filterPrices()"
-            style="padding:9px 14px;border:1px solid var(--border);border-radius:10px;background:var(--bg-input);
-                   color:var(--text-main);font-family:'Cairo';font-size:14px;width:260px;outline:none;">
+        <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;">
+            <button id="btnTogglePriceAdd" onclick="togglePriceAddForm()"
+                style="display:none;background:linear-gradient(135deg,#2e7d32,#1b5e20);color:#fff;border:none;border-radius:10px;
+                       padding:9px 16px;cursor:pointer;font-family:'Cairo';font-size:13px;font-weight:700;">
+                ➕ إضافة صنف
+            </button>
+            <input type="text" id="priceSearchInput" placeholder="🔍 ابحث عن صنف..." oninput="filterPrices()"
+                style="padding:9px 14px;border:1px solid var(--border);border-radius:10px;background:var(--bg-input);
+                       color:var(--text-main);font-family:'Cairo';font-size:14px;width:260px;outline:none;">
+        </div>
+    </div>
+    <div id="priceAddForm" style="display:none;background:rgba(46,125,50,0.06);border:1px dashed rgba(46,125,50,0.45);border-radius:12px;padding:14px;margin-bottom:16px;">
+        <div style="font-size:13px;color:#a5d6a7;font-weight:700;margin-bottom:10px;">➕ صنف جديد</div>
+        <div style="display:grid;grid-template-columns:2fr 1fr 1fr auto auto;gap:8px;align-items:end;">
+            <div>
+                <label style="font-size:11px;color:var(--text-dim);display:block;margin-bottom:3px;">اسم الصنف *</label>
+                <input id="newPriceName" type="text" placeholder="مثلاً: قهوة اكسترا" style="width:100%;padding:7px 10px;font-size:13px;font-family:'Cairo';box-sizing:border-box;">
+            </div>
+            <div>
+                <label style="font-size:11px;color:var(--text-dim);display:block;margin-bottom:3px;">الوزن / الوحدة *</label>
+                <input id="newPriceWeight" type="text" placeholder="مثلاً: 1 كيلو" style="width:100%;padding:7px 10px;font-size:13px;font-family:'Cairo';box-sizing:border-box;">
+            </div>
+            <div>
+                <label style="font-size:11px;color:var(--text-dim);display:block;margin-bottom:3px;">السعر (د.أ) *</label>
+                <input id="newPricePrice" type="number" step="0.01" min="0" placeholder="0.00" style="width:100%;padding:7px 10px;font-size:13px;font-family:'Cairo';box-sizing:border-box;">
+            </div>
+            <button onclick="addPriceItem()"
+                style="padding:8px 16px;background:linear-gradient(135deg,#2e7d32,#1b5e20);color:#fff;border:none;border-radius:8px;cursor:pointer;font-family:'Cairo';font-size:12px;font-weight:700;height:36px;">
+                💾 حفظ
+            </button>
+            <button onclick="togglePriceAddForm(false)"
+                style="padding:8px 14px;background:rgba(120,120,120,0.1);color:var(--text-dim);border:1px solid var(--border);border-radius:8px;cursor:pointer;font-family:'Cairo';font-size:12px;height:36px;">
+                ✗ إلغاء
+            </button>
+        </div>
     </div>
     <div id="priceListContainer"></div>
 </div>`,
