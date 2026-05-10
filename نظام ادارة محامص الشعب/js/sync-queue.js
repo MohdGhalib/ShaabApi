@@ -232,6 +232,7 @@ function _sqRenderUIImpl() {
         document.body.appendChild(el);
     }
     _sqEnsureStyles();
+    _sqPositionAboveEmergency(el);
 
     const count = Object.keys(_sqPending).length;
     const isOffline = (typeof navigator !== 'undefined' && navigator && navigator.onLine === false);
@@ -319,15 +320,43 @@ function __sq_toggleDropdown() {
     _sqRenderUIImpl();
 }
 
+/* ── يتموضع فوق زر التنبيه الطارئ #_emFloatBtn إن وُجد، وإلا في موضع آمن ── */
+function _sqPositionAboveEmergency(el) {
+    if (!el) return;
+    const em = document.getElementById('_emFloatBtn');
+    let bottomPx;
+    let leftPx = 18;
+    if (em) {
+        const rect = em.getBoundingClientRect();
+        const emBottomFromViewport = window.innerHeight - rect.bottom;
+        const emHeight = rect.height || 46;
+        const gap = 14;
+        bottomPx = emBottomFromViewport + emHeight + gap;
+        leftPx = Math.max(8, rect.left - 5);
+    } else {
+        /* fallback: فوق المساحة المعتادة لزر الطارئ (super admin أعلى) */
+        const isSA = (typeof currentUser !== 'undefined' && currentUser && currentUser.isAdmin);
+        bottomPx = isSA ? 244 : 132;
+    }
+    el.style.bottom = bottomPx + 'px';
+    el.style.left   = leftPx + 'px';
+}
+
+/* أعِد التموضع عند تغيّر حجم النافذة (قد يتغيّر موقع زر الطارئ) */
+window.addEventListener('resize', () => {
+    const fl = document.getElementById('sqFloater');
+    if (fl) _sqPositionAboveEmergency(fl);
+});
+
 function _sqEnsureStyles() {
     if (document.getElementById('sqStyles')) return;
     const s = document.createElement('style');
     s.id = 'sqStyles';
     s.textContent = `
         #sqFloater {
-            position: fixed; bottom: 22px; left: 22px; z-index: 99999;
+            position: fixed; bottom: 132px; left: 18px; z-index: 9999;
             font-family: 'Cairo', sans-serif; direction: rtl;
-            transition: opacity 0.5s ease, transform 0.5s ease;
+            transition: opacity 0.5s ease, transform 0.5s ease, bottom 0.3s ease;
         }
         #sqFloater.sq-faded { opacity: 0.25; }
         #sqFloater.sq-faded:hover { opacity: 1; }
