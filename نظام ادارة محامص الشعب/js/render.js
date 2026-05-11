@@ -778,9 +778,16 @@ function _renderTableI(get) {
         return `<tr data-id="${x.id}">
             <td><span class="seq-badge" title="الرقم التسلسلي">#${x.seq||'—'}</span></td>
             <td><b>${x.branch}</b><br><small>${x.city}</small></td>
-            <td>${(currentUser?.role === 'cc_manager' || currentUser?.role === 'cc_employee')
-                  ? `<span class="c360-phone-link" onclick="openCustomer360('${sanitize(x.phone)}')" title="عرض ملف الزبون">${sanitize(x.phone)}</span>`
-                  : sanitize(x.phone)}</td>
+            <td>${(() => {
+                const _ph = sanitize(x.phone);
+                const _isCC = currentUser?.role === 'cc_manager' || currentUser?.role === 'cc_employee';
+                const _cnt = (typeof _c360ContactCount === 'function' && x.phone) ? _c360ContactCount(x.phone) : 0;
+                const _badge = (_cnt > 1) ? `<span class="phone-contact-badge" title="${_cnt} تواصل سابق">${_cnt}</span>` : '';
+                const _inner = _isCC
+                    ? `<span class="c360-phone-link" onclick="openCustomer360('${_ph}')" title="عرض ملف الزبون">${_ph}</span>`
+                    : _ph;
+                return `<span class="phone-cell-wrap">${_inner}${_badge}</span>`;
+            })()}</td>
             <td>
                 <span class="emp-badge">${x.type||'—'}</span>${ctBadge}${_existsTag}${notifyBtnI}
                 ${_itemBadge}

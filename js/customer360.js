@@ -18,6 +18,26 @@ function _c360PhoneOf(rec) {
     return rec?.phone || rec?.customerPhone || rec?.mobile || '';
 }
 
+/* عدّ عدد التواصلات السابقة لهذا الرقم (استفسارات + منتسيات محجوزة + شكاوى)
+   يُستخدم لعرض badge صغير بجانب رقم الهاتف في جدول الاستفسارات */
+function _c360ContactCount(rawPhone) {
+    if (!rawPhone) return 0;
+    const norm = _c360NormalizePhone(rawPhone);
+    if (!norm) return 0;
+    const match = (p) => {
+        const np = _c360NormalizePhone(p);
+        return np && (np.includes(norm) || norm.includes(np));
+    };
+    let n = 0;
+    if (typeof db === 'object' && db) {
+        n += (db.inquiries  || []).filter(x => !x.deleted && match(x.phone)).length;
+        n += (db.montasiat  || []).filter(x => !x.deleted && match(x.reservedFor?.phone)).length;
+        n += (db.complaints || []).filter(x => !x.deleted && match(x.customer?.phone)).length;
+    }
+    return n;
+}
+if (typeof window !== 'undefined') window._c360ContactCount = _c360ContactCount;
+
 function _c360EnsureStyles() {
     if (document.getElementById('c360Styles')) return;
     const s = document.createElement('style');
@@ -47,6 +67,16 @@ function _c360EnsureStyles() {
         #c360Modal .c360-empty { color:#888; font-size:12px; padding:8px 4px; }
         .c360-phone-link { color:#90caf9; cursor:pointer; text-decoration:underline dotted; }
         .c360-phone-link:hover { color:#bbdefb; }
+        .phone-cell-wrap { position:relative; display:inline-block; padding-top:6px; }
+        .phone-contact-badge {
+            position:absolute; top:-2px; right:-10px;
+            min-width:16px; height:16px; padding:0 4px;
+            background:#d32f2f; color:#fff;
+            border:1.5px solid #1a1a1a; border-radius:10px;
+            font-size:9px; font-weight:800; line-height:13px;
+            text-align:center; box-shadow:0 1px 3px rgba(0,0,0,0.5);
+            pointer-events:none;
+        }
     `;
     document.head.appendChild(s);
 }
@@ -174,6 +204,15 @@ function openCustomer360(rawPhone) {
 function closeCustomer360() {
     const el = document.getElementById('c360Modal');
     if (el) el.classList.add('hidden');
+}
+
+/* أنزِل الـ styles فور تحميل السكربت — الـ badge على رقم الهاتف يستخدمها قبل أن يُفتح الـ modal */
+if (typeof document !== 'undefined') {
+    if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', _c360EnsureStyles);
+    } else {
+        _c360EnsureStyles();
+    }
 }
 
 /* Ctrl+K — quick search shortcut (cc_manager / cc_employee only) */
