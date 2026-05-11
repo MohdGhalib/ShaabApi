@@ -655,6 +655,10 @@ async function loadAllData() {
     } finally {
         _isLoading = false;
     }
+    /* 🚀 Phase 5b: init tracking of last-saved record state for diff-based save */
+    if (typeof _initLastSavedRecords === 'function') {
+        try { _initLastSavedRecords(); } catch (e) { console.warn('[Phase5b] init failed:', e); }
+    }
 }
 
 /* ── حفظ البيانات ──
@@ -891,6 +895,84 @@ function _showSaveError() {
    - الإرسال للسيرفر يُؤجَّل 300ms ويُدمج مع أي حفظ آخر يحدث في الفترة
    - يحلّ مشكلة "ادخال اسم ثم نسخه ولصقه بسرعة" — كلا الحفظَين يُجمَّعان في طلب واحد فلا يحدث تعارض */
 let _saveDebounceTimer = null;
+
+/* ══════════════════════════════════════════════════════════════════
+   🚀 Phase 5b (Migration #11): Smart save — per-record dispatch + lite blob
+   ══════════════════════════════════════════════════════════════════
+   - يتعقّب آخر حالة محفوظة لكل سجل من inquiries/montasiat/complaints
+   - عند save()، يحسب diff ويُرسل التغييرات فردياً عبر endpoints الجديدة
+   - يُرسل Master_DB blob مُخفَّفاً (بدون المصفوفات الثلاث) فقط لو نجح الـ dispatch
+   - النتيجة: حفظ منتسية واحدة ~200ms بدلاً من ~3000ms */
+let _lastSavedRecords = {
+    inquiries:  new Map(),
+    montasiat:  new Map(),
+    complaints: new Map()
+};
+
+function _initLastSavedRecords() {
+    for (const type of ['inquiries', 'montasiat', 'complaints']) {
+        const arr = (db && Array.isArray(db[type])) ? db[type] : [];
+        const m = new Map();
+        for (const r of arr) {
+            if (r && r.id != null) m.set(r.id, JSON.stringify(r));
+        }
+        _lastSavedRecords[type] = m;
+    }
+}
+
+function _diffRecords(type) {
+    const arr = (db && Array.isArray(db[type])) ? db[type] : [];
+    const lastMap = _lastSavedRecords[type] || new Map();
+    const created = [], updated = [], deleted = [];
+    const seen = new Set();
+    for (const rec of arr) {
+        if (!rec || rec.id == null) continue;
+        seen.add(rec.id);
+        const cur = JSON.stringify(rec);
+        const last = lastMap.get(rec.id);
+        if (last == null) created.push(rec);
+        else if (last !== cur) updated.push(rec);
+    }
+    for (const id of lastMap.keys()) {
+        if (!seen.has(id)) deleted.push(id);
+    }
+    return { created, updated, deleted };
+}
+
+async function _dispatchOne(method, url, body) {
+    const opts = {
+        method,
+        headers: { 'Authorization': `Bearer ${_token}` }
+    };
+    if (body != null) {
+        opts.headers['Content-Type'] = 'application/json';
+        opts.body = JSON.stringify(body);
+    }
+    const res = await fetch(url, opts);
+    if (!res.ok) throw new Error(`${method} ${url} → ${res.status}`);
+    return res;
+}
+
+async function _flushPerRecordChanges() {
+    const tasks = [];
+    let summary = '';
+    for (const type of ['inquiries', 'montasiat', 'complaints']) {
+        const diff = _diffRecords(type);
+        const urlBase = `api/${type}`;
+        for (const rec of diff.created) tasks.push(_dispatchOne('POST', urlBase, rec));
+        for (const rec of diff.updated) tasks.push(_dispatchOne('PUT', `${urlBase}/${rec.id}`, rec));
+        for (const id  of diff.deleted) tasks.push(_dispatchOne('DELETE', `${urlBase}/${id}`, null));
+        if (diff.created.length || diff.updated.length || diff.deleted.length) {
+            summary += ` ${type[0].toUpperCase()}+${diff.created.length}/~${diff.updated.length}/-${diff.deleted.length}`;
+        }
+    }
+    if (tasks.length === 0) return 0;
+    console.log(`[Phase5b] dispatching ${tasks.length} per-record:${summary}`);
+    await Promise.all(tasks);
+    _initLastSavedRecords();
+    return tasks.length;
+}
+
 function save() {
     renderAll();
     if (typeof _updateBadges === 'function') _updateBadges();
@@ -900,9 +982,29 @@ function save() {
         try { __sq_beforePush(db); } catch {}
     }
     if (_saveDebounceTimer) clearTimeout(_saveDebounceTimer);
-    _saveDebounceTimer = setTimeout(() => {
+    _saveDebounceTimer = setTimeout(async () => {
         _saveDebounceTimer = null;
-        _push('Shaab_Master_DB', JSON.stringify(db));
+
+        /* 🚀 Phase 5b: dispatch per-record changes first */
+        let perRecordOk = true;
+        try {
+            await _flushPerRecordChanges();
+        } catch (e) {
+            console.error('[Phase5b] per-record flush failed, falling back to full blob:', e);
+            perRecordOk = false;
+        }
+
+        if (perRecordOk) {
+            /* lite blob — لا نُرسل المصفوفات (تأتي من /api/* عند القراءة) */
+            const liteDb = { ...db };
+            delete liteDb.inquiries;
+            delete liteDb.montasiat;
+            delete liteDb.complaints;
+            _push('Shaab_Master_DB', JSON.stringify(liteDb));
+        } else {
+            /* fallback: full blob لو فشل per-record dispatch */
+            _push('Shaab_Master_DB', JSON.stringify(db));
+        }
     }, 300);
 }
 
