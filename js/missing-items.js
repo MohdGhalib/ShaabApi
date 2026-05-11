@@ -69,25 +69,174 @@ function _showMontasiaNotifModal(text, title) {
     if (!_canSeeMontasiaNotif()) return;
     let el = document.getElementById('_mntNotifModal');
     if (!el) {
+        /* أنزِل styles مرة واحدة */
+        if (!document.getElementById('_mntNotifStyles')) {
+            const s = document.createElement('style');
+            s.id = '_mntNotifStyles';
+            s.textContent = `
+                @keyframes _notifSlideUp { from { opacity:0; transform:translateY(28px) scale(0.95); } to { opacity:1; transform:translateY(0) scale(1); } }
+                @keyframes _notifBackdrop { from { opacity:0; backdrop-filter:blur(0); } to { opacity:1; backdrop-filter:blur(8px); } }
+                @keyframes _stampLand { 0% { opacity:0; transform:rotate(-12deg) scale(1.5); } 60% { opacity:1; transform:rotate(-12deg) scale(0.92); } 100% { opacity:1; transform:rotate(-12deg) scale(1); } }
+                #_mntNotifModal {
+                    position:fixed; inset:0;
+                    background:radial-gradient(ellipse at center, rgba(60,30,8,0.92) 0%, rgba(15,8,2,0.96) 100%);
+                    z-index:99999; display:none; align-items:center; justify-content:center;
+                    padding:20px; direction:rtl;
+                    font-family:'Cairo','Tajawal',sans-serif;
+                    animation:_notifBackdrop 0.35s ease-out;
+                }
+                #_mntNotifModal .wrap { max-width:560px; width:100%; animation:_notifSlideUp 0.45s cubic-bezier(0.34,1.3,0.64,1); }
+                #_mntNotifModal .instruction {
+                    background:linear-gradient(135deg,#25d366 0%,#128c7e 50%,#075e54 100%);
+                    color:#fff; padding:14px 22px; border-radius:18px 18px 0 0;
+                    display:flex; align-items:center; gap:14px;
+                    border:1.5px solid rgba(37,211,102,0.5); border-bottom:0;
+                    box-shadow:0 -6px 26px rgba(7,94,84,0.45);
+                    position:relative; overflow:hidden;
+                }
+                #_mntNotifModal .instruction::before {
+                    content:''; position:absolute; inset:0;
+                    background:repeating-linear-gradient(45deg, transparent 0 12px, rgba(255,255,255,0.04) 12px 14px);
+                    pointer-events:none;
+                }
+                #_mntNotifModal .instruction-icon {
+                    width:38px; height:38px; background:rgba(255,255,255,0.22);
+                    border-radius:50%; display:flex; align-items:center; justify-content:center;
+                    font-size:19px; flex-shrink:0; border:1.5px solid rgba(255,255,255,0.35);
+                }
+                #_mntNotifModal .instruction-text {
+                    font-size:13.5px; font-weight:800; line-height:1.55; letter-spacing:0.2px;
+                    text-shadow:0 1px 2px rgba(0,0,0,0.25);
+                }
+                #_mntNotifModal .receipt {
+                    background:linear-gradient(180deg, #fdf8ef 0%, #faf2e3 100%);
+                    border:1.5px solid rgba(139,69,19,0.25);
+                    border-radius:0 0 18px 18px;
+                    box-shadow:0 36px 90px rgba(0,0,0,0.6), inset 0 1px 0 rgba(255,255,255,0.85);
+                    position:relative; overflow:hidden;
+                }
+                #_mntNotifModal .receipt::before {
+                    content:''; position:absolute; inset:0;
+                    background-image:
+                        radial-gradient(circle at 14% 18%, rgba(139,69,19,0.04) 0, transparent 12%),
+                        radial-gradient(circle at 86% 78%, rgba(120,53,15,0.05) 0, transparent 14%),
+                        radial-gradient(circle at 50% 50%, rgba(160,82,45,0.025) 0, transparent 30%);
+                    pointer-events:none;
+                }
+                #_mntNotifModal .receipt-head {
+                    padding:26px 28px 18px; text-align:center;
+                    border-bottom:2px dashed rgba(139,69,19,0.22);
+                    position:relative;
+                }
+                #_mntNotifModal .receipt-brand {
+                    font-size:10.5px; font-weight:800; color:#8b6f47;
+                    letter-spacing:4px; margin-bottom:8px; text-transform:uppercase;
+                }
+                #_mntNotifModal .receipt-title {
+                    font-size:20px; font-weight:900; color:#3a2818;
+                    letter-spacing:0.3px; line-height:1.4;
+                }
+                #_mntNotifModal .receipt-stamp {
+                    position:absolute; top:18px; left:22px;
+                    transform:rotate(-12deg);
+                    border:2.5px solid #c62828; color:#c62828;
+                    padding:4px 12px; border-radius:6px;
+                    font-size:11px; font-weight:900; letter-spacing:1.5px;
+                    background:rgba(198,40,40,0.04);
+                    animation:_stampLand 0.7s 0.35s cubic-bezier(0.5,1.6,0.4,1) both;
+                    opacity:0;
+                }
+                #_mntNotifModal .receipt-body {
+                    white-space:pre-wrap; direction:rtl; text-align:right;
+                    font-family:'Cairo','Tajawal',sans-serif;
+                    font-size:13.5px; line-height:2.05; font-weight:500;
+                    padding:24px 28px; margin:0;
+                    color:#2d1d10; overflow-y:auto; max-height:48vh;
+                    background:transparent; position:relative;
+                }
+                #_mntNotifModal .receipt-foot {
+                    padding:20px 28px 26px; text-align:center;
+                    border-top:2px dashed rgba(139,69,19,0.22);
+                    position:relative;
+                }
+                #_mntNotifModal .receipt-edge {
+                    height:14px;
+                    background:
+                        radial-gradient(circle at 8px 14px, transparent 6px, #fdf8ef 7px) repeat-x,
+                        linear-gradient(180deg, transparent, transparent);
+                    background-size:16px 14px;
+                    margin-top:-1px;
+                }
+                #_mntNotifModal .copy-btn {
+                    background:linear-gradient(135deg, #6b4422 0%, #3a2818 100%);
+                    color:#fdf8ef; border:0; border-radius:12px;
+                    padding:13px 38px; cursor:pointer;
+                    font-family:'Cairo','Tajawal',sans-serif;
+                    font-weight:800; font-size:14.5px; letter-spacing:0.5px;
+                    box-shadow:0 8px 22px rgba(58,40,24,0.45), inset 0 1px 0 rgba(255,255,255,0.18);
+                    transition:transform 0.18s ease, box-shadow 0.18s ease, background 0.18s ease;
+                    position:relative; overflow:hidden;
+                }
+                #_mntNotifModal .copy-btn::after {
+                    content:''; position:absolute; inset:0;
+                    background:linear-gradient(120deg, transparent 40%, rgba(255,255,255,0.18) 50%, transparent 60%);
+                    transform:translateX(100%); transition:transform 0.5s;
+                }
+                #_mntNotifModal .copy-btn:hover {
+                    transform:translateY(-2px);
+                    box-shadow:0 14px 28px rgba(58,40,24,0.55), inset 0 1px 0 rgba(255,255,255,0.22);
+                }
+                #_mntNotifModal .copy-btn:hover::after { transform:translateX(-100%); }
+                #_mntNotifModal .copy-btn:disabled {
+                    background:linear-gradient(135deg, #2e7d32 0%, #1b5e20 100%);
+                    cursor:default; transform:none;
+                }
+                #_mntNotifModal .bean {
+                    position:absolute; font-size:18px; opacity:0.18;
+                    user-select:none; pointer-events:none;
+                }
+                #_mntNotifModal .bean.b1 { top:8px; right:14px; transform:rotate(35deg); }
+                #_mntNotifModal .bean.b2 { bottom:62px; left:18px; transform:rotate(-22deg); font-size:14px; }
+            `;
+            document.head.appendChild(s);
+        }
+
         el = document.createElement('div');
         el.id = '_mntNotifModal';
-        el.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.65);z-index:99999;display:none;align-items:center;justify-content:center;padding:20px;direction:rtl;font-family:"Cairo",sans-serif;';
         el.innerHTML = `
-            <div style="background:#1a1a1a;color:#fff;border:1px solid #444;border-radius:12px;max-width:580px;width:100%;max-height:88vh;overflow:hidden;display:flex;flex-direction:column;box-shadow:0 18px 48px rgba(0,0,0,0.6);" onclick="event.stopPropagation()">
-                <div style="padding:14px 18px;background:linear-gradient(135deg,#1565c0,#0d3a73);display:flex;justify-content:flex-start;align-items:center;gap:12px;">
-                    <div id="_mntNotifTitle" style="font-size:15px;font-weight:800;"></div>
+            <div class="wrap" onclick="event.stopPropagation()">
+                <div class="instruction">
+                    <div class="instruction-icon">📤</div>
+                    <div class="instruction-text">انسخ هذا النص وقم بأرساله لجروب الفرع على الواتساب</div>
                 </div>
-                <pre id="_mntNotifText" style="white-space:pre-wrap;direction:rtl;text-align:right;font-family:'Cairo';font-size:13.5px;line-height:1.9;padding:18px;margin:0;overflow-y:auto;flex:1;background:rgba(255,255,255,0.03);"></pre>
-                <div style="padding:12px 18px;display:flex;gap:10px;justify-content:center;border-top:1px solid rgba(255,255,255,0.08);flex-wrap:wrap;">
-                    <button onclick="_copyMontasiaNotif(this)" style="background:#2e7d32;color:#fff;border:0;border-radius:8px;padding:10px 28px;cursor:pointer;font-family:'Cairo';font-weight:700;font-size:14px;">📋 نسخ النص وإغلاق</button>
+                <div class="receipt">
+                    <span class="bean b1">☕</span>
+                    <span class="bean b2">●</span>
+                    <div class="receipt-head">
+                        <div class="receipt-brand">محامص الشعب</div>
+                        <div id="_mntNotifTitle" class="receipt-title"></div>
+                        <div id="_mntNotifStamp" class="receipt-stamp">تبليغ</div>
+                    </div>
+                    <pre id="_mntNotifText" class="receipt-body"></pre>
+                    <div class="receipt-edge"></div>
+                    <div class="receipt-foot">
+                        <button class="copy-btn" onclick="_copyMontasiaNotif(this)">
+                            📋 نسخ النص وإغلاق
+                        </button>
+                    </div>
                 </div>
             </div>
         `;
         document.body.appendChild(el);
-        /* لا تُغلَق عند النقر خارج النافذة — الإغلاق فقط بزر نسخ (طلب المستخدم) */
+        /* لا تُغلَق عند النقر خارج النافذة — الإغلاق فقط بزر نسخ */
     }
     document.getElementById('_mntNotifTitle').textContent = title || 'تبليغ';
     document.getElementById('_mntNotifText').textContent  = text;
+    /* اضبط نص الـ stamp بناءً على عنوان الرسالة */
+    const stamp = document.getElementById('_mntNotifStamp');
+    if (stamp) {
+        stamp.textContent = (title && title.includes('تسليم')) ? 'تسليم' : 'تبليغ';
+    }
     el.style.display = 'flex';
 }
 
