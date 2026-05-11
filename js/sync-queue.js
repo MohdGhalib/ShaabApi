@@ -144,8 +144,26 @@ function __sq_markConfirmed(sentSnapshot) {
 }
 
 /* ── إعادة محاولة فورية ── */
-function __sq_retryNow() {
+function __sq_retryNow(srcBtn) {
     const count = Object.keys(_sqPending).length;
+    console.log(`[SQ] __sq_retryNow invoked — pending=${count}`);
+
+    /* ردّة فعل بصرية فورية على الزر إن وُجد */
+    let _origHtml = null;
+    if (srcBtn && srcBtn.tagName === 'BUTTON') {
+        _origHtml = srcBtn.innerHTML;
+        srcBtn.disabled = true;
+        srcBtn.style.opacity = '0.7';
+        srcBtn.innerHTML = '⏳ جارٍ المحاولة...';
+        setTimeout(() => {
+            try {
+                srcBtn.disabled = false;
+                srcBtn.style.opacity = '';
+                if (_origHtml != null) srcBtn.innerHTML = _origHtml;
+            } catch {}
+        }, 1800);
+    }
+
     if (count === 0) {
         _sqRenderUI();
         return;
@@ -283,7 +301,7 @@ function _sqRenderUIImpl() {
             <div class="sq-dd-header">
                 <span class="sq-dd-header-title">${headerLabel}</span>
                 <div class="sq-dd-actions">
-                    <button onclick="__sq_retryNow()" class="sq-retry" title="إعادة محاولة فورية">⟳ إعادة محاولة</button>
+                    <button onclick="__sq_retryNow(this)" class="sq-retry" title="إعادة محاولة فورية">⟳ إعادة محاولة</button>
                     <button onclick="__sq_toggleDropdown()" class="sq-close" title="إغلاق">✕</button>
                 </div>
             </div>
@@ -495,4 +513,12 @@ if (document.readyState === 'loading') {
     document.addEventListener('DOMContentLoaded', __sq_init);
 } else {
     __sq_init();
+}
+
+/* ── تأكيد التوفّر على window — حماية ضد أي بيئة تحميل غير قياسية ── */
+if (typeof window !== 'undefined') {
+    window.__sq_retryNow      = __sq_retryNow;
+    window.__sq_toggleDropdown = __sq_toggleDropdown;
+    window.__sq_beforePush    = __sq_beforePush;
+    window.__sq_markConfirmed = __sq_markConfirmed;
 }
