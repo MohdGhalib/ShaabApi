@@ -456,12 +456,25 @@ async function loadAllData() {
             return;
         }
         try {
-            const res = await fetch('api/storage?keys=' + keys.join(','), {
-                headers: { 'Authorization': `Bearer ${_token}` }
-            });
+            /* 🔄 Phase 4b (Migration #11): جلب المنتسيات من endpoint منفصل بالتوازي */
+            const [res, _mntRes] = await Promise.all([
+                fetch('api/storage?keys=' + keys.join(','), {
+                    headers: { 'Authorization': `Bearer ${_token}` }
+                }),
+                fetch('api/montasiat', {
+                    headers: { 'Authorization': `Bearer ${_token}` }
+                }).catch(e => { console.warn('[Phase4b] /api/montasiat fetch failed:', e); return null; })
+            ]);
             if (res.status === 401) { location.reload(); return; }
             if (!res.ok) throw new Error('Server error ' + res.status);
             const data = await res.json();
+
+            /* اقرأ المنتسيات الجديدة مبكراً — لو فشل، نُكمل على JSON blob */
+            let _newMontasiat = null;
+            if (_mntRes && _mntRes.ok) {
+                try { _newMontasiat = await _mntRes.json(); }
+                catch (e) { console.warn('[Phase4b] /api/montasiat parse failed:', e); }
+            }
 
             // 🛡️ حماية حاسمة ضد تفريغ db: لو السيرفر رجّع Master_DB فارغ/مفقود
             // ولدينا بيانات محلية صالحة، لا نُكتب فوقها — هذا منع الكتابة بدب فارغ تماماً.
@@ -480,6 +493,11 @@ async function loadAllData() {
                         : null;
                     const _parsed = JSON.parse(_masterStr);
                     db = _parsed;
+                    /* 🔄 Phase 4b: استبدل db.montasiat بالـ endpoint الجديد لو نجح،
+                       وإلا اترك ما خرج من JSON blob (fallback) */
+                    if (Array.isArray(_newMontasiat)) {
+                        db.montasiat = _newMontasiat;
+                    }
                     // 🔄 طبّق التعديلات المحلية الأحدث فوق بيانات السيرفر (مقارنة بالـ timestamp)
                     if (_localBranchInfo) {
                         if (!db.branchInfo || typeof db.branchInfo !== 'object') db.branchInfo = {};
