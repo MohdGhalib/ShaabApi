@@ -65,8 +65,13 @@ function _c360EnsureStyles() {
         #c360Modal .c360-item .status.pending { background:rgba(245,124,0,0.18); color:#ffcc80; border:1px solid rgba(245,124,0,0.4); }
         #c360Modal .c360-item .status.rejected { background:rgba(229,57,53,0.18); color:#ef9a9a; border:1px solid rgba(229,57,53,0.4); }
         #c360Modal .c360-empty { color:#888; font-size:12px; padding:8px 4px; }
-        .c360-phone-link { color:#90caf9; cursor:pointer; text-decoration:underline dotted; }
-        .c360-phone-link:hover { color:#bbdefb; }
+        .c360-phone-link {
+            color:#64b5f6 !important; cursor:pointer !important;
+            text-decoration:underline !important; text-decoration-style:dotted !important;
+            text-underline-offset:3px; font-weight:700;
+            transition:color 0.15s ease;
+        }
+        .c360-phone-link:hover { color:#bbdefb !important; background:rgba(100,181,246,0.12); border-radius:4px; padding:1px 4px; }
         .phone-cell-wrap { position:relative; display:inline-block; padding-top:6px; }
         .phone-contact-badge {
             position:absolute; top:-2px; right:-10px;
