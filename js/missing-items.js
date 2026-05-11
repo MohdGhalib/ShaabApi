@@ -32,7 +32,7 @@ function _montasiaNotifDetails(item, opts) {
             lines.push(`  ${i+1}. ${it.name}${q}${p}`);
         });
     }
-    if (item.notes) lines.push(`الملاحظات: ${item.notes}`);
+    if (item.notes) lines.push(item.notes);
     return lines.join('\n') || '—';
 }
 
