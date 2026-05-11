@@ -469,7 +469,7 @@ function confirmDeliver() {
         const _deliveryIso = `${dateVal}T${timeVal}:00`;
         if (item.iso && _deliveryIso < item.iso) {
             const _reportTime = String(item.iso).replace('T', ' ').slice(0, 16);
-            return alert(`⚠️ هذا الوقت قبل وقت التبليغ.\n\nوقت التبليغ:  ${_reportTime}\nوقت التسليم: ${dateVal} ${timeVal}\n\nيرجى اختيار وقت تسليم صحيح.`);
+            return alert(`💡 حكمة اليوم تقول:\nلا تذهب لحديقة الحيوان لرؤية الحمار 🫏\nقم بالوقوف امام المرآة وستراه بدون دفع رسوم دخول\n\n━━━━━━━━━━━━━━━━━━━━\n\n⚠️ هذا الوقت قبل وقت التبليغ.\n\nوقت التبليغ:  ${_reportTime}\nوقت التسليم: ${dateVal} ${timeVal}\n\nيرجى اختيار وقت تسليم صحيح.`);
         }
         // تنسيق: YYYY/MM/DD — HH:MM
         const [y,m,d] = dateVal.split('-');
