@@ -30,11 +30,13 @@ public class StorageController : ControllerBase
     // هذه المفاتيح لا يمكن تعديلها إلا من قِبل المدراء
     private static readonly HashSet<string> _adminOnlyKeys = ["Shaab_Employees_DB"];
 
-    private readonly AppDbContext _db;
-    private readonly FcmService   _fcm;
+    private readonly AppDbContext         _db;
+    private readonly FcmService           _fcm;
+    private readonly PerRecordSyncService _perRecordSync;
 
-    public StorageController(AppDbContext db, FcmService fcm)
+    public StorageController(AppDbContext db, FcmService fcm, PerRecordSyncService perRecordSync)
     {
+        _perRecordSync = perRecordSync;
         _db = db;
         _fcm = fcm;
     }
@@ -235,6 +237,22 @@ public class StorageController : ControllerBase
         }
 
         await _db.SaveChangesAsync();
+
+        // 🔄 Phase 2 (Migration #11): Dual-write per-record tables for Master_DB
+        // Source of truth is still the JSON blob; this builds shadow tables for Phase 4 cutover.
+        // Best-effort — exceptions are caught inside the service and never bubble up.
+        if (body.Key == "Shaab_Master_DB" && !string.IsNullOrEmpty(body.Value))
+        {
+            try
+            {
+                var (inq, mnt, cmp) = await _perRecordSync.SyncMasterDbAsync(body.Value!);
+                Console.WriteLine($"[DUAL-WRITE] mirrored to per-record tables: I={inq} M={mnt} C={cmp}");
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"[DUAL-WRITE] outer guard caught: {ex.Message}");
+            }
+        }
 
         // إرسال حدث SSE لجميع المتصلين (fire-and-forget)
         _ = SseController.Broadcast("reload", "1");

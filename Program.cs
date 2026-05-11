@@ -47,6 +47,7 @@ builder.Services.AddDbContext<AppDbContext>(options =>
 builder.Services.AddControllers();
 builder.Services.AddHttpContextAccessor();
 builder.Services.AddScoped<FcmService>();
+builder.Services.AddScoped<PerRecordSyncService>();
 
 // JWT Authentication
 var jwtKey = builder.Configuration["Jwt:Key"]!;
