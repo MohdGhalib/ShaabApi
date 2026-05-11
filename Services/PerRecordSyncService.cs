@@ -117,7 +117,7 @@ public class PerRecordSyncService
                     e = new Montasia { Id = id };
                     _db.Montasiat.Add(e);
                 }
-                e.Serial   = GetIntOrNull(rec, "serial");
+                e.Serial   = GetStringOrNull(rec, "serial", 30);
                 e.Branch   = GetStringOrNull(rec, "branch", 100);
                 e.Type     = GetStringOrNull(rec, "type", 50);
                 e.Status   = GetStringOrNull(rec, "status", 50);

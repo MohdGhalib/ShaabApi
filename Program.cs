@@ -122,7 +122,7 @@ using (var scope = app.Services.CreateScope())
 
         ("montasiat", @"CREATE TABLE IF NOT EXISTS montasiat (
             id BIGINT PRIMARY KEY,
-            serial INT NULL,
+            serial VARCHAR(30) NULL,
             branch VARCHAR(100) NULL,
             type VARCHAR(50) NULL,
             status VARCHAR(50) NULL,
@@ -164,6 +164,20 @@ using (var scope = app.Services.CreateScope())
         {
             Console.WriteLine($"[startup] ⚠ CREATE TABLE {tableName} failed: {ex.Message}");
         }
+    }
+
+    // ── Phase 4a fix: serial column INT → VARCHAR(30) to match JSON blob semantics ──
+    // Idempotent: if the column is already VARCHAR, MySQL no-ops the MODIFY.
+    try
+    {
+        await db.Database.ExecuteSqlRawAsync(
+            "ALTER TABLE montasiat MODIFY COLUMN serial VARCHAR(30) NULL"
+        );
+        Console.WriteLine("[startup] ✓ montasiat.serial column ensured as VARCHAR(30)");
+    }
+    catch (Exception ex)
+    {
+        Console.WriteLine($"[startup] ⚠ ALTER montasiat.serial failed: {ex.Message}");
     }
 
     var row = await db.Storage.FindAsync("Shaab_Employees_DB");

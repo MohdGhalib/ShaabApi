@@ -11,7 +11,8 @@ public class Montasia
     public long Id { get; set; }
 
     [Column("serial")]
-    public int? Serial { get; set; }
+    [MaxLength(30)]
+    public string? Serial { get; set; }
 
     [Column("branch")]
     [MaxLength(100)]
