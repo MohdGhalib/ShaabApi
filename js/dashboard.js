@@ -42,12 +42,11 @@ function renderDashboard() {
     // 👤 Customer 360 — cc_manager و cc_employee فقط
     const _canC360   = currentUser?.role === 'cc_manager' || currentUser?.role === 'cc_employee';
     const _c360Bar = _canC360 ? `
-        <div style="background:linear-gradient(135deg,rgba(21,101,192,0.12),rgba(13,58,115,0.08));border:1px solid rgba(100,181,246,0.35);border-radius:14px;padding:14px 18px;margin-bottom:18px;display:flex;gap:10px;align-items:center;">
+        <div style="background:linear-gradient(135deg,rgba(21,101,192,0.12),rgba(13,58,115,0.08));border:1px solid rgba(100,181,246,0.35);border-radius:14px;padding:14px 18px;margin-bottom:18px;display:flex;gap:10px;align-items:center;max-width:50%;">
             <span style="font-size:18px;">📞</span>
             <input id="c360DashSearch" type="tel" placeholder="ابحث عن زبون برقم الهاتف..." style="flex:1;background:rgba(0,0,0,0.25);color:#fff;border:1px solid rgba(255,255,255,0.15);border-radius:8px;padding:9px 12px;font-family:'Cairo';font-size:14px;direction:rtl;"
                    onkeydown="if(event.key==='Enter') openCustomer360(this.value)" />
-            <button onclick="openCustomer360(document.getElementById('c360DashSearch').value)" style="background:#1565c0;color:#fff;border:0;border-radius:8px;padding:9px 16px;cursor:pointer;font-family:'Cairo';font-weight:700;">عرض الملف</button>
-            <span style="font-size:11px;color:var(--text-dim);">أو اضغط <kbd style="background:rgba(255,255,255,0.1);border:1px solid rgba(255,255,255,0.2);border-radius:4px;padding:2px 6px;font-family:monospace;">Ctrl+K</kbd></span>
+            <button onclick="openCustomer360(document.getElementById('c360DashSearch').value)" style="background:#1565c0;color:#fff;border:0;border-radius:8px;padding:9px 16px;cursor:pointer;font-family:'Cairo';font-weight:700;">بحث</button>
         </div>
     ` : '';
     const cards = `
