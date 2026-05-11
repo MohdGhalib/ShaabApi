@@ -245,9 +245,18 @@ public class StorageController : ControllerBase
         {
             try
             {
-                // Diff-aware: pass oldValue so we only upsert changed records
-                var (inq, mnt, cmp) = await _perRecordSync.SyncMasterDbAsync(body.Value!, oldValue);
-                Console.WriteLine($"[DUAL-WRITE] mirrored to per-record tables: I={inq} M={mnt} C={cmp}");
+                // Phase 5d: skip dual-write for lite blobs (Phase 5b clients dispatch
+                // per-record directly via /api/{type}). Only legacy full blobs (with
+                // record arrays embedded) still need the mirror.
+                if (_BlobHasRecordArrays(body.Value!))
+                {
+                    var (inq, mnt, cmp) = await _perRecordSync.SyncMasterDbAsync(body.Value!, oldValue);
+                    Console.WriteLine($"[DUAL-WRITE] legacy full-blob mirrored: I={inq} M={mnt} C={cmp}");
+                }
+                else
+                {
+                    Console.WriteLine("[DUAL-WRITE] skipped — lite blob (Phase 5b client)");
+                }
             }
             catch (Exception ex)
             {
@@ -262,6 +271,22 @@ public class StorageController : ControllerBase
     }
 
     // آمن للاستدعاء من Task.Run — لا يستخدم DbContext
+    // Phase 5d: detect whether a Master_DB payload still ships the heavy record arrays.
+    // Lite blobs (post-Phase 5b) omit them since records flow through /api/{type} endpoints.
+    private static bool _BlobHasRecordArrays(string json)
+    {
+        try
+        {
+            using var doc = JsonDocument.Parse(json);
+            var root = doc.RootElement;
+            if (root.ValueKind != JsonValueKind.Object) return false;
+            return (root.TryGetProperty("inquiries",  out var i) && i.ValueKind == JsonValueKind.Array)
+                || (root.TryGetProperty("montasiat",  out var m) && m.ValueKind == JsonValueKind.Array)
+                || (root.TryGetProperty("complaints", out var c) && c.ValueKind == JsonValueKind.Array);
+        }
+        catch { return false; }
+    }
+
     private static async Task _DetectAndNotify(
         List<FcmTokenRecord> allTokens,
         string? empJson,
