@@ -39,7 +39,19 @@ function renderDashboard() {
 
     // مدير قسم السيطرة: لا يرى بطاقتي "استفسارات اليوم" و"إجمالي المنتسيات"
     const _isCtrlMgr = currentUser?.role === 'control_employee';
+    // 👤 Customer 360 — cc_manager و cc_employee فقط
+    const _canC360   = currentUser?.role === 'cc_manager' || currentUser?.role === 'cc_employee';
+    const _c360Bar = _canC360 ? `
+        <div style="background:linear-gradient(135deg,rgba(21,101,192,0.12),rgba(13,58,115,0.08));border:1px solid rgba(100,181,246,0.35);border-radius:14px;padding:14px 18px;margin-bottom:18px;display:flex;gap:10px;align-items:center;">
+            <span style="font-size:18px;">📞</span>
+            <input id="c360DashSearch" type="tel" placeholder="ابحث عن زبون برقم الهاتف..." style="flex:1;background:rgba(0,0,0,0.25);color:#fff;border:1px solid rgba(255,255,255,0.15);border-radius:8px;padding:9px 12px;font-family:'Cairo';font-size:14px;direction:rtl;"
+                   onkeydown="if(event.key==='Enter') openCustomer360(this.value)" />
+            <button onclick="openCustomer360(document.getElementById('c360DashSearch').value)" style="background:#1565c0;color:#fff;border:0;border-radius:8px;padding:9px 16px;cursor:pointer;font-family:'Cairo';font-weight:700;">عرض الملف</button>
+            <span style="font-size:11px;color:var(--text-dim);">أو اضغط <kbd style="background:rgba(255,255,255,0.1);border:1px solid rgba(255,255,255,0.2);border-radius:4px;padding:2px 6px;font-family:monospace;">Ctrl+K</kbd></span>
+        </div>
+    ` : '';
     const cards = `
+    ${_c360Bar}
     <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:16px;margin-bottom:28px;">
         <div style="${cardStyle('#d32f2f')}">
             <div style="font-size:13px;color:var(--text-dim);font-weight:600;">⏳ منتسيات لم يتم تسليمها</div>
