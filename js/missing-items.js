@@ -46,11 +46,9 @@ function _buildAddNotifText(item) {
     const time   = item.time   || _fmtIsoLocal(item.iso).slice(0, 16);
     const emp    = item.branchEmp || item.addedBy || '—';
     const details = _montasiaNotifDetails(item, { includeType: true });
-    const sysTime = _fmtIsoLocal(item.iso);
     return `تم استلام تبليغ عن منتسية من الفرع ${branch} بالتوقيت: ${time}
 عن طريق الموظف: ${emp} بالتفاصيل التالية:
 ${details}
-وقت استلام المنتسية على النظام: ${sysTime}
 
 يرجى تأكيد استلام رسالة التبليغ على الواتساب واعلامنا اذا فيه أي ملاحظات او تعديل`;
 }
@@ -64,8 +62,7 @@ function _buildDeliveryNotifText(item) {
 بالتفاصيل التالية:
 ${details}
 
-وقت التبليغ عن المنتسية: ${reportTime}
-وقت تسليم المنتسية: ${dt}`;
+وقت التبليغ عن المنتسية: ${reportTime}`;
 }
 
 function _showMontasiaNotifModal(text, title) {
