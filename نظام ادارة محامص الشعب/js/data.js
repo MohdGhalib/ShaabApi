@@ -421,6 +421,11 @@ const IS_LOCAL = location.protocol === 'file:';
 let _token     = null;
 let _isLoading = false;
 let _isSaving  = false;          // يمنع SSE من تحميل بيانات قديمة أثناء الحفظ
+let _isUnloading = false;        // يمنع toast الخطأ أثناء logout/reload (fetch يُلغى)
+if (typeof window !== 'undefined') {
+    window.addEventListener('beforeunload', () => { _isUnloading = true; });
+    window.addEventListener('pagehide',     () => { _isUnloading = true; });
+}
 
 // 🔒 Optimistic Concurrency: إصدار كل مفتاح Storage على السيرفر
 // يُحدَّث عند كل loadAllData ناجح وعند كل _push ناجح
@@ -707,7 +712,7 @@ function _push(key, value) {
             await _handleVersionConflict(key);
             return;
         }
-        if (!r.ok) { _showSaveError(); return; }
+        if (!r.ok) { if (!_isUnloading) _showSaveError(); return; }
 
         // ✓ نجح — احفظ الإصدار الجديد + أعِد ضبط عدّاد محاولات التعارض
         try {
@@ -723,7 +728,8 @@ function _push(key, value) {
     }).catch(() => {
         _isSaving = false;
         clearTimeout(_savingTimer);
-        _showSaveError();
+        /* لا تُظهر toast لو الصفحة قيد إعادة التحميل/الخروج — fetch مُلغى بسبب navigation */
+        if (!_isUnloading) _showSaveError();
     });
 }
 
@@ -769,9 +775,12 @@ async function _handleVersionConflict(key) {
             _conflictRetryCount = 0;
         } else {
             // مفاتيح أخرى (employees / breaks / sessions / priceList): مجرد تحديث + toast
+            /* مفاتيح غير Master_DB (sessions/employees/breaks/priceList):
+               عادةً race condition عابر (heartbeat ضد recordLogin مثلاً)
+               → اكتفِ بتحديث صامت بدون toast مزعج */
             await loadAllData();
             if (typeof renderAll === 'function') renderAll();
-            _showConflictToast();
+            console.log(`[conflict] ${key} silently refreshed (no toast)`);
         }
     } catch (e) {
         console.error('[_push] conflict refresh failed:', e);
