@@ -245,7 +245,8 @@ public class StorageController : ControllerBase
         {
             try
             {
-                var (inq, mnt, cmp) = await _perRecordSync.SyncMasterDbAsync(body.Value!);
+                // Diff-aware: pass oldValue so we only upsert changed records
+                var (inq, mnt, cmp) = await _perRecordSync.SyncMasterDbAsync(body.Value!, oldValue);
                 Console.WriteLine($"[DUAL-WRITE] mirrored to per-record tables: I={inq} M={mnt} C={cmp}");
             }
             catch (Exception ex)

@@ -34,22 +34,42 @@ public class PerRecordSyncService
     public PerRecordSyncService(AppDbContext db) { _db = db; }
 
     public async Task<(int inquiries, int montasiat, int complaints)> SyncMasterDbAsync(string masterDbJson)
+        => await SyncMasterDbAsync(masterDbJson, null);
+
+    /// <summary>
+    /// Diff-aware variant: when oldJson is provided, only records whose raw JSON
+    /// changed (or are new) get upserted. Used by the dual-write hot path.
+    /// Falls back to full sync when oldJson is null (used by backfill).
+    /// </summary>
+    public async Task<(int inquiries, int montasiat, int complaints)> SyncMasterDbAsync(string masterDbJson, string? oldJson)
     {
         int inqCount = 0, mntCount = 0, cmpCount = 0;
+        JsonDocument? oldDoc = null;
         try
         {
             using var doc = JsonDocument.Parse(masterDbJson);
             var root = doc.RootElement;
             if (root.ValueKind != JsonValueKind.Object) return (0, 0, 0);
 
+            if (!string.IsNullOrEmpty(oldJson))
+            {
+                try { oldDoc = JsonDocument.Parse(oldJson); }
+                catch { oldDoc = null; }
+            }
+            var oldRoot = oldDoc?.RootElement;
+
+            var oldInqMap = _IndexRawById(oldRoot, "inquiries");
+            var oldMntMap = _IndexRawById(oldRoot, "montasiat");
+            var oldCmpMap = _IndexRawById(oldRoot, "complaints");
+
             if (root.TryGetProperty("inquiries",  out var inqArr) && inqArr.ValueKind == JsonValueKind.Array)
-                inqCount = UpsertInquiries(inqArr);
+                inqCount = UpsertInquiries(inqArr, oldInqMap);
 
             if (root.TryGetProperty("montasiat",  out var mntArr) && mntArr.ValueKind == JsonValueKind.Array)
-                mntCount = await UpsertMontasiatAsync(mntArr);
+                mntCount = await UpsertMontasiatAsync(mntArr, oldMntMap);
 
             if (root.TryGetProperty("complaints", out var cmpArr) && cmpArr.ValueKind == JsonValueKind.Array)
-                cmpCount = await UpsertComplaintsAsync(cmpArr);
+                cmpCount = await UpsertComplaintsAsync(cmpArr, oldCmpMap);
 
             await _db.SaveChangesAsync();
         }
@@ -57,18 +77,37 @@ public class PerRecordSyncService
         {
             Console.WriteLine($"[DUAL-WRITE] sync failed: {ex.GetType().Name}: {ex.Message}");
         }
+        finally
+        {
+            oldDoc?.Dispose();
+        }
         return (inqCount, mntCount, cmpCount);
     }
 
-    private int UpsertInquiries(JsonElement arr)
+    private static Dictionary<long, string>? _IndexRawById(JsonElement? root, string prop)
     {
-        var ids = CollectIds(arr);
-        var existing = _db.Inquiries.Where(i => ids.Contains(i.Id)).ToDictionary(i => i.Id);
+        if (root is not { } r || r.ValueKind != JsonValueKind.Object) return null;
+        if (!r.TryGetProperty(prop, out var arr) || arr.ValueKind != JsonValueKind.Array) return null;
+        var map = new Dictionary<long, string>(capacity: arr.GetArrayLength());
+        foreach (var rec in arr.EnumerateArray())
+        {
+            if (!TryGetLongId(rec, out var id)) continue;
+            map[id] = rec.GetRawText();
+        }
+        return map;
+    }
+
+    private int UpsertInquiries(JsonElement arr, Dictionary<long, string>? oldMap)
+    {
+        var changedIds = _CollectChangedIds(arr, oldMap);
+        if (changedIds.Count == 0) return 0;
+        var existing = _db.Inquiries.Where(i => changedIds.Contains(i.Id)).ToDictionary(i => i.Id);
 
         int count = 0;
         foreach (var rec in arr.EnumerateArray())
         {
             if (!TryGetLongId(rec, out var id)) continue;
+            if (!changedIds.Contains(id)) continue;
             try
             {
                 var e = existing.TryGetValue(id, out var found) ? found : null;
@@ -100,15 +139,17 @@ public class PerRecordSyncService
         return count;
     }
 
-    private async Task<int> UpsertMontasiatAsync(JsonElement arr)
+    private async Task<int> UpsertMontasiatAsync(JsonElement arr, Dictionary<long, string>? oldMap)
     {
-        var ids = CollectIds(arr);
-        var existing = await _db.Montasiat.Where(m => ids.Contains(m.Id)).ToDictionaryAsync(m => m.Id);
+        var changedIds = _CollectChangedIds(arr, oldMap);
+        if (changedIds.Count == 0) return 0;
+        var existing = await _db.Montasiat.Where(m => changedIds.Contains(m.Id)).ToDictionaryAsync(m => m.Id);
 
         int count = 0;
         foreach (var rec in arr.EnumerateArray())
         {
             if (!TryGetLongId(rec, out var id)) continue;
+            if (!changedIds.Contains(id)) continue;
             try
             {
                 var e = existing.TryGetValue(id, out var found) ? found : null;
@@ -135,15 +176,17 @@ public class PerRecordSyncService
         return count;
     }
 
-    private async Task<int> UpsertComplaintsAsync(JsonElement arr)
+    private async Task<int> UpsertComplaintsAsync(JsonElement arr, Dictionary<long, string>? oldMap)
     {
-        var ids = CollectIds(arr);
-        var existing = await _db.Complaints.Where(c => ids.Contains(c.Id)).ToDictionaryAsync(c => c.Id);
+        var changedIds = _CollectChangedIds(arr, oldMap);
+        if (changedIds.Count == 0) return 0;
+        var existing = await _db.Complaints.Where(c => changedIds.Contains(c.Id)).ToDictionaryAsync(c => c.Id);
 
         int count = 0;
         foreach (var rec in arr.EnumerateArray())
         {
             if (!TryGetLongId(rec, out var id)) continue;
+            if (!changedIds.Contains(id)) continue;
             try
             {
                 var e = existing.TryGetValue(id, out var found) ? found : null;
@@ -177,6 +220,29 @@ public class PerRecordSyncService
         foreach (var rec in arr.EnumerateArray())
             if (TryGetLongId(rec, out var id)) ids.Add(id);
         return ids;
+    }
+
+    /// <summary>
+    /// Returns IDs of records that are NEW or CHANGED vs the old map.
+    /// When oldMap is null → returns all IDs (full sync, used by backfill).
+    /// When oldMap is provided → compares raw JSON text per record and skips matches.
+    /// </summary>
+    private static HashSet<long> _CollectChangedIds(JsonElement arr, Dictionary<long, string>? oldMap)
+    {
+        var changed = new HashSet<long>();
+        foreach (var rec in arr.EnumerateArray())
+        {
+            if (!TryGetLongId(rec, out var id)) continue;
+            if (oldMap == null)
+            {
+                changed.Add(id);
+                continue;
+            }
+            var newRaw = rec.GetRawText();
+            if (oldMap.TryGetValue(id, out var oldRaw) && oldRaw == newRaw) continue;
+            changed.Add(id);
+        }
+        return changed;
     }
 
     private static bool TryGetLongId(JsonElement rec, out long id)
