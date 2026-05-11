@@ -553,7 +553,7 @@ function _renderTableM(get, isAdmin) {
                 ${x.serial ? `<div style="margin-bottom:4px;"><span style="display:inline-block;background:rgba(100,181,246,0.15);color:#90caf9;border:1px solid rgba(100,181,246,0.4);padding:2px 8px;border-radius:6px;font-size:11px;font-weight:700;font-family:monospace;">#${sanitize(x.serial)}</span></div>` : ''}
                 <span class="text-box-cell">${sanitize(x.notes)}</span>${perm('editM')?` <button onclick="startEditMontasia(${x.id})" title="تعديل المدخلات" style="background:none;border:none;cursor:pointer;color:var(--text-dim);padding:0 4px;font-size:13px;vertical-align:middle;">✏️</button>`:''}${extraInfo}${photoCell}${editBox}
                 ${x.reservedFor && x.reservedFor.inqSeq ? `<div style="margin-top:8px;display:flex;gap:6px;flex-wrap:wrap;align-items:center;">
-                    <button onclick="jumpToInquiry(${x.reservedFor.inqSeq})" title="انتقل لاستفسار الزبون" style="background:linear-gradient(135deg,rgba(46,125,50,0.18),rgba(46,125,50,0.10));border:1px solid rgba(46,125,50,0.45);color:#a5d6a7;border-radius:8px;padding:5px 12px;font-family:'Cairo';font-size:11px;font-weight:700;cursor:pointer;">👤 رقم الزبون${x.reservedFor.phone?` — ${sanitize(x.reservedFor.phone)}`:''}</button>
+                    <button onclick="jumpToInquiry(${x.reservedFor.inqSeq})" title="انتقل لاستفسار الزبون" style="background:linear-gradient(135deg,rgba(46,125,50,0.18),rgba(46,125,50,0.10));border:1px solid rgba(46,125,50,0.45);color:#a5d6a7;border-radius:8px;padding:5px 12px;font-family:'Cairo';font-size:11px;font-weight:700;cursor:pointer;">👤 رقم الزبون${x.reservedFor.phone?` — ${sanitize(x.reservedFor.phone)}`:''}</button>${x.reservedFor.phone && (currentUser?.role === 'cc_manager' || currentUser?.role === 'cc_employee') ? `<span class="c360-phone-link" onclick="event.stopPropagation();openCustomer360('${sanitize(x.reservedFor.phone)}')" title="عرض ملف الزبون" style="margin-right:6px;font-size:11px;">📞 ملف الزبون</span>` : ''}
                     ${(currentUser?.role === 'cc_manager' || currentUser?.isAdmin) ? `<button onclick="unreserveMontasia(${x.id})" title="فك حجز المنتسية (مدير الكول سنتر فقط)" style="background:linear-gradient(135deg,rgba(211,47,47,0.18),rgba(211,47,47,0.10));border:1px solid rgba(211,47,47,0.45);color:#ef9a9a;border-radius:8px;padding:5px 12px;font-family:'Cairo';font-size:11px;font-weight:700;cursor:pointer;">🔓 فك الحجز</button>` : ''}
                 </div>` : ''}
             </td>
@@ -778,7 +778,9 @@ function _renderTableI(get) {
         return `<tr data-id="${x.id}">
             <td><span class="seq-badge" title="الرقم التسلسلي">#${x.seq||'—'}</span></td>
             <td><b>${x.branch}</b><br><small>${x.city}</small></td>
-            <td>${sanitize(x.phone)}</td>
+            <td>${(currentUser?.role === 'cc_manager' || currentUser?.role === 'cc_employee')
+                  ? `<span class="c360-phone-link" onclick="openCustomer360('${sanitize(x.phone)}')" title="عرض ملف الزبون">${sanitize(x.phone)}</span>`
+                  : sanitize(x.phone)}</td>
             <td>
                 <span class="emp-badge">${x.type||'—'}</span>${ctBadge}${_existsTag}${notifyBtnI}
                 ${_itemBadge}
@@ -856,7 +858,7 @@ function _renderTableC(get, isAdmin) {
         const hideFromControl = isControl || isMedia || isControlEmployee || isControlSub;
 
         const custHtml = (!hideFromControl && x.customer?.phone)
-            ? `<div class="customer-info-box">👤 <b>الهاتف:</b> ${sanitize(x.customer.phone)}</div>`
+            ? `<div class="customer-info-box">👤 <b>الهاتف:</b> ${(currentUser?.role === 'cc_manager' || currentUser?.role === 'cc_employee') ? `<span class="c360-phone-link" onclick="openCustomer360('${sanitize(x.customer.phone)}')" title="عرض ملف الزبون">${sanitize(x.customer.phone)}</span>` : sanitize(x.customer.phone)}</div>`
             : '';
 
         const linkHtml = (!hideFromControl && x.linkedInqSeq && perm('viewLinkBadge'))
