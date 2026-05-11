@@ -43,28 +43,202 @@ function _c360EnsureStyles() {
     const s = document.createElement('style');
     s.id = 'c360Styles';
     s.textContent = `
-        #c360Modal { position:fixed; inset:0; background:rgba(0,0,0,0.65); z-index:99998; display:flex; align-items:center; justify-content:center; padding:20px; font-family:'Cairo',sans-serif; direction:rtl; }
+        @keyframes _c360SlideUp { from { opacity:0; transform:translateY(28px) scale(0.95); } to { opacity:1; transform:translateY(0) scale(1); } }
+        @keyframes _c360StampLand { 0% { opacity:0; transform:rotate(-12deg) scale(1.5); } 60% { opacity:1; transform:rotate(-12deg) scale(0.92); } 100% { opacity:1; transform:rotate(-12deg) scale(1); } }
+
+        #c360Modal {
+            position:fixed; inset:0;
+            background:radial-gradient(ellipse at center, rgba(60,30,8,0.92) 0%, rgba(15,8,2,0.96) 100%);
+            backdrop-filter:blur(8px);
+            z-index:99998; display:flex; align-items:center; justify-content:center;
+            padding:20px; direction:rtl;
+            font-family:'Cairo','Tajawal',sans-serif;
+        }
         #c360Modal.hidden { display:none; }
-        #c360Modal .c360-box { background:#1a1a1a; color:#fff; border:1px solid #444; border-radius:14px; width:100%; max-width:760px; max-height:88vh; overflow:hidden; display:flex; flex-direction:column; box-shadow:0 18px 48px rgba(0,0,0,0.6); }
-        #c360Modal .c360-header { padding:14px 18px; background:linear-gradient(135deg,#1565c0,#0d3a73); display:flex; justify-content:space-between; align-items:center; gap:12px; }
-        #c360Modal .c360-title { font-size:15px; font-weight:800; }
-        #c360Modal .c360-close { background:rgba(255,255,255,0.18); color:#fff; border:1px solid rgba(255,255,255,0.4); border-radius:6px; padding:4px 12px; cursor:pointer; font-family:'Cairo'; font-size:13px; font-weight:700; }
-        #c360Modal .c360-close:hover { background:rgba(255,255,255,0.32); }
-        #c360Modal .c360-search { padding:10px 18px; background:rgba(255,255,255,0.04); border-bottom:1px solid rgba(255,255,255,0.08); display:flex; gap:8px; align-items:center; }
-        #c360Modal .c360-search input { flex:1; background:#0e0e0e; color:#fff; border:1px solid #555; border-radius:8px; padding:8px 12px; font-family:'Cairo','monospace'; font-size:14px; }
-        #c360Modal .c360-summary { padding:12px 18px; background:rgba(100,181,246,0.05); border-bottom:1px solid rgba(255,255,255,0.06); display:flex; gap:14px; flex-wrap:wrap; font-size:12px; }
-        #c360Modal .c360-summary .pill { background:rgba(100,181,246,0.12); border:1px solid rgba(100,181,246,0.35); border-radius:14px; padding:4px 12px; color:#90caf9; font-weight:700; }
-        #c360Modal .c360-body { overflow-y:auto; padding:10px 18px 20px; flex:1; }
-        #c360Modal .c360-section { margin-top:14px; }
-        #c360Modal .c360-section-title { font-size:13px; font-weight:800; color:#ef9a9a; margin-bottom:6px; display:flex; align-items:center; gap:8px; }
-        #c360Modal .c360-item { background:rgba(255,255,255,0.05); border:1px solid rgba(255,255,255,0.08); border-radius:9px; padding:9px 11px; margin:6px 0; font-size:12.5px; line-height:1.6; }
-        #c360Modal .c360-item .row1 { display:flex; justify-content:space-between; gap:8px; align-items:center; }
-        #c360Modal .c360-item .meta { font-size:11px; color:#999; }
-        #c360Modal .c360-item .status { font-size:11px; padding:2px 8px; border-radius:10px; font-weight:700; }
-        #c360Modal .c360-item .status.done { background:rgba(76,175,80,0.18); color:#a5d6a7; border:1px solid rgba(76,175,80,0.4); }
-        #c360Modal .c360-item .status.pending { background:rgba(245,124,0,0.18); color:#ffcc80; border:1px solid rgba(245,124,0,0.4); }
-        #c360Modal .c360-item .status.rejected { background:rgba(229,57,53,0.18); color:#ef9a9a; border:1px solid rgba(229,57,53,0.4); }
-        #c360Modal .c360-empty { color:#888; font-size:12px; padding:8px 4px; }
+        #c360Modal .c360-wrap {
+            max-width:720px; width:100%; max-height:92vh;
+            display:flex; flex-direction:column;
+            animation:_c360SlideUp 0.45s cubic-bezier(0.34,1.3,0.64,1);
+        }
+
+        /* الشريط العلوي (إرشاد) */
+        #c360Modal .c360-instruction {
+            background:linear-gradient(135deg,#25d366 0%,#128c7e 50%,#075e54 100%);
+            color:#fff; padding:14px 22px; border-radius:18px 18px 0 0;
+            display:flex; align-items:center; gap:14px;
+            border:1.5px solid rgba(37,211,102,0.5); border-bottom:0;
+            box-shadow:0 -6px 26px rgba(7,94,84,0.45);
+            position:relative; overflow:hidden;
+        }
+        #c360Modal .c360-instruction::before {
+            content:''; position:absolute; inset:0;
+            background:repeating-linear-gradient(45deg, transparent 0 12px, rgba(255,255,255,0.04) 12px 14px);
+            pointer-events:none;
+        }
+        #c360Modal .c360-instruction-icon {
+            width:38px; height:38px; background:rgba(255,255,255,0.22);
+            border-radius:50%; display:flex; align-items:center; justify-content:center;
+            font-size:19px; flex-shrink:0; border:1.5px solid rgba(255,255,255,0.35);
+        }
+        #c360Modal .c360-instruction-text {
+            font-size:13.5px; font-weight:800; line-height:1.55; letter-spacing:0.2px;
+            text-shadow:0 1px 2px rgba(0,0,0,0.25);
+        }
+
+        /* الإيصال */
+        #c360Modal .c360-receipt {
+            background:linear-gradient(180deg, #fdf8ef 0%, #faf2e3 100%);
+            border:1.5px solid rgba(139,69,19,0.25);
+            border-radius:0 0 18px 18px;
+            box-shadow:0 36px 90px rgba(0,0,0,0.6), inset 0 1px 0 rgba(255,255,255,0.85);
+            position:relative; overflow:hidden;
+            display:flex; flex-direction:column;
+            flex:1; min-height:0;
+        }
+        #c360Modal .c360-receipt::before {
+            content:''; position:absolute; inset:0;
+            background-image:
+                radial-gradient(circle at 14% 18%, rgba(139,69,19,0.04) 0, transparent 12%),
+                radial-gradient(circle at 86% 78%, rgba(120,53,15,0.05) 0, transparent 14%);
+            pointer-events:none;
+        }
+        #c360Modal .c360-bean {
+            position:absolute; font-size:18px; opacity:0.18;
+            user-select:none; pointer-events:none;
+        }
+        #c360Modal .c360-bean.c360-b1 { top:8px; right:14px; transform:rotate(35deg); }
+        #c360Modal .c360-bean.c360-b2 { bottom:80px; left:18px; transform:rotate(-22deg); font-size:14px; }
+
+        #c360Modal .c360-close {
+            position:absolute; top:12px; left:14px; z-index:5;
+            width:30px; height:30px; border-radius:50%;
+            background:rgba(58,40,24,0.08); color:#5c3919;
+            border:1px solid rgba(58,40,24,0.18);
+            font-size:14px; font-weight:800; cursor:pointer;
+            display:flex; align-items:center; justify-content:center;
+            transition:background 0.18s, transform 0.18s;
+            font-family:'Cairo';
+        }
+        #c360Modal .c360-close:hover { background:rgba(198,40,40,0.12); color:#c62828; transform:rotate(90deg); }
+
+        /* رأس الإيصال */
+        #c360Modal .c360-receipt-head {
+            padding:24px 28px 18px; text-align:center;
+            border-bottom:2px dashed rgba(139,69,19,0.22);
+            position:relative;
+        }
+        #c360Modal .c360-brand {
+            font-size:10.5px; font-weight:800; color:#8b6f47;
+            letter-spacing:4px; margin-bottom:8px; text-transform:uppercase;
+        }
+        #c360Modal .c360-receipt-title {
+            font-size:20px; font-weight:900; color:#3a2818;
+            letter-spacing:0.3px; line-height:1.4;
+        }
+        #c360Modal .c360-stamp {
+            position:absolute; top:16px; right:22px;
+            transform:rotate(-12deg);
+            border:2.5px solid #c62828; color:#c62828;
+            padding:4px 12px; border-radius:6px;
+            font-size:11px; font-weight:900; letter-spacing:1.5px;
+            background:rgba(198,40,40,0.04);
+            animation:_c360StampLand 0.7s 0.35s cubic-bezier(0.5,1.6,0.4,1) both;
+            opacity:0;
+        }
+
+        /* شريط البحث */
+        #c360Modal .c360-search {
+            padding:14px 28px;
+            background:rgba(255,245,220,0.4);
+            border-bottom:2px dashed rgba(139,69,19,0.22);
+            display:flex; gap:10px; align-items:center;
+        }
+        #c360Modal .c360-search input {
+            flex:1; background:#fff; color:#3a2818;
+            border:1.5px solid rgba(139,69,19,0.22);
+            border-radius:10px; padding:10px 14px;
+            font-family:'Cairo','Tajawal',sans-serif; font-size:14px; font-weight:700;
+            transition:border-color 0.18s, box-shadow 0.18s;
+            direction:rtl;
+        }
+        #c360Modal .c360-search input:focus {
+            outline:none; border-color:#c0935d;
+            box-shadow:0 0 0 3px rgba(192,147,93,0.18);
+        }
+        #c360Modal .c360-search input::placeholder { color:#a08770; font-weight:600; }
+
+        /* شريط الملخّص (pills) */
+        #c360Modal .c360-summary {
+            padding:14px 28px;
+            background:rgba(192,147,93,0.06);
+            border-bottom:2px dashed rgba(139,69,19,0.22);
+            display:flex; gap:8px; flex-wrap:wrap;
+        }
+        #c360Modal .c360-summary .pill {
+            background:linear-gradient(135deg, #fff5dc 0%, #ffe9c2 100%);
+            color:#5c3919;
+            border:1.5px solid rgba(192,147,93,0.45);
+            border-radius:14px; padding:5px 12px;
+            font-size:11.5px; font-weight:800;
+            box-shadow:0 1px 3px rgba(139,69,19,0.08);
+        }
+
+        /* جسم القائمة */
+        #c360Modal .c360-body {
+            overflow-y:auto; padding:8px 28px 20px; flex:1; min-height:0;
+            position:relative;
+        }
+        #c360Modal .c360-section { margin-top:18px; }
+        #c360Modal .c360-section-title {
+            font-size:13.5px; font-weight:900; color:#5c3919;
+            margin-bottom:10px;
+            display:flex; align-items:center; gap:8px;
+            letter-spacing:0.3px;
+        }
+        #c360Modal .c360-item {
+            background:#fff;
+            border:1.5px solid rgba(139,69,19,0.18);
+            border-radius:12px; padding:11px 14px; margin:8px 0;
+            font-size:12.5px; line-height:1.7;
+            color:#3a2818;
+            box-shadow:0 2px 6px rgba(139,69,19,0.05);
+            transition:transform 0.18s, box-shadow 0.18s;
+        }
+        #c360Modal .c360-item:hover {
+            transform:translateY(-1px);
+            box-shadow:0 6px 14px rgba(139,69,19,0.12);
+            border-color:#c0935d;
+        }
+        #c360Modal .c360-item .row1 {
+            display:flex; justify-content:space-between; gap:8px; align-items:center;
+            margin-bottom:4px;
+        }
+        #c360Modal .c360-item .row1 strong { color:#3a2818; font-weight:800; font-size:13px; }
+        #c360Modal .c360-item .meta {
+            font-size:11px; color:#8b6f47; font-weight:600;
+            margin-top:4px;
+        }
+        #c360Modal .c360-item .status {
+            font-size:10.5px; padding:3px 10px; border-radius:10px; font-weight:800;
+        }
+        #c360Modal .c360-item .status.done {
+            background:rgba(46,125,50,0.12); color:#2e7d32;
+            border:1px solid rgba(46,125,50,0.35);
+        }
+        #c360Modal .c360-item .status.pending {
+            background:rgba(245,124,0,0.12); color:#e65100;
+            border:1px solid rgba(245,124,0,0.35);
+        }
+        #c360Modal .c360-item .status.rejected {
+            background:rgba(198,40,40,0.12); color:#c62828;
+            border:1px solid rgba(198,40,40,0.35);
+        }
+        #c360Modal .c360-empty {
+            color:#a08770; font-size:12px; padding:10px 4px;
+            text-align:center; font-style:italic;
+        }
+
+        /* phone link in tables — same coffee tone but readable on dark bg */
         .c360-phone-link {
             color:#64b5f6 !important; cursor:pointer !important;
             text-decoration:underline !important; text-decoration-style:dotted !important;
@@ -92,19 +266,33 @@ function _c360EnsureModal() {
     el.id = 'c360Modal';
     el.className = 'hidden';
     el.innerHTML = `
-        <div class="c360-box" onclick="event.stopPropagation()">
-            <div class="c360-header">
-                <div class="c360-title">📞 ملف الزبون</div>
-                <button class="c360-close" onclick="closeCustomer360()">إغلاق ✕</button>
+        <div class="c360-wrap" onclick="event.stopPropagation()">
+            <div class="c360-instruction">
+                <div class="c360-instruction-icon">👤</div>
+                <div class="c360-instruction-text">ملف الزبون والتعاملات السابقة معنا</div>
             </div>
-            <div class="c360-search">
-                <input type="tel" id="c360PhoneInput" placeholder="ابحث برقم آخر — أدخل الرقم واضغط Enter" autocomplete="off" />
+            <div class="c360-receipt">
+                <span class="c360-bean c360-b1">☕</span>
+                <span class="c360-bean c360-b2">●</span>
+                <button class="c360-close" onclick="closeCustomer360()" aria-label="إغلاق">✕</button>
+
+                <div class="c360-receipt-head">
+                    <div class="c360-brand">محامص الشعب</div>
+                    <div class="c360-receipt-title">📞 ملف الزبون</div>
+                    <span class="c360-stamp">ملف</span>
+                </div>
+
+                <div class="c360-search">
+                    <input type="tel" id="c360PhoneInput" placeholder="ابحث برقم آخر — أدخل الرقم واضغط Enter" autocomplete="off" />
+                </div>
+
+                <div class="c360-summary" id="c360Summary"></div>
+
+                <div class="c360-body" id="c360Body"></div>
             </div>
-            <div class="c360-summary" id="c360Summary"></div>
-            <div class="c360-body" id="c360Body"></div>
         </div>
     `;
-    el.addEventListener('click', e => { if (e.target === el) closeCustomer360(); });
+    /* لا تُغلق عند النقر خارج النافذة — الإغلاق فقط بزر ✕ */
     document.body.appendChild(el);
 
     const inp = document.getElementById('c360PhoneInput');
