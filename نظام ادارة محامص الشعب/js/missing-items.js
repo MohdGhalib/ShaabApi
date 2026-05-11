@@ -465,6 +465,12 @@ function confirmDeliver() {
         const timeVal = document.getElementById('deliverPrevTime')?.value;
         if (!dateVal) return alert("يرجى تحديد تاريخ التسليم");
         if (!timeVal) return alert("يرجى تحديد وقت التسليم");
+        // 🛡️ تحقق: وقت التسليم يجب ألا يكون قبل وقت التبليغ
+        const _deliveryIso = `${dateVal}T${timeVal}:00`;
+        if (item.iso && _deliveryIso < item.iso) {
+            const _reportTime = String(item.iso).replace('T', ' ').slice(0, 16);
+            return alert(`⚠️ هذا الوقت قبل وقت التبليغ.\n\nوقت التبليغ:  ${_reportTime}\nوقت التسليم: ${dateVal} ${timeVal}\n\nيرجى اختيار وقت تسليم صحيح.`);
+        }
         // تنسيق: YYYY/MM/DD — HH:MM
         const [y,m,d] = dateVal.split('-');
         item.dt = `${y}/${m}/${d} — ${timeVal}`;
