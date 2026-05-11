@@ -4,6 +4,131 @@
 /* ── حالة نافذة وقت تسجيل المنتسية ── */
 let _addMTimeMode = 'now';
 
+/* ══════════════════════════════════════════════════════════════════
+   📢 شاشة تبليغ منتسية (إضافة/تسليم) — لـ cc_manager و cc_employee فقط
+   ══════════════════════════════════════════════════════════════════ */
+function _canSeeMontasiaNotif() {
+    const r = currentUser?.role;
+    return r === 'cc_manager' || r === 'cc_employee';
+}
+
+function _montasiaNotifDetails(item, opts) {
+    const lines = [];
+    const includeType = (opts && opts.includeType !== false);
+    if (includeType && item.type && !['نقدي', 'أخرى'].includes(item.type)) {
+        lines.push(`النوع: ${item.type}`);
+    }
+    if (item.roastSubType)    lines.push(`الفئة: ${item.roastSubType}`);
+    if (item.roastItemName)   lines.push(`الصنف: ${item.roastItemName}`);
+    if (item.roastItemValue)  lines.push(`القيمة: ${item.roastItemValue}`);
+    if (item.roastItemWeight) lines.push(`الوزن: ${item.roastItemWeight}`);
+    if (item.missingValue)    lines.push(`القيمة المفقودة: ${item.missingValue}`);
+    if (Array.isArray(item.items) && item.items.length) {
+        lines.push('الأصناف:');
+        item.items.forEach((it, i) => {
+            if (!it || !it.name) return;
+            const q = it.qty ? ` × ${it.qty}` : '';
+            const p = it.price ? ` - ${it.price}` : '';
+            lines.push(`  ${i+1}. ${it.name}${q}${p}`);
+        });
+    }
+    if (item.notes) lines.push(`الملاحظات: ${item.notes}`);
+    if (item.serial) lines.push(`الرقم التسلسلي: #${item.serial}`);
+    return lines.join('\n') || '—';
+}
+
+function _fmtIsoLocal(iso) {
+    if (!iso) return '—';
+    return String(iso).replace('T', ' ').slice(0, 19);
+}
+
+function _buildAddNotifText(item) {
+    const branch = item.branch || '—';
+    const time   = item.time   || _fmtIsoLocal(item.iso).slice(0, 16);
+    const emp    = item.branchEmp || item.addedBy || '—';
+    const details = _montasiaNotifDetails(item, { includeType: true });
+    const sysTime = _fmtIsoLocal(item.iso);
+    return `تم استلام تبليغ عن منتسية من الفرع ${branch} بالتوقيت: ${time}
+عن طريق الموظف: ${emp} بالتفاصيل التالية:
+${details}
+وقت استلام المنتسية على النظام: ${sysTime}
+
+يرجى تأكيد استلام رسالة التبليغ على الواتساب واعلامنا اذا فيه أي ملاحظات او تعديل`;
+}
+
+function _buildDeliveryNotifText(item) {
+    const branch = item.branch || '—';
+    const dt = item.dt || _fmtIsoLocal(new Date().toISOString());
+    const details = _montasiaNotifDetails(item, { includeType: true });
+    const reportTime = _fmtIsoLocal(item.iso);
+    return `تم تسليم منتسيات في الفرع ${branch} بالتوقيت: ${dt}
+بالتفاصيل التالية:
+${details}
+
+وقت التبليغ عن المنتسية: ${reportTime}
+وقت تسليم المنتسية: ${dt}`;
+}
+
+function _showMontasiaNotifModal(text, title) {
+    if (!_canSeeMontasiaNotif()) return;
+    let el = document.getElementById('_mntNotifModal');
+    if (!el) {
+        el = document.createElement('div');
+        el.id = '_mntNotifModal';
+        el.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.65);z-index:99999;display:none;align-items:center;justify-content:center;padding:20px;direction:rtl;font-family:"Cairo",sans-serif;';
+        el.innerHTML = `
+            <div style="background:#1a1a1a;color:#fff;border:1px solid #444;border-radius:12px;max-width:580px;width:100%;max-height:88vh;overflow:hidden;display:flex;flex-direction:column;box-shadow:0 18px 48px rgba(0,0,0,0.6);" onclick="event.stopPropagation()">
+                <div style="padding:14px 18px;background:linear-gradient(135deg,#1565c0,#0d3a73);display:flex;justify-content:flex-start;align-items:center;gap:12px;">
+                    <div id="_mntNotifTitle" style="font-size:15px;font-weight:800;"></div>
+                </div>
+                <pre id="_mntNotifText" style="white-space:pre-wrap;direction:rtl;text-align:right;font-family:'Cairo';font-size:13.5px;line-height:1.9;padding:18px;margin:0;overflow-y:auto;flex:1;background:rgba(255,255,255,0.03);"></pre>
+                <div style="padding:12px 18px;display:flex;gap:10px;justify-content:center;border-top:1px solid rgba(255,255,255,0.08);flex-wrap:wrap;">
+                    <button onclick="_copyMontasiaNotif(this)" style="background:#2e7d32;color:#fff;border:0;border-radius:8px;padding:10px 28px;cursor:pointer;font-family:'Cairo';font-weight:700;font-size:14px;">📋 نسخ النص وإغلاق</button>
+                </div>
+            </div>
+        `;
+        document.body.appendChild(el);
+        /* لا تُغلَق عند النقر خارج النافذة — الإغلاق فقط بزر نسخ (طلب المستخدم) */
+    }
+    document.getElementById('_mntNotifTitle').textContent = title || 'تبليغ';
+    document.getElementById('_mntNotifText').textContent  = text;
+    el.style.display = 'flex';
+}
+
+function _closeMontasiaNotifModal() {
+    const el = document.getElementById('_mntNotifModal');
+    if (el) el.style.display = 'none';
+}
+
+function _copyMontasiaNotif(btn) {
+    const t = document.getElementById('_mntNotifText')?.textContent || '';
+    if (!t) { _closeMontasiaNotifModal(); return; }
+    const _done = () => {
+        if (btn) {
+            btn.innerHTML = '✓ تم النسخ';
+            btn.disabled = true;
+        }
+        /* أغلق الرسالة بعد النسخ بنصف ثانية ليرى المستخدم التأكيد */
+        setTimeout(() => {
+            _closeMontasiaNotifModal();
+            if (btn) { btn.innerHTML = '📋 نسخ النص وإغلاق'; btn.disabled = false; }
+        }, 600);
+    };
+    if (navigator.clipboard?.writeText) {
+        navigator.clipboard.writeText(t).then(_done).catch(() => { _closeMontasiaNotifModal(); });
+    } else {
+        const ta = document.createElement('textarea');
+        ta.value = t; document.body.appendChild(ta); ta.select();
+        try { document.execCommand('copy'); _done(); } catch { _closeMontasiaNotifModal(); }
+        document.body.removeChild(ta);
+    }
+}
+
+if (typeof window !== 'undefined') {
+    window._closeMontasiaNotifModal = _closeMontasiaNotifModal;
+    window._copyMontasiaNotif       = _copyMontasiaNotif;
+}
+
 /* ── إظهار/إخفاء الحقول الإضافية حسب نوع المنتسية ── */
 function toggleMontasiaTypeFields() {
     const t = document.getElementById('mType')?.value || '';
@@ -334,6 +459,10 @@ function confirmAddMontasia() {
         _logAudit('addMontasia', rec.branch || '—', `${rec.type} — #${rec.serial} — ${_montasiaSummary(rec).substring(0,80)}`, 'montasia', rec.id);
     }
     save();
+    /* 📢 شاشة تبليغ المنتسية (cc_manager / cc_employee فقط) */
+    if (_canSeeMontasiaNotif()) {
+        try { _showMontasiaNotifModal(_buildAddNotifText(rec), '📢 تبليغ منتسية جديدة'); } catch (e) { console.error('[notif] add modal failed:', e); }
+    }
     document.getElementById("mNotes").value = "";
     document.getElementById("mType").value = "";
     _resetMontasiaExtraFields();
@@ -489,6 +618,10 @@ function confirmDeliver() {
     if (typeof _logAudit === 'function') _logAudit('deliverMontasia', item.branch || '—', `${_montasiaSummary(item).substring(0,80)}`, 'montasia', item.id);
     save();
     cancelDeliver();
+    /* 📢 شاشة تبليغ التسليم (cc_manager / cc_employee فقط) */
+    if (_canSeeMontasiaNotif()) {
+        try { _showMontasiaNotifModal(_buildDeliveryNotifText(item), '🚚 تبليغ تسليم منتسية'); } catch (e) { console.error('[notif] delivery modal failed:', e); }
+    }
 }
 
 function cancelDeliver() {
@@ -537,6 +670,10 @@ function confirmDeliverDirect(id) {
     item.dt          = now();
     item.deliveredBy = currentUser.name;
     save();
+    /* 📢 شاشة تبليغ التسليم (cc_manager / cc_employee فقط) */
+    if (_canSeeMontasiaNotif()) {
+        try { _showMontasiaNotifModal(_buildDeliveryNotifText(item), '🚚 تبليغ تسليم منتسية'); } catch (e) { console.error('[notif] delivery modal failed:', e); }
+    }
 }
 
 function showDeliverNotes(id) {
