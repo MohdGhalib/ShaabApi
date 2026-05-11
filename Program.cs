@@ -93,6 +93,78 @@ using (var scope = app.Services.CreateScope())
             Console.WriteLine($"[startup] ⚠ ALTER TABLE failed: {ex.Message}");
     }
 
+    // ── Phase 1 (Migration #11): إنشاء جداول السجلات المنفصلة ──
+    // إضافية فقط — لا تأثير على البيانات أو السلوك. Frontend لا يقرأ منها بعد.
+    var _phase1Tables = new (string name, string sql)[]
+    {
+        ("inquiries", @"CREATE TABLE IF NOT EXISTS inquiries (
+            id BIGINT PRIMARY KEY,
+            seq INT NULL,
+            city VARCHAR(100) NULL,
+            branch VARCHAR(100) NULL,
+            phone VARCHAR(30) NULL,
+            type VARCHAR(50) NULL,
+            notes TEXT NULL,
+            item_name VARCHAR(200) NULL,
+            offer_name VARCHAR(200) NULL,
+            quality_photo LONGTEXT NULL,
+            time VARCHAR(50) NULL,
+            iso VARCHAR(50) NULL,
+            added_by VARCHAR(100) NULL,
+            data JSON NULL,
+            version BIGINT NOT NULL DEFAULT 0,
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            INDEX idx_inq_branch (branch),
+            INDEX idx_inq_iso (iso),
+            INDEX idx_inq_phone (phone)
+        ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;"),
+
+        ("montasiat", @"CREATE TABLE IF NOT EXISTS montasiat (
+            id BIGINT PRIMARY KEY,
+            serial INT NULL,
+            branch VARCHAR(100) NULL,
+            type VARCHAR(50) NULL,
+            status VARCHAR(50) NULL,
+            time VARCHAR(50) NULL,
+            iso VARCHAR(50) NULL,
+            added_by VARCHAR(100) NULL,
+            data JSON NULL,
+            version BIGINT NOT NULL DEFAULT 0,
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            INDEX idx_mnt_branch (branch),
+            INDEX idx_mnt_iso (iso),
+            INDEX idx_mnt_type (type)
+        ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;"),
+
+        ("complaints", @"CREATE TABLE IF NOT EXISTS complaints (
+            id BIGINT PRIMARY KEY,
+            branch VARCHAR(100) NULL,
+            notes TEXT NULL,
+            time VARCHAR(50) NULL,
+            iso VARCHAR(50) NULL,
+            file LONGTEXT NULL,
+            added_by VARCHAR(100) NULL,
+            data JSON NULL,
+            version BIGINT NOT NULL DEFAULT 0,
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            INDEX idx_cmp_branch (branch),
+            INDEX idx_cmp_iso (iso)
+        ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;")
+    };
+
+    foreach (var (tableName, createSql) in _phase1Tables)
+    {
+        try
+        {
+            await db.Database.ExecuteSqlRawAsync(createSql);
+            Console.WriteLine($"[startup] ✓ Per-record table ready: {tableName}");
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"[startup] ⚠ CREATE TABLE {tableName} failed: {ex.Message}");
+        }
+    }
+
     var row = await db.Storage.FindAsync("Shaab_Employees_DB");
     List<EmpRecord>? emps = null;
     if (row != null)
