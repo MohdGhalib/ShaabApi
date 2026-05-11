@@ -702,8 +702,9 @@ function selectDeliveryTimeMode(mode) {
     const nowCard    = document.getElementById('deliverNowCard');
     const prevCard   = document.getElementById('deliverPrevCard');
     const prevFields = document.getElementById('deliverPrevFields');
-    if (nowCard)  { nowCard.style.borderColor  = mode==='now'      ? 'var(--accent-red)' : ''; nowCard.style.background  = mode==='now'      ? 'var(--soft-red)' : ''; }
-    if (prevCard) { prevCard.style.borderColor = mode==='previous' ? 'var(--accent-red)' : ''; prevCard.style.background = mode==='previous' ? 'var(--soft-red)' : ''; }
+    /* تصميم coffee-receipt: استخدم class dlv-card-active بدلاً من inline styles */
+    if (nowCard)  { nowCard.classList.toggle('dlv-card-active', mode === 'now');      nowCard.style.borderColor = '';  nowCard.style.background = ''; }
+    if (prevCard) { prevCard.classList.toggle('dlv-card-active', mode === 'previous'); prevCard.style.borderColor = ''; prevCard.style.background = ''; }
     if (prevFields) prevFields.style.display = mode==='previous' ? 'block' : 'none';
 }
 
@@ -713,11 +714,11 @@ function selectDeliveryType(type) {
     const otherCard = document.getElementById("deliverOtherBranchCard");
     const selector  = document.getElementById("deliveryBranchSelector");
 
-    sameCard.style.borderColor  = type === 'same'  ? 'var(--accent-red)' : '';
-    sameCard.style.background   = type === 'same'  ? 'var(--soft-red)'   : '';
-    otherCard.style.borderColor = type === 'other' ? 'var(--accent-red)' : '';
-    otherCard.style.background  = type === 'other' ? 'var(--soft-red)'   : '';
-    selector.style.display      = type === 'other' ? 'block' : 'none';
+    sameCard.classList.toggle('dlv-card-active', type === 'same');
+    otherCard.classList.toggle('dlv-card-active', type === 'other');
+    sameCard.style.borderColor = ''; sameCard.style.background = '';
+    otherCard.style.borderColor = ''; otherCard.style.background = '';
+    selector.style.display = type === 'other' ? 'block' : 'none';
 }
 
 function confirmDeliver() {

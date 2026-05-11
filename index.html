@@ -303,82 +303,292 @@
 </div>
 
 <!-- ══ DELIVERY MODAL ══ -->
-<div class="modal-overlay hidden" id="deliveryModal">
-    <div class="modal-box" style="width:480px;max-width:95vw;">
-        <button class="modal-close" onclick="cancelDeliver()">✕</button>
-        <div style="font-size:28px;margin-bottom:12px;">📦</div>
-        <h3 style="margin:0 0 6px;color:var(--accent-red);">تسليم المنتسية</h3>
-        <div id="deliveryItemInfo" style="font-size:13px;color:var(--text-dim);margin-bottom:24px;"></div>
-
-        <!-- خياران -->
-        <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-bottom:20px;">
-            <div class="break-btn-card" id="deliverSameBranchCard" onclick="selectDeliveryType('same')">
-                <span class="break-icon">🏪</span>
-                نفس الفرع
-            </div>
-            <div class="break-btn-card" id="deliverOtherBranchCard" onclick="selectDeliveryType('other')">
-                <span class="break-icon">🔀</span>
-                فرع آخر
-            </div>
+<div class="modal-overlay hidden" id="deliveryModal" data-dlv-styled="1">
+    <div class="dlv-wrap">
+        <!-- شريط الإرشاد (لا يدخل في عملية الحفظ — للموظف فقط) -->
+        <div class="dlv-instruction">
+            <div class="dlv-instruction-icon">📦</div>
+            <div class="dlv-instruction-text">أكمل بيانات التسليم لإتمام العملية</div>
         </div>
 
-        <!-- قائمة الفروع (تظهر عند اختيار فرع آخر) — تدعم التسليم لفرع بدولة أخرى -->
-        <div id="deliveryBranchSelector" style="display:none;margin-bottom:20px;">
-            <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px;">
-                <div>
-                    <label style="font-size:13px;color:var(--text-dim);display:block;margin-bottom:6px;">الدولة</label>
-                    <select id="deliverCountrySelect" onchange="updateCities('deliverCountrySelect','deliverCitySelect','deliverBranchSelect')"></select>
-                </div>
-                <div>
-                    <label style="font-size:13px;color:var(--text-dim);display:block;margin-bottom:6px;" data-region-label-for="deliverCitySelect">المحافظة</label>
-                    <select id="deliverCitySelect" onchange="updateBranches('deliverCitySelect','deliverBranchSelect')"></select>
-                </div>
-                <div>
-                    <label style="font-size:13px;color:var(--text-dim);display:block;margin-bottom:6px;">الفرع</label>
-                    <select id="deliverBranchSelect"></select>
-                </div>
-            </div>
-        </div>
+        <!-- الإيصال -->
+        <div class="dlv-receipt">
+            <span class="dlv-bean dlv-b1">☕</span>
+            <span class="dlv-bean dlv-b2">●</span>
+            <button class="dlv-close" onclick="cancelDeliver()" aria-label="إغلاق">✕</button>
 
-        <!-- ── اختيار وقت التسليم ── -->
-        <div style="margin-bottom:20px;">
-            <label style="font-size:13px;color:var(--text-dim);display:block;margin-bottom:10px;font-weight:700;">⏰ وقت التسليم</label>
-            <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px;">
-                <div class="break-btn-card" id="deliverNowCard" onclick="selectDeliveryTimeMode('now')" style="border-color:var(--accent-red);background:var(--soft-red);">
-                    <span class="break-icon">⚡</span>
-                    تسليم الآن
-                </div>
-                <div class="break-btn-card" id="deliverPrevCard" onclick="selectDeliveryTimeMode('previous')">
-                    <span class="break-icon">🕐</span>
-                    تسليم بوقت سابق
-                </div>
+            <div class="dlv-receipt-head">
+                <div class="dlv-brand">محامص الشعب</div>
+                <div class="dlv-title">تسليم المنتسية</div>
+                <div id="deliveryItemInfo" class="dlv-item-info"></div>
+                <span class="dlv-stamp">تسليم</span>
             </div>
-        </div>
 
-        <!-- ── حقول الوقت السابق ── -->
-        <div id="deliverPrevFields" style="display:none;margin-bottom:20px;background:rgba(255,255,255,0.03);border:1px solid var(--border);border-radius:14px;padding:16px;">
-            <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:12px;">
-                <div>
-                    <label style="font-size:12px;color:var(--text-dim);display:block;margin-bottom:6px;">📅 تاريخ التسليم</label>
-                    <div class="date-picker-wrap" onclick="openDatePicker('deliverPrevDate','day')">
-                        <span class="date-display" id="deliverPrevDate-display">📅 اختر التاريخ</span>
-                        <input type="hidden" id="deliverPrevDate">
+            <div class="dlv-receipt-body">
+                <!-- نفس الفرع / فرع آخر -->
+                <div class="dlv-section-label">🏪 موقع التسليم</div>
+                <div class="dlv-options-grid">
+                    <div class="dlv-card" id="deliverSameBranchCard" onclick="selectDeliveryType('same')">
+                        <span class="dlv-card-icon">🏪</span>
+                        <span class="dlv-card-text">نفس الفرع</span>
+                    </div>
+                    <div class="dlv-card" id="deliverOtherBranchCard" onclick="selectDeliveryType('other')">
+                        <span class="dlv-card-icon">🔀</span>
+                        <span class="dlv-card-text">فرع آخر</span>
                     </div>
                 </div>
-                <div>
-                    <label style="font-size:12px;color:var(--text-dim);display:block;margin-bottom:6px;">🕐 وقت التسليم</label>
-                    <input type="time" id="deliverPrevTime" style="padding:10px;">
+
+                <!-- قائمة الفروع للفرع الآخر -->
+                <div id="deliveryBranchSelector" class="dlv-branch-selector" style="display:none;">
+                    <div class="dlv-three-col">
+                        <div>
+                            <label class="dlv-label">الدولة</label>
+                            <select id="deliverCountrySelect" class="dlv-select" onchange="updateCities('deliverCountrySelect','deliverCitySelect','deliverBranchSelect')"></select>
+                        </div>
+                        <div>
+                            <label class="dlv-label" data-region-label-for="deliverCitySelect">المحافظة</label>
+                            <select id="deliverCitySelect" class="dlv-select" onchange="updateBranches('deliverCitySelect','deliverBranchSelect')"></select>
+                        </div>
+                        <div>
+                            <label class="dlv-label">الفرع</label>
+                            <select id="deliverBranchSelect" class="dlv-select"></select>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- فاصل منقّط -->
+                <div class="dlv-divider"></div>
+
+                <!-- وقت التسليم -->
+                <div class="dlv-section-label">⏰ وقت التسليم</div>
+                <div class="dlv-options-grid">
+                    <div class="dlv-card dlv-card-active" id="deliverNowCard" onclick="selectDeliveryTimeMode('now')">
+                        <span class="dlv-card-icon">⚡</span>
+                        <span class="dlv-card-text">تسليم الآن</span>
+                    </div>
+                    <div class="dlv-card" id="deliverPrevCard" onclick="selectDeliveryTimeMode('previous')">
+                        <span class="dlv-card-icon">🕐</span>
+                        <span class="dlv-card-text">تسليم بوقت سابق</span>
+                    </div>
+                </div>
+
+                <!-- حقول الوقت السابق -->
+                <div id="deliverPrevFields" class="dlv-prev-fields" style="display:none;">
+                    <div class="dlv-two-col">
+                        <div>
+                            <label class="dlv-label">📅 تاريخ التسليم</label>
+                            <div class="date-picker-wrap dlv-date-wrap" onclick="openDatePicker('deliverPrevDate','day')">
+                                <span class="date-display" id="deliverPrevDate-display">📅 اختر التاريخ</span>
+                                <input type="hidden" id="deliverPrevDate">
+                            </div>
+                        </div>
+                        <div>
+                            <label class="dlv-label">🕐 وقت التسليم</label>
+                            <input type="time" id="deliverPrevTime" class="dlv-input">
+                        </div>
+                    </div>
+                    <div style="margin-top:12px;">
+                        <label class="dlv-label">📝 ملاحظات</label>
+                        <textarea id="deliverPrevNotes" rows="2" class="dlv-textarea" placeholder="ملاحظات التسليم (اختياري)..."></textarea>
+                    </div>
                 </div>
             </div>
-            <div>
-                <label style="font-size:12px;color:var(--text-dim);display:block;margin-bottom:6px;">📝 ملاحظات</label>
-                <textarea id="deliverPrevNotes" rows="2" placeholder="ملاحظات التسليم (اختياري)..."></textarea>
+
+            <div class="dlv-receipt-edge"></div>
+
+            <div class="dlv-receipt-foot">
+                <button class="dlv-confirm-btn" onclick="confirmDeliver()">✅ تأكيد التسليم</button>
             </div>
         </div>
-
-        <button class="btn btn-main" style="width:100%;padding:14px;font-size:15px;" onclick="confirmDeliver()">✅ تأكيد التسليم</button>
     </div>
 </div>
+
+<style>
+    /* ══ Delivery Modal — Coffee-Receipt Aesthetic ══ */
+    #deliveryModal[data-dlv-styled="1"] {
+        background:radial-gradient(ellipse at center, rgba(60,30,8,0.92) 0%, rgba(15,8,2,0.96) 100%);
+        z-index:99996;
+        backdrop-filter:blur(8px);
+        font-family:'Cairo','Tajawal',sans-serif;
+    }
+    #deliveryModal[data-dlv-styled="1"] .dlv-wrap {
+        max-width:560px; width:100%; max-height:92vh; overflow-y:auto;
+        animation:_dlvSlideUp 0.45s cubic-bezier(0.34,1.3,0.64,1);
+    }
+    @keyframes _dlvSlideUp { from { opacity:0; transform:translateY(28px) scale(0.95); } to { opacity:1; transform:translateY(0) scale(1); } }
+    @keyframes _dlvStampLand { 0% { opacity:0; transform:rotate(-12deg) scale(1.5); } 60% { opacity:1; transform:rotate(-12deg) scale(0.92); } 100% { opacity:1; transform:rotate(-12deg) scale(1); } }
+    .dlv-instruction {
+        background:linear-gradient(135deg,#25d366 0%,#128c7e 50%,#075e54 100%);
+        color:#fff; padding:14px 22px; border-radius:18px 18px 0 0;
+        display:flex; align-items:center; gap:14px;
+        border:1.5px solid rgba(37,211,102,0.5); border-bottom:0;
+        box-shadow:0 -6px 26px rgba(7,94,84,0.45);
+        position:relative; overflow:hidden;
+    }
+    .dlv-instruction::before {
+        content:''; position:absolute; inset:0;
+        background:repeating-linear-gradient(45deg, transparent 0 12px, rgba(255,255,255,0.04) 12px 14px);
+        pointer-events:none;
+    }
+    .dlv-instruction-icon {
+        width:38px; height:38px; background:rgba(255,255,255,0.22);
+        border-radius:50%; display:flex; align-items:center; justify-content:center;
+        font-size:19px; flex-shrink:0; border:1.5px solid rgba(255,255,255,0.35);
+    }
+    .dlv-instruction-text {
+        font-size:13.5px; font-weight:800; line-height:1.55; letter-spacing:0.2px;
+        text-shadow:0 1px 2px rgba(0,0,0,0.25);
+    }
+    .dlv-receipt {
+        background:linear-gradient(180deg, #fdf8ef 0%, #faf2e3 100%);
+        border:1.5px solid rgba(139,69,19,0.25);
+        border-radius:0 0 18px 18px;
+        box-shadow:0 36px 90px rgba(0,0,0,0.6), inset 0 1px 0 rgba(255,255,255,0.85);
+        position:relative; overflow:hidden;
+    }
+    .dlv-receipt::before {
+        content:''; position:absolute; inset:0;
+        background-image:
+            radial-gradient(circle at 14% 18%, rgba(139,69,19,0.04) 0, transparent 12%),
+            radial-gradient(circle at 86% 78%, rgba(120,53,15,0.05) 0, transparent 14%);
+        pointer-events:none;
+    }
+    .dlv-close {
+        position:absolute; top:12px; left:14px; z-index:5;
+        width:30px; height:30px; border-radius:50%;
+        background:rgba(58,40,24,0.08); color:#5c3919;
+        border:1px solid rgba(58,40,24,0.18);
+        font-size:14px; font-weight:800; cursor:pointer;
+        display:flex; align-items:center; justify-content:center;
+        transition:background 0.18s, transform 0.18s;
+        font-family:'Cairo';
+    }
+    .dlv-close:hover { background:rgba(198,40,40,0.12); color:#c62828; transform:rotate(90deg); }
+    .dlv-receipt-head {
+        padding:26px 28px 18px; text-align:center;
+        border-bottom:2px dashed rgba(139,69,19,0.22);
+        position:relative;
+    }
+    .dlv-brand {
+        font-size:10.5px; font-weight:800; color:#8b6f47;
+        letter-spacing:4px; margin-bottom:8px; text-transform:uppercase;
+    }
+    .dlv-title {
+        font-size:22px; font-weight:900; color:#3a2818;
+        letter-spacing:0.3px; line-height:1.4; margin-bottom:6px;
+    }
+    .dlv-item-info {
+        font-size:12.5px; color:#7a5a3a; font-weight:600; line-height:1.6;
+    }
+    .dlv-stamp {
+        position:absolute; top:18px; right:22px;
+        transform:rotate(-12deg);
+        border:2.5px solid #c62828; color:#c62828;
+        padding:4px 12px; border-radius:6px;
+        font-size:11px; font-weight:900; letter-spacing:1.5px;
+        background:rgba(198,40,40,0.04);
+        animation:_dlvStampLand 0.7s 0.35s cubic-bezier(0.5,1.6,0.4,1) both;
+        opacity:0;
+    }
+    .dlv-receipt-body {
+        padding:22px 28px; position:relative;
+    }
+    .dlv-section-label {
+        font-size:13px; font-weight:800; color:#5c3919;
+        margin-bottom:12px; letter-spacing:0.3px;
+    }
+    .dlv-options-grid {
+        display:grid; grid-template-columns:1fr 1fr; gap:12px;
+        margin-bottom:18px;
+    }
+    .dlv-card {
+        background:#fff; border:2px solid rgba(139,69,19,0.18);
+        border-radius:14px; padding:18px 12px;
+        display:flex; flex-direction:column; align-items:center; gap:8px;
+        cursor:pointer; transition:all 0.2s ease;
+        box-shadow:0 2px 8px rgba(139,69,19,0.06);
+    }
+    .dlv-card:hover {
+        border-color:#c0935d; transform:translateY(-2px);
+        box-shadow:0 8px 20px rgba(139,69,19,0.18);
+    }
+    .dlv-card.dlv-card-active, .dlv-card.active {
+        background:linear-gradient(135deg, #fff5dc 0%, #ffe9c2 100%);
+        border-color:#c0935d; color:#3a2818;
+        box-shadow:0 6px 18px rgba(192,147,93,0.35), inset 0 1px 0 rgba(255,255,255,0.6);
+    }
+    .dlv-card-icon { font-size:24px; }
+    .dlv-card-text { font-size:13.5px; font-weight:800; color:#3a2818; }
+    .dlv-divider {
+        height:0; border-top:2px dashed rgba(139,69,19,0.22);
+        margin:18px 0;
+    }
+    .dlv-branch-selector { margin-bottom:18px; }
+    .dlv-three-col { display:grid; grid-template-columns:1fr 1fr 1fr; gap:10px; }
+    .dlv-two-col   { display:grid; grid-template-columns:1fr 1fr;     gap:10px; }
+    .dlv-label {
+        font-size:11.5px; font-weight:700; color:#7a5a3a;
+        display:block; margin-bottom:6px; letter-spacing:0.3px;
+    }
+    .dlv-select, .dlv-input, .dlv-textarea, .dlv-date-wrap {
+        width:100%; box-sizing:border-box;
+        background:#fff !important; color:#3a2818 !important;
+        border:1.5px solid rgba(139,69,19,0.22) !important;
+        border-radius:10px !important; padding:9px 12px !important;
+        font-family:'Cairo','Tajawal',sans-serif !important;
+        font-size:13px !important; font-weight:600 !important;
+        transition:border-color 0.18s, box-shadow 0.18s;
+    }
+    .dlv-select:focus, .dlv-input:focus, .dlv-textarea:focus {
+        outline:none !important;
+        border-color:#c0935d !important;
+        box-shadow:0 0 0 3px rgba(192,147,93,0.18) !important;
+    }
+    .dlv-date-wrap { display:flex; align-items:center; cursor:pointer; min-height:40px; }
+    .dlv-date-wrap .date-display { color:#3a2818 !important; font-weight:600; font-size:13px; }
+    .dlv-textarea { resize:vertical; min-height:54px; }
+    .dlv-prev-fields {
+        background:rgba(255,245,220,0.5);
+        border:1.5px dashed rgba(192,147,93,0.4);
+        border-radius:12px; padding:16px;
+        margin-bottom:8px;
+    }
+    .dlv-receipt-edge {
+        height:14px;
+        background:radial-gradient(circle at 8px 14px, transparent 6px, #fdf8ef 7px) repeat-x;
+        background-size:16px 14px;
+    }
+    .dlv-receipt-foot {
+        padding:18px 28px 24px; text-align:center;
+        border-top:2px dashed rgba(139,69,19,0.22);
+    }
+    .dlv-confirm-btn {
+        background:linear-gradient(135deg, #6b4422 0%, #3a2818 100%);
+        color:#fdf8ef; border:0; border-radius:12px;
+        padding:14px 40px; cursor:pointer;
+        font-family:'Cairo','Tajawal',sans-serif;
+        font-weight:800; font-size:15px; letter-spacing:0.5px;
+        box-shadow:0 8px 22px rgba(58,40,24,0.45), inset 0 1px 0 rgba(255,255,255,0.18);
+        transition:transform 0.18s ease, box-shadow 0.18s ease;
+        position:relative; overflow:hidden; width:100%;
+    }
+    .dlv-confirm-btn::after {
+        content:''; position:absolute; inset:0;
+        background:linear-gradient(120deg, transparent 40%, rgba(255,255,255,0.18) 50%, transparent 60%);
+        transform:translateX(100%); transition:transform 0.5s;
+    }
+    .dlv-confirm-btn:hover {
+        transform:translateY(-2px);
+        box-shadow:0 14px 28px rgba(58,40,24,0.55);
+    }
+    .dlv-confirm-btn:hover::after { transform:translateX(-100%); }
+    .dlv-bean {
+        position:absolute; font-size:18px; opacity:0.18;
+        user-select:none; pointer-events:none;
+    }
+    .dlv-bean.dlv-b1 { top:8px; right:14px; transform:rotate(35deg); }
+    .dlv-bean.dlv-b2 { bottom:62px; left:18px; transform:rotate(-22deg); font-size:14px; }
+</style>
 
 
 <!-- ══ ADD MONTASIA TIME MODAL ══ -->
@@ -731,7 +941,7 @@
 <script src="js/render.js?v=80"></script>
 <script src="js/pages.js?v=67"></script>
 <script src="js/ui.js?v=41"></script>
-<script src="js/missing-items.js?v=69"></script>
+<script src="js/missing-items.js?v=70"></script>
 <script src="js/inquiries.js?v=49"></script>
 <script src="js/control.js?v=60"></script>
 <script src="js/employees.js?v=35"></script>
