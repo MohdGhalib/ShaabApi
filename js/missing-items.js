@@ -33,7 +33,6 @@ function _montasiaNotifDetails(item, opts) {
         });
     }
     if (item.notes) lines.push(`الملاحظات: ${item.notes}`);
-    if (item.serial) lines.push(`الرقم التسلسلي: #${item.serial}`);
     return lines.join('\n') || '—';
 }
 
