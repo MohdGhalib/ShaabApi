@@ -456,24 +456,38 @@ async function loadAllData() {
             return;
         }
         try {
-            /* 🔄 Phase 4b (Migration #11): جلب المنتسيات من endpoint منفصل بالتوازي */
-            const [res, _mntRes] = await Promise.all([
+            /* 🔄 Phase 4b/4c (Migration #11): جلب السجلات من endpoints منفصلة بالتوازي */
+            const [res, _mntRes, _inqRes, _cmpRes] = await Promise.all([
                 fetch('api/storage?keys=' + keys.join(','), {
                     headers: { 'Authorization': `Bearer ${_token}` }
                 }),
                 fetch('api/montasiat', {
                     headers: { 'Authorization': `Bearer ${_token}` }
-                }).catch(e => { console.warn('[Phase4b] /api/montasiat fetch failed:', e); return null; })
+                }).catch(e => { console.warn('[Phase4b] /api/montasiat fetch failed:', e); return null; }),
+                fetch('api/inquiries', {
+                    headers: { 'Authorization': `Bearer ${_token}` }
+                }).catch(e => { console.warn('[Phase4c] /api/inquiries fetch failed:', e); return null; }),
+                fetch('api/complaints', {
+                    headers: { 'Authorization': `Bearer ${_token}` }
+                }).catch(e => { console.warn('[Phase4c] /api/complaints fetch failed:', e); return null; })
             ]);
             if (res.status === 401) { location.reload(); return; }
             if (!res.ok) throw new Error('Server error ' + res.status);
             const data = await res.json();
 
-            /* اقرأ المنتسيات الجديدة مبكراً — لو فشل، نُكمل على JSON blob */
-            let _newMontasiat = null;
+            /* اقرأ السجلات الجديدة مبكراً — لو فشل أي منها، نُكمل على JSON blob */
+            let _newMontasiat = null, _newInquiries = null, _newComplaints = null;
             if (_mntRes && _mntRes.ok) {
                 try { _newMontasiat = await _mntRes.json(); }
                 catch (e) { console.warn('[Phase4b] /api/montasiat parse failed:', e); }
+            }
+            if (_inqRes && _inqRes.ok) {
+                try { _newInquiries = await _inqRes.json(); }
+                catch (e) { console.warn('[Phase4c] /api/inquiries parse failed:', e); }
+            }
+            if (_cmpRes && _cmpRes.ok) {
+                try { _newComplaints = await _cmpRes.json(); }
+                catch (e) { console.warn('[Phase4c] /api/complaints parse failed:', e); }
             }
 
             // 🛡️ حماية حاسمة ضد تفريغ db: لو السيرفر رجّع Master_DB فارغ/مفقود
@@ -493,11 +507,11 @@ async function loadAllData() {
                         : null;
                     const _parsed = JSON.parse(_masterStr);
                     db = _parsed;
-                    /* 🔄 Phase 4b: استبدل db.montasiat بالـ endpoint الجديد لو نجح،
+                    /* 🔄 Phase 4b/4c: استبدل السجلات بالـ endpoints الجديدة لو نجحت،
                        وإلا اترك ما خرج من JSON blob (fallback) */
-                    if (Array.isArray(_newMontasiat)) {
-                        db.montasiat = _newMontasiat;
-                    }
+                    if (Array.isArray(_newMontasiat))  db.montasiat  = _newMontasiat;
+                    if (Array.isArray(_newInquiries))  db.inquiries  = _newInquiries;
+                    if (Array.isArray(_newComplaints)) db.complaints = _newComplaints;
                     // 🔄 طبّق التعديلات المحلية الأحدث فوق بيانات السيرفر (مقارنة بالـ timestamp)
                     if (_localBranchInfo) {
                         if (!db.branchInfo || typeof db.branchInfo !== 'object') db.branchInfo = {};
