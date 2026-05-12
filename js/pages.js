@@ -18,7 +18,6 @@ m: `
             <option value="نقدي">نقدي</option>
             <option value="اصناف محمص الشعب">🌰 اصناف محمص الشعب</option>
             <option value="أخرى">أخرى</option>
-            <option value="متعدد الأصناف">📋 متعدد الأصناف</option>
         </select>
         <input id="mBranchEmp" type="text" placeholder="اسم موظف الفرع *">
     </div>
