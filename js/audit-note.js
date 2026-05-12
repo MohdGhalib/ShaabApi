@@ -190,9 +190,42 @@ function _anEnsureStyles() {
         #anModal .an-notes-label {
             font-size:12.5px; font-weight:800; color:#5c3919;
             margin-bottom:8px; letter-spacing:0.3px;
-            display:flex; align-items:center; gap:5px;
+            display:flex; align-items:center; gap:12px; flex-wrap:wrap;
         }
         #anModal .an-notes-label .req { color:#c62828; font-size:13px; line-height:0; }
+        #anModal .an-notes-label .an-notes-label-text { flex-shrink:0; }
+        #anModal .an-camera-inline {
+            display:inline-flex; align-items:center; gap:6px;
+            background:rgba(255,255,255,0.6);
+            border:1px solid rgba(139,69,19,0.30);
+            border-radius:8px;
+            padding:4px 8px;
+            font-size:11.5px;
+        }
+        #anModal .an-camera-inline .an-cam-mini {
+            color:#5c3919; font-weight:800; white-space:nowrap;
+        }
+        #anModal .an-camera-inline input {
+            font-family:'Cairo','Tajawal',sans-serif;
+            font-size:12px; font-weight:700;
+            padding:3px 8px;
+            border:1px solid rgba(139,69,19,0.22);
+            border-radius:6px;
+            background:#fff;
+            color:#3a2818;
+            outline:none;
+            width:90px;
+            direction:rtl;
+            transition:border-color 0.18s, box-shadow 0.18s;
+        }
+        #anModal .an-camera-inline input[type=time] { width:110px; }
+        #anModal .an-camera-inline input:focus {
+            border-color:#c0935d;
+            box-shadow:0 0 0 2px rgba(192,147,93,0.18);
+        }
+        #anModal .an-camera-inline input[readonly] {
+            background:rgba(255,245,220,0.5); color:#5c3919; cursor:default;
+        }
         #anModal .an-notes-pad {
             width:100%; box-sizing:border-box;
             min-height:140px; resize:vertical;
@@ -635,7 +668,7 @@ function openAuditNoteModal(complaintId, mode) {
                         ? 'نموذج تدقيق مُرسَل — اطلاعك على المحتوى فقط'
                         : (isEdit
                             ? 'تعديل نموذج التدقيق — مدير قسم السيطرة'
-                            : 'نموذج تدقيق السيطرة — املأ التفاصيل بدقة')}
+                            : 'نموذج تدقيق السيطرة')}
                 </div>
             </div>
             <div class="an-receipt">
@@ -700,12 +733,22 @@ function openAuditNoteModal(complaintId, mode) {
                         </div>
                     </div>
 
-                    <!-- منطقة الكتابة الكبيرة -->
+                    <!-- منطقة الكتابة الكبيرة + حقلَي الكاميرا والوقت -->
                     <div class="an-section">
                         <div class="an-section-title">📝 ملاحظات التدقيق التفصيلية</div>
                         <div class="an-notes-area">
-                            <div class="an-notes-label">اكتب التفاصيل الكاملة <span class="req">*</span></div>
-                            <textarea id="anDetails" class="an-notes-pad" ${readonly} rows="6" placeholder="اكتب هنا ملاحظات السيطرة بالتفصيل ...">${sanitize(v('details'))}</textarea>
+                            <div class="an-notes-label">
+                                <span class="an-notes-label-text">اكتب التفاصيل الكاملة <span class="req">*</span></span>
+                                <span class="an-camera-inline">
+                                    <span class="an-cam-mini">📷 الكاميرا:</span>
+                                    <input type="text" id="anCameraNum" ${readonly} value="${sanitize(v('cameraNum'))}" placeholder="رقم">
+                                </span>
+                                <span class="an-camera-inline">
+                                    <span class="an-cam-mini">⏰ الوقت:</span>
+                                    <input type="time" id="anCameraTime" ${readonly} value="${v('cameraTime')}">
+                                </span>
+                            </div>
+                            <textarea id="anDetails" class="an-notes-pad" ${readonly} rows="6" placeholder="اكتب هنا ملاحظات السيطرة بالتفصيل ...">${sanitize(v('details') || (isView || isEdit ? '' : 'بعد المتابعة والتدقيق : \n'))}</textarea>
                         </div>
                     </div>
 
@@ -740,6 +783,26 @@ function openAuditNoteModal(complaintId, mode) {
     modal.addEventListener('click', (e) => {
         if (e.target === modal) closeAuditNoteModal();
     });
+
+    // حماية الـ prefix «بعد المتابعة والتدقيق : » من الحذف في وضع جديد
+    if (!isView && !isEdit) {
+        const ta = document.getElementById('anDetails');
+        const PFX = 'بعد المتابعة والتدقيق : ';
+        if (ta) {
+            // إذا أزال المستخدم البداية أعِدها
+            ta.addEventListener('input', () => {
+                if (!ta.value.startsWith(PFX)) {
+                    ta.value = PFX + (ta.value.startsWith('بعد ') ? ta.value.replace(/^بعد[^:]*:\s*/, '') : ta.value.replace(/^\s*/, ''));
+                }
+            });
+            // ضع المؤشر بعد الـ prefix
+            requestAnimationFrame(() => {
+                ta.focus();
+                const len = ta.value.length;
+                ta.setSelectionRange(len, len);
+            });
+        }
+    }
 }
 
 function closeAuditNoteModal() {
@@ -754,6 +817,12 @@ function submitAuditNote(complaintId, mode) {
     const errEl = document.getElementById('anErr');
     const showErr = (msg) => { if (errEl) { errEl.textContent = msg; errEl.classList.add('show'); } };
 
+    const PFX = 'بعد المتابعة والتدقيق : ';
+    let detailsVal = document.getElementById('anDetails').value.trim();
+    if (!detailsVal.startsWith(PFX.trim()) && !detailsVal.startsWith(PFX)) {
+        detailsVal = PFX + detailsVal;
+    }
+
     const fields = {
         date:           document.getElementById('anDate').value.trim(),
         time:           document.getElementById('anTime').value.trim(),
@@ -764,13 +833,22 @@ function submitAuditNote(complaintId, mode) {
         branch:         document.getElementById('anBranch').value.trim(),
         returnAmount:   document.getElementById('anReturnAmt').value.trim(),
         returnReason:   document.getElementById('anReturnReason').value.trim(),
-        details:        document.getElementById('anDetails').value.trim(),
+        details:        detailsVal,
+        cameraNum:      document.getElementById('anCameraNum').value.trim(),
+        cameraTime:     document.getElementById('anCameraTime').value.trim(),
         auditor:        document.getElementById('anAuditor').value.trim()
     };
 
-    const missing = Object.entries(fields).find(([k, v]) => !v);
+    // كل الحقول إجبارية ما عدا الكاميرا والوقت — إن أردت إجبارها أيضاً قم بإزالة هذا الفلتر
+    const requiredKeys = ['date','time','invoiceNumber','invoiceValue','user','cashier','branch','returnAmount','returnReason','details','cameraNum','cameraTime','auditor'];
+    const missing = requiredKeys.find(k => !fields[k]);
     if (missing) {
-        showErr('⚠️ يرجى تعبئة جميع الحقول — حقل "' + _anFieldLabel(missing[0]) + '" مفقود');
+        showErr('⚠️ يرجى تعبئة جميع الحقول — حقل "' + _anFieldLabel(missing) + '" مفقود');
+        return;
+    }
+    // تحقق أن الموظف كتب شيئاً بعد الـ prefix
+    if (fields.details.trim() === PFX.trim() || fields.details.trim() === PFX.trim() + ':' ) {
+        showErr('⚠️ يرجى كتابة تفاصيل المتابعة بعد عبارة "بعد المتابعة والتدقيق :"');
         return;
     }
 
@@ -819,7 +897,9 @@ function _anFieldLabel(key) {
         date:'اليوم', time:'الوقت', invoiceNumber:'رقم الفاتورة', invoiceValue:'قيمة الفاتورة',
         user:'اليوزر', cashier:'الكاشير', branch:'الفرع',
         returnAmount:'مقدار الإرجاع', returnReason:'سبب الإرجاع',
-        details:'ملاحظات التدقيق التفصيلية', auditor:'المدقق'
+        details:'ملاحظات التدقيق التفصيلية',
+        cameraNum:'رقم الكاميرا', cameraTime:'وقت الكاميرا',
+        auditor:'المدقق'
     };
     return map[key] || key;
 }
@@ -836,10 +916,6 @@ function printAuditNote(complaintId) {
         ? `شكوى السيطرة المرتبطة: ${sanitize((linkedC.notes || '').substring(0, 100))}`
         : 'شكوى السيطرة المرتبطة: —';
 
-    const editedLine = note.editedBy
-        ? `<div class="meta-line"><b>آخر تعديل:</b> ${sanitize(note.editedBy)} — ${sanitize(new Date(note.editedAt).toLocaleString('ar-EG'))}</div>`
-        : '';
-
     const w = window.open('', '_blank', 'width=900,height=1100');
     if (!w) { alert('المتصفح يمنع فتح نوافذ — يرجى السماح بـ popups لهذا الموقع'); return; }
 
@@ -847,7 +923,7 @@ function printAuditNote(complaintId) {
 <html lang="ar" dir="rtl">
 <head>
 <meta charset="UTF-8">
-<title>نموذج تدقيق — فاتورة ${sanitize(note.invoiceNumber)}</title>
+<title> </title>
 <style>
     @page { size:A4; margin:15mm 12mm 18mm 12mm; }
     * { box-sizing:border-box; }
@@ -869,14 +945,6 @@ function printAuditNote(complaintId) {
     .head { text-align:center; padding-bottom:18px; border-bottom:2px dashed rgba(139,69,19,0.30); position:relative; }
     .brand { font-size:11px; font-weight:800; color:#8b6f47; letter-spacing:4px; margin-bottom:6px; text-transform:uppercase; }
     .title { font-size:22px; font-weight:900; color:#3a2818; letter-spacing:0.5px; }
-    .stamp {
-        position:absolute; top:6px; right:10px;
-        transform:rotate(-12deg);
-        border:2.5px solid #c62828; color:#c62828;
-        padding:4px 12px; border-radius:6px;
-        font-size:11px; font-weight:900; letter-spacing:1.5px;
-        background:rgba(198,40,40,0.04);
-    }
     .meta-block {
         margin:14px 0 18px;
         padding:10px 14px;
@@ -931,10 +999,6 @@ function printAuditNote(complaintId) {
         border-bottom:1.5px solid #5c3919;
         color:#3a2818;
     }
-    .footer-meta {
-        margin-top:18px; font-size:11px; color:#8b6f47;
-        text-align:center; letter-spacing:0.3px;
-    }
     .controls {
         max-width:760px; margin:14px auto 0; text-align:center;
     }
@@ -954,10 +1018,14 @@ function printAuditNote(complaintId) {
         border:1.5px solid rgba(139,69,19,0.30) !important;
     }
     @media print {
+        @page {
+            size:A4; margin:14mm 12mm;
+            /* إخفاء ترويسة المتصفح وذيلها (التاريخ والرابط واسم المستند) */
+            margin-top:0; margin-bottom:0;
+        }
         body { padding:0; }
         .controls { display:none; }
         .receipt { box-shadow:none; border:1px solid #999; }
-        .stamp { print-color-adjust:exact; -webkit-print-color-adjust:exact; }
     }
 </style>
 </head>
@@ -966,13 +1034,10 @@ function printAuditNote(complaintId) {
         <div class="head">
             <div class="brand">شركة محامص الشعب</div>
             <div class="title">نموذج تدقيق سيطرة</div>
-            <div class="stamp">تدقيق رسمي</div>
         </div>
 
         <div class="meta-block">
             <div class="meta-line"><b>${complaintLine}</b></div>
-            <div class="meta-line"><b>أرسل النموذج:</b> ${sanitize(note.addedBy || '—')} — ${sanitize(new Date(note.addedAt).toLocaleString('ar-EG'))}</div>
-            ${editedLine}
         </div>
 
         <table class="fields">
@@ -985,6 +1050,8 @@ function printAuditNote(complaintId) {
             <tr><td class="label">🏪 الفرع</td><td colspan="3">${sanitize(note.branch)}</td></tr>
             <tr><td class="label">💵 مقدار الإرجاع</td><td>${sanitize(note.returnAmount)}</td>
                 <td class="label">📝 سبب الإرجاع</td><td>${sanitize(note.returnReason)}</td></tr>
+            <tr><td class="label">📷 رقم الكاميرا</td><td>${sanitize(note.cameraNum || '—')}</td>
+                <td class="label">⏱ وقت الكاميرا</td><td>${sanitize(note.cameraTime || '—')}</td></tr>
         </table>
 
         <div class="notes-area">
@@ -996,8 +1063,6 @@ function printAuditNote(complaintId) {
             <div class="auditor-label">━━ المدقق ━━</div>
             <div class="auditor-name">${sanitize(note.auditor)}</div>
         </div>
-
-        <div class="footer-meta">طُبع في: ${sanitize(new Date().toLocaleString('ar-EG'))}</div>
     </div>
 
     <div class="controls">
