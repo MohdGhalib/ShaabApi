@@ -325,7 +325,7 @@ function toggleTabMsg() {
 
 function switchTab(t) {
     // تحديد الـ active لجميع التبويبات العادية
-    ['o','i','cu','comp','mn','b','e','s','f','p','h','l','t','msg','msg-mine','msg-all'].forEach(id => {
+    ['o','i','cu','comp','mn','an','b','e','s','f','p','h','l','t','msg','msg-mine','msg-all'].forEach(id => {
         const btn = document.getElementById(`tab-${id}`);
         if (btn) btn.classList.toggle('active', t === id);
     });
@@ -338,7 +338,7 @@ function switchTab(t) {
     // tab-c-sub: active عند 'c' — tab-c الأب: group-active عند 'c' أو 'cu' أو 'comp'
     document.getElementById('tab-c-sub')?.classList.toggle('active', t === 'c');
     const tabC = document.getElementById('tab-c');
-    if (tabC) { tabC.classList.remove('active'); tabC.classList.toggle('group-active', t === 'c' || t === 'cu' || t === 'comp' || t === 'mn'); }
+    if (tabC) { tabC.classList.remove('active'); tabC.classList.toggle('group-active', t === 'c' || t === 'cu' || t === 'comp' || t === 'mn' || t === 'an'); }
 
     // tab-msg الأب: group-active عند msg أو msg-mine أو msg-all
     const tabMsgEl = document.getElementById('tab-msg');
@@ -348,7 +348,7 @@ function switchTab(t) {
     const grpM = document.getElementById('nav-group-m');
     if (grpM) grpM.classList.toggle('open', t === 'm' || t === 'o');
     const grpC = document.getElementById('nav-group-c');
-    if (grpC) grpC.classList.toggle('open', t === 'c' || t === 'cu' || t === 'comp' || t === 'mn');
+    if (grpC) grpC.classList.toggle('open', t === 'c' || t === 'cu' || t === 'comp' || t === 'mn' || t === 'an');
     const grpMsg = document.getElementById('nav-group-msg');
     if (grpMsg) grpMsg.classList.toggle('open', t === 'msg' || t === 'msg-mine' || t === 'msg-all');
 
@@ -360,8 +360,8 @@ function switchTab(t) {
 
     // تسجيل وقت المشاهدة وإخفاء الشارة عند فتح التبويب
     _activeTab = t;
-    if (['m','o','c','cu','comp','mn','i'].includes(t)) {
-        _markTabSeen(t === 'o' ? 'm' : (t === 'cu' || t === 'comp' || t === 'mn') ? 'c' : t);
+    if (['m','o','c','cu','comp','mn','an','i'].includes(t)) {
+        _markTabSeen(t === 'o' ? 'm' : (t === 'cu' || t === 'comp' || t === 'mn' || t === 'an') ? 'c' : t);
     }
     const badge = document.getElementById(`badge-${t}`);
     if (badge) { badge.textContent = ''; badge.style.display = 'none'; }
@@ -422,6 +422,9 @@ function switchTab(t) {
         setupCitySelects();
     if (typeof setupCountrySelects === 'function') setupCountrySelects();
         if (typeof renderMediaNotes === 'function') renderMediaNotes();
+        return;
+    } else if (t === 'an') {
+        if (typeof renderAuditNotes === 'function') renderAuditNotes();
         return;
     } else {
         populateEmployeeDropdowns();

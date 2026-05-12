@@ -368,6 +368,16 @@ function setProfileUI() {
         document.getElementById('tab-h')?.classList.add('hidden');
     }
 
+    // متابعات موظفي السيطرة — لمدير السيطرة فقط (1111 / title) أو لمدير الكول سنتر / admin
+    const _canSeeAN = isAdmin || isCCManager
+        || currentUser?.title === 'مدير قسم السيطرة'
+        || currentUser?.empId === '1111';
+    if (_canSeeAN) {
+        document.getElementById('tab-an')?.classList.remove('hidden');
+    } else {
+        document.getElementById('tab-an')?.classList.add('hidden');
+    }
+
     // سجل التدقيق — للمدير ومدير الكول سنتر فقط
     if (isAdmin || isCCManager) {
         document.getElementById('tab-l')?.classList.remove('hidden');

@@ -872,7 +872,10 @@ function _renderTableC(get, isAdmin) {
             ? `<div><span class="linked-inq" onclick="jumpToInquiry(${x.linkedInqSeq})" title="انتقل للاستفسار المرتبط">🔗 استفسار #${x.linkedInqSeq}</span></div>`
             : '';
 
-        const fileLink = x.file ? `<br><button onclick="openInvoiceFile('${x.id}')" class="btn-attach" style="border:none;cursor:pointer;font-family:Cairo;">📎 عرض المرفق</button>` : '';
+        const _hasAN = (typeof hasAuditNote === 'function') && hasAuditNote(x.id);
+        const _canOpenAN = currentUser && (currentUser.isAdmin || currentUser.role === 'control_employee' || currentUser.role === 'control_sub' || currentUser.role === 'cc_manager');
+        const auditBtn = _canOpenAN ? `${x.file ? ' ' : '<br>'}<button onclick="openAuditNoteModal('${x.id}')" class="btn-audit-note${_hasAN ? ' has-note' : ''}" title="${_hasAN ? 'عرض ملاحظة السيطرة المرسلة' : 'كتابة ملاحظة سيطرة'}">📋 ${_hasAN ? 'ملاحظة السيطرة' : 'ملاحظات السيطرة'}</button>` : '';
+        const fileLink = (x.file ? `<br><button onclick="openInvoiceFile('${x.id}')" class="btn-attach" style="border:none;cursor:pointer;font-family:Cairo;">📎 عرض المرفق</button>` : '') + auditBtn;
 
         const ctStr  = x.callTime ? _formatCallTime(x.callTime) : '';
         const hasMore = !!(ctStr || x.noteDate || x.moveNumber || x.invoiceValue);

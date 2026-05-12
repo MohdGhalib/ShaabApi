@@ -763,6 +763,13 @@ cu: `
         <tbody></tbody>
     </table>
     <div id="paginationCU"></div>
+</div>`,
+
+an: `
+<div class="card">
+    <h3 style="color:#a5d6a7;">📋 متابعات موظفي السيطرة</h3>
+    <p style="color:var(--text-dim);font-size:13px;margin:-10px 0 18px;">نماذج التدقيق المرسلة من موظفي السيطرة على شكاوى السيطرة</p>
+    <div id="auditNotesContainer"></div>
 </div>`
 
 };
