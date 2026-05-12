@@ -270,6 +270,16 @@ function _anEnsureStyles() {
         }
         #anModal .an-btn-cancel:hover { background:rgba(255,245,220,0.6); }
 
+        #anModal .an-btn-print {
+            background:linear-gradient(135deg, #1565c0 0%, #0d47a1 100%);
+            color:#fff;
+            box-shadow:0 4px 10px rgba(13,71,161,0.32), inset 0 1px 0 rgba(255,255,255,0.20);
+            text-shadow:0 1px 1px rgba(0,0,0,0.22);
+            border:1px solid rgba(255,255,255,0.22);
+        }
+        #anModal .an-btn-print:hover { filter:brightness(1.10); transform:translateY(-1px); }
+        #anModal .an-btn-print:active { transform:translateY(0) scale(0.97); }
+
         /* رسالة الخطأ */
         #anModal .an-err {
             background:rgba(198,40,40,0.10);
@@ -692,9 +702,11 @@ function openAuditNoteModal(complaintId, mode) {
                 <div class="an-footer">
                     ${isView
                         ? `<button class="an-btn an-btn-cancel" onclick="closeAuditNoteModal()">إغلاق</button>
+                           <button class="an-btn an-btn-print" onclick="printAuditNote(${complaint.id})">🖨️ تصدير وطباعة</button>
                            <button class="an-btn an-btn-submit" onclick="jumpToComplaintFromAudit(${complaint.id})">🔙 الانتقال للشكوى</button>`
                         : (isEdit
                             ? `<button class="an-btn an-btn-cancel" onclick="closeAuditNoteModal()">إلغاء</button>
+                               <button class="an-btn an-btn-print" onclick="printAuditNote(${complaint.id})">🖨️ تصدير وطباعة</button>
                                <button class="an-btn an-btn-submit" onclick="submitAuditNote(${complaint.id}, 'edit')">💾 حفظ التعديلات</button>`
                             : `<button class="an-btn an-btn-cancel" onclick="closeAuditNoteModal()">إلغاء</button>
                                <button class="an-btn an-btn-submit" onclick="submitAuditNote(${complaint.id})">📤 إرسال إلى مدير السيطرة</button>`)
@@ -791,6 +803,197 @@ function _anFieldLabel(key) {
         details:'ملاحظات التدقيق التفصيلية', auditor:'المدقق'
     };
     return map[key] || key;
+}
+
+/* ══════════════════════════════════════════════════════
+   طباعة / تصدير النموذج — نافذة منفصلة مهيّأة للطابعة
+   ══════════════════════════════════════════════════════ */
+function printAuditNote(complaintId) {
+    const note = (db.auditNotes || []).find(n => !n.deleted && n.complaintId == complaintId);
+    if (!note) { alert('لا توجد ملاحظة للطباعة'); return; }
+
+    const linkedC = (db.complaints || []).find(c => c.id == complaintId);
+    const complaintLine = linkedC
+        ? `شكوى السيطرة المرتبطة: ${sanitize((linkedC.notes || '').substring(0, 100))}`
+        : 'شكوى السيطرة المرتبطة: —';
+
+    const editedLine = note.editedBy
+        ? `<div class="meta-line"><b>آخر تعديل:</b> ${sanitize(note.editedBy)} — ${sanitize(new Date(note.editedAt).toLocaleString('ar-EG'))}</div>`
+        : '';
+
+    const w = window.open('', '_blank', 'width=900,height=1100');
+    if (!w) { alert('المتصفح يمنع فتح نوافذ — يرجى السماح بـ popups لهذا الموقع'); return; }
+
+    w.document.write(`<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<title>نموذج تدقيق — فاتورة ${sanitize(note.invoiceNumber)}</title>
+<style>
+    @page { size:A4; margin:15mm 12mm 18mm 12mm; }
+    * { box-sizing:border-box; }
+    body {
+        margin:0; padding:24px;
+        font-family:'Cairo','Tajawal','Segoe UI', Tahoma, sans-serif;
+        color:#3a2818; background:#fff;
+        direction:rtl;
+    }
+    .receipt {
+        max-width:760px; margin:0 auto;
+        background:linear-gradient(180deg, #fdf8ef 0%, #faf2e3 100%);
+        border:1.5px solid rgba(139,69,19,0.30);
+        border-radius:14px;
+        padding:28px 32px;
+        box-shadow:0 4px 12px rgba(74,40,18,0.16);
+        position:relative;
+    }
+    .head { text-align:center; padding-bottom:18px; border-bottom:2px dashed rgba(139,69,19,0.30); position:relative; }
+    .brand { font-size:11px; font-weight:800; color:#8b6f47; letter-spacing:4px; margin-bottom:6px; text-transform:uppercase; }
+    .title { font-size:22px; font-weight:900; color:#3a2818; letter-spacing:0.5px; }
+    .stamp {
+        position:absolute; top:6px; right:10px;
+        transform:rotate(-12deg);
+        border:2.5px solid #c62828; color:#c62828;
+        padding:4px 12px; border-radius:6px;
+        font-size:11px; font-weight:900; letter-spacing:1.5px;
+        background:rgba(198,40,40,0.04);
+    }
+    .meta-block {
+        margin:14px 0 18px;
+        padding:10px 14px;
+        background:rgba(192,147,93,0.10);
+        border:1px solid rgba(192,147,93,0.40);
+        border-radius:8px;
+        font-size:12px; color:#5c3919;
+        line-height:1.7;
+    }
+    .meta-line { margin:2px 0; }
+    .meta-line b { color:#3a2818; }
+    table.fields {
+        width:100%; border-collapse:collapse; margin-top:14px;
+        font-size:13px;
+    }
+    table.fields td {
+        border:1px solid rgba(139,69,19,0.25);
+        padding:9px 12px;
+        background:#fff;
+    }
+    table.fields td.label {
+        background:#fbf3df;
+        font-weight:800; color:#5c3919;
+        width:30%; white-space:nowrap;
+    }
+    .notes-area {
+        margin-top:18px;
+        background:#fff5dc; border:1.5px solid rgba(192,147,93,0.45);
+        border-radius:10px; padding:14px 16px;
+    }
+    .notes-title { font-size:12.5px; font-weight:800; color:#5c3919; margin-bottom:8px; letter-spacing:0.3px; }
+    .notes-body {
+        background:#fff; border:1.5px solid rgba(139,69,19,0.22); border-radius:8px;
+        padding:12px 14px;
+        min-height:120px;
+        font-size:13.5px; line-height:1.8; color:#3a2818;
+        white-space:pre-wrap;
+    }
+    .auditor {
+        margin-top:26px; padding-top:18px;
+        border-top:2px dashed rgba(139,69,19,0.30);
+        text-align:center;
+    }
+    .auditor-label {
+        font-size:11.5px; font-weight:800; color:#8b6f47;
+        letter-spacing:5px; margin-bottom:8px; text-transform:uppercase;
+    }
+    .auditor-name {
+        display:inline-block;
+        font-size:17px; font-weight:800;
+        padding:6px 24px 4px;
+        border-bottom:1.5px solid #5c3919;
+        color:#3a2818;
+    }
+    .footer-meta {
+        margin-top:18px; font-size:11px; color:#8b6f47;
+        text-align:center; letter-spacing:0.3px;
+    }
+    .controls {
+        max-width:760px; margin:14px auto 0; text-align:center;
+    }
+    .controls button {
+        font-family:'Cairo', sans-serif; font-size:13.5px; font-weight:800;
+        padding:9px 24px; border:none; border-radius:8px;
+        cursor:pointer; margin:0 4px;
+        transition:filter 0.15s;
+    }
+    .btn-print {
+        background:linear-gradient(135deg, #2e7d32, #1b5e20);
+        color:#fff; box-shadow:0 3px 8px rgba(46,125,50,0.32);
+    }
+    .btn-print:hover { filter:brightness(1.10); }
+    .btn-close {
+        background:#fff; color:#5c3919;
+        border:1.5px solid rgba(139,69,19,0.30) !important;
+    }
+    @media print {
+        body { padding:0; }
+        .controls { display:none; }
+        .receipt { box-shadow:none; border:1px solid #999; }
+        .stamp { print-color-adjust:exact; -webkit-print-color-adjust:exact; }
+    }
+</style>
+</head>
+<body>
+    <div class="receipt">
+        <div class="head">
+            <div class="brand">شركة محامص الشعب</div>
+            <div class="title">نموذج تدقيق سيطرة</div>
+            <div class="stamp">تدقيق رسمي</div>
+        </div>
+
+        <div class="meta-block">
+            <div class="meta-line"><b>${complaintLine}</b></div>
+            <div class="meta-line"><b>أرسل النموذج:</b> ${sanitize(note.addedBy || '—')} — ${sanitize(new Date(note.addedAt).toLocaleString('ar-EG'))}</div>
+            ${editedLine}
+        </div>
+
+        <table class="fields">
+            <tr><td class="label">📅 اليوم</td><td>${sanitize(note.date)}</td>
+                <td class="label">⏰ الوقت</td><td>${sanitize(note.time)}</td></tr>
+            <tr><td class="label">🧾 رقم الفاتورة</td><td>${sanitize(note.invoiceNumber)}</td>
+                <td class="label">💰 قيمة الفاتورة</td><td>${sanitize(note.invoiceValue)}</td></tr>
+            <tr><td class="label">👤 اليوزر</td><td>${sanitize(note.user)}</td>
+                <td class="label">💼 الكاشير</td><td>${sanitize(note.cashier)}</td></tr>
+            <tr><td class="label">🏪 الفرع</td><td colspan="3">${sanitize(note.branch)}</td></tr>
+            <tr><td class="label">💵 مقدار الإرجاع</td><td>${sanitize(note.returnAmount)}</td>
+                <td class="label">📝 سبب الإرجاع</td><td>${sanitize(note.returnReason)}</td></tr>
+        </table>
+
+        <div class="notes-area">
+            <div class="notes-title">📝 ملاحظات التدقيق التفصيلية</div>
+            <div class="notes-body">${sanitize(note.details || '—')}</div>
+        </div>
+
+        <div class="auditor">
+            <div class="auditor-label">━━ المدقق ━━</div>
+            <div class="auditor-name">${sanitize(note.auditor)}</div>
+        </div>
+
+        <div class="footer-meta">طُبع في: ${sanitize(new Date().toLocaleString('ar-EG'))}</div>
+    </div>
+
+    <div class="controls">
+        <button class="btn-print" onclick="window.print()">🖨️ طباعة</button>
+        <button class="btn-close" onclick="window.close()">إغلاق</button>
+    </div>
+
+    <script>
+        // افتح حوار الطباعة تلقائياً بعد لحظات (يتيح للنظام أن يحضّر الخطوط أولاً)
+        setTimeout(() => { window.print(); }, 300);
+    </script>
+</body>
+</html>`);
+    w.document.close();
+    w.focus();
 }
 
 /* ══════════════════════════════════════════════════════
@@ -898,3 +1101,4 @@ window.jumpToComplaintFromAudit = jumpToComplaintFromAudit;
 window.renderAuditNotes         = renderAuditNotes;
 window.canSeeAuditNotesTab      = canSeeAuditNotesTab;
 window._anNotifyAlreadyFilled   = _anNotifyAlreadyFilled;
+window.printAuditNote           = printAuditNote;
