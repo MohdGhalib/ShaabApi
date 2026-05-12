@@ -120,14 +120,11 @@
 
 <!-- ══ MAIN APP ══ -->
 <div class="main-wrapper" id="mainApp">
-    <div class="sidebar" id="sidebarRoot">
-        <button class="sidebar-collapse-btn" id="sidebarCollapseBtn" onclick="toggleSidebar()" title="تكبير / تصغير القائمة" aria-label="تكبير أو تصغير القائمة الجانبية">
-            <span class="sc-arrow">▶</span>
-        </button>
-        <div class="sidebar-brand" style="padding:0 25px 20px;text-align:center;">
-            <img src="img/logo.png" alt="محامص الشعب" class="sidebar-logo" style="width:70px;height:70px;object-fit:contain;margin-bottom:6px;filter:drop-shadow(0 2px 8px rgba(211,47,47,0.3));">
-            <h3 class="sidebar-brand-name" style="margin:0;color:var(--accent-red);font-size:18px;">محامص الشعب</h3>
-            <small class="sidebar-brand-sub" style="color:var(--text-dim)">بوابة الاتصالات والسيطرة</small>
+    <div class="sidebar">
+        <div style="padding:0 25px 20px;text-align:center;">
+            <img src="img/logo.png" alt="محامص الشعب" style="width:70px;height:70px;object-fit:contain;margin-bottom:6px;filter:drop-shadow(0 2px 8px rgba(211,47,47,0.3));">
+            <h3 style="margin:0;color:var(--accent-red);font-size:18px;">محامص الشعب</h3>
+            <small style="color:var(--text-dim)">بوابة الاتصالات والسيطرة</small>
         </div>
         <div class="nav-tabs">
             <button class="nav-item hidden" id="tab-h" onclick="switchTab('h')" style="position:relative;">🏠 لوحة التحكم</button>
@@ -230,93 +227,6 @@
     </div>
 
     <style>
-        /* ══ Sidebar Collapse ══ */
-        .sidebar { transition:width 0.28s cubic-bezier(.4,0,.2,1); position:relative; }
-        .content-area { transition:margin-right 0.28s cubic-bezier(.4,0,.2,1); }
-
-        .sidebar-collapse-btn {
-            position:absolute; top:14px; left:14px; z-index:10;
-            width:28px; height:28px; border-radius:50%;
-            background:rgba(255,255,255,0.06);
-            border:1px solid rgba(255,255,255,0.12);
-            color:var(--text-dim);
-            cursor:pointer; display:flex; align-items:center; justify-content:center;
-            font-size:11px; font-family:'Cairo';
-            transition:background 0.2s, transform 0.2s, color 0.2s;
-        }
-        .sidebar-collapse-btn:hover { background:rgba(192,147,93,0.18); color:#fff; transform:scale(1.08); }
-        .sidebar-collapse-btn .sc-arrow { display:inline-block; transition:transform 0.28s ease; }
-        .sidebar.collapsed .sidebar-collapse-btn .sc-arrow { transform:rotate(180deg); }
-
-        /* الوضع المصغّر */
-        .sidebar.collapsed { width:68px !important; padding:25px 0; }
-        body:has(.sidebar.collapsed) .content-area,
-        .main-wrapper:has(.sidebar.collapsed) .content-area { margin-right:68px !important; }
-
-        /* اللوغو يصغر ويختفي النص */
-        .sidebar.collapsed .sidebar-brand { padding:24px 0 16px !important; }
-        .sidebar.collapsed .sidebar-logo { width:38px !important; height:38px !important; margin-bottom:0 !important; }
-        .sidebar.collapsed .sidebar-brand-name,
-        .sidebar.collapsed .sidebar-brand-sub { display:none !important; }
-
-        /* عناصر القائمة: أيقونة فقط */
-        .sidebar.collapsed .nav-tabs { padding:0 8px; }
-        .sidebar.collapsed .nav-item,
-        .sidebar.collapsed .sub-nav button {
-            width:52px !important; height:42px !important;
-            padding:0 !important; margin:4px auto !important;
-            justify-content:center !important; gap:0 !important;
-            overflow:hidden; white-space:nowrap;
-            font-size:18px !important;
-            border-radius:12px !important;
-        }
-        /* قصّ النصّ — تبقى الأيقونة (الإيموجي) ظاهرة في البداية */
-        .sidebar.collapsed .nav-item { text-indent:0; }
-        .sidebar.collapsed .nav-item > * { display:none; } /* badges/chevrons */
-        .sidebar.collapsed .nav-item::after,
-        .sidebar.collapsed .sub-nav button::after { content:''; }
-
-        /* عند الـ hover على أيقونة، أظهر النص بـ tooltip */
-        .sidebar.collapsed .nav-item:hover::before,
-        .sidebar.collapsed .sub-nav button:hover::before {
-            content:attr(data-tip);
-            position:absolute; right:62px; top:50%; transform:translateY(-50%);
-            background:#1a1a1a; color:#fff;
-            padding:6px 12px; border-radius:8px;
-            font-size:12px; font-weight:700; white-space:nowrap;
-            box-shadow:0 4px 14px rgba(0,0,0,0.45);
-            border:1px solid rgba(255,255,255,0.1);
-            z-index:200; pointer-events:none;
-            font-family:'Cairo';
-        }
-
-        /* بطاقة الموظف: دائرة فقط */
-        .sidebar.collapsed .user-profile-btn { padding:8px !important; gap:0 !important; justify-content:center !important; }
-        .sidebar.collapsed .user-profile-btn .user-info-mini { display:none !important; }
-        .sidebar.collapsed .user-profile-btn .user-avatar { width:42px !important; height:42px !important; margin:0 auto !important; }
-
-        /* أيقونة الثيم: stack رأسي */
-        .sidebar.collapsed .theme-switcher { flex-direction:column; padding:6px 4px; margin:0 8px 10px; gap:4px; }
-        .sidebar.collapsed .theme-opt { width:32px; height:32px; }
-        .sidebar.collapsed .theme-opt .theme-ico { font-size:14px; }
-
-        /* زر الخروج: دائرة فقط */
-        .sidebar.collapsed .btn-logout {
-            font-size:0 !important;
-            width:48px !important; height:42px !important;
-            margin:0 auto 12px !important; padding:0 !important;
-            border-radius:50% !important; min-width:0 !important;
-            display:flex; align-items:center; justify-content:center;
-        }
-        .sidebar.collapsed .btn-logout::before {
-            content:'⎋'; font-size:18px; line-height:1;
-        }
-
-        /* تجنّب :has fallback للمتصفحات الأقدم */
-        @supports not (selector(:has(*))) {
-            .sidebar.collapsed ~ .content-area { margin-right:68px !important; }
-        }
-
         /* 🎨 Theme Switcher — preview-only chrome */
         .theme-switcher {
             display:flex; gap:6px; align-items:center; justify-content:center;
@@ -398,26 +308,7 @@
             document.querySelectorAll('.theme-switcher .theme-opt').forEach(b => {
                 b.classList.toggle('active', b.dataset.themePreview === saved);
             });
-
-            /* استرجاع حالة تصغير الـ sidebar + إضافة tooltips */
-            const sb = document.getElementById('sidebarRoot');
-            if (sb && localStorage.getItem('Shaab_SidebarCollapsed') === '1') {
-                sb.classList.add('collapsed');
-            }
-            /* استخرج النص الأصلي لكل nav-item ليُستخدم كـ tooltip في الوضع المصغّر */
-            document.querySelectorAll('.sidebar .nav-item, .sidebar .sub-nav button').forEach(btn => {
-                if (!btn.dataset.tip) btn.dataset.tip = btn.textContent.trim();
-            });
         });
-
-        /* تبديل تصغير الـ sidebar */
-        function toggleSidebar() {
-            const sb = document.getElementById('sidebarRoot');
-            if (!sb) return;
-            const willCollapse = !sb.classList.contains('collapsed');
-            sb.classList.toggle('collapsed', willCollapse);
-            try { localStorage.setItem('Shaab_SidebarCollapsed', willCollapse ? '1' : '0'); } catch {}
-        }
     </script>
 
     <div class="content-area">
