@@ -882,6 +882,7 @@ function _renderTableC(get, isAdmin) {
                 _auditBtnHtml = `${_spacer}<button onclick="_anNotifyAlreadyFilled(this)" class="btn-audit-note has-note" title="تم تعبئة النموذج مسبقاً">📋 ملاحظة السيطرة</button>`;
                 if (_isCtrlMgr) {
                     _auditBtnHtml += ` <button onclick="openAuditNoteModal('${x.id}','edit')" class="btn-audit-edit" title="تعديل النموذج (مدير قسم السيطرة)">✏️</button>`;
+                    _auditBtnHtml += ` <button onclick="jumpToAuditNoteFromComplaint('${x.id}')" class="btn-audit-link" title="عرض المتابعة في تاب «متابعات موظفي السيطرة»">📂 المتابعة المرتبطة</button>`;
                 }
             } else {
                 _auditBtnHtml = `${_spacer}<button onclick="openAuditNoteModal('${x.id}')" class="btn-audit-note" title="كتابة ملاحظة سيطرة">📋 ملاحظات السيطرة</button>`;

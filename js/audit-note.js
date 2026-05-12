@@ -404,6 +404,28 @@ function _anEnsureStyles() {
         }
         .btn-audit-edit:active { transform:translateY(0) scale(0.95) rotate(0); }
 
+        /* ──────── زر «📂 المتابعة المرتبطة» — أزرق للتنقّل لتاب المتابعة ──────── */
+        .btn-audit-link {
+            background:linear-gradient(135deg, #1565c0 0%, #0d47a1 100%) !important;
+            color:#fff !important;
+            border:1px solid rgba(255,255,255,0.22) !important;
+            cursor:pointer;
+            font-family:'Cairo','Tajawal',sans-serif;
+            font-weight:700; letter-spacing:0.2px;
+            padding:4px 11px; font-size:12px;
+            border-radius:8px;
+            box-shadow:0 2px 5px rgba(13,71,161,0.35), inset 0 1px 0 rgba(255,255,255,0.20);
+            text-shadow:0 1px 1px rgba(0,0,0,0.22);
+            transition:filter 0.15s, transform 0.15s, box-shadow 0.18s;
+            display:inline-flex; align-items:center; gap:3px;
+        }
+        .btn-audit-link:hover {
+            filter:brightness(1.10);
+            transform:translateY(-1px);
+            box-shadow:0 5px 12px rgba(13,71,161,0.5);
+        }
+        .btn-audit-link:active { transform:translateY(0) scale(0.97); }
+
         /* ──────── وضع التعديل — إطار ذهبي حول الإيصال + شريط علوي مختلف ──────── */
         #anModal.an-mode-edit .an-receipt {
             border:1.5px solid #c0935d;
@@ -919,6 +941,27 @@ function hasAuditNote(complaintId) {
 }
 
 /* ══════════════════════════════════════════════════════
+   الانتقال من شكوى سيطرة إلى ملاحظتها في تاب «متابعات موظفي السيطرة»
+   ══════════════════════════════════════════════════════ */
+function jumpToAuditNoteFromComplaint(complaintId) {
+    if (typeof switchTab !== 'function') return;
+    switchTab('an');
+    setTimeout(() => {
+        const card = document.querySelector(`[data-an-cid="${complaintId}"]`);
+        if (!card) return;
+        card.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        const prevShadow = card.style.boxShadow;
+        const prevBg     = card.style.background;
+        card.style.boxShadow  = '0 0 0 3px #2e7d32, 0 8px 18px rgba(46,125,50,0.32)';
+        card.style.background = 'linear-gradient(180deg,rgba(46,125,50,0.18),rgba(46,125,50,0.06))';
+        setTimeout(() => {
+            card.style.boxShadow  = prevShadow;
+            card.style.background = prevBg;
+        }, 2400);
+    }, 320);
+}
+
+/* ══════════════════════════════════════════════════════
    الانتقال من ملاحظة سيطرة إلى الشكوى المرتبطة
    ══════════════════════════════════════════════════════ */
 function jumpToComplaintFromAudit(complaintId) {
@@ -968,7 +1011,7 @@ function renderAuditNotes() {
                 <b style="color:#d4aa5a;">📝 الملاحظات:</b> ${sanitize((n.details || '').substring(0, 200))}${(n.details || '').length > 200 ? '…' : ''}
               </div>` : '';
         return `
-        <div style="background:linear-gradient(180deg,rgba(46,125,50,0.05),rgba(46,125,50,0.02));border:1px solid rgba(46,125,50,0.22);border-radius:12px;padding:14px 16px;margin-bottom:12px;">
+        <div data-an-cid="${n.complaintId}" style="background:linear-gradient(180deg,rgba(46,125,50,0.05),rgba(46,125,50,0.02));border:1px solid rgba(46,125,50,0.22);border-radius:12px;padding:14px 16px;margin-bottom:12px;transition:box-shadow 0.4s, background 0.4s;">
             <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:12px;flex-wrap:wrap;">
                 <div style="flex:1;min-width:220px;">
                     <div style="font-size:14px;font-weight:800;color:var(--text-main);">
@@ -1017,3 +1060,4 @@ window.renderAuditNotes         = renderAuditNotes;
 window.canSeeAuditNotesTab      = canSeeAuditNotesTab;
 window._anNotifyAlreadyFilled   = _anNotifyAlreadyFilled;
 window.printAuditNote           = printAuditNote;
+window.jumpToAuditNoteFromComplaint = jumpToAuditNoteFromComplaint;
