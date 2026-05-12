@@ -368,9 +368,8 @@ function setProfileUI() {
         document.getElementById('tab-h')?.classList.add('hidden');
     }
 
-    // متابعات موظفي السيطرة — لمدير السيطرة فقط (1111 / title) أو لمدير الكول سنتر / admin
-    const _canSeeAN = isAdmin || isCCManager
-        || currentUser?.title === 'مدير قسم السيطرة'
+    // متابعات موظفي السيطرة — لمدير قسم السيطرة فقط لا غير
+    const _canSeeAN = currentUser?.title === 'مدير قسم السيطرة'
         || currentUser?.empId === '1111';
     if (_canSeeAN) {
         document.getElementById('tab-an')?.classList.remove('hidden');

@@ -691,8 +691,6 @@ function renderAuditNotes() {
    ══════════════════════════════════════════════════════ */
 function canSeeAuditNotesTab() {
     if (!currentUser) return false;
-    if (currentUser.isAdmin) return true;
-    if (currentUser.role === 'cc_manager') return true;
     if (currentUser.title === 'مدير قسم السيطرة') return true;
     if (currentUser.empId === '1111') return true;
     return false;
