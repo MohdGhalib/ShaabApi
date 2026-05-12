@@ -8,13 +8,6 @@
     --accent-red: #c62828; --dark-red: #8b0000; --soft-red: #fde8e8;
     --text-main: #1a202c; --text-dim: #5a6a80; --border: #d8e0ec;
 }
-/* ☕ Coffee Theme — لوحة دافئة كريمي/بنّي بنفس روحية إيصالات المحمص */
-[data-theme="coffee"] {
-    --bg-deep: #f5ecd9; --bg-card: #fdf8ef; --bg-input: #ffffff;
-    --accent-red: #c62828; --dark-red: #6b4422; --soft-red: #fff5dc;
-    --text-main: #3a2818; --text-dim: #8b6f47; --border: rgba(139,69,19,0.22);
-}
-
 /* ════════════════════════════════════════════════════════════════
    🎨 لمسات التصميم الاحترافية — micro-interactions و تحسينات بصرية
    ════════════════════════════════════════════════════════════════ */

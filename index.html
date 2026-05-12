@@ -16,7 +16,7 @@
         })();
     </script>
     <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="css/styles.css?v=25">
+    <link rel="stylesheet" href="css/styles.css?v=26">
     <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
 </head>
@@ -218,9 +218,6 @@
             <button type="button" class="theme-opt" data-theme-preview="light" onclick="_previewThemeOpt(this)" title="الوضع النهاري">
                 <span class="theme-ico">☀️</span>
             </button>
-            <button type="button" class="theme-opt" data-theme-preview="coffee" onclick="_previewThemeOpt(this)" title="ثيم محامص الشعب">
-                <span class="theme-ico">☕</span>
-            </button>
         </div>
 
         <button class="btn-logout" onclick="doLogout()">تسجيل الخروج</button>
@@ -229,9 +226,10 @@
     <style>
         /* 🎨 Theme Switcher — preview-only chrome */
         .theme-switcher {
-            display:flex; gap:6px; align-items:center; justify-content:center;
-            margin:0 14px 10px;
-            padding:6px;
+            display:flex; gap:4px; align-items:center; justify-content:center;
+            margin:0 auto 10px;
+            padding:4px;
+            width:fit-content;
             background:linear-gradient(135deg, rgba(255,255,255,0.04), rgba(255,255,255,0.01));
             border:1px solid rgba(255,255,255,0.08);
             border-radius:999px;
@@ -246,7 +244,7 @@
         }
         .theme-switcher:hover::before { opacity:1; }
         .theme-opt {
-            width:36px; height:36px; border-radius:50%;
+            width:30px; height:30px; border-radius:50%;
             border:1.5px solid transparent;
             background:rgba(255,255,255,0.04);
             display:flex; align-items:center; justify-content:center;
@@ -255,7 +253,7 @@
             padding:0;
         }
         .theme-opt .theme-ico {
-            font-size:16px; line-height:1;
+            font-size:14px; line-height:1;
             filter:grayscale(0.55) brightness(0.85);
             transition:filter 0.18s ease, transform 0.25s ease;
         }
@@ -295,17 +293,6 @@
             if (theme === 'light') {
                 document.documentElement.setAttribute('data-theme', 'light');
                 localStorage.setItem('Shaab_Theme', 'light');
-            } else if (theme === 'coffee') {
-                /* الثيم القهوي مفعّل فقط لـ cc_manager — للباقي نقرة بلا تأثير */
-                const role = (typeof currentUser !== 'undefined' && currentUser) ? currentUser.role : null;
-                if (role !== 'cc_manager') {
-                    /* أعد إبراز الثيم الحالي بصرياً ولا تطبّق التغيير */
-                    const cur = localStorage.getItem('Shaab_Theme') || 'dark';
-                    group.querySelectorAll('.theme-opt').forEach(b => b.classList.toggle('active', b.dataset.themePreview === cur));
-                    return;
-                }
-                document.documentElement.setAttribute('data-theme', 'coffee');
-                localStorage.setItem('Shaab_Theme', 'coffee');
             } else if (theme === 'dark') {
                 document.documentElement.removeAttribute('data-theme');
                 localStorage.setItem('Shaab_Theme', 'dark');
@@ -321,18 +308,13 @@
             });
         });
 
-        /* لو المستخدم على ثيم coffee ولكنه لم يعد cc_manager، أعِده للداكن */
-        function _enforceCoffeeRoleGate() {
-            const role = (typeof currentUser !== 'undefined' && currentUser) ? currentUser.role : null;
-            if (role && role !== 'cc_manager' && localStorage.getItem('Shaab_Theme') === 'coffee') {
+        /* تأمين: لو كان أحد على coffee من قبل، نُعيده للوضع الداكن (الثيم أُلغي) */
+        (function _resetLegacyCoffee() {
+            if (localStorage.getItem('Shaab_Theme') === 'coffee') {
                 document.documentElement.removeAttribute('data-theme');
                 localStorage.setItem('Shaab_Theme', 'dark');
-                document.querySelectorAll('.theme-switcher .theme-opt').forEach(b => {
-                    b.classList.toggle('active', b.dataset.themePreview === 'dark');
-                });
             }
-        }
-        setInterval(_enforceCoffeeRoleGate, 1500);
+        })();
     </script>
 
     <div class="content-area">
