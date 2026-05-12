@@ -424,111 +424,26 @@ function _anEnsureStyles() {
             content:'تعديل · '; font-size:10px; opacity:0.85;
         }
 
-        /* ──────── زر "📋 ملاحظات السيطرة" — مميّز بشكل لافت ──────── */
-        @keyframes _anBtnBreathe {
-            0%,100% {
-                box-shadow:
-                    0 3px 8px rgba(7,94,84,0.42),
-                    0 0 0 0 rgba(37,211,102,0.55),
-                    inset 0 1px 0 rgba(255,255,255,0.30);
-            }
-            50% {
-                box-shadow:
-                    0 5px 14px rgba(7,94,84,0.55),
-                    0 0 0 6px rgba(37,211,102,0),
-                    inset 0 1px 0 rgba(255,255,255,0.35);
-            }
-        }
-        @keyframes _anBtnShimmer {
-            0%   { background-position:200% 0; }
-            100% { background-position:-200% 0; }
-        }
-        @keyframes _anBadgeBounce {
-            0%,100% { transform:translate(-50%,0) scale(1); }
-            50%     { transform:translate(-50%,-2px) scale(1.08); }
-        }
+        /* ──────── زر "📋 ملاحظات السيطرة" — مطابق لزر "تسليم" في المنتسيات ──────── */
         .btn-audit-note {
-            position:relative;
-            background:
-                linear-gradient(110deg,
-                    #25d366 0%,
-                    #128c7e 35%,
-                    #34c98a 50%,   /* lighter highlight band for shimmer */
-                    #128c7e 65%,
-                    #075e54 100%) !important;
-            background-size:220% 100% !important;
+            background:#2e7d32 !important;
             color:#fff !important;
-            border:1.5px solid rgba(255,255,255,0.32) !important;
+            padding:6px 14px;
+            font-size:12px;
+            border-radius:8px;
+            border:none !important;
             cursor:pointer;
             font-family:'Cairo','Tajawal',sans-serif;
-            font-weight:800; letter-spacing:0.4px;
-            padding:6px 14px 6px 13px;
-            font-size:12.5px;
-            border-radius:10px;
-            text-shadow:0 1px 1px rgba(0,0,0,0.30);
-            box-shadow:
-                0 3px 8px rgba(7,94,84,0.42),
-                0 0 0 0 rgba(37,211,102,0.55),
-                inset 0 1px 0 rgba(255,255,255,0.30);
-            transition:filter 0.18s, transform 0.18s;
-            display:inline-flex; align-items:center; gap:5px;
-            animation:_anBtnBreathe 2.4s ease-in-out infinite, _anBtnShimmer 4.8s linear infinite;
+            font-weight:700;
+            transition:filter 0.15s, transform 0.15s;
+            display:inline-flex; align-items:center; gap:4px;
         }
-        .btn-audit-note::before {
-            /* shine sweep overlay */
-            content:''; position:absolute; inset:0;
-            background:linear-gradient(110deg, transparent 35%, rgba(255,255,255,0.32) 50%, transparent 65%);
-            background-size:220% 100%;
-            animation:_anBtnShimmer 4.8s linear infinite;
-            border-radius:inherit;
-            pointer-events:none;
-            mix-blend-mode:overlay;
-            opacity:0.55;
-        }
-        .btn-audit-note::after {
-            /* small "جديد" badge */
-            content:'جديد';
-            position:absolute; top:-8px; left:50%;
-            transform:translate(-50%, 0);
-            background:linear-gradient(135deg, #c1572b 0%, #8a3617 100%);
-            color:#fff5dc;
-            font-size:8.5px; font-weight:900;
-            padding:2px 7px 1px;
-            border-radius:10px;
-            letter-spacing:0.8px;
-            box-shadow:0 2px 5px rgba(122,61,31,0.5), inset 0 1px 0 rgba(255,245,220,0.30);
-            border:1px solid rgba(255,245,220,0.35);
-            animation:_anBadgeBounce 1.6s ease-in-out infinite;
-            white-space:nowrap;
-            pointer-events:none;
-        }
-        .btn-audit-note:hover {
-            filter:brightness(1.10) saturate(1.15);
-            transform:translateY(-1.5px);
-        }
+        .btn-audit-note:hover { filter:brightness(1.10); transform:translateY(-1px); }
         .btn-audit-note:active { transform:translateY(0) scale(0.97); }
 
+        /* عند وجود ملاحظة سابقة — لون أغمق قليلاً للتمييز فقط، بدون شارات أو حركات */
         .btn-audit-note.has-note {
-            background:
-                linear-gradient(135deg, #075e54 0%, #128c7e 60%, #075e54 100%) !important;
-            background-size:100% 100% !important;
-            box-shadow:
-                0 0 0 2px rgba(37,211,102,0.40),
-                0 2px 5px rgba(7,94,84,0.5),
-                inset 0 1px 0 rgba(255,255,255,0.18) !important;
-            animation:none;   /* don't breathe when already filled */
-            border-color:rgba(165,214,167,0.4) !important;
-        }
-        .btn-audit-note.has-note::before {
-            display:none;   /* no shimmer when locked */
-        }
-        .btn-audit-note.has-note::after {
-            /* swap "جديد" badge with "تم" badge */
-            content:'تم ✓';
-            background:linear-gradient(135deg, #2e7d32 0%, #1b5e20 100%);
-            animation:none;
-            top:-7px;
-            font-size:8.5px;
+            background:#1b5e20 !important;
         }
 
         @media (max-width:760px) {
