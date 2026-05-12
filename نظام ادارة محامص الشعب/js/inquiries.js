@@ -3,7 +3,11 @@
 ══════════════════════════════════════════════════════ */
 function toggleInquiryNotes() {
     const t = document.getElementById("iType").value;
-    document.getElementById("iNotesBox").style.display = (t==="شكوى"||t==="أخرى") ? "block" : "none";
+    const _detailsTypes = ["شكوى","أخرى","استفسار عن عروض","موظفين شركات توصيل","موظف محامص الشعب","أوقات الدوام","تحويل اقسام داخلي","توظيف وشؤون موظفين","طلبية","تحويل لمولات او بوابة الشعب"];
+    document.getElementById("iNotesBox").style.display = _detailsTypes.indexOf(t) !== -1 ? "block" : "none";
+    if (_detailsTypes.indexOf(t) === -1) {
+        const _nIn = document.getElementById("iNotes"); if (_nIn) _nIn.value = "";
+    }
     const itemBox = document.getElementById("iItemNameBox");
     if (itemBox) itemBox.style.display = (t === "استفسار عن أصناف") ? "block" : "none";
     if (t !== "استفسار عن أصناف") {
@@ -428,7 +432,9 @@ function addInquiry() {
     const p = document.getElementById("iPhone").value;
     const b = c === 'غير محدد' ? 'غير محدد' : branchEl.value;
     const needsNotes = (t==="شكوى"||t==="أخرى");
-    const n = needsNotes ? document.getElementById("iNotes").value.trim() : "";
+    const _detailsTypes = ["شكوى","أخرى","استفسار عن عروض","موظفين شركات توصيل","موظف محامص الشعب","أوقات الدوام","تحويل اقسام داخلي","توظيف وشؤون موظفين","طلبية","تحويل لمولات او بوابة الشعب"];
+    const _showsNotes = _detailsTypes.indexOf(t) !== -1;
+    const n = _showsNotes ? document.getElementById("iNotes").value.trim() : "";
     const ct = (t === "شكوى") ? (document.getElementById("iComplaintType")?.value || '') : '';
     const itemName = (t === "استفسار عن أصناف") ? (document.getElementById("iItemName")?.value.trim() || '') : '';
     if (!c||!b||!p||!t) return alert("يرجى إكمال البيانات");
