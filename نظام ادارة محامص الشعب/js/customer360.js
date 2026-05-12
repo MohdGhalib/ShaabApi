@@ -292,7 +292,8 @@ function _c360EnsureModal() {
             </div>
         </div>
     `;
-    /* لا تُغلق عند النقر خارج النافذة — الإغلاق فقط بزر ✕ */
+    /* أغلق عند النقر خارج النافذة */
+    el.addEventListener('click', e => { if (e.target === el) closeCustomer360(); });
     document.body.appendChild(el);
 
     const inp = document.getElementById('c360PhoneInput');
