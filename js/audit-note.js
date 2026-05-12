@@ -5,414 +5,306 @@
    - يظهر لمدير السيطرة في تاب "متابعات موظفي السيطرة"
    ══════════════════════════════════════════════════════ */
 
-/* ── حقن CSS مرّة واحدة فقط ── */
+/* ── حقن CSS مرّة واحدة فقط — مطابق لتصميم c360 ── */
 function _anEnsureStyles() {
     if (document.getElementById('_anStyles')) return;
-
-    // ── خطوط مميّزة من Google Fonts (تحميل ذكي، مرّة واحدة) ──
-    if (!document.getElementById('_anFonts')) {
-        const fontLink = document.createElement('link');
-        fontLink.id = '_anFonts';
-        fontLink.rel = 'stylesheet';
-        fontLink.href = 'https://fonts.googleapis.com/css2?family=Reem+Kufi:wght@500;700&family=Amiri:wght@400;700&display=swap';
-        document.head.appendChild(fontLink);
-    }
 
     const st = document.createElement('style');
     st.id = '_anStyles';
     st.textContent = `
-        /* ──────── Keyframes ──────── */
-        @keyframes _anEnter   { 0% { opacity:0; transform:translateY(40px) scale(0.92) rotateX(8deg); } 100% { opacity:1; transform:translateY(0) scale(1) rotateX(0); } }
-        @keyframes _anStampIn { 0% { opacity:0; transform:rotate(-25deg) scale(2.4); filter:blur(4px); } 60% { opacity:1; transform:rotate(-14deg) scale(0.92); filter:blur(0); } 100% { opacity:0.95; transform:rotate(-14deg) scale(1); filter:blur(0); } }
-        @keyframes _anFieldIn { 0% { opacity:0; transform:translateX(-18px); } 100% { opacity:1; transform:translateX(0); } }
-        @keyframes _anBeanFloat { 0%,100% { transform:translateY(0) rotate(0); } 50% { transform:translateY(-3px) rotate(8deg); } }
-        @keyframes _anShimmer { 0% { background-position:-200% 0; } 100% { background-position:200% 0; } }
+        /* ──────── Keyframes (مطابقة لـ c360) ──────── */
+        @keyframes _anSlideUp   { from { opacity:0; transform:translateY(28px) scale(0.95); } to { opacity:1; transform:translateY(0) scale(1); } }
+        @keyframes _anStampLand { 0% { opacity:0; transform:rotate(-12deg) scale(1.5); } 60% { opacity:1; transform:rotate(-12deg) scale(0.92); } 100% { opacity:1; transform:rotate(-12deg) scale(1); } }
 
-        /* ──────── Backdrop ──────── */
+        /* ──────── Backdrop (مطابق لـ c360) ──────── */
         #anModal {
-            position:fixed; inset:0; z-index:10000;
-            background:radial-gradient(circle at 50% 30%, rgba(45,28,18,0.72), rgba(12,8,6,0.88));
-            backdrop-filter:blur(8px) saturate(140%);
-            display:flex; align-items:center; justify-content:center;
-            padding:20px; overflow-y:auto;
-            perspective:1400px;
+            position:fixed; inset:0;
+            background:radial-gradient(ellipse at center, rgba(60,30,8,0.92) 0%, rgba(15,8,2,0.96) 100%);
+            backdrop-filter:blur(8px);
+            z-index:99998; display:flex; align-items:center; justify-content:center;
+            padding:20px; direction:rtl;
+            font-family:'Cairo','Tajawal',sans-serif;
         }
         #anModal.hidden { display:none; }
 
-        /* ──────── Container ──────── */
+        /* ──────── Wrap ──────── */
         #anModal .an-wrap {
-            max-width:700px; width:100%; max-height:94vh;
+            max-width:720px; width:100%; max-height:92vh;
             display:flex; flex-direction:column;
-            animation:_anEnter 0.55s cubic-bezier(0.22,1.18,0.36,1);
-            transform-origin:center top;
-            filter:drop-shadow(0 24px 38px rgba(0,0,0,0.45));
+            animation:_anSlideUp 0.45s cubic-bezier(0.34,1.3,0.64,1);
         }
 
-        /* ──────── Header strip (Coffee-bar deep tone) ──────── */
+        /* ──────── الشريط العلوي الأخضر (مطابق لـ c360) ──────── */
         #anModal .an-instruction {
-            background:
-                linear-gradient(135deg, #3a2418 0%, #5d3a24 45%, #2e1810 100%);
-            color:#f8e9c8; padding:16px 24px;
-            border-radius:14px 14px 0 0;
+            background:linear-gradient(135deg,#25d366 0%,#128c7e 50%,#075e54 100%);
+            color:#fff; padding:14px 22px; border-radius:18px 18px 0 0;
             display:flex; align-items:center; gap:14px;
-            box-shadow:inset 0 -2px 0 rgba(212,170,90,0.4), 0 6px 18px rgba(46,24,16,0.5);
+            border:1.5px solid rgba(37,211,102,0.5); border-bottom:0;
+            box-shadow:0 -6px 26px rgba(7,94,84,0.45);
             position:relative; overflow:hidden;
-            border:1px solid rgba(212,170,90,0.28);
-            border-bottom:none;
         }
         #anModal .an-instruction::before {
             content:''; position:absolute; inset:0;
-            background:
-                repeating-linear-gradient(45deg, transparent 0 14px, rgba(212,170,90,0.06) 14px 16px),
-                radial-gradient(circle at 10% 20%, rgba(212,170,90,0.12) 0%, transparent 50%);
+            background:repeating-linear-gradient(45deg, transparent 0 12px, rgba(255,255,255,0.04) 12px 14px);
             pointer-events:none;
         }
         #anModal .an-instruction-icon {
-            width:42px; height:42px;
-            background:linear-gradient(135deg,#d4aa5a,#a07838);
-            border-radius:50%;
-            display:flex; align-items:center; justify-content:center;
-            font-size:20px; flex-shrink:0; position:relative; z-index:1;
-            box-shadow:0 0 0 3px rgba(212,170,90,0.18), inset 0 -2px 4px rgba(0,0,0,0.18);
+            width:38px; height:38px; background:rgba(255,255,255,0.22);
+            border-radius:50%; display:flex; align-items:center; justify-content:center;
+            font-size:19px; flex-shrink:0; border:1.5px solid rgba(255,255,255,0.35);
         }
         #anModal .an-instruction-text {
-            font-family:'Reem Kufi', 'Cairo', sans-serif;
-            font-size:15px; font-weight:700; line-height:1.5; letter-spacing:0.4px;
-            text-shadow:0 1px 2px rgba(0,0,0,0.4);
-            position:relative; z-index:1;
+            font-size:13.5px; font-weight:800; line-height:1.55; letter-spacing:0.2px;
+            text-shadow:0 1px 2px rgba(0,0,0,0.25);
+            flex:1;
         }
-        #anModal .an-instruction-close {
-            margin-inline-start:auto; position:relative; z-index:1;
-            background:rgba(248,233,200,0.12); color:#f8e9c8;
-            border:1px solid rgba(248,233,200,0.20);
-            width:34px; height:34px; border-radius:50%;
-            font-size:15px; font-weight:700; cursor:pointer;
-            display:flex; align-items:center; justify-content:center;
-            transition:background 0.22s, transform 0.18s;
-        }
-        #anModal .an-instruction-close:hover { background:rgba(248,233,200,0.22); transform:rotate(90deg); }
 
-        /* ──────── Aged paper receipt ──────── */
+        /* ──────── الإيصال الكريمي (مطابق لـ c360) ──────── */
         #anModal .an-receipt {
-            background:
-                /* paper noise texture (SVG) */
-                url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='280' height='280'><filter id='n'><feTurbulence type='fractalNoise' baseFrequency='0.86' numOctaves='2' stitchTiles='stitch'/><feColorMatrix values='0 0 0 0 0.42, 0 0 0 0 0.28, 0 0 0 0 0.16, 0 0 0 0.08 0'/></filter><rect width='100%25' height='100%25' filter='url(%23n)'/></svg>"),
-                radial-gradient(ellipse at 15% 0%, rgba(160,120,56,0.16) 0%, transparent 40%),
-                radial-gradient(ellipse at 85% 100%, rgba(160,120,56,0.14) 0%, transparent 40%),
-                linear-gradient(180deg, #fbf3df 0%, #f5ead0 100%);
-            border:1.5px solid rgba(139,89,40,0.30);
-            border-top:none;
-            border-radius:0 0 14px 14px;
-            padding:32px 36px 28px 36px;
-            box-shadow:
-                inset 0 2px 0 rgba(212,170,90,0.4),
-                inset 0 0 0 2px rgba(255,255,255,0.30),
-                0 6px 14px rgba(74,40,18,0.20);
-            overflow-y:auto;
-            position:relative;
-            font-family:'Cairo', sans-serif;
-            color:#3a2418;
+            background:linear-gradient(180deg, #fdf8ef 0%, #faf2e3 100%);
+            border:1.5px solid rgba(139,69,19,0.25);
+            border-radius:0 0 18px 18px;
+            box-shadow:0 36px 90px rgba(0,0,0,0.6), inset 0 1px 0 rgba(255,255,255,0.85);
+            position:relative; overflow:hidden;
+            display:flex; flex-direction:column;
+            flex:1; min-height:0;
         }
-        /* خاتم شمعي في الزاوية */
         #anModal .an-receipt::before {
-            content:'تدقيق'; position:absolute; top:14px; left:24px;
-            font-family:'Reem Kufi', sans-serif;
-            font-size:11px; font-weight:700; letter-spacing:3px;
-            color:#7a3d1f;
-            background:radial-gradient(circle, #c1572b 0%, #8a3617 70%);
-            color:#f8e9c8;
-            width:64px; height:64px; border-radius:50%;
+            content:''; position:absolute; inset:0;
+            background-image:
+                radial-gradient(circle at 14% 18%, rgba(139,69,19,0.04) 0, transparent 12%),
+                radial-gradient(circle at 86% 78%, rgba(120,53,15,0.05) 0, transparent 14%);
+            pointer-events:none;
+        }
+        #anModal .an-bean {
+            position:absolute; font-size:18px; opacity:0.18;
+            user-select:none; pointer-events:none;
+        }
+        #anModal .an-bean.an-b1 { top:8px; right:14px; transform:rotate(35deg); }
+        #anModal .an-bean.an-b2 { bottom:80px; left:18px; transform:rotate(-22deg); font-size:14px; }
+
+        #anModal .an-close {
+            position:absolute; top:12px; left:14px; z-index:5;
+            width:30px; height:30px; border-radius:50%;
+            background:rgba(58,40,24,0.08); color:#5c3919;
+            border:1px solid rgba(58,40,24,0.18);
+            font-size:14px; font-weight:800; cursor:pointer;
             display:flex; align-items:center; justify-content:center;
-            transform:rotate(-14deg);
-            box-shadow:
-                inset 0 -2px 6px rgba(0,0,0,0.32),
-                inset 0 2px 6px rgba(255,255,255,0.22),
-                0 3px 8px rgba(122,61,31,0.5);
-            border:2px dashed rgba(248,233,200,0.5);
-            opacity:0;
-            animation:_anStampIn 0.7s 0.4s cubic-bezier(0.4,1.6,0.6,1) forwards;
-            pointer-events:none;
+            transition:background 0.18s, transform 0.18s;
+            font-family:'Cairo';
         }
-        /* حبات بُن متناثرة (زخرفية) */
-        #anModal .an-receipt::after {
-            content:'';
-            position:absolute; bottom:0; left:0; right:0; height:14px;
-            background:
-                radial-gradient(ellipse 6px 8px at 8% 50%, #6b3a1a 0%, transparent 60%),
-                radial-gradient(ellipse 6px 8px at 22% 50%, #6b3a1a 0%, transparent 60%),
-                radial-gradient(ellipse 6px 8px at 36% 50%, #6b3a1a 0%, transparent 60%),
-                radial-gradient(ellipse 6px 8px at 50% 50%, #6b3a1a 0%, transparent 60%),
-                radial-gradient(ellipse 6px 8px at 64% 50%, #6b3a1a 0%, transparent 60%),
-                radial-gradient(ellipse 6px 8px at 78% 50%, #6b3a1a 0%, transparent 60%),
-                radial-gradient(ellipse 6px 8px at 92% 50%, #6b3a1a 0%, transparent 60%);
-            opacity:0.16;
-            pointer-events:none;
-        }
+        #anModal .an-close:hover { background:rgba(198,40,40,0.12); color:#c62828; transform:rotate(90deg); }
 
-        /* ──────── Title with calligraphic flourishes ──────── */
-        #anModal .an-title {
-            font-family:'Reem Kufi', 'Cairo', serif;
-            text-align:center; font-size:30px; font-weight:700;
-            color:#2e1810; letter-spacing:2px;
-            padding:6px 0 16px; margin-bottom:6px;
+        /* ──────── رأس الإيصال (مطابق لـ c360) ──────── */
+        #anModal .an-receipt-head {
+            padding:24px 28px 18px; text-align:center;
+            border-bottom:2px dashed rgba(139,69,19,0.22);
             position:relative;
-            text-shadow:0 1px 0 rgba(255,255,255,0.6);
         }
-        #anModal .an-title::before, #anModal .an-title::after {
-            content:'❖'; color:#a07838; font-size:14px;
-            position:relative; top:-6px; margin:0 12px;
-            animation:_anBeanFloat 3s ease-in-out infinite;
+        #anModal .an-brand {
+            font-size:10.5px; font-weight:800; color:#8b6f47;
+            letter-spacing:4px; margin-bottom:8px; text-transform:uppercase;
         }
-        #anModal .an-title-sub {
-            text-align:center;
-            font-family:'Amiri', serif;
-            font-size:13px; color:#7a4a26;
-            letter-spacing:5px; font-style:italic;
-            margin-bottom:24px;
+        #anModal .an-receipt-title {
+            font-size:20px; font-weight:900; color:#3a2818;
+            letter-spacing:0.3px; line-height:1.4;
         }
-        #anModal .an-title-sub::before, #anModal .an-title-sub::after {
-            content:'•'; margin:0 10px; color:#a07838;
+        #anModal .an-stamp {
+            position:absolute; top:16px; right:22px;
+            transform:rotate(-12deg);
+            border:2.5px solid #c62828; color:#c62828;
+            padding:4px 12px; border-radius:6px;
+            font-size:11px; font-weight:900; letter-spacing:1.5px;
+            background:rgba(198,40,40,0.04);
+            animation:_anStampLand 0.7s 0.35s cubic-bezier(0.5,1.6,0.4,1) both;
+            opacity:0;
         }
 
-        /* ──────── Rows (مطابقة لجدول الورد الأصلي) ──────── */
+        /* ──────── جسم الفورم ──────── */
+        #anModal .an-body {
+            overflow-y:auto; padding:14px 28px 20px; flex:1; min-height:0;
+            position:relative;
+        }
+        #anModal .an-section { margin-top:14px; }
+        #anModal .an-section-title {
+            font-size:13.5px; font-weight:900; color:#5c3919;
+            margin-bottom:10px;
+            display:flex; align-items:center; gap:8px;
+            letter-spacing:0.3px;
+        }
+
+        /* صفوف الحقول */
         #anModal .an-row {
-            display:grid; gap:12px 14px;
-            margin-bottom:14px;
-            padding:14px 14px 12px;
-            background:rgba(255,253,247,0.36);
-            border:1px solid rgba(139,89,40,0.18);
-            border-radius:8px;
-            box-shadow:inset 0 1px 0 rgba(255,255,255,0.5);
+            display:grid; gap:10px 12px;
+            background:#fff;
+            border:1.5px solid rgba(139,69,19,0.18);
+            border-radius:12px; padding:12px;
+            box-shadow:0 2px 6px rgba(139,69,19,0.05);
         }
         #anModal .an-row-5 { grid-template-columns:repeat(5, minmax(0,1fr)); }
         #anModal .an-row-4 { grid-template-columns:repeat(4, minmax(0,1fr)); }
-        #anModal .an-field { display:flex; flex-direction:column; gap:5px; opacity:0; animation:_anFieldIn 0.45s cubic-bezier(0.3,1.1,0.5,1) forwards; }
-        #anModal .an-row-5 .an-field:nth-child(1) { animation-delay:0.10s; }
-        #anModal .an-row-5 .an-field:nth-child(2) { animation-delay:0.15s; }
-        #anModal .an-row-5 .an-field:nth-child(3) { animation-delay:0.20s; }
-        #anModal .an-row-5 .an-field:nth-child(4) { animation-delay:0.25s; }
-        #anModal .an-row-5 .an-field:nth-child(5) { animation-delay:0.30s; }
-        #anModal .an-row-4 .an-field:nth-child(1) { animation-delay:0.36s; }
-        #anModal .an-row-4 .an-field:nth-child(2) { animation-delay:0.41s; }
-        #anModal .an-row-4 .an-field:nth-child(3) { animation-delay:0.46s; }
-        #anModal .an-row-4 .an-field:nth-child(4) { animation-delay:0.51s; }
-
-        /* ──────── Big notes pad (ورق مسطّر — الصف الفارغ بالأصل) ──────── */
-        #anModal .an-notes-area {
-            margin-top:6px; margin-bottom:6px;
-            opacity:0; animation:_anFieldIn 0.5s 0.58s cubic-bezier(0.3,1.1,0.5,1) forwards;
-        }
-        #anModal .an-notes-label {
-            font-family:'Reem Kufi', 'Cairo', sans-serif;
-            font-size:13px; font-weight:700; color:#5d3a20;
-            letter-spacing:0.5px;
-            margin-bottom:8px;
-            display:flex; align-items:center; gap:6px;
-        }
-        #anModal .an-notes-label .req { color:#c1572b; font-size:14px; line-height:0; }
-        #anModal .an-notes-pad {
-            width:100%; box-sizing:border-box;
-            min-height:170px; resize:vertical;
-            padding:14px 16px;
-            font-family:'Amiri', 'Cairo', serif;
-            font-size:15px; line-height:30px;
-            color:#2e1810;
-            background:
-                linear-gradient(180deg, transparent 0, transparent 29px, rgba(139,89,40,0.22) 30px),
-                linear-gradient(180deg, #fdf8e9 0%, #f8f0d6 100%);
-            background-size:100% 30px;
-            background-attachment:local;
-            border:1.5px solid rgba(139,89,40,0.32);
-            border-radius:8px;
-            box-shadow:
-                inset 0 2px 4px rgba(139,89,40,0.08),
-                inset 4px 0 0 rgba(193,87,43,0.45);   /* margin line on right (RTL) */
-            outline:none;
-            transition:border-color 0.25s, box-shadow 0.25s;
-        }
-        #anModal .an-notes-pad:focus {
-            border-color:#a07838;
-            box-shadow:
-                0 0 0 3px rgba(160,120,56,0.18),
-                inset 0 2px 4px rgba(139,89,40,0.08),
-                inset 4px 0 0 rgba(193,87,43,0.65);
-        }
-        #anModal .an-notes-pad::placeholder {
-            color:rgba(122,74,38,0.40); font-style:italic;
-        }
+        #anModal .an-field { display:flex; flex-direction:column; gap:5px; }
 
         #anModal .an-field label {
-            font-family:'Reem Kufi', 'Cairo', sans-serif;
-            font-size:12.5px; font-weight:500; color:#5d3a20;
-            letter-spacing:0.5px;
-            display:flex; align-items:center; gap:6px;
+            font-size:11.5px; font-weight:800; color:#5c3919;
+            display:flex; align-items:center; gap:5px;
+            letter-spacing:0.2px;
         }
-        #anModal .an-field label .req { color:#c1572b; font-size:14px; line-height:0; }
+        #anModal .an-field label .req { color:#c62828; font-size:13px; line-height:0; }
         #anModal .an-field input,
         #anModal .an-field textarea,
         #anModal .an-field select {
-            font-family:'Cairo', sans-serif;
-            font-size:14px; padding:10px 14px;
-            border:1.5px solid rgba(139,89,40,0.22);
-            border-radius:6px;
-            background:linear-gradient(180deg, rgba(255,253,247,0.82), rgba(252,247,232,0.82));
-            color:#2e1810;
+            font-family:'Cairo','Tajawal',sans-serif;
+            font-size:13px; padding:9px 12px;
+            border:1.5px solid rgba(139,69,19,0.22);
+            border-radius:10px;
+            background:#fff;
+            color:#3a2818;
+            font-weight:600;
             outline:none;
-            transition:border-color 0.25s, background 0.25s, box-shadow 0.25s, transform 0.18s;
-            box-shadow:inset 0 1px 3px rgba(139,89,40,0.06);
+            transition:border-color 0.18s, box-shadow 0.18s;
+            direction:rtl;
         }
         #anModal .an-field input:focus,
         #anModal .an-field textarea:focus,
         #anModal .an-field select:focus {
-            border-color:#a07838;
-            background:#fffef8;
-            box-shadow:0 0 0 3px rgba(160,120,56,0.18), inset 0 1px 3px rgba(139,89,40,0.10);
-            transform:translateY(-1px);
+            border-color:#c0935d;
+            box-shadow:0 0 0 3px rgba(192,147,93,0.18);
         }
+        #anModal .an-field input::placeholder,
+        #anModal .an-field textarea::placeholder { color:#a08770; font-weight:600; }
         #anModal .an-field input[readonly] {
-            background:rgba(245,237,217,0.6);
-            color:#5d3a20;
+            background:rgba(255,245,220,0.5);
+            color:#5c3919;
             cursor:default;
         }
-        #anModal .an-field textarea { resize:vertical; min-height:64px; }
 
-        /* ──────── Auditor signature section (gold-leaf accent) ──────── */
+        /* منطقة الكتابة الكبيرة (تشبه شريط الملخّص في c360 لكن للكتابة) */
+        #anModal .an-notes-area {
+            background:linear-gradient(135deg, #fff5dc 0%, #ffe9c2 100%);
+            border:1.5px solid rgba(192,147,93,0.45);
+            border-radius:14px;
+            padding:14px 16px;
+            box-shadow:0 1px 3px rgba(139,69,19,0.08);
+        }
+        #anModal .an-notes-label {
+            font-size:12.5px; font-weight:800; color:#5c3919;
+            margin-bottom:8px; letter-spacing:0.3px;
+            display:flex; align-items:center; gap:5px;
+        }
+        #anModal .an-notes-label .req { color:#c62828; font-size:13px; line-height:0; }
+        #anModal .an-notes-pad {
+            width:100%; box-sizing:border-box;
+            min-height:140px; resize:vertical;
+            padding:11px 14px;
+            font-family:'Cairo','Tajawal',sans-serif;
+            font-size:13px; line-height:1.7;
+            color:#3a2818;
+            background:#fff;
+            border:1.5px solid rgba(139,69,19,0.22);
+            border-radius:10px;
+            outline:none;
+            transition:border-color 0.18s, box-shadow 0.18s;
+            direction:rtl;
+        }
+        #anModal .an-notes-pad:focus {
+            border-color:#c0935d;
+            box-shadow:0 0 0 3px rgba(192,147,93,0.18);
+        }
+        #anModal .an-notes-pad::placeholder { color:#a08770; font-weight:600; }
+        #anModal .an-notes-pad[readonly] { background:rgba(255,245,220,0.5); }
+
+        /* قسم المدقق */
         #anModal .an-auditor-section {
-            margin-top:28px; padding-top:22px;
             text-align:center;
-            position:relative;
-            opacity:0; animation:_anFieldIn 0.5s 0.66s cubic-bezier(0.3,1.1,0.5,1) forwards;
+            padding:18px 16px 8px;
+            border-top:2px dashed rgba(139,69,19,0.22);
+            margin-top:8px;
         }
-        #anModal .an-auditor-section::before {
-            content:'';
-            position:absolute; top:0; left:50%; transform:translateX(-50%);
-            width:60%; height:1px;
-            background:linear-gradient(90deg, transparent, rgba(160,120,56,0.55), transparent);
-        }
-        #anModal .an-auditor-section::after {
-            content:'';
-            position:absolute; top:-4px; left:50%; transform:translateX(-50%);
-            width:8px; height:8px; border-radius:50%;
-            background:radial-gradient(circle, #d4aa5a, #7a4a26);
-            box-shadow:0 0 0 2px rgba(212,170,90,0.25);
-        }
-        #anModal .an-auditor-section .an-auditor-label {
-            font-family:'Reem Kufi', 'Cairo', sans-serif;
-            font-size:11.5px;
-            background:linear-gradient(90deg, transparent, #a07838 20%, #d4aa5a 50%, #a07838 80%, transparent);
-            -webkit-background-clip:text; background-clip:text;
-            -webkit-text-fill-color:transparent;
-            font-weight:700; letter-spacing:6px;
-            margin-bottom:10px;
+        #anModal .an-auditor-label {
+            font-size:11px; font-weight:800; color:#8b6f47;
+            letter-spacing:5px; margin-bottom:10px;
+            text-transform:uppercase;
         }
         #anModal .an-auditor-section input {
-            font-family:'Amiri', 'Cairo', serif;
+            font-family:'Cairo','Tajawal',sans-serif;
             text-align:center;
-            font-size:18px; font-weight:700;
-            padding:8px 14px 4px;
+            font-size:15px; font-weight:800;
+            padding:6px 14px 4px;
             border:none;
-            border-bottom:1.5px dotted rgba(122,74,38,0.55);
+            border-bottom:1.5px solid #5c3919;
             background:transparent;
-            color:#2e1810;
-            min-width:280px;
+            color:#3a2818;
+            min-width:260px;
             outline:none;
-            transition:border-color 0.25s;
-            letter-spacing:1px;
+            transition:border-color 0.18s;
+            direction:rtl;
         }
-        #anModal .an-auditor-section input:focus {
-            border-bottom:1.5px solid #a07838;
-            border-bottom-style:solid;
-        }
-        #anModal .an-auditor-section input::placeholder {
-            color:rgba(122,74,38,0.4); font-style:italic;
-        }
+        #anModal .an-auditor-section input:focus { border-bottom-color:#c0935d; }
+        #anModal .an-auditor-section input::placeholder { color:#a08770; font-style:italic; font-weight:600; }
 
-        /* ──────── Footer buttons ──────── */
+        /* الأزرار السفلية */
         #anModal .an-footer {
-            margin-top:28px; padding-top:18px;
-            display:flex; gap:14px; justify-content:center; flex-wrap:wrap;
-            border-top:1px dashed rgba(139,89,40,0.28);
-            opacity:0; animation:_anFieldIn 0.5s 0.72s cubic-bezier(0.3,1.1,0.5,1) forwards;
+            padding:16px 28px 18px;
+            display:flex; gap:10px; justify-content:center; flex-wrap:wrap;
+            border-top:1px solid rgba(139,69,19,0.12);
+            background:rgba(255,245,220,0.30);
         }
         #anModal .an-btn {
-            font-family:'Reem Kufi', 'Cairo', sans-serif;
-            font-size:13.5px; font-weight:700; letter-spacing:0.5px;
-            padding:12px 30px; border:none; border-radius:8px;
+            font-family:'Cairo','Tajawal',sans-serif;
+            font-size:13.5px; font-weight:800;
+            padding:10px 24px; border:none; border-radius:10px;
             cursor:pointer;
-            transition:transform 0.18s, box-shadow 0.22s, filter 0.22s;
-            position:relative; overflow:hidden;
+            transition:transform 0.15s, filter 0.18s, box-shadow 0.2s;
         }
         #anModal .an-btn-submit {
-            background:linear-gradient(135deg, #4a8b3c 0%, #2e6e23 50%, #1a4515 100%);
-            color:#fffef8;
-            box-shadow:
-                0 5px 12px rgba(27,94,32,0.36),
-                inset 0 1px 0 rgba(255,255,255,0.20);
-            text-shadow:0 1px 1px rgba(0,0,0,0.3);
+            background:linear-gradient(135deg, #2e7d32 0%, #1b5e20 100%);
+            color:#fff;
+            box-shadow:0 4px 10px rgba(46,125,50,0.32);
         }
-        #anModal .an-btn-submit::before {
-            content:''; position:absolute; inset:0;
-            background:linear-gradient(110deg, transparent 25%, rgba(255,255,255,0.22) 50%, transparent 75%);
-            background-size:200% 100%;
-            animation:_anShimmer 3s linear infinite;
-        }
-        #anModal .an-btn-submit:hover {
-            filter:brightness(1.10);
-            transform:translateY(-2px);
-            box-shadow:0 8px 18px rgba(27,94,32,0.48), inset 0 1px 0 rgba(255,255,255,0.24);
-        }
-        #anModal .an-btn-submit:active { transform:translateY(0) scale(0.97); }
+        #anModal .an-btn-submit:hover { filter:brightness(1.10); transform:translateY(-1px); }
         #anModal .an-btn-cancel {
-            background:linear-gradient(135deg, rgba(139,89,40,0.10), rgba(139,89,40,0.04));
-            color:#5d3a20;
-            border:1.5px solid rgba(139,89,40,0.35);
+            background:#fff;
+            color:#5c3919;
+            border:1.5px solid rgba(139,69,19,0.30);
         }
-        #anModal .an-btn-cancel:hover {
-            background:linear-gradient(135deg, rgba(139,89,40,0.18), rgba(139,89,40,0.10));
-            transform:translateY(-1px);
-        }
+        #anModal .an-btn-cancel:hover { background:rgba(255,245,220,0.6); }
 
-        /* ──────── Error toast ──────── */
+        /* رسالة الخطأ */
         #anModal .an-err {
-            background:linear-gradient(135deg, rgba(193,87,43,0.12), rgba(193,87,43,0.06));
-            color:#7a3d1f; font-size:13px; font-weight:700;
-            padding:11px 16px; border-radius:8px;
-            border:1px solid rgba(193,87,43,0.32);
-            margin-top:16px; text-align:center;
+            background:rgba(198,40,40,0.10);
+            color:#c62828; font-size:12.5px; font-weight:700;
+            padding:9px 14px; border-radius:8px;
+            border:1px solid rgba(198,40,40,0.28);
+            margin:0 28px 8px; text-align:center;
             display:none;
         }
-        #anModal .an-err.show {
-            display:block;
-            animation:_anFieldIn 0.3s cubic-bezier(0.3,1.4,0.6,1);
-        }
+        #anModal .an-err.show { display:block; }
 
-        /* ──────── Trigger button in complaint card (green coffee-stamp) ──────── */
+        /* ──────── زر "ملاحظات السيطرة" الأخضر (يتناسب مع الواتساب) ──────── */
         .btn-audit-note {
-            background:linear-gradient(135deg, #4a8b3c 0%, #2e6e23 60%, #1a4515 100%) !important;
-            color:#fffef8 !important;
-            border:1px solid rgba(212,170,90,0.4) !important;
+            background:linear-gradient(135deg,#25d366 0%,#128c7e 50%,#075e54 100%) !important;
+            color:#fff !important;
+            border:1px solid rgba(255,255,255,0.18) !important;
             cursor:pointer;
-            font-family:'Reem Kufi', 'Cairo', sans-serif;
-            font-weight:700; letter-spacing:0.4px;
-            padding:5px 12px; font-size:12px;
-            border-radius:6px;
-            box-shadow:0 2px 5px rgba(27,94,32,0.32), inset 0 1px 0 rgba(255,255,255,0.18);
-            transition:filter 0.18s, transform 0.18s, box-shadow 0.22s;
+            font-family:'Cairo','Tajawal',sans-serif;
+            font-weight:700; letter-spacing:0.3px;
+            padding:4px 11px; font-size:12px;
+            border-radius:8px;
+            box-shadow:0 2px 5px rgba(7,94,84,0.32);
+            transition:filter 0.15s, transform 0.15s, box-shadow 0.18s;
             display:inline-flex; align-items:center; gap:4px;
-            text-shadow:0 1px 1px rgba(0,0,0,0.22);
         }
         .btn-audit-note:hover {
-            filter:brightness(1.12);
+            filter:brightness(1.10);
             transform:translateY(-1px);
-            box-shadow:0 4px 8px rgba(27,94,32,0.42), inset 0 1px 0 rgba(255,255,255,0.22);
         }
         .btn-audit-note.has-note {
-            background:linear-gradient(135deg, #2e1810 0%, #5d3a20 60%, #2e1810 100%) !important;
-            box-shadow:0 0 0 2px rgba(212,170,90,0.55), 0 2px 5px rgba(0,0,0,0.32) !important;
-            color:#f8e9c8 !important;
+            background:linear-gradient(135deg, #075e54 0%, #128c7e 100%) !important;
+            box-shadow:0 0 0 2px rgba(37,211,102,0.4), 0 2px 5px rgba(7,94,84,0.5) !important;
         }
         .btn-audit-note.has-note::before {
-            content:'✓'; margin-left:4px; color:#d4aa5a; font-weight:900;
+            content:'✓'; margin-left:3px; color:#a5d6a7; font-weight:900;
         }
 
         @media (max-width:760px) {
@@ -421,11 +313,10 @@ function _anEnsureStyles() {
         }
         @media (max-width:480px) {
             #anModal .an-row-5, #anModal .an-row-4 { grid-template-columns:1fr; }
-            #anModal .an-receipt { padding:26px 18px 22px 18px; }
-            #anModal .an-title { font-size:24px; letter-spacing:1px; }
-            #anModal .an-receipt::before { width:52px; height:52px; font-size:9px; top:10px; left:14px; }
+            #anModal .an-body { padding:12px 18px 16px; }
+            #anModal .an-receipt-head { padding:20px 18px 14px; }
+            #anModal .an-stamp { top:10px; right:14px; font-size:9px; padding:3px 9px; }
             #anModal .an-auditor-section input { min-width:0; width:100%; max-width:280px; }
-            #anModal .an-notes-pad { font-size:14px; line-height:28px; background-size:100% 28px; }
         }
     `;
     document.head.appendChild(st);
@@ -462,67 +353,85 @@ function openAuditNoteModal(complaintId) {
             <div class="an-instruction">
                 <div class="an-instruction-icon">${isView ? '📋' : '✍️'}</div>
                 <div class="an-instruction-text">
-                    ${isView ? 'ملاحظة سيطرة مرسلة — اطلاعك على المحتوى فقط' : 'نموذج تدقيق السيطرة — املأ التفاصيل بدقة'}
+                    ${isView ? 'نموذج تدقيق مُرسَل — اطلاعك على المحتوى فقط' : 'نموذج تدقيق السيطرة — املأ التفاصيل بدقة'}
                 </div>
-                <button class="an-instruction-close" onclick="closeAuditNoteModal()" title="إغلاق">✕</button>
             </div>
             <div class="an-receipt">
-                <div class="an-title">تدقيق</div>
-                <div class="an-title-sub">وثيقة سيطرة داخلية</div>
+                <button class="an-close" onclick="closeAuditNoteModal()" title="إغلاق">✕</button>
+                <span class="an-bean an-b1">☕</span>
+                <span class="an-bean an-b2">☕</span>
 
-                <!-- ── الصف الأول: 5 حقول (اليوم • الوقت • رقم الفاتورة • قيمة الفاتورة • اليوزر) ── -->
-                <div class="an-row an-row-5">
-                    <div class="an-field">
-                        <label>اليوم <span class="req">*</span></label>
-                        <input type="date" id="anDate" ${readonly} value="${v('date', dateStr)}">
-                    </div>
-                    <div class="an-field">
-                        <label>الوقت <span class="req">*</span></label>
-                        <input type="time" id="anTime" ${readonly} value="${v('time', timeStr)}">
-                    </div>
-                    <div class="an-field">
-                        <label>رقم الفاتورة <span class="req">*</span></label>
-                        <input type="text" id="anInvNum" ${readonly} value="${sanitize(v('invoiceNumber'))}" placeholder="—">
-                    </div>
-                    <div class="an-field">
-                        <label>قيمة الفاتورة <span class="req">*</span></label>
-                        <input type="text" id="anInvValue" ${readonly} value="${sanitize(v('invoiceValue'))}" placeholder="—">
-                    </div>
-                    <div class="an-field">
-                        <label>اليوزر <span class="req">*</span></label>
-                        <input type="text" id="anUser" ${readonly} value="${sanitize(v('user'))}" placeholder="—">
-                    </div>
+                <div class="an-receipt-head">
+                    <div class="an-brand">شركة محامص الشعب</div>
+                    <div class="an-receipt-title">نموذج تدقيق سيطرة</div>
+                    <div class="an-stamp">تدقيق رسمي</div>
                 </div>
 
-                <!-- ── الصف الثاني: 4 حقول (الكاشير • الفرع • مقدار الإرجاع • سبب الإرجاع) ── -->
-                <div class="an-row an-row-4">
-                    <div class="an-field">
-                        <label>الكاشير <span class="req">*</span></label>
-                        <input type="text" id="anCashier" ${readonly} value="${sanitize(v('cashier'))}" placeholder="—">
+                <div class="an-body">
+                    <!-- الصف الأول: 5 حقول -->
+                    <div class="an-section">
+                        <div class="an-section-title">📅 بيانات الفاتورة</div>
+                        <div class="an-row an-row-5">
+                            <div class="an-field">
+                                <label>اليوم <span class="req">*</span></label>
+                                <input type="date" id="anDate" ${readonly} value="${v('date', dateStr)}">
+                            </div>
+                            <div class="an-field">
+                                <label>الوقت <span class="req">*</span></label>
+                                <input type="time" id="anTime" ${readonly} value="${v('time', timeStr)}">
+                            </div>
+                            <div class="an-field">
+                                <label>رقم الفاتورة <span class="req">*</span></label>
+                                <input type="text" id="anInvNum" ${readonly} value="${sanitize(v('invoiceNumber'))}" placeholder="—">
+                            </div>
+                            <div class="an-field">
+                                <label>قيمة الفاتورة <span class="req">*</span></label>
+                                <input type="text" id="anInvValue" ${readonly} value="${sanitize(v('invoiceValue'))}" placeholder="—">
+                            </div>
+                            <div class="an-field">
+                                <label>اليوزر <span class="req">*</span></label>
+                                <input type="text" id="anUser" ${readonly} value="${sanitize(v('user'))}" placeholder="—">
+                            </div>
+                        </div>
                     </div>
-                    <div class="an-field">
-                        <label>الفرع <span class="req">*</span></label>
-                        <input type="text" id="anBranch" ${readonly} value="${sanitize(v('branch', complaint.branch || ''))}">
-                    </div>
-                    <div class="an-field">
-                        <label>مقدار الإرجاع <span class="req">*</span></label>
-                        <input type="text" id="anReturnAmt" ${readonly} value="${sanitize(v('returnAmount'))}" placeholder="—">
-                    </div>
-                    <div class="an-field">
-                        <label>سبب الإرجاع <span class="req">*</span></label>
-                        <input type="text" id="anReturnReason" ${readonly} value="${sanitize(v('returnReason'))}" placeholder="—">
-                    </div>
-                </div>
 
-                <!-- ── المنطقة الكبيرة للكتابة (الصف الفارغ في الأصل) ── -->
-                <div class="an-notes-area">
-                    <div class="an-notes-label">ملاحظات التدقيق التفصيلية <span class="req">*</span></div>
-                    <textarea id="anDetails" class="an-notes-pad" ${readonly} rows="7" placeholder="اكتب هنا ملاحظات السيطرة بالتفصيل ...">${sanitize(v('details'))}</textarea>
-                </div>
+                    <!-- الصف الثاني: 4 حقول -->
+                    <div class="an-section">
+                        <div class="an-section-title">🏪 بيانات الفرع والإرجاع</div>
+                        <div class="an-row an-row-4">
+                            <div class="an-field">
+                                <label>الكاشير <span class="req">*</span></label>
+                                <input type="text" id="anCashier" ${readonly} value="${sanitize(v('cashier'))}" placeholder="—">
+                            </div>
+                            <div class="an-field">
+                                <label>الفرع <span class="req">*</span></label>
+                                <input type="text" id="anBranch" ${readonly} value="${sanitize(v('branch', complaint.branch || ''))}">
+                            </div>
+                            <div class="an-field">
+                                <label>مقدار الإرجاع <span class="req">*</span></label>
+                                <input type="text" id="anReturnAmt" ${readonly} value="${sanitize(v('returnAmount'))}" placeholder="—">
+                            </div>
+                            <div class="an-field">
+                                <label>سبب الإرجاع <span class="req">*</span></label>
+                                <input type="text" id="anReturnReason" ${readonly} value="${sanitize(v('returnReason'))}" placeholder="—">
+                            </div>
+                        </div>
+                    </div>
 
-                <div class="an-auditor-section">
-                    <div class="an-auditor-label">المدقق</div>
-                    <input type="text" id="anAuditor" ${readonly} value="${sanitize(v('auditor'))}" placeholder="اسم المدقق">
+                    <!-- منطقة الكتابة الكبيرة -->
+                    <div class="an-section">
+                        <div class="an-section-title">📝 ملاحظات التدقيق التفصيلية</div>
+                        <div class="an-notes-area">
+                            <div class="an-notes-label">اكتب التفاصيل الكاملة <span class="req">*</span></div>
+                            <textarea id="anDetails" class="an-notes-pad" ${readonly} rows="6" placeholder="اكتب هنا ملاحظات السيطرة بالتفصيل ...">${sanitize(v('details'))}</textarea>
+                        </div>
+                    </div>
+
+                    <!-- توقيع المدقق -->
+                    <div class="an-auditor-section">
+                        <div class="an-auditor-label">المدقق</div>
+                        <input type="text" id="anAuditor" ${readonly} value="${sanitize(v('auditor'))}" placeholder="اسم المدقق">
+                    </div>
                 </div>
 
                 <div class="an-err" id="anErr"></div>
