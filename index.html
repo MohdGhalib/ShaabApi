@@ -16,7 +16,7 @@
         })();
     </script>
     <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="css/styles.css?v=24">
+    <link rel="stylesheet" href="css/styles.css?v=25">
     <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
 </head>
@@ -295,6 +295,17 @@
             if (theme === 'light') {
                 document.documentElement.setAttribute('data-theme', 'light');
                 localStorage.setItem('Shaab_Theme', 'light');
+            } else if (theme === 'coffee') {
+                /* الثيم القهوي مفعّل فقط لـ cc_manager — للباقي نقرة بلا تأثير */
+                const role = (typeof currentUser !== 'undefined' && currentUser) ? currentUser.role : null;
+                if (role !== 'cc_manager') {
+                    /* أعد إبراز الثيم الحالي بصرياً ولا تطبّق التغيير */
+                    const cur = localStorage.getItem('Shaab_Theme') || 'dark';
+                    group.querySelectorAll('.theme-opt').forEach(b => b.classList.toggle('active', b.dataset.themePreview === cur));
+                    return;
+                }
+                document.documentElement.setAttribute('data-theme', 'coffee');
+                localStorage.setItem('Shaab_Theme', 'coffee');
             } else if (theme === 'dark') {
                 document.documentElement.removeAttribute('data-theme');
                 localStorage.setItem('Shaab_Theme', 'dark');
@@ -309,6 +320,19 @@
                 b.classList.toggle('active', b.dataset.themePreview === saved);
             });
         });
+
+        /* لو المستخدم على ثيم coffee ولكنه لم يعد cc_manager، أعِده للداكن */
+        function _enforceCoffeeRoleGate() {
+            const role = (typeof currentUser !== 'undefined' && currentUser) ? currentUser.role : null;
+            if (role && role !== 'cc_manager' && localStorage.getItem('Shaab_Theme') === 'coffee') {
+                document.documentElement.removeAttribute('data-theme');
+                localStorage.setItem('Shaab_Theme', 'dark');
+                document.querySelectorAll('.theme-switcher .theme-opt').forEach(b => {
+                    b.classList.toggle('active', b.dataset.themePreview === 'dark');
+                });
+            }
+        }
+        setInterval(_enforceCoffeeRoleGate, 1500);
     </script>
 
     <div class="content-area">

@@ -8,6 +8,138 @@
     --accent-red: #c62828; --dark-red: #8b0000; --soft-red: #fde8e8;
     --text-main: #1a202c; --text-dim: #5a6a80; --border: #d8e0ec;
 }
+/* ☕ Coffee Theme — لوحة دافئة كريمي/بنّي بنفس روحية إيصالات المحمص */
+[data-theme="coffee"] {
+    --bg-deep: #f5ecd9; --bg-card: #fdf8ef; --bg-input: #ffffff;
+    --accent-red: #c62828; --dark-red: #6b4422; --soft-red: #fff5dc;
+    --text-main: #3a2818; --text-dim: #8b6f47; --border: rgba(139,69,19,0.22);
+}
+
+/* ════════════════════════════════════════════════════════════════
+   🎨 لمسات التصميم الاحترافية — micro-interactions و تحسينات بصرية
+   ════════════════════════════════════════════════════════════════ */
+
+/* تنعيم الخطوط على جميع المتصفحات */
+html { -webkit-font-smoothing:antialiased; -moz-osx-font-smoothing:grayscale; text-rendering:optimizeLegibility; scroll-behavior:smooth; }
+body { font-feature-settings: "kern" 1, "liga" 1, "lnum" 1; }
+
+/* Selection لون موحّد ومتقن */
+::selection { background:rgba(211,47,47,0.28); color:inherit; }
+[data-theme="coffee"] ::selection { background:rgba(192,147,93,0.38); color:#3a2818; }
+[data-theme="light"]  ::selection { background:rgba(198,40,40,0.18); color:#1a202c; }
+
+/* Scrollbar أنيق بدل scrollbar المتصفح الافتراضي */
+* { scrollbar-width:thin; scrollbar-color:rgba(160,160,160,0.35) transparent; }
+*::-webkit-scrollbar { width:10px; height:10px; }
+*::-webkit-scrollbar-track { background:transparent; }
+*::-webkit-scrollbar-thumb { background:linear-gradient(180deg, rgba(160,160,160,0.3), rgba(160,160,160,0.18)); border-radius:8px; border:2px solid transparent; background-clip:padding-box; transition:background 0.2s; }
+*::-webkit-scrollbar-thumb:hover { background:linear-gradient(180deg, rgba(211,47,47,0.55), rgba(211,47,47,0.35)); background-clip:padding-box; }
+[data-theme="coffee"] *::-webkit-scrollbar-thumb:hover { background:linear-gradient(180deg, rgba(192,147,93,0.7), rgba(107,68,34,0.5)); background-clip:padding-box; }
+
+/* ── Nav-item: hover refined + indicator slide ── */
+.nav-item {
+    position:relative; overflow:hidden;
+    transition:
+        background 0.28s cubic-bezier(0.4,0,0.2,1),
+        color 0.28s cubic-bezier(0.4,0,0.2,1),
+        transform 0.2s cubic-bezier(0.4,0,0.2,1),
+        box-shadow 0.28s cubic-bezier(0.4,0,0.2,1),
+        padding 0.2s cubic-bezier(0.4,0,0.2,1);
+}
+/* شريط مؤشّر يظهر يميناً عند الـ hover/active */
+.nav-item::before {
+    content:''; position:absolute; top:8px; bottom:8px; right:0;
+    width:3px; border-radius:3px 0 0 3px;
+    background:linear-gradient(180deg, transparent 8%, var(--accent-red) 30%, var(--accent-red) 70%, transparent 92%);
+    transform:scaleY(0); transform-origin:center;
+    transition:transform 0.32s cubic-bezier(0.34,1.3,0.64,1);
+    opacity:0.92;
+}
+.nav-item:hover::before { transform:scaleY(1); }
+.nav-item.active::before {
+    transform:scaleY(1);
+    box-shadow:0 0 12px rgba(211,47,47,0.45), 0 0 4px rgba(211,47,47,0.6);
+}
+[data-theme="coffee"] .nav-item::before {
+    background:linear-gradient(180deg, transparent 8%, #c0935d 30%, #6b4422 70%, transparent 92%);
+}
+[data-theme="coffee"] .nav-item.active::before {
+    box-shadow:0 0 12px rgba(192,147,93,0.55), 0 0 4px rgba(107,68,34,0.55);
+}
+
+/* تظليل خفيف عند الـ hover — gradient ناعم بدلاً من background صلب */
+.nav-item:hover {
+    background:linear-gradient(135deg, rgba(255,255,255,0.045) 0%, rgba(255,255,255,0.015) 100%);
+    transform:translateX(-3px); /* RTL: يتحرّك يسار قليلاً نحو المحتوى */
+    box-shadow:inset 1px 0 0 rgba(255,255,255,0.05), 0 4px 14px rgba(0,0,0,0.18);
+}
+[data-theme="light"] .nav-item:hover {
+    background:linear-gradient(135deg, rgba(198,40,40,0.06) 0%, rgba(198,40,40,0.02) 100%);
+    box-shadow:inset 1px 0 0 rgba(198,40,40,0.08), 0 4px 14px rgba(198,40,40,0.08);
+}
+[data-theme="coffee"] .nav-item:hover {
+    background:linear-gradient(135deg, rgba(192,147,93,0.14) 0%, rgba(255,245,220,0.6) 100%);
+    color:#3a2818;
+    box-shadow:inset 1px 0 0 rgba(192,147,93,0.25), 0 4px 14px rgba(139,69,19,0.08);
+}
+
+/* تأثير "ripple" خفيف على النقر */
+.nav-item:active {
+    transform:translateX(-1px) scale(0.985);
+    transition:transform 0.08s ease;
+}
+
+/* تحسين العنصر النشط — glow ناعم بدلاً من حدود قاسية */
+.nav-item.active {
+    box-shadow:0 4px 18px rgba(211,47,47,0.18), inset 0 1px 0 rgba(255,255,255,0.06);
+    letter-spacing:0.2px;
+}
+[data-theme="coffee"] .nav-item.active {
+    background:linear-gradient(135deg, #fff5dc 0%, #ffe9c2 100%);
+    border-color:#c0935d;
+    color:#3a2818;
+    box-shadow:0 4px 18px rgba(192,147,93,0.32), inset 0 1px 0 rgba(255,255,255,0.6);
+}
+
+/* ── إجمالي تحسينات بصرية ── */
+
+/* Focus ring أنيق عبر الموقع — تركيز كبدل outline القبيح */
+:focus-visible { outline:2px solid rgba(211,47,47,0.55); outline-offset:2px; border-radius:6px; }
+[data-theme="coffee"] :focus-visible { outline-color:rgba(192,147,93,0.65); }
+
+/* Button hover — رفعة لطيفة + ظل عميق */
+button:not(.theme-opt):not(.nav-item):not(.modal-close):not(.sq-btn) {
+    transition:transform 0.18s cubic-bezier(0.4,0,0.2,1), box-shadow 0.22s ease, filter 0.18s ease;
+}
+button:not(.theme-opt):not(.nav-item):not(.modal-close):not(.sq-btn):hover {
+    filter:brightness(1.08);
+}
+button:not(.theme-opt):not(.nav-item):not(.modal-close):not(.sq-btn):active {
+    transform:translateY(1px) scale(0.99);
+    filter:brightness(0.95);
+}
+
+/* Inputs — حدود ناعمة + focus ring جذّاب */
+input:not([type="checkbox"]):not([type="radio"]):not([type="range"]),
+textarea, select {
+    transition:border-color 0.22s ease, box-shadow 0.22s ease, background 0.22s ease;
+}
+input:not([type="checkbox"]):not([type="radio"]):not([type="range"]):focus,
+textarea:focus, select:focus {
+    border-color:var(--accent-red) !important;
+    box-shadow:0 0 0 3px rgba(211,47,47,0.12);
+}
+[data-theme="coffee"] input:not([type="checkbox"]):not([type="radio"]):not([type="range"]):focus,
+[data-theme="coffee"] textarea:focus,
+[data-theme="coffee"] select:focus {
+    border-color:#c0935d !important;
+    box-shadow:0 0 0 3px rgba(192,147,93,0.2);
+}
+
+/* رفع البطاقات قليلاً عند الـ hover — اختياري لطيف */
+.card-hover-lift, .login-box {
+    transition:transform 0.3s cubic-bezier(0.4,0,0.2,1), box-shadow 0.3s ease;
+}
 * { box-sizing: border-box; font-variant-numeric: lining-nums; font-feature-settings: "lnum" 1; }
 body { margin: 0; font-family: 'Cairo', sans-serif; background: var(--bg-deep); color: var(--text-main); min-height: 100vh; overflow-x: hidden; }
 
