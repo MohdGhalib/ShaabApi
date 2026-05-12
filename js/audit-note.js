@@ -1032,7 +1032,7 @@ function printAuditNote(complaintId) {
 <body>
     <div class="receipt">
         <div class="head">
-            <div class="brand">شركة محامص الشعب</div>
+            <div class="brand">🙦 شركة برافو لصناعة المكسرات والشوكولاتة. 🙤</div>
             <div class="title">نموذج تدقيق سيطرة</div>
         </div>
 
