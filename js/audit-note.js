@@ -174,21 +174,72 @@ function _anEnsureStyles() {
             content:'•'; margin:0 10px; color:#a07838;
         }
 
-        /* ──────── Grid with staggered reveal ──────── */
-        #anModal .an-grid {
-            display:grid; grid-template-columns:1fr 1fr; gap:16px 20px;
+        /* ──────── Rows (مطابقة لجدول الورد الأصلي) ──────── */
+        #anModal .an-row {
+            display:grid; gap:12px 14px;
+            margin-bottom:14px;
+            padding:14px 14px 12px;
+            background:rgba(255,253,247,0.36);
+            border:1px solid rgba(139,89,40,0.18);
+            border-radius:8px;
+            box-shadow:inset 0 1px 0 rgba(255,255,255,0.5);
         }
-        #anModal .an-grid .full { grid-column:1/-1; }
-        #anModal .an-field { display:flex; flex-direction:column; gap:6px; opacity:0; animation:_anFieldIn 0.45s cubic-bezier(0.3,1.1,0.5,1) forwards; }
-        #anModal .an-field:nth-child(1) { animation-delay:0.10s; }
-        #anModal .an-field:nth-child(2) { animation-delay:0.16s; }
-        #anModal .an-field:nth-child(3) { animation-delay:0.22s; }
-        #anModal .an-field:nth-child(4) { animation-delay:0.28s; }
-        #anModal .an-field:nth-child(5) { animation-delay:0.34s; }
-        #anModal .an-field:nth-child(6) { animation-delay:0.40s; }
-        #anModal .an-field:nth-child(7) { animation-delay:0.46s; }
-        #anModal .an-field:nth-child(8) { animation-delay:0.52s; }
-        #anModal .an-field:nth-child(9) { animation-delay:0.58s; }
+        #anModal .an-row-5 { grid-template-columns:repeat(5, minmax(0,1fr)); }
+        #anModal .an-row-4 { grid-template-columns:repeat(4, minmax(0,1fr)); }
+        #anModal .an-field { display:flex; flex-direction:column; gap:5px; opacity:0; animation:_anFieldIn 0.45s cubic-bezier(0.3,1.1,0.5,1) forwards; }
+        #anModal .an-row-5 .an-field:nth-child(1) { animation-delay:0.10s; }
+        #anModal .an-row-5 .an-field:nth-child(2) { animation-delay:0.15s; }
+        #anModal .an-row-5 .an-field:nth-child(3) { animation-delay:0.20s; }
+        #anModal .an-row-5 .an-field:nth-child(4) { animation-delay:0.25s; }
+        #anModal .an-row-5 .an-field:nth-child(5) { animation-delay:0.30s; }
+        #anModal .an-row-4 .an-field:nth-child(1) { animation-delay:0.36s; }
+        #anModal .an-row-4 .an-field:nth-child(2) { animation-delay:0.41s; }
+        #anModal .an-row-4 .an-field:nth-child(3) { animation-delay:0.46s; }
+        #anModal .an-row-4 .an-field:nth-child(4) { animation-delay:0.51s; }
+
+        /* ──────── Big notes pad (ورق مسطّر — الصف الفارغ بالأصل) ──────── */
+        #anModal .an-notes-area {
+            margin-top:6px; margin-bottom:6px;
+            opacity:0; animation:_anFieldIn 0.5s 0.58s cubic-bezier(0.3,1.1,0.5,1) forwards;
+        }
+        #anModal .an-notes-label {
+            font-family:'Reem Kufi', 'Cairo', sans-serif;
+            font-size:13px; font-weight:700; color:#5d3a20;
+            letter-spacing:0.5px;
+            margin-bottom:8px;
+            display:flex; align-items:center; gap:6px;
+        }
+        #anModal .an-notes-label .req { color:#c1572b; font-size:14px; line-height:0; }
+        #anModal .an-notes-pad {
+            width:100%; box-sizing:border-box;
+            min-height:170px; resize:vertical;
+            padding:14px 16px;
+            font-family:'Amiri', 'Cairo', serif;
+            font-size:15px; line-height:30px;
+            color:#2e1810;
+            background:
+                linear-gradient(180deg, transparent 0, transparent 29px, rgba(139,89,40,0.22) 30px),
+                linear-gradient(180deg, #fdf8e9 0%, #f8f0d6 100%);
+            background-size:100% 30px;
+            background-attachment:local;
+            border:1.5px solid rgba(139,89,40,0.32);
+            border-radius:8px;
+            box-shadow:
+                inset 0 2px 4px rgba(139,89,40,0.08),
+                inset 4px 0 0 rgba(193,87,43,0.45);   /* margin line on right (RTL) */
+            outline:none;
+            transition:border-color 0.25s, box-shadow 0.25s;
+        }
+        #anModal .an-notes-pad:focus {
+            border-color:#a07838;
+            box-shadow:
+                0 0 0 3px rgba(160,120,56,0.18),
+                inset 0 2px 4px rgba(139,89,40,0.08),
+                inset 4px 0 0 rgba(193,87,43,0.65);
+        }
+        #anModal .an-notes-pad::placeholder {
+            color:rgba(122,74,38,0.40); font-style:italic;
+        }
 
         #anModal .an-field label {
             font-family:'Reem Kufi', 'Cairo', sans-serif;
@@ -364,12 +415,17 @@ function _anEnsureStyles() {
             content:'✓'; margin-left:4px; color:#d4aa5a; font-weight:900;
         }
 
-        @media (max-width:600px) {
-            #anModal .an-grid { grid-template-columns:1fr; }
-            #anModal .an-receipt { padding:26px 22px 22px 22px; }
+        @media (max-width:760px) {
+            #anModal .an-row-5 { grid-template-columns:repeat(2, 1fr); }
+            #anModal .an-row-4 { grid-template-columns:repeat(2, 1fr); }
+        }
+        @media (max-width:480px) {
+            #anModal .an-row-5, #anModal .an-row-4 { grid-template-columns:1fr; }
+            #anModal .an-receipt { padding:26px 18px 22px 18px; }
             #anModal .an-title { font-size:24px; letter-spacing:1px; }
             #anModal .an-receipt::before { width:52px; height:52px; font-size:9px; top:10px; left:14px; }
             #anModal .an-auditor-section input { min-width:0; width:100%; max-width:280px; }
+            #anModal .an-notes-pad { font-size:14px; line-height:28px; background-size:100% 28px; }
         }
     `;
     document.head.appendChild(st);
@@ -411,50 +467,61 @@ function openAuditNoteModal(complaintId) {
                 <button class="an-instruction-close" onclick="closeAuditNoteModal()" title="إغلاق">✕</button>
             </div>
             <div class="an-receipt">
-                <div class="an-title">نموذج تدقيق</div>
+                <div class="an-title">تدقيق</div>
                 <div class="an-title-sub">وثيقة سيطرة داخلية</div>
 
-                <div class="an-grid">
+                <!-- ── الصف الأول: 5 حقول (اليوم • الوقت • رقم الفاتورة • قيمة الفاتورة • اليوزر) ── -->
+                <div class="an-row an-row-5">
                     <div class="an-field">
-                        <label>📅 اليوم <span class="req">*</span></label>
+                        <label>اليوم <span class="req">*</span></label>
                         <input type="date" id="anDate" ${readonly} value="${v('date', dateStr)}">
                     </div>
                     <div class="an-field">
-                        <label>⏰ الوقت <span class="req">*</span></label>
+                        <label>الوقت <span class="req">*</span></label>
                         <input type="time" id="anTime" ${readonly} value="${v('time', timeStr)}">
                     </div>
                     <div class="an-field">
-                        <label>🧾 رقم الفاتورة <span class="req">*</span></label>
-                        <input type="text" id="anInvNum" ${readonly} value="${sanitize(v('invoiceNumber'))}" placeholder="مثلاً: 12345">
+                        <label>رقم الفاتورة <span class="req">*</span></label>
+                        <input type="text" id="anInvNum" ${readonly} value="${sanitize(v('invoiceNumber'))}" placeholder="—">
                     </div>
                     <div class="an-field">
-                        <label>💰 قيمة الفاتورة <span class="req">*</span></label>
-                        <input type="text" id="anInvValue" ${readonly} value="${sanitize(v('invoiceValue'))}" placeholder="بالدينار">
+                        <label>قيمة الفاتورة <span class="req">*</span></label>
+                        <input type="text" id="anInvValue" ${readonly} value="${sanitize(v('invoiceValue'))}" placeholder="—">
                     </div>
                     <div class="an-field">
-                        <label>👤 اليوزر <span class="req">*</span></label>
-                        <input type="text" id="anUser" ${readonly} value="${sanitize(v('user'))}" placeholder="اسم/رقم اليوزر">
-                    </div>
-                    <div class="an-field">
-                        <label>💼 الكاشير <span class="req">*</span></label>
-                        <input type="text" id="anCashier" ${readonly} value="${sanitize(v('cashier'))}" placeholder="اسم الكاشير">
-                    </div>
-                    <div class="an-field full">
-                        <label>🏪 الفرع <span class="req">*</span></label>
-                        <input type="text" id="anBranch" ${readonly} value="${sanitize(v('branch', complaint.branch || ''))}">
-                    </div>
-                    <div class="an-field">
-                        <label>💵 مقدار الإرجاع <span class="req">*</span></label>
-                        <input type="text" id="anReturnAmt" ${readonly} value="${sanitize(v('returnAmount'))}" placeholder="بالدينار">
-                    </div>
-                    <div class="an-field">
-                        <label>📝 سبب الإرجاع <span class="req">*</span></label>
-                        <input type="text" id="anReturnReason" ${readonly} value="${sanitize(v('returnReason'))}" placeholder="اكتب السبب">
+                        <label>اليوزر <span class="req">*</span></label>
+                        <input type="text" id="anUser" ${readonly} value="${sanitize(v('user'))}" placeholder="—">
                     </div>
                 </div>
 
+                <!-- ── الصف الثاني: 4 حقول (الكاشير • الفرع • مقدار الإرجاع • سبب الإرجاع) ── -->
+                <div class="an-row an-row-4">
+                    <div class="an-field">
+                        <label>الكاشير <span class="req">*</span></label>
+                        <input type="text" id="anCashier" ${readonly} value="${sanitize(v('cashier'))}" placeholder="—">
+                    </div>
+                    <div class="an-field">
+                        <label>الفرع <span class="req">*</span></label>
+                        <input type="text" id="anBranch" ${readonly} value="${sanitize(v('branch', complaint.branch || ''))}">
+                    </div>
+                    <div class="an-field">
+                        <label>مقدار الإرجاع <span class="req">*</span></label>
+                        <input type="text" id="anReturnAmt" ${readonly} value="${sanitize(v('returnAmount'))}" placeholder="—">
+                    </div>
+                    <div class="an-field">
+                        <label>سبب الإرجاع <span class="req">*</span></label>
+                        <input type="text" id="anReturnReason" ${readonly} value="${sanitize(v('returnReason'))}" placeholder="—">
+                    </div>
+                </div>
+
+                <!-- ── المنطقة الكبيرة للكتابة (الصف الفارغ في الأصل) ── -->
+                <div class="an-notes-area">
+                    <div class="an-notes-label">ملاحظات التدقيق التفصيلية <span class="req">*</span></div>
+                    <textarea id="anDetails" class="an-notes-pad" ${readonly} rows="7" placeholder="اكتب هنا ملاحظات السيطرة بالتفصيل ...">${sanitize(v('details'))}</textarea>
+                </div>
+
                 <div class="an-auditor-section">
-                    <div class="an-auditor-label">━━ المدقق ━━</div>
+                    <div class="an-auditor-label">المدقق</div>
                     <input type="text" id="anAuditor" ${readonly} value="${sanitize(v('auditor'))}" placeholder="اسم المدقق">
                 </div>
 
@@ -501,6 +568,7 @@ function submitAuditNote(complaintId) {
         branch:         document.getElementById('anBranch').value.trim(),
         returnAmount:   document.getElementById('anReturnAmt').value.trim(),
         returnReason:   document.getElementById('anReturnReason').value.trim(),
+        details:        document.getElementById('anDetails').value.trim(),
         auditor:        document.getElementById('anAuditor').value.trim()
     };
 
@@ -535,7 +603,8 @@ function _anFieldLabel(key) {
     const map = {
         date:'اليوم', time:'الوقت', invoiceNumber:'رقم الفاتورة', invoiceValue:'قيمة الفاتورة',
         user:'اليوزر', cashier:'الكاشير', branch:'الفرع',
-        returnAmount:'مقدار الإرجاع', returnReason:'سبب الإرجاع', auditor:'المدقق'
+        returnAmount:'مقدار الإرجاع', returnReason:'سبب الإرجاع',
+        details:'ملاحظات التدقيق التفصيلية', auditor:'المدقق'
     };
     return map[key] || key;
 }
@@ -590,6 +659,10 @@ function renderAuditNotes() {
         const complaintInfo = linkedC
             ? `<div style="font-size:11.5px;color:var(--text-dim);margin-top:4px;">🔗 شكوى السيطرة: <b style="color:#90caf9;">${sanitize((linkedC.notes || '').substring(0, 60))}${(linkedC.notes || '').length > 60 ? '…' : ''}</b></div>`
             : `<div style="font-size:11.5px;color:#ef9a9a;margin-top:4px;">⚠️ الشكوى المرتبطة لم تعد موجودة</div>`;
+        const detailsPreview = n.details
+            ? `<div style="margin-top:8px;padding:8px 12px;background:rgba(212,170,90,0.08);border-right:3px solid rgba(212,170,90,0.5);border-radius:6px;font-size:12.5px;color:var(--text-main);line-height:1.6;">
+                <b style="color:#d4aa5a;">📝 الملاحظات:</b> ${sanitize((n.details || '').substring(0, 200))}${(n.details || '').length > 200 ? '…' : ''}
+              </div>` : '';
         return `
         <div style="background:linear-gradient(180deg,rgba(46,125,50,0.05),rgba(46,125,50,0.02));border:1px solid rgba(46,125,50,0.22);border-radius:12px;padding:14px 16px;margin-bottom:12px;">
             <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:12px;flex-wrap:wrap;">
@@ -601,6 +674,7 @@ function renderAuditNotes() {
                         📅 ${sanitize(n.date)} ${sanitize(n.time)} · المدقق: <b style="color:#a5d6a7;">${sanitize(n.auditor)}</b> · أرسلها: ${sanitize(n.addedBy)}
                     </div>
                     ${complaintInfo}
+                    ${detailsPreview}
                 </div>
                 <div style="display:flex;gap:6px;flex-wrap:wrap;">
                     <button onclick="openAuditNoteModal(${n.complaintId})" style="background:#2e7d32;color:#fff;border:none;cursor:pointer;font-family:Cairo;font-weight:700;padding:6px 12px;font-size:12px;border-radius:7px;">📋 عرض النموذج</button>
