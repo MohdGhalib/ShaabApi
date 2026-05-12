@@ -281,6 +281,54 @@ function _anEnsureStyles() {
         }
         #anModal .an-err.show { display:block; }
 
+        /* ──────── Toast لرسالة «تم تعبئته مسبقاً» ──────── */
+        .an-toast {
+            position:absolute;
+            z-index:99999;
+            background:linear-gradient(135deg, #5c3919 0%, #3a2818 100%);
+            color:#fff5dc;
+            padding:10px 16px;
+            border-radius:10px;
+            font-family:'Cairo','Tajawal',sans-serif;
+            font-size:12.5px; font-weight:700;
+            box-shadow:0 8px 22px rgba(0,0,0,0.45), 0 0 0 1px rgba(212,170,90,0.35);
+            opacity:0;
+            transform:translateY(8px) scale(0.95);
+            transition:opacity 0.28s, transform 0.28s;
+            pointer-events:none;
+            direction:rtl; text-align:right;
+            max-width:280px;
+            border:1px solid rgba(255,193,7,0.45);
+        }
+        .an-toast.show {
+            opacity:1; transform:translateY(0) scale(1);
+        }
+        .an-toast::before {
+            content:'⚠️ '; margin-left:4px;
+        }
+
+        /* ──────── زر القلم البرتقالي لتعديل النموذج (مدير قسم السيطرة) ──────── */
+        .btn-audit-edit {
+            background:linear-gradient(135deg, #f57c00 0%, #e65100 100%) !important;
+            color:#fff !important;
+            border:1px solid rgba(255,255,255,0.22) !important;
+            cursor:pointer;
+            font-family:'Cairo','Tajawal',sans-serif;
+            font-weight:700; letter-spacing:0.2px;
+            padding:4px 9px; font-size:13px;
+            border-radius:8px;
+            box-shadow:0 2px 5px rgba(230,81,0,0.35);
+            transition:filter 0.15s, transform 0.15s, box-shadow 0.18s;
+            display:inline-flex; align-items:center; gap:3px;
+            min-width:28px;
+        }
+        .btn-audit-edit:hover {
+            filter:brightness(1.12);
+            transform:translateY(-1px);
+            box-shadow:0 4px 8px rgba(230,81,0,0.5);
+        }
+        .btn-audit-edit:active { transform:translateY(0) scale(0.95); }
+
         /* ──────── زر "ملاحظات السيطرة" الأخضر (يتناسب مع الواتساب) ──────── */
         .btn-audit-note {
             background:linear-gradient(135deg,#25d366 0%,#128c7e 50%,#075e54 100%) !important;
@@ -323,16 +371,50 @@ function _anEnsureStyles() {
 }
 
 /* ══════════════════════════════════════════════════════
-   فتح المودال — مع تعبئة الفرع تلقائياً من الشكوى
+   Toast — رسالة بجانب زر «📋 ملاحظة السيطرة» المعبأ مسبقاً
    ══════════════════════════════════════════════════════ */
-function openAuditNoteModal(complaintId) {
+function _anNotifyAlreadyFilled(btn) {
+    _anEnsureStyles();
+    // أزل أي toast سابق
+    document.querySelectorAll('.an-toast').forEach(t => t.remove());
+    const toast = document.createElement('div');
+    toast.className = 'an-toast';
+    toast.textContent = 'تم تعبئة النموذج مسبقاً ولا يمكن فتحه مجدداً';
+    const r = btn.getBoundingClientRect();
+    const top = Math.max(8, r.top - 44 + window.scrollY);
+    const left = Math.min(window.innerWidth - 280, Math.max(8, r.left - 60 + window.scrollX));
+    toast.style.top = top + 'px';
+    toast.style.left = left + 'px';
+    document.body.appendChild(toast);
+    requestAnimationFrame(() => toast.classList.add('show'));
+    setTimeout(() => {
+        toast.classList.remove('show');
+        setTimeout(() => toast.remove(), 320);
+    }, 2800);
+}
+
+/* ══════════════════════════════════════════════════════
+   فتح المودال — مع تعبئة الفرع تلقائياً من الشكوى
+   mode: 'new' (افتراضي) | 'edit' (مدير السيطرة فقط) | 'view'
+   ══════════════════════════════════════════════════════ */
+function openAuditNoteModal(complaintId, mode) {
     _anEnsureStyles();
 
     const complaint = (db.complaints || []).find(c => c.id == complaintId);
     if (!complaint) { alert('الشكوى غير موجودة'); return; }
 
-    // إذا كان عند الشكوى ملاحظة سيطرة سابقة، اعرضها للقراءة بدل التعبئة الجديدة
     const existing = (db.auditNotes || []).find(n => !n.deleted && n.complaintId == complaintId);
+
+    // تحديد الوضع
+    if (!mode) mode = existing ? 'view' : 'new';
+    if (mode === 'edit' && !existing) mode = 'new';
+
+    // التحقق من صلاحية وضع التعديل (مدير السيطرة فقط)
+    const _isCtrlMgr = currentUser && (currentUser.title === 'مدير قسم السيطرة' || currentUser.empId === '1111');
+    if (mode === 'edit' && !_isCtrlMgr) {
+        alert('ليس لديك صلاحية تعديل هذا النموذج');
+        return;
+    }
 
     // أزل أي مودال سابق
     const old = document.getElementById('anModal');
@@ -343,17 +425,22 @@ function openAuditNoteModal(complaintId) {
     const timeStr = today.toTimeString().substring(0, 5);
 
     const v = (k, def='') => existing ? (existing[k] ?? def) : def;
-    const readonly = existing ? 'readonly' : '';
-    const isView = !!existing;
+    const readonly = (mode === 'view') ? 'readonly' : '';
+    const isView = (mode === 'view');
+    const isEdit = (mode === 'edit');
 
     const modal = document.createElement('div');
     modal.id = 'anModal';
     modal.innerHTML = `
         <div class="an-wrap">
             <div class="an-instruction">
-                <div class="an-instruction-icon">${isView ? '📋' : '✍️'}</div>
+                <div class="an-instruction-icon">${isView ? '📋' : (isEdit ? '✏️' : '✍️')}</div>
                 <div class="an-instruction-text">
-                    ${isView ? 'نموذج تدقيق مُرسَل — اطلاعك على المحتوى فقط' : 'نموذج تدقيق السيطرة — املأ التفاصيل بدقة'}
+                    ${isView
+                        ? 'نموذج تدقيق مُرسَل — اطلاعك على المحتوى فقط'
+                        : (isEdit
+                            ? 'تعديل نموذج التدقيق — مدير قسم السيطرة'
+                            : 'نموذج تدقيق السيطرة — املأ التفاصيل بدقة')}
                 </div>
             </div>
             <div class="an-receipt">
@@ -440,8 +527,11 @@ function openAuditNoteModal(complaintId) {
                     ${isView
                         ? `<button class="an-btn an-btn-cancel" onclick="closeAuditNoteModal()">إغلاق</button>
                            <button class="an-btn an-btn-submit" onclick="jumpToComplaintFromAudit(${complaint.id})">🔙 الانتقال للشكوى</button>`
-                        : `<button class="an-btn an-btn-cancel" onclick="closeAuditNoteModal()">إلغاء</button>
-                           <button class="an-btn an-btn-submit" onclick="submitAuditNote(${complaint.id})">📤 إرسال إلى مدير السيطرة</button>`
+                        : (isEdit
+                            ? `<button class="an-btn an-btn-cancel" onclick="closeAuditNoteModal()">إلغاء</button>
+                               <button class="an-btn an-btn-submit" onclick="submitAuditNote(${complaint.id}, 'edit')">💾 حفظ التعديلات</button>`
+                            : `<button class="an-btn an-btn-cancel" onclick="closeAuditNoteModal()">إلغاء</button>
+                               <button class="an-btn an-btn-submit" onclick="submitAuditNote(${complaint.id})">📤 إرسال إلى مدير السيطرة</button>`)
                     }
                 </div>
             </div>
@@ -463,7 +553,7 @@ function closeAuditNoteModal() {
 /* ══════════════════════════════════════════════════════
    إرسال النموذج — التحقق من الحقول وحفظه
    ══════════════════════════════════════════════════════ */
-function submitAuditNote(complaintId) {
+function submitAuditNote(complaintId, mode) {
     const errEl = document.getElementById('anErr');
     const showErr = (msg) => { if (errEl) { errEl.textContent = msg; errEl.classList.add('show'); } };
 
@@ -489,6 +579,25 @@ function submitAuditNote(complaintId) {
 
     if (!db.auditNotes) db.auditNotes = [];
 
+    if (mode === 'edit') {
+        // تعديل سجل موجود (لمدير قسم السيطرة فقط)
+        const _isCtrlMgr = currentUser && (currentUser.title === 'مدير قسم السيطرة' || currentUser.empId === '1111');
+        if (!_isCtrlMgr) { alert('ليس لديك صلاحية تعديل'); return; }
+        const existing = db.auditNotes.find(n => !n.deleted && n.complaintId == complaintId);
+        if (!existing) { alert('السجل الأصلي لم يعد موجوداً'); return; }
+        Object.assign(existing, fields);
+        existing.editedBy   = (currentUser && currentUser.name)  || '—';
+        existing.editedByEmpId = (currentUser && currentUser.empId) || '—';
+        existing.editedAt   = Date.now();
+        existing.editedIso  = new Date().toISOString();
+        if (typeof save === 'function') save();
+        if (typeof _logAudit === 'function') _logAudit('editAuditNote', fields.branch, `تعديل تدقيق #${fields.invoiceNumber}`, 'auditNote', existing.id);
+        closeAuditNoteModal();
+        alert('✅ تم حفظ التعديلات على النموذج');
+        return;
+    }
+
+    // إنشاء جديد
     const note = {
         id: Date.now(),
         complaintId: complaintId,
@@ -620,3 +729,4 @@ window.hasAuditNote             = hasAuditNote;
 window.jumpToComplaintFromAudit = jumpToComplaintFromAudit;
 window.renderAuditNotes         = renderAuditNotes;
 window.canSeeAuditNotesTab      = canSeeAuditNotesTab;
+window._anNotifyAlreadyFilled   = _anNotifyAlreadyFilled;

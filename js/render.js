@@ -873,9 +873,21 @@ function _renderTableC(get, isAdmin) {
             : '';
 
         const _hasAN = (typeof hasAuditNote === 'function') && hasAuditNote(x.id);
-        const _canOpenAN = currentUser && (currentUser.isAdmin || currentUser.role === 'control_employee' || currentUser.role === 'control_sub' || currentUser.role === 'cc_manager');
-        const auditBtn = _canOpenAN ? `${x.file ? ' ' : '<br>'}<button onclick="openAuditNoteModal('${x.id}')" class="btn-audit-note${_hasAN ? ' has-note' : ''}" title="${_hasAN ? 'عرض ملاحظة السيطرة المرسلة' : 'كتابة ملاحظة سيطرة'}">📋 ${_hasAN ? 'ملاحظة السيطرة' : 'ملاحظات السيطرة'}</button>` : '';
-        const fileLink = (x.file ? `<br><button onclick="openInvoiceFile('${x.id}')" class="btn-attach" style="border:none;cursor:pointer;font-family:Cairo;">📎 عرض المرفق</button>` : '') + auditBtn;
+        const _isCtrlMgr = currentUser && (currentUser.title === 'مدير قسم السيطرة' || currentUser.empId === '1111');
+        const _canOpenAN = currentUser && (currentUser.isAdmin || currentUser.role === 'control_employee' || currentUser.role === 'control_sub' || currentUser.role === 'cc_manager' || _isCtrlMgr);
+        let _auditBtnHtml = '';
+        if (_canOpenAN) {
+            const _spacer = x.file ? ' ' : '<br>';
+            if (_hasAN) {
+                _auditBtnHtml = `${_spacer}<button onclick="_anNotifyAlreadyFilled(this)" class="btn-audit-note has-note" title="تم تعبئة النموذج مسبقاً">📋 ملاحظة السيطرة</button>`;
+                if (_isCtrlMgr) {
+                    _auditBtnHtml += ` <button onclick="openAuditNoteModal('${x.id}','edit')" class="btn-audit-edit" title="تعديل النموذج (مدير قسم السيطرة)">✏️</button>`;
+                }
+            } else {
+                _auditBtnHtml = `${_spacer}<button onclick="openAuditNoteModal('${x.id}')" class="btn-audit-note" title="كتابة ملاحظة سيطرة">📋 ملاحظات السيطرة</button>`;
+            }
+        }
+        const fileLink = (x.file ? `<br><button onclick="openInvoiceFile('${x.id}')" class="btn-attach" style="border:none;cursor:pointer;font-family:Cairo;">📎 عرض المرفق</button>` : '') + _auditBtnHtml;
 
         const ctStr  = x.callTime ? _formatCallTime(x.callTime) : '';
         const hasMore = !!(ctStr || x.noteDate || x.moveNumber || x.invoiceValue);
