@@ -283,14 +283,32 @@
     </style>
 
     <script>
-        /* معاينة فقط — لا يطبّق الثيم فعلياً */
+        /* تبديل الثيم — Dark/Light فعّال، Coffee قيد التطوير */
         function _previewThemeOpt(btn) {
             if (!btn) return;
             const group = btn.closest('.theme-switcher');
             if (!group) return;
             group.querySelectorAll('.theme-opt').forEach(b => b.classList.remove('active'));
             btn.classList.add('active');
+
+            const theme = btn.dataset.themePreview;
+            if (theme === 'light') {
+                document.documentElement.setAttribute('data-theme', 'light');
+                localStorage.setItem('Shaab_Theme', 'light');
+            } else if (theme === 'dark') {
+                document.documentElement.removeAttribute('data-theme');
+                localStorage.setItem('Shaab_Theme', 'dark');
+            }
+            /* coffee — لم يُفعَّل بعد، فقط معاينة شكلية */
         }
+
+        /* عند تحميل الصفحة، أبرز الزر المطابق للثيم المحفوظ */
+        document.addEventListener('DOMContentLoaded', function() {
+            const saved = localStorage.getItem('Shaab_Theme') || 'dark';
+            document.querySelectorAll('.theme-switcher .theme-opt').forEach(b => {
+                b.classList.toggle('active', b.dataset.themePreview === saved);
+            });
+        });
     </script>
 
     <div class="content-area">
