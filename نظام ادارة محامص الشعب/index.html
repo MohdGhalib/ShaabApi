@@ -703,11 +703,22 @@
 </div>
 
 <!-- ══ NOTIFY MODAL ══ -->
-<div class="modal-overlay hidden" id="notifyModal">
-    <div class="modal-box" style="width:620px;max-width:96vw;padding:0;border-radius:20px;text-align:right;">
-        <button class="modal-close" onclick="closeNotifyModal()">✕</button>
-        <div style="padding:20px 24px 16px;border-bottom:1px solid var(--border);">
-            <h4 style="margin:0 0 14px;color:var(--accent-red);font-size:15px;">📣 إعداد بطاقة التبليغ</h4>
+<div class="modal-overlay hidden" id="notifyModal" data-coffee="1">
+    <div class="ntf-wrap">
+        <div class="ntf-instruction">
+            <div class="ntf-instruction-icon">📣</div>
+            <div class="ntf-instruction-text">جهّز بطاقة التبليغ وانسخها أو صدّرها كصورة لإرسالها على الواتساب</div>
+        </div>
+        <div class="ntf-receipt">
+            <span class="ntf-bean ntf-b1">☕</span>
+            <span class="ntf-bean ntf-b2">●</span>
+            <button class="ntf-close" onclick="closeNotifyModal()" aria-label="إغلاق">✕</button>
+            <div class="ntf-head">
+                <div class="ntf-brand">محامص الشعب</div>
+                <div class="ntf-title">📣 إعداد بطاقة التبليغ</div>
+                <span class="ntf-stamp">تبليغ</span>
+            </div>
+        <div class="ntf-form-section">
             <div id="notifyPersonNameRow" style="display:flex;gap:12px;align-items:center;flex-wrap:wrap;">
                 <label style="font-size:13px;color:var(--text-dim);white-space:nowrap;">اسم الشخص الذي تم تبليغه:</label>
                 <input type="text" id="notifyPersonName" placeholder="اكتب الاسم هنا..." oninput="refreshNotifyCard()" style="flex:1;min-width:200px;">
@@ -721,17 +732,92 @@
                 <textarea id="notifyCcActions" rows="2" placeholder="اكتب الإجراءات التي قام بها قسم الكول سنتر..." oninput="refreshNotifyCard()" style="flex:1;min-width:240px;resize:vertical;font-family:'Cairo';"></textarea>
             </div>
         </div>
-        <div id="notifyCard" style="background:#fff;padding:28px 32px;direction:rtl;font-family:'Cairo',sans-serif;max-height:55vh;overflow-y:auto;color:#222;">
-        </div>
-        <div style="padding:14px 24px;border-top:1px solid var(--border);">
-            <button class="btn btn-main" id="exportNotifyBtn" disabled
-                    style="width:100%;padding:11px;font-size:13px;opacity:0.4;cursor:not-allowed;"
-                    onclick="exportControlNotifyImages()">
-                تصدير الصورتين ⬇️
+        <div id="notifyCard" style="background:#fff;padding:28px 32px;direction:rtl;font-family:'Cairo',sans-serif;max-height:55vh;overflow-y:auto;color:#222;border-top:2px dashed rgba(139,69,19,0.22);border-bottom:2px dashed rgba(139,69,19,0.22);"></div>
+        <div class="ntf-receipt-foot">
+            <button class="ntf-export-btn" id="exportNotifyBtn" disabled onclick="exportControlNotifyImages()">
+                ⬇️ تصدير الصورتين
             </button>
+        </div>
         </div>
     </div>
 </div>
+
+<style>
+    /* ══ Notify Modal — Coffee-Receipt Aesthetic ══ */
+    #notifyModal[data-coffee="1"] {
+        background:radial-gradient(ellipse at center, rgba(60,30,8,0.92) 0%, rgba(15,8,2,0.96) 100%);
+        backdrop-filter:blur(8px);
+        font-family:'Cairo','Tajawal',sans-serif;
+    }
+    #notifyModal[data-coffee="1"] .ntf-wrap {
+        max-width:680px; width:100%; max-height:92vh;
+        display:flex; flex-direction:column;
+        animation:_ntfSlideUp 0.45s cubic-bezier(0.34,1.3,0.64,1);
+    }
+    @keyframes _ntfSlideUp { from { opacity:0; transform:translateY(28px) scale(0.95); } to { opacity:1; transform:translateY(0) scale(1); } }
+    @keyframes _ntfStampLand { 0% { opacity:0; transform:rotate(-12deg) scale(1.5); } 60% { opacity:1; transform:rotate(-12deg) scale(0.92); } 100% { opacity:1; transform:rotate(-12deg) scale(1); } }
+    #notifyModal .ntf-instruction {
+        background:linear-gradient(135deg,#25d366 0%,#128c7e 50%,#075e54 100%);
+        color:#fff; padding:14px 22px; border-radius:18px 18px 0 0;
+        display:flex; align-items:center; gap:14px;
+        border:1.5px solid rgba(37,211,102,0.5); border-bottom:0;
+        box-shadow:0 -6px 26px rgba(7,94,84,0.45);
+        position:relative; overflow:hidden;
+    }
+    #notifyModal .ntf-instruction::before { content:''; position:absolute; inset:0; background:repeating-linear-gradient(45deg, transparent 0 12px, rgba(255,255,255,0.04) 12px 14px); pointer-events:none; }
+    #notifyModal .ntf-instruction-icon { width:38px; height:38px; background:rgba(255,255,255,0.22); border-radius:50%; display:flex; align-items:center; justify-content:center; font-size:19px; flex-shrink:0; border:1.5px solid rgba(255,255,255,0.35); }
+    #notifyModal .ntf-instruction-text { font-size:13.5px; font-weight:800; line-height:1.55; letter-spacing:0.2px; text-shadow:0 1px 2px rgba(0,0,0,0.25); }
+    #notifyModal .ntf-receipt {
+        background:linear-gradient(180deg, #fdf8ef 0%, #faf2e3 100%);
+        border:1.5px solid rgba(139,69,19,0.25);
+        border-radius:0 0 18px 18px;
+        box-shadow:0 36px 90px rgba(0,0,0,0.6), inset 0 1px 0 rgba(255,255,255,0.85);
+        position:relative; overflow:hidden;
+        display:flex; flex-direction:column; flex:1; min-height:0;
+    }
+    #notifyModal .ntf-receipt::before { content:''; position:absolute; inset:0; background-image: radial-gradient(circle at 14% 18%, rgba(139,69,19,0.04) 0, transparent 12%), radial-gradient(circle at 86% 78%, rgba(120,53,15,0.05) 0, transparent 14%); pointer-events:none; }
+    #notifyModal .ntf-bean { position:absolute; font-size:18px; opacity:0.18; user-select:none; pointer-events:none; }
+    #notifyModal .ntf-bean.ntf-b1 { top:8px; right:14px; transform:rotate(35deg); }
+    #notifyModal .ntf-bean.ntf-b2 { bottom:80px; left:18px; transform:rotate(-22deg); font-size:14px; }
+    #notifyModal .ntf-close { position:absolute; top:12px; left:14px; z-index:5; width:30px; height:30px; border-radius:50%; background:rgba(58,40,24,0.08); color:#5c3919; border:1px solid rgba(58,40,24,0.18); font-size:14px; font-weight:800; cursor:pointer; display:flex; align-items:center; justify-content:center; transition:background 0.18s, transform 0.18s; font-family:'Cairo'; }
+    #notifyModal .ntf-close:hover { background:rgba(198,40,40,0.12); color:#c62828; transform:rotate(90deg); }
+    #notifyModal .ntf-head { padding:22px 28px 16px; text-align:center; border-bottom:2px dashed rgba(139,69,19,0.22); position:relative; }
+    #notifyModal .ntf-brand { font-size:10.5px; font-weight:800; color:#8b6f47; letter-spacing:4px; margin-bottom:8px; text-transform:uppercase; }
+    #notifyModal .ntf-title { font-size:18px; font-weight:900; color:#3a2818; letter-spacing:0.3px; line-height:1.4; }
+    #notifyModal .ntf-stamp { position:absolute; top:16px; right:22px; transform:rotate(-12deg); border:2.5px solid #c62828; color:#c62828; padding:4px 12px; border-radius:6px; font-size:11px; font-weight:900; letter-spacing:1.5px; background:rgba(198,40,40,0.04); animation:_ntfStampLand 0.7s 0.35s cubic-bezier(0.5,1.6,0.4,1) both; opacity:0; }
+    #notifyModal .ntf-form-section { padding:16px 24px; background:rgba(255,245,220,0.4); }
+    #notifyModal .ntf-form-section label { font-size:12.5px; color:#7a5a3a; font-weight:700; }
+    #notifyModal .ntf-form-section input,
+    #notifyModal .ntf-form-section textarea {
+        background:#fff !important; color:#3a2818 !important;
+        border:1.5px solid rgba(139,69,19,0.22) !important;
+        border-radius:8px !important; padding:8px 12px !important;
+        font-family:'Cairo','Tajawal',sans-serif !important;
+        font-size:13px !important; font-weight:600 !important;
+    }
+    #notifyModal .ntf-form-section input:focus,
+    #notifyModal .ntf-form-section textarea:focus {
+        outline:none !important; border-color:#c0935d !important;
+        box-shadow:0 0 0 3px rgba(192,147,93,0.18) !important;
+    }
+    #notifyModal #notifyCard {
+        background:#fdf8ef !important;
+        color:#3a2818 !important;
+    }
+    #notifyModal .ntf-receipt-foot { padding:18px 28px 24px; text-align:center; }
+    #notifyModal .ntf-export-btn {
+        background:linear-gradient(135deg, #6b4422 0%, #3a2818 100%);
+        color:#fdf8ef; border:0; border-radius:12px;
+        padding:13px 36px; cursor:pointer;
+        font-family:'Cairo','Tajawal',sans-serif;
+        font-weight:800; font-size:14px; letter-spacing:0.5px;
+        box-shadow:0 8px 22px rgba(58,40,24,0.45), inset 0 1px 0 rgba(255,255,255,0.18);
+        transition:transform 0.18s ease, box-shadow 0.18s ease;
+        width:100%; max-width:340px;
+    }
+    #notifyModal .ntf-export-btn:hover:not(:disabled) { transform:translateY(-2px); box-shadow:0 14px 28px rgba(58,40,24,0.55); }
+    #notifyModal .ntf-export-btn:disabled { background:rgba(139,69,19,0.25); color:#a08770; cursor:not-allowed; box-shadow:none; }
+</style>
 
 
 <!-- ══ BREAK TIMER OVERLAY ══ -->
