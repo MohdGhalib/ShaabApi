@@ -281,78 +281,244 @@ function _anEnsureStyles() {
         }
         #anModal .an-err.show { display:block; }
 
-        /* ──────── Toast لرسالة «تم تعبئته مسبقاً» ──────── */
+        /* ──────── Toast كملصق إيصال صغير ──────── */
+        @keyframes _anToastEnter {
+            0%   { opacity:0; transform:translateY(-6px) rotate(-2deg) scale(0.92); }
+            60%  { opacity:1; transform:translateY(2px)  rotate(0.4deg) scale(1.02); }
+            100% { opacity:1; transform:translateY(0)    rotate(-1deg)  scale(1); }
+        }
+        @keyframes _anToastPulse {
+            0%,100% { box-shadow:0 8px 22px rgba(46,24,16,0.32), 0 0 0 1px rgba(192,147,93,0.45); }
+            50%     { box-shadow:0 10px 26px rgba(46,24,16,0.42), 0 0 0 2px rgba(192,147,93,0.7); }
+        }
         .an-toast {
             position:absolute;
             z-index:99999;
-            background:linear-gradient(135deg, #5c3919 0%, #3a2818 100%);
-            color:#fff5dc;
-            padding:10px 16px;
+            background:
+                linear-gradient(135deg, #fff5dc 0%, #ffe9c2 100%);
+            color:#3a2818;
+            padding:10px 14px 10px 16px;
             border-radius:10px;
             font-family:'Cairo','Tajawal',sans-serif;
-            font-size:12.5px; font-weight:700;
-            box-shadow:0 8px 22px rgba(0,0,0,0.45), 0 0 0 1px rgba(212,170,90,0.35);
+            font-size:12px; font-weight:800;
+            line-height:1.4;
+            box-shadow:0 8px 22px rgba(46,24,16,0.32), 0 0 0 1px rgba(192,147,93,0.45);
             opacity:0;
-            transform:translateY(8px) scale(0.95);
-            transition:opacity 0.28s, transform 0.28s;
+            transform:translateY(-6px) rotate(-2deg) scale(0.92);
+            transition:opacity 0.28s, transform 0.32s;
             pointer-events:none;
             direction:rtl; text-align:right;
-            max-width:280px;
-            border:1px solid rgba(255,193,7,0.45);
+            max-width:260px;
+            border:1px solid rgba(192,147,93,0.55);
+            border-right:4px solid #c1572b;
+            transform-origin:top right;
+        }
+        .an-toast::after {
+            /* perforated edge feel at the bottom */
+            content:'';
+            position:absolute; left:0; right:0; bottom:-1px; height:6px;
+            background:
+                radial-gradient(circle at 6px 6px, #fff5dc 4.5px, transparent 5px),
+                radial-gradient(circle at 18px 6px, #fff5dc 4.5px, transparent 5px),
+                radial-gradient(circle at 30px 6px, #fff5dc 4.5px, transparent 5px),
+                radial-gradient(circle at 42px 6px, #fff5dc 4.5px, transparent 5px),
+                radial-gradient(circle at 54px 6px, #fff5dc 4.5px, transparent 5px),
+                radial-gradient(circle at 66px 6px, #fff5dc 4.5px, transparent 5px),
+                radial-gradient(circle at 78px 6px, #fff5dc 4.5px, transparent 5px),
+                radial-gradient(circle at 90px 6px, #fff5dc 4.5px, transparent 5px),
+                radial-gradient(circle at 102px 6px, #fff5dc 4.5px, transparent 5px),
+                radial-gradient(circle at 114px 6px, #fff5dc 4.5px, transparent 5px),
+                radial-gradient(circle at 126px 6px, #fff5dc 4.5px, transparent 5px),
+                radial-gradient(circle at 138px 6px, #fff5dc 4.5px, transparent 5px),
+                radial-gradient(circle at 150px 6px, #fff5dc 4.5px, transparent 5px),
+                radial-gradient(circle at 162px 6px, #fff5dc 4.5px, transparent 5px),
+                radial-gradient(circle at 174px 6px, #fff5dc 4.5px, transparent 5px),
+                radial-gradient(circle at 186px 6px, #fff5dc 4.5px, transparent 5px),
+                radial-gradient(circle at 198px 6px, #fff5dc 4.5px, transparent 5px),
+                radial-gradient(circle at 210px 6px, #fff5dc 4.5px, transparent 5px),
+                radial-gradient(circle at 222px 6px, #fff5dc 4.5px, transparent 5px),
+                radial-gradient(circle at 234px 6px, #fff5dc 4.5px, transparent 5px),
+                radial-gradient(circle at 246px 6px, #fff5dc 4.5px, transparent 5px),
+                radial-gradient(circle at 258px 6px, #fff5dc 4.5px, transparent 5px);
+        }
+        .an-toast .an-toast-icon {
+            display:inline-flex; align-items:center; justify-content:center;
+            width:22px; height:22px;
+            background:radial-gradient(circle, #c1572b 0%, #8a3617 100%);
+            border-radius:50%;
+            color:#fff5dc;
+            font-size:12px; font-weight:900;
+            margin-left:6px;
+            box-shadow:inset 0 1px 2px rgba(255,255,255,0.25), 0 1px 3px rgba(122,61,31,0.5);
+            vertical-align:-5px;
         }
         .an-toast.show {
-            opacity:1; transform:translateY(0) scale(1);
-        }
-        .an-toast::before {
-            content:'⚠️ '; margin-left:4px;
+            opacity:1;
+            transform:translateY(0) rotate(-1deg) scale(1);
+            animation:_anToastEnter 0.5s cubic-bezier(0.34,1.36,0.56,1) forwards, _anToastPulse 2.2s 0.5s ease-in-out infinite;
         }
 
-        /* ──────── زر القلم البرتقالي لتعديل النموذج (مدير قسم السيطرة) ──────── */
+        /* ──────── زر القلم — نحاسي ذهبي (ينسجم مع لوحة الإيصال) ──────── */
+        @keyframes _anEditBreathe {
+            0%,100% { box-shadow:0 2px 5px rgba(122,74,38,0.35), 0 0 0 0 rgba(212,170,90,0.45); }
+            50%     { box-shadow:0 3px 7px rgba(122,74,38,0.45), 0 0 0 4px rgba(212,170,90,0); }
+        }
         .btn-audit-edit {
-            background:linear-gradient(135deg, #f57c00 0%, #e65100 100%) !important;
-            color:#fff !important;
-            border:1px solid rgba(255,255,255,0.22) !important;
+            background:linear-gradient(135deg, #d4aa5a 0%, #a07838 55%, #7a4a26 100%) !important;
+            color:#fff5dc !important;
+            border:1px solid rgba(255,245,220,0.32) !important;
             cursor:pointer;
             font-family:'Cairo','Tajawal',sans-serif;
-            font-weight:700; letter-spacing:0.2px;
+            font-weight:800;
             padding:4px 9px; font-size:13px;
             border-radius:8px;
-            box-shadow:0 2px 5px rgba(230,81,0,0.35);
-            transition:filter 0.15s, transform 0.15s, box-shadow 0.18s;
+            box-shadow:0 2px 5px rgba(122,74,38,0.35), inset 0 1px 0 rgba(255,245,220,0.25);
+            text-shadow:0 1px 1px rgba(0,0,0,0.22);
+            transition:filter 0.18s, transform 0.18s, box-shadow 0.22s;
             display:inline-flex; align-items:center; gap:3px;
-            min-width:28px;
+            min-width:30px;
+            animation:_anEditBreathe 2.6s ease-in-out infinite;
+            position:relative;
+        }
+        .btn-audit-edit::after {
+            /* tiny corner shine */
+            content:''; position:absolute; top:2px; right:4px;
+            width:6px; height:6px; border-radius:50%;
+            background:radial-gradient(circle, rgba(255,245,220,0.7), transparent 70%);
+            pointer-events:none;
         }
         .btn-audit-edit:hover {
-            filter:brightness(1.12);
-            transform:translateY(-1px);
-            box-shadow:0 4px 8px rgba(230,81,0,0.5);
+            filter:brightness(1.10);
+            transform:translateY(-1px) rotate(-4deg);
+            box-shadow:0 5px 12px rgba(122,74,38,0.5), inset 0 1px 0 rgba(255,245,220,0.3);
         }
-        .btn-audit-edit:active { transform:translateY(0) scale(0.95); }
+        .btn-audit-edit:active { transform:translateY(0) scale(0.95) rotate(0); }
 
-        /* ──────── زر "ملاحظات السيطرة" الأخضر (يتناسب مع الواتساب) ──────── */
+        /* ──────── وضع التعديل — إطار ذهبي حول الإيصال + شريط علوي مختلف ──────── */
+        #anModal.an-mode-edit .an-receipt {
+            border:1.5px solid #c0935d;
+            box-shadow:
+                0 36px 90px rgba(0,0,0,0.6),
+                inset 0 1px 0 rgba(255,255,255,0.85),
+                0 0 0 2px rgba(212,170,90,0.35);
+        }
+        #anModal.an-mode-edit .an-instruction {
+            background:linear-gradient(135deg, #d4aa5a 0%, #a07838 50%, #7a4a26 100%);
+            border-color:rgba(255,245,220,0.4);
+        }
+        #anModal.an-mode-edit .an-stamp {
+            border-color:#a07838; color:#7a4a26;
+            background:rgba(212,170,90,0.10);
+        }
+        #anModal.an-mode-edit .an-stamp::before {
+            content:'تعديل · '; font-size:10px; opacity:0.85;
+        }
+
+        /* ──────── زر "📋 ملاحظات السيطرة" — مميّز بشكل لافت ──────── */
+        @keyframes _anBtnBreathe {
+            0%,100% {
+                box-shadow:
+                    0 3px 8px rgba(7,94,84,0.42),
+                    0 0 0 0 rgba(37,211,102,0.55),
+                    inset 0 1px 0 rgba(255,255,255,0.30);
+            }
+            50% {
+                box-shadow:
+                    0 5px 14px rgba(7,94,84,0.55),
+                    0 0 0 6px rgba(37,211,102,0),
+                    inset 0 1px 0 rgba(255,255,255,0.35);
+            }
+        }
+        @keyframes _anBtnShimmer {
+            0%   { background-position:200% 0; }
+            100% { background-position:-200% 0; }
+        }
+        @keyframes _anBadgeBounce {
+            0%,100% { transform:translate(-50%,0) scale(1); }
+            50%     { transform:translate(-50%,-2px) scale(1.08); }
+        }
         .btn-audit-note {
-            background:linear-gradient(135deg,#25d366 0%,#128c7e 50%,#075e54 100%) !important;
+            position:relative;
+            background:
+                linear-gradient(110deg,
+                    #25d366 0%,
+                    #128c7e 35%,
+                    #34c98a 50%,   /* lighter highlight band for shimmer */
+                    #128c7e 65%,
+                    #075e54 100%) !important;
+            background-size:220% 100% !important;
             color:#fff !important;
-            border:1px solid rgba(255,255,255,0.18) !important;
+            border:1.5px solid rgba(255,255,255,0.32) !important;
             cursor:pointer;
             font-family:'Cairo','Tajawal',sans-serif;
-            font-weight:700; letter-spacing:0.3px;
-            padding:4px 11px; font-size:12px;
-            border-radius:8px;
-            box-shadow:0 2px 5px rgba(7,94,84,0.32);
-            transition:filter 0.15s, transform 0.15s, box-shadow 0.18s;
-            display:inline-flex; align-items:center; gap:4px;
+            font-weight:800; letter-spacing:0.4px;
+            padding:6px 14px 6px 13px;
+            font-size:12.5px;
+            border-radius:10px;
+            text-shadow:0 1px 1px rgba(0,0,0,0.30);
+            box-shadow:
+                0 3px 8px rgba(7,94,84,0.42),
+                0 0 0 0 rgba(37,211,102,0.55),
+                inset 0 1px 0 rgba(255,255,255,0.30);
+            transition:filter 0.18s, transform 0.18s;
+            display:inline-flex; align-items:center; gap:5px;
+            animation:_anBtnBreathe 2.4s ease-in-out infinite, _anBtnShimmer 4.8s linear infinite;
+        }
+        .btn-audit-note::before {
+            /* shine sweep overlay */
+            content:''; position:absolute; inset:0;
+            background:linear-gradient(110deg, transparent 35%, rgba(255,255,255,0.32) 50%, transparent 65%);
+            background-size:220% 100%;
+            animation:_anBtnShimmer 4.8s linear infinite;
+            border-radius:inherit;
+            pointer-events:none;
+            mix-blend-mode:overlay;
+            opacity:0.55;
+        }
+        .btn-audit-note::after {
+            /* small "جديد" badge */
+            content:'جديد';
+            position:absolute; top:-8px; left:50%;
+            transform:translate(-50%, 0);
+            background:linear-gradient(135deg, #c1572b 0%, #8a3617 100%);
+            color:#fff5dc;
+            font-size:8.5px; font-weight:900;
+            padding:2px 7px 1px;
+            border-radius:10px;
+            letter-spacing:0.8px;
+            box-shadow:0 2px 5px rgba(122,61,31,0.5), inset 0 1px 0 rgba(255,245,220,0.30);
+            border:1px solid rgba(255,245,220,0.35);
+            animation:_anBadgeBounce 1.6s ease-in-out infinite;
+            white-space:nowrap;
+            pointer-events:none;
         }
         .btn-audit-note:hover {
-            filter:brightness(1.10);
-            transform:translateY(-1px);
+            filter:brightness(1.10) saturate(1.15);
+            transform:translateY(-1.5px);
         }
+        .btn-audit-note:active { transform:translateY(0) scale(0.97); }
+
         .btn-audit-note.has-note {
-            background:linear-gradient(135deg, #075e54 0%, #128c7e 100%) !important;
-            box-shadow:0 0 0 2px rgba(37,211,102,0.4), 0 2px 5px rgba(7,94,84,0.5) !important;
+            background:
+                linear-gradient(135deg, #075e54 0%, #128c7e 60%, #075e54 100%) !important;
+            background-size:100% 100% !important;
+            box-shadow:
+                0 0 0 2px rgba(37,211,102,0.40),
+                0 2px 5px rgba(7,94,84,0.5),
+                inset 0 1px 0 rgba(255,255,255,0.18) !important;
+            animation:none;   /* don't breathe when already filled */
+            border-color:rgba(165,214,167,0.4) !important;
         }
         .btn-audit-note.has-note::before {
-            content:'✓'; margin-left:3px; color:#a5d6a7; font-weight:900;
+            display:none;   /* no shimmer when locked */
+        }
+        .btn-audit-note.has-note::after {
+            /* swap "جديد" badge with "تم" badge */
+            content:'تم ✓';
+            background:linear-gradient(135deg, #2e7d32 0%, #1b5e20 100%);
+            animation:none;
+            top:-7px;
+            font-size:8.5px;
         }
 
         @media (max-width:760px) {
@@ -375,21 +541,20 @@ function _anEnsureStyles() {
    ══════════════════════════════════════════════════════ */
 function _anNotifyAlreadyFilled(btn) {
     _anEnsureStyles();
-    // أزل أي toast سابق
     document.querySelectorAll('.an-toast').forEach(t => t.remove());
     const toast = document.createElement('div');
     toast.className = 'an-toast';
-    toast.textContent = 'تم تعبئة النموذج مسبقاً ولا يمكن فتحه مجدداً';
+    toast.innerHTML = '<span class="an-toast-icon">!</span> تم تعبئة هذا النموذج مسبقاً — لا يمكن فتحه مجدداً';
     const r = btn.getBoundingClientRect();
-    const top = Math.max(8, r.top - 44 + window.scrollY);
-    const left = Math.min(window.innerWidth - 280, Math.max(8, r.left - 60 + window.scrollX));
+    const top = Math.max(8, r.top - 56 + window.scrollY);
+    const left = Math.min(window.innerWidth - 280, Math.max(8, r.left - 30 + window.scrollX));
     toast.style.top = top + 'px';
     toast.style.left = left + 'px';
     document.body.appendChild(toast);
     requestAnimationFrame(() => toast.classList.add('show'));
     setTimeout(() => {
         toast.classList.remove('show');
-        setTimeout(() => toast.remove(), 320);
+        setTimeout(() => toast.remove(), 360);
     }, 2800);
 }
 
@@ -431,6 +596,7 @@ function openAuditNoteModal(complaintId, mode) {
 
     const modal = document.createElement('div');
     modal.id = 'anModal';
+    if (isEdit) modal.classList.add('an-mode-edit');
     modal.innerHTML = `
         <div class="an-wrap">
             <div class="an-instruction">
@@ -639,19 +805,21 @@ function hasAuditNote(complaintId) {
    ══════════════════════════════════════════════════════ */
 function jumpToComplaintFromAudit(complaintId) {
     closeAuditNoteModal();
-    // افتح تاب متابعات السيطرة
-    if (typeof toggleTabC === 'function') toggleTabC();
-    // مرّر إلى الشكوى
-    setTimeout(() => {
-        const row = document.querySelector(`[data-complaint-id="${complaintId}"]`);
-        if (row) {
-            row.scrollIntoView({ behavior: 'smooth', block: 'center' });
-            row.style.transition = 'background 0.3s';
-            const oldBg = row.style.background;
-            row.style.background = 'rgba(46,125,50,0.18)';
-            setTimeout(() => { row.style.background = oldBg; }, 1800);
-        }
-    }, 300);
+    // استخدم الدالة الموجودة في control.js — تنتقل وتُبرز الصف
+    if (typeof jumpToComplaint === 'function') {
+        jumpToComplaint(complaintId);
+    } else if (typeof switchTab === 'function') {
+        // fallback آمن
+        switchTab('c');
+        setTimeout(() => {
+            const row = document.querySelector(`#tableC tbody tr[data-id="${complaintId}"]`);
+            if (row) {
+                row.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                row.style.boxShadow = 'inset 0 0 0 3px #2e7d32';
+                setTimeout(() => { row.style.boxShadow = ''; }, 2500);
+            }
+        }, 300);
+    }
 }
 
 /* ══════════════════════════════════════════════════════
