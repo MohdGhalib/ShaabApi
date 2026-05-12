@@ -1143,3 +1143,17 @@ window.canSeeAuditNotesTab      = canSeeAuditNotesTab;
 window._anNotifyAlreadyFilled   = _anNotifyAlreadyFilled;
 window.printAuditNote           = printAuditNote;
 window.jumpToAuditNoteFromComplaint = jumpToAuditNoteFromComplaint;
+
+/* ══════════════════════════════════════════════════════
+   حقن CSS فور تحميل الملف — لكي يحصل زر «📋 ملاحظات السيطرة»
+   على تصميمه الكامل (shimmer + breathing + badge) من اللحظة
+   التي يُرسم فيها بواسطة render.js، لا فقط بعد فتح المودال.
+   ══════════════════════════════════════════════════════ */
+(function _anInjectStylesEarly() {
+    if (typeof document === 'undefined') return;
+    if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', _anEnsureStyles, { once: true });
+    } else {
+        _anEnsureStyles();
+    }
+})();
