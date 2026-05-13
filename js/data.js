@@ -446,7 +446,7 @@ async function loadAllData(force) {
     // عند الإجبار: لا ننتظر إن كان عالقاً — نُعيد ضبط العلَم ونتابع
     _isLoading = true;
     try {
-    const keys = ['Shaab_Master_DB','Shaab_Employees_DB','Shaab_Breaks_DB','Shaab_Sessions_DB','Shaab_AuditNotes_DB'];
+    const keys = ['Shaab_Master_DB','Shaab_Employees_DB','Shaab_Breaks_DB','Shaab_Sessions_DB','Shaab_AuditNotes_DB','Shaab_Compensations_DB'];
     if (IS_LOCAL) {
         db        = localStorage.getItem('Shaab_Master_DB')    ? JSON.parse(localStorage.getItem('Shaab_Master_DB'))    : { montasiat:[], inquiries:[], complaints:[] };
         employees = localStorage.getItem('Shaab_Employees_DB') ? JSON.parse(localStorage.getItem('Shaab_Employees_DB')) : [];
@@ -461,6 +461,15 @@ async function loadAllData(force) {
             }
         } catch {}
         if (!Array.isArray(db.auditNotes)) db.auditNotes = [];
+        // تعويضات الفروع من المفتاح المستقلّ
+        try {
+            const _cp = localStorage.getItem('Shaab_Compensations_DB');
+            if (_cp) {
+                const _arr = JSON.parse(_cp);
+                if (Array.isArray(_arr)) db.compensations = _arr;
+            }
+        } catch {}
+        if (!Array.isArray(db.compensations)) db.compensations = [];
         priceList = localStorage.getItem('Shaab_PriceList_DB') ? JSON.parse(localStorage.getItem('Shaab_PriceList_DB')) : structuredClone(DEFAULT_PRICE_LIST);
     } else {
         // قبل تسجيل الدخول لا يوجد token — نهيئ بيانات فارغة فقط
@@ -569,6 +578,14 @@ async function loadAllData(force) {
                 } catch (e) { console.warn('[loadAllData] failed to parse Shaab_AuditNotes_DB:', e); }
             }
             if (!Array.isArray(db.auditNotes)) db.auditNotes = [];
+            // 🛡️ تعويضات الفروع في مفتاح مستقلّ
+            if (data['Shaab_Compensations_DB']) {
+                try {
+                    const _cp = JSON.parse(data['Shaab_Compensations_DB']);
+                    if (Array.isArray(_cp)) db.compensations = _cp;
+                } catch (e) { console.warn('[loadAllData] failed to parse Shaab_Compensations_DB:', e); }
+            }
+            if (!Array.isArray(db.compensations)) db.compensations = [];
 
             // 🔒 خزّن إصدارات المفاتيح من السيرفر للحفاظ على التزامن في الحفظ القادم
             if (data['_versions'] && typeof data['_versions'] === 'object') {
@@ -1077,7 +1094,8 @@ function saveEmployees()  { _push('Shaab_Employees_DB',  JSON.stringify(employee
 function saveBreaks()     { _push('Shaab_Breaks_DB',     JSON.stringify(breaks));    }
 function saveSessions()   { _push('Shaab_Sessions_DB',   JSON.stringify(sessions));  }
 function savePriceList()  { _push('Shaab_PriceList_DB',  JSON.stringify(priceList)); }
-function saveAuditNotes() { _push('Shaab_AuditNotes_DB', JSON.stringify(db.auditNotes || [])); }
+function saveAuditNotes()    { _push('Shaab_AuditNotes_DB',    JSON.stringify(db.auditNotes    || [])); }
+function saveCompensations() { _push('Shaab_Compensations_DB', JSON.stringify(db.compensations || [])); }
 
 function _toLatinDigits(str) {
     return String(str)

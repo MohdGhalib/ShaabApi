@@ -1341,7 +1341,9 @@ function addCompensation() {
         time: now(),
         iso: iso()
     });
-    save();
+    // 🛡️ نحفظ في مفتاح مستقلّ (Shaab_Compensations_DB) لتفادي تعارض إصدار master_DB
+    if (typeof saveCompensations === 'function') saveCompensations();
+    else save();
 
     document.getElementById('compNotes').value        = '';
     document.getElementById('compAdminNote').value     = '';
@@ -1366,7 +1368,9 @@ function deleteCompensation(id) {
             item.deleted      = true;
             item.deletedBy    = currentUser.name;
             item.deletedAtTs  = Date.now();
-            save();
+            // 🛡️ مفتاح مستقلّ — لا تعارض مع master_DB
+            if (typeof saveCompensations === 'function') saveCompensations();
+            else save();
             renderCompensations();
             _populateCompComplaintSelect();
         }
