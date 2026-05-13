@@ -144,6 +144,16 @@ function _anEnsureStyles() {
         #anModal .an-row-5 { grid-template-columns:repeat(5, minmax(0,1fr)); }
         #anModal .an-row-4 { grid-template-columns:repeat(4, minmax(0,1fr)); }
         #anModal .an-row-6 { grid-template-columns:repeat(6, minmax(0,1fr)); }
+        #anModal .an-row-8 { grid-template-columns:repeat(8, minmax(0,1fr)); gap:5px 6px; padding:6px 8px; }
+        /* حقول مضغوطة للصف الـ 8 */
+        #anModal .an-row-8 .an-field label { font-size:9.5px; letter-spacing:0; }
+        #anModal .an-row-8 .an-field input {
+            font-size:11px; padding:4px 6px;
+            border-radius:6px;
+        }
+        #anModal .an-row-8 .an-day-name {
+            font-size:9.5px; padding:0 4px;
+        }
 
         /* اسم اليوم تحت حقل التاريخ */
         #anModal .an-day-name {
@@ -819,9 +829,9 @@ function openAuditNoteModal(complaintId, mode) {
                         <b>الفرع:</b> <span class="an-linked-branch">${sanitize(complaint.branch || '—')}</span>
                     </div>
 
-                    <!-- صف واحد: 6 حقول (اليوم • الوقت • رقم الفاتورة • قيمة الفاتورة • اليوزر • اسم الكاشير) -->
+                    <!-- صف واحد: 8 حقول (اليوم • الوقت • رقم الفاتورة • قيمة الفاتورة • اليوزر • اسم الكاشير • رقم الكاميرا • وقت الكاميرا) -->
                     <div class="an-section">
-                        <div class="an-row an-row-6">
+                        <div class="an-row an-row-8">
                             <div class="an-field">
                                 <label>اليوم <span class="req">*</span></label>
                                 <input type="date" id="anDate" ${readonly} value="${v('date', dateStr)}" onchange="_anSyncDayName()">
@@ -847,23 +857,21 @@ function openAuditNoteModal(complaintId, mode) {
                                 <label>اسم الكاشير <span class="req">*</span></label>
                                 <input type="text" id="anCashier" ${readonly} value="${sanitize(v('cashier'))}" placeholder="—">
                             </div>
+                            <div class="an-field">
+                                <label>📷 رقم الكاميرا <span class="req">*</span></label>
+                                <input type="text" id="anCameraNum" ${readonly} value="${sanitize(v('cameraNum'))}" placeholder="—">
+                            </div>
+                            <div class="an-field">
+                                <label>⏰ وقت الكاميرا <span class="req">*</span></label>
+                                <input type="time" id="anCameraTime" ${readonly} value="${v('cameraTime')}">
+                            </div>
                         </div>
                     </div>
 
-                    <!-- البوكس الأبيض الكبير — يحوي كل البيانات الخفيفة + منطقة الكتابة -->
+                    <!-- البوكس الأبيض الكبير — يحوي عبارة "بعد المتابعة" والمدقق ومنطقة الكتابة -->
                     <div class="an-notes-area">
                         <div class="an-notes-box">
                             <div class="an-notes-top">
-                                <span class="an-cam-cell">
-                                    <span class="an-cam-mini">📷 رقم الكاميرا:</span>
-                                    <input type="text" id="anCameraNum" ${readonly} value="${sanitize(v('cameraNum'))}" placeholder="رقم">
-                                </span>
-                                <span class="an-seps">,,,</span>
-                                <span class="an-cam-cell">
-                                    <span class="an-cam-mini">⏰ وقت الكاميرا:</span>
-                                    <input type="time" id="anCameraTime" ${readonly} value="${v('cameraTime')}">
-                                </span>
-                                <span class="an-seps">,,,</span>
                                 <span class="an-prefix-label">بعد المتابعة والتدقيق :</span>
                                 <span class="an-auditor-inline">
                                     <span class="an-auditor-label">المدقق :</span>
@@ -1094,6 +1102,12 @@ function printAuditNote(complaintId) {
     table.fields-6 td:not(.label) {
         text-align:center; font-weight:700; font-size:13px;
     }
+    table.fields-8 td.label {
+        font-size:10.5px; width:12.5%; padding:5px 4px;
+    }
+    table.fields-8 td:not(.label) {
+        text-align:center; font-weight:700; font-size:11.5px; padding:6px 4px;
+    }
     .notes-area {
         margin-top:12px;
         background:linear-gradient(135deg, #fff5dc 0%, #ffe9c2 100%);
@@ -1249,7 +1263,7 @@ function printAuditNote(complaintId) {
             </div>
         </div>
 
-        <table class="fields fields-6">
+        <table class="fields fields-8">
             <tr>
                 <td class="label">اليوم</td>
                 <td class="label">الوقت</td>
@@ -1257,24 +1271,24 @@ function printAuditNote(complaintId) {
                 <td class="label">قيمة الفاتورة</td>
                 <td class="label">اليوزر</td>
                 <td class="label">اسم الكاشير</td>
+                <td class="label">📷 رقم الكاميرا</td>
+                <td class="label">⏰ وقت الكاميرا</td>
             </tr>
             <tr>
-                <td>${sanitize(_anPrintDay(note.date))} <span style="display:block;font-size:11px;color:#7a4a26;font-weight:700;">${sanitize(note.date)}</span></td>
+                <td>${sanitize(_anPrintDay(note.date))} <span style="display:block;font-size:10px;color:#7a4a26;font-weight:700;">${sanitize(note.date)}</span></td>
                 <td>${sanitize(note.time)}</td>
                 <td>${sanitize(note.invoiceNumber)}</td>
                 <td>${sanitize(note.invoiceValue)}</td>
                 <td>${sanitize(note.user)}</td>
                 <td>${sanitize(note.cashier)}</td>
+                <td>${sanitize(note.cameraNum || '—')}</td>
+                <td>${sanitize(note.cameraTime || '—')}</td>
             </tr>
         </table>
 
         <div class="notes-area">
             <div class="notes-box">
                 <div class="notes-top">
-                    <span class="cam-cell"><b>📷 رقم الكاميرا:</b> ${sanitize(note.cameraNum || '—')}</span>
-                    <span class="seps">,,,</span>
-                    <span class="cam-cell"><b>⏰ وقت الكاميرا:</b> ${sanitize(note.cameraTime || '—')}</span>
-                    <span class="seps">,,,</span>
                     <span class="prefix-label">بعد المتابعة والتدقيق :</span>
                     <span class="auditor-inline">
                         <b class="auditor-inline-label">المدقق :</b>
