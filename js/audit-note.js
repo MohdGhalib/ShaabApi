@@ -58,6 +58,27 @@ function _anEnsureStyles() {
             text-shadow:0 1px 2px rgba(0,0,0,0.25);
             flex:1;
         }
+        /* زر العمل في الترويسة (إرسال / حفظ / طباعة) — على اليسار بصرياً */
+        #anModal .an-header-action {
+            margin-inline-start:auto; position:relative; z-index:1;
+            font-family:'Cairo','Tajawal',sans-serif;
+            font-weight:900; letter-spacing:0.4px;
+            font-size:13px;
+            padding:7px 18px;
+            border:1.5px solid rgba(255,255,255,0.4);
+            border-radius:10px;
+            cursor:pointer;
+            color:#fff; background:linear-gradient(135deg,#2e7d32,#1b5e20);
+            box-shadow:0 4px 10px rgba(0,0,0,0.25), inset 0 1px 0 rgba(255,255,255,0.25);
+            transition:filter 0.18s, transform 0.18s;
+            display:inline-flex; align-items:center; gap:5px;
+            text-shadow:0 1px 1px rgba(0,0,0,0.32);
+            white-space:nowrap;
+        }
+        #anModal .an-header-action:hover { filter:brightness(1.10); transform:translateY(-1px); }
+        #anModal .an-header-action:active { transform:translateY(0) scale(0.97); }
+        #anModal .an-header-save  { background:linear-gradient(135deg,#a07838,#7a4a26) !important; }
+        #anModal .an-header-print { background:linear-gradient(135deg,#1565c0,#0d47a1) !important; }
 
         /* ──────── الإيصال الكريمي (مطابق لـ c360) ──────── */
         #anModal .an-receipt {
@@ -157,10 +178,19 @@ function _anEnsureStyles() {
                 0.85fr; /* وقت الكاميرا */
             gap:5px 6px; padding:6px 8px;
         }
-        #anModal .an-row-8 .an-field label { font-size:9.5px; letter-spacing:0; }
+        #anModal .an-row-8 .an-field label {
+            font-size:13.5px;
+            font-weight:900;
+            letter-spacing:0.3px;
+            text-align:center;
+            justify-content:center;
+            color:#3a2818;
+            margin-bottom:4px;
+        }
         #anModal .an-row-8 .an-field input {
             font-size:11px; padding:4px 6px;
             border-radius:6px;
+            text-align:center;
         }
         /* صف داخلي: التاريخ + اسم اليوم جنباً إلى جنب */
         #anModal .an-date-inline {
@@ -304,11 +334,18 @@ function _anEnsureStyles() {
             border-radius:8px;
             letter-spacing:0.3px;
         }
+        /* صف المدقق — في أسفل بوكس الكتابة على اليسار بصرياً */
+        #anModal .an-auditor-bottom {
+            display:flex;
+            justify-content:flex-end;   /* في RTL = أقصى اليسار بصرياً */
+            margin-top:8px;
+            padding-top:8px;
+            border-top:1.5px dashed rgba(139,69,19,0.25);
+        }
         /* توقيع المدقق — inline داخل شريط الـ top الأبيض */
         #anModal .an-auditor-inline {
             display:inline-flex; align-items:center; gap:6px;
-            margin-inline-start:auto;   /* يدفع للجهة الأخرى تلقائياً (يسار في RTL) */
-            padding:3px 10px;
+            padding:4px 12px;
             background:rgba(212,170,90,0.10);
             border:1px solid rgba(139,69,19,0.25);
             border-radius:8px;
@@ -376,7 +413,7 @@ function _anEnsureStyles() {
         }
         #anModal .an-notes-pad {
             width:100%; box-sizing:border-box;
-            min-height:260px; resize:vertical;
+            min-height:360px; resize:vertical;
             padding:8px 6px;
             flex:1 1 auto;
             /* إلغاء الإطار لأن البوكس الخارجي an-notes-box هو الذي يحويه */
@@ -823,6 +860,11 @@ function openAuditNoteModal(complaintId, mode) {
                             ? 'تعديل نموذج التدقيق — مدير قسم السيطرة'
                             : 'نموذج تدقيق السيطرة')}
                 </div>
+                ${isView
+                    ? `<button class="an-header-action an-header-print" onclick="printAuditNote(${complaint.id})" title="تصدير وطباعة">🖨️ طباعة</button>`
+                    : (isEdit
+                        ? `<button class="an-header-action an-header-save" onclick="submitAuditNote(${complaint.id}, 'edit')" title="حفظ التعديلات">💾 حفظ التعديلات</button>`
+                        : `<button class="an-header-action an-header-send" onclick="submitAuditNote(${complaint.id})" title="إرسال إلى مدير السيطرة">📤 إرسال</button>`)}
             </div>
             <div class="an-receipt">
                 <button class="an-close" onclick="closeAuditNoteModal()" title="إغلاق">✕</button>
@@ -885,17 +927,16 @@ function openAuditNoteModal(complaintId, mode) {
                         </div>
                     </div>
 
-                    <!-- البوكس الأبيض الكبير — يحوي عبارة "بعد المتابعة" والمدقق ومنطقة الكتابة -->
+                    <!-- البوكس الأبيض الكبير — كتابة + توقيع المدقق في الأسفل -->
                     <div class="an-notes-area">
                         <div class="an-notes-box">
-                            <div class="an-notes-top">
-                                <span class="an-prefix-label">بعد المتابعة والتدقيق :</span>
+                            <textarea id="anDetails" class="an-notes-pad" ${readonly} rows="14" placeholder="اكتب التفاصيل ...">${sanitize(v('details') || (isView || isEdit ? '' : 'بعد المتابعة والتدقيق : \n'))}</textarea>
+                            <div class="an-auditor-bottom">
                                 <span class="an-auditor-inline">
                                     <span class="an-auditor-label">المدقق :</span>
                                     <input type="text" id="anAuditor" ${readonly} value="${sanitize(v('auditor'))}" placeholder="اسم المدقق">
                                 </span>
                             </div>
-                            <textarea id="anDetails" class="an-notes-pad" ${readonly} rows="10" placeholder="اكتب التفاصيل ...">${sanitize(v('details'))}</textarea>
                         </div>
                     </div>
 
@@ -905,19 +946,11 @@ function openAuditNoteModal(complaintId, mode) {
 
                 <div class="an-err" id="anErr"></div>
 
-                <div class="an-footer">
-                    ${isView
-                        ? `<button class="an-btn an-btn-cancel" onclick="closeAuditNoteModal()">إغلاق</button>
-                           <button class="an-btn an-btn-print" onclick="printAuditNote(${complaint.id})">🖨️ تصدير وطباعة</button>
-                           <button class="an-btn an-btn-submit" onclick="jumpToComplaintFromAudit(${complaint.id})">🔙 الانتقال للشكوى</button>`
-                        : (isEdit
-                            ? `<button class="an-btn an-btn-cancel" onclick="closeAuditNoteModal()">إلغاء</button>
-                               <button class="an-btn an-btn-print" onclick="printAuditNote(${complaint.id})">🖨️ تصدير وطباعة</button>
-                               <button class="an-btn an-btn-submit" onclick="submitAuditNote(${complaint.id}, 'edit')">💾 حفظ التعديلات</button>`
-                            : `<button class="an-btn an-btn-cancel" onclick="closeAuditNoteModal()">إلغاء</button>
-                               <button class="an-btn an-btn-submit" onclick="submitAuditNote(${complaint.id})">📤 إرسال إلى مدير السيطرة</button>`)
-                    }
-                </div>
+                ${isView
+                    ? `<div class="an-footer">
+                         <button class="an-btn an-btn-submit" onclick="jumpToComplaintFromAudit(${complaint.id})">🔙 الانتقال للشكوى</button>
+                       </div>`
+                    : ''}
             </div>
         </div>
     `;
@@ -930,6 +963,24 @@ function openAuditNoteModal(complaintId, mode) {
 
     // اعرض اسم اليوم بناءً على التاريخ الحالي
     _anSyncDayName();
+
+    // حماية الـ prefix «بعد المتابعة والتدقيق : » من الحذف في وضع جديد
+    if (!isView && !isEdit) {
+        const ta = document.getElementById('anDetails');
+        const PFX = 'بعد المتابعة والتدقيق : ';
+        if (ta) {
+            ta.addEventListener('input', () => {
+                if (!ta.value.startsWith(PFX)) {
+                    ta.value = PFX + (ta.value.startsWith('بعد ') ? ta.value.replace(/^بعد[^:]*:\s*/, '') : ta.value.replace(/^\s*/, ''));
+                }
+            });
+            requestAnimationFrame(() => {
+                ta.focus();
+                const len = ta.value.length;
+                ta.setSelectionRange(len, len);
+            });
+        }
+    }
 }
 
 /* ── حساب اسم اليوم بالعربية وعرضه تحت حقل التاريخ ── */
@@ -1129,7 +1180,7 @@ function printAuditNote(complaintId) {
     table.fields-8 col.col-camnum   { width:11%; }
     table.fields-8 col.col-camtime  { width:9%; }
     table.fields-8 td.label {
-        font-size:10.5px; padding:5px 4px;
+        font-size:13px; padding:6px 4px; font-weight:900;
     }
     table.fields-8 td:not(.label) {
         text-align:center; font-weight:700; font-size:11.5px; padding:6px 4px;
@@ -1156,6 +1207,11 @@ function printAuditNote(complaintId) {
         padding-bottom:8px;
         border-bottom:1.5px dashed rgba(139,69,19,0.25);
         font-size:12px; margin-bottom:8px;
+    }
+    .auditor-bottom {
+        display:flex; justify-content:flex-end;
+        margin-top:8px; padding-top:8px;
+        border-top:1.5px dashed rgba(139,69,19,0.25);
     }
     .notes-top .cam-cell { color:#3a2818; font-weight:700; }
     .notes-top .cam-cell b { color:#5c3919; }
@@ -1321,14 +1377,13 @@ function printAuditNote(complaintId) {
 
         <div class="notes-area">
             <div class="notes-box">
-                <div class="notes-top">
-                    <span class="prefix-label">بعد المتابعة والتدقيق :</span>
+                <div class="notes-body">${sanitize(note.details || '—')}</div>
+                <div class="auditor-bottom">
                     <span class="auditor-inline">
                         <b class="auditor-inline-label">المدقق :</b>
                         <span class="auditor-inline-name">${sanitize(note.auditor)}</span>
                     </span>
                 </div>
-                <div class="notes-body">${sanitize(note.details || '—')}</div>
             </div>
         </div>
     </div>
