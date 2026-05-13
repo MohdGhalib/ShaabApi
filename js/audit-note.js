@@ -865,7 +865,9 @@ function submitAuditNote(complaintId, mode) {
         existing.editedByEmpId = (currentUser && currentUser.empId) || '—';
         existing.editedAt   = Date.now();
         existing.editedIso  = new Date().toISOString();
-        if (typeof save === 'function') save();
+        // 🛡️ نحفظ في مفتاح مستقلّ (Shaab_AuditNotes_DB) لتفادي تعارض إصدار master_DB
+        if (typeof saveAuditNotes === 'function') saveAuditNotes();
+        else if (typeof save === 'function') save();
         if (typeof _logAudit === 'function') _logAudit('editAuditNote', fields.branch, `تعديل تدقيق #${fields.invoiceNumber}`, 'auditNote', existing.id);
         closeAuditNoteModal();
         alert('✅ تم حفظ التعديلات على النموذج');
@@ -885,7 +887,9 @@ function submitAuditNote(complaintId, mode) {
     };
 
     db.auditNotes.unshift(note);
-    if (typeof save === 'function') save();
+    // 🛡️ نحفظ في مفتاح مستقلّ (Shaab_AuditNotes_DB) لتفادي تعارض إصدار master_DB
+    if (typeof saveAuditNotes === 'function') saveAuditNotes();
+    else if (typeof save === 'function') save();
     if (typeof _logAudit === 'function') _logAudit('addAuditNote', fields.branch, `تدقيق فاتورة #${fields.invoiceNumber}`, 'auditNote', note.id);
 
     closeAuditNoteModal();

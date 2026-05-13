@@ -446,12 +446,21 @@ async function loadAllData(force) {
     // عند الإجبار: لا ننتظر إن كان عالقاً — نُعيد ضبط العلَم ونتابع
     _isLoading = true;
     try {
-    const keys = ['Shaab_Master_DB','Shaab_Employees_DB','Shaab_Breaks_DB','Shaab_Sessions_DB'];
+    const keys = ['Shaab_Master_DB','Shaab_Employees_DB','Shaab_Breaks_DB','Shaab_Sessions_DB','Shaab_AuditNotes_DB'];
     if (IS_LOCAL) {
         db        = localStorage.getItem('Shaab_Master_DB')    ? JSON.parse(localStorage.getItem('Shaab_Master_DB'))    : { montasiat:[], inquiries:[], complaints:[] };
         employees = localStorage.getItem('Shaab_Employees_DB') ? JSON.parse(localStorage.getItem('Shaab_Employees_DB')) : [];
         breaks    = localStorage.getItem('Shaab_Breaks_DB')    ? JSON.parse(localStorage.getItem('Shaab_Breaks_DB'))    : [];
         sessions  = localStorage.getItem('Shaab_Sessions_DB')  ? JSON.parse(localStorage.getItem('Shaab_Sessions_DB'))  : [];
+        // ملاحظات السيطرة من المفتاح المستقلّ
+        try {
+            const _an = localStorage.getItem('Shaab_AuditNotes_DB');
+            if (_an) {
+                const _arr = JSON.parse(_an);
+                if (Array.isArray(_arr)) db.auditNotes = _arr;
+            }
+        } catch {}
+        if (!Array.isArray(db.auditNotes)) db.auditNotes = [];
         priceList = localStorage.getItem('Shaab_PriceList_DB') ? JSON.parse(localStorage.getItem('Shaab_PriceList_DB')) : structuredClone(DEFAULT_PRICE_LIST);
     } else {
         // قبل تسجيل الدخول لا يوجد token — نهيئ بيانات فارغة فقط
@@ -552,6 +561,14 @@ async function loadAllData(force) {
             breaks    = data['Shaab_Breaks_DB']    ? JSON.parse(data['Shaab_Breaks_DB'])    : [];
             sessions  = data['Shaab_Sessions_DB']  ? JSON.parse(data['Shaab_Sessions_DB'])  : [];
             priceList = data['Shaab_PriceList_DB'] ? JSON.parse(data['Shaab_PriceList_DB']) : structuredClone(DEFAULT_PRICE_LIST);
+            // 🛡️ ملاحظات السيطرة في مفتاح مستقلّ — منعزل عن master_DB لتفادي تعارض الإصدارات
+            if (data['Shaab_AuditNotes_DB']) {
+                try {
+                    const _an = JSON.parse(data['Shaab_AuditNotes_DB']);
+                    if (Array.isArray(_an)) db.auditNotes = _an;
+                } catch (e) { console.warn('[loadAllData] failed to parse Shaab_AuditNotes_DB:', e); }
+            }
+            if (!Array.isArray(db.auditNotes)) db.auditNotes = [];
 
             // 🔒 خزّن إصدارات المفاتيح من السيرفر للحفاظ على التزامن في الحفظ القادم
             if (data['_versions'] && typeof data['_versions'] === 'object') {
@@ -1056,10 +1073,11 @@ async function reloadTable(btn) {
     }
 }
 
-function saveEmployees() { _push('Shaab_Employees_DB', JSON.stringify(employees)); }
-function saveBreaks()    { _push('Shaab_Breaks_DB',    JSON.stringify(breaks));    }
-function saveSessions()  { _push('Shaab_Sessions_DB',  JSON.stringify(sessions));  }
-function savePriceList() { _push('Shaab_PriceList_DB', JSON.stringify(priceList)); }
+function saveEmployees()  { _push('Shaab_Employees_DB',  JSON.stringify(employees)); }
+function saveBreaks()     { _push('Shaab_Breaks_DB',     JSON.stringify(breaks));    }
+function saveSessions()   { _push('Shaab_Sessions_DB',   JSON.stringify(sessions));  }
+function savePriceList()  { _push('Shaab_PriceList_DB',  JSON.stringify(priceList)); }
+function saveAuditNotes() { _push('Shaab_AuditNotes_DB', JSON.stringify(db.auditNotes || [])); }
 
 function _toLatinDigits(str) {
     return String(str)
