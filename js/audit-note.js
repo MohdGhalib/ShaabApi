@@ -80,6 +80,41 @@ function _anEnsureStyles() {
         #anModal .an-header-save  { background:linear-gradient(135deg,#a07838,#7a4a26) !important; }
         #anModal .an-header-print { background:linear-gradient(135deg,#1565c0,#0d47a1) !important; }
 
+        /* ضوابط الخط في الترويسة */
+        #anModal .an-font-controls {
+            display:inline-flex; align-items:center; gap:5px;
+            background:rgba(0,0,0,0.18);
+            border:1px solid rgba(255,255,255,0.18);
+            border-radius:8px;
+            padding:3px 6px;
+            margin-inline-start:auto;
+            position:relative; z-index:1;
+        }
+        #anModal .an-fc-select {
+            font-family:'Cairo', sans-serif;
+            font-size:11.5px; font-weight:700;
+            padding:3px 6px;
+            border:1px solid rgba(255,255,255,0.25);
+            border-radius:6px;
+            background:rgba(255,255,255,0.92);
+            color:#3a2818;
+            outline:none; cursor:pointer;
+        }
+        #anModal .an-fc-save {
+            font-size:13px; font-weight:900;
+            padding:3px 9px;
+            border:1px solid rgba(255,255,255,0.32);
+            border-radius:6px;
+            background:linear-gradient(135deg,#2e7d32,#1b5e20);
+            color:#fff;
+            cursor:pointer;
+            transition:filter 0.18s;
+        }
+        #anModal .an-fc-save:hover { filter:brightness(1.10); }
+        #anModal .an-fc-save:disabled { cursor:default; opacity:0.7; }
+        /* عند وجود ضوابط الخط، زر العمل لا يدفع تلقائياً ولكن يبقى بجانبها */
+        #anModal .an-font-controls ~ .an-header-action { margin-inline-start:6px; }
+
         /* ──────── الإيصال الكريمي (مطابق لـ c360) ──────── */
         #anModal .an-receipt {
             background:linear-gradient(180deg, #fdf8ef 0%, #faf2e3 100%);
@@ -186,6 +221,7 @@ function _anEnsureStyles() {
             justify-content:center;
             color:#3a2818;
             margin-bottom:4px;
+            white-space:nowrap;   /* منع كلمة "وقت الكاميرا" من النزول لسطر ثانٍ */
         }
         #anModal .an-row-8 .an-field input {
             font-size:11px; padding:4px 6px;
@@ -352,6 +388,19 @@ function _anEnsureStyles() {
             position:absolute;
             bottom:8px; left:10px;
             z-index:3;
+        }
+        /* إجراء المسؤول — pill عائم في الزاوية السفلى اليمنى بصرياً */
+        #anModal .an-supervisor-bottom {
+            position:absolute;
+            bottom:8px; right:10px;
+            z-index:3;
+        }
+        #anModal .an-supervisor-inline {
+            background:rgba(21,101,192,0.10) !important;
+            border-color:rgba(21,101,192,0.30) !important;
+        }
+        #anModal .an-supervisor-inline .an-auditor-label {
+            color:#1565c0 !important;
         }
         /* توقيع المدقق — inline داخل شريط الـ top الأبيض */
         #anModal .an-auditor-inline {
@@ -880,6 +929,27 @@ function openAuditNoteModal(complaintId, mode) {
                             ? 'تعديل نموذج التدقيق — مدير قسم السيطرة'
                             : 'نموذج تدقيق السيطرة')}
                 </div>
+                ${isView ? '' : `
+                <span class="an-font-controls">
+                    <select id="anFontFamily" class="an-fc-select" title="نوع الخط" onchange="_anApplyFontPrefs()">
+                        <option value="Arial">Arial</option>
+                        <option value="Tahoma">Tahoma</option>
+                        <option value="'Times New Roman'">Times</option>
+                        <option value="'Courier New'">Courier</option>
+                        <option value="Cairo">Cairo</option>
+                    </select>
+                    <select id="anFontSize" class="an-fc-select" title="حجم الخط" onchange="_anApplyFontPrefs()">
+                        <option value="12">12</option>
+                        <option value="13">13</option>
+                        <option value="14">14</option>
+                        <option value="15" selected>15</option>
+                        <option value="16">16</option>
+                        <option value="18">18</option>
+                        <option value="20">20</option>
+                        <option value="22">22</option>
+                    </select>
+                    <button type="button" class="an-fc-save" title="حفظ الإعدادات لجميع موظفي السيطرة" onclick="_anSavePrefs(this)">💾</button>
+                </span>`}
                 ${isView
                     ? `<button class="an-header-action an-header-print" onclick="printAuditNote(${complaint.id})" title="تصدير وطباعة">🖨️ طباعة</button>`
                     : (isEdit
@@ -957,6 +1027,12 @@ function openAuditNoteModal(complaintId, mode) {
                                     <input type="text" id="anAuditor" ${readonly} value="${sanitize(v('auditor'))}" placeholder="اسم المدقق">
                                 </span>
                             </div>
+                            <div class="an-supervisor-bottom">
+                                <span class="an-auditor-inline an-supervisor-inline">
+                                    <span class="an-auditor-label">إجراء المسؤول :</span>
+                                    <input type="text" id="anSupervisorAction" ${readonly} value="${sanitize(v('supervisorAction'))}" placeholder="إجراء المسؤول">
+                                </span>
+                            </div>
                         </div>
                     </div>
 
@@ -984,14 +1060,62 @@ function openAuditNoteModal(complaintId, mode) {
     // اعرض اسم اليوم بناءً على التاريخ الحالي
     _anSyncDayName();
 
-    // ركّز على بوكس الكتابة الغنية + اربط سكرول الماوس لتكبير النص المحدّد
+    // ركّز على بوكس الكتابة الغنية + اربط سكرول الماوس لتكبير النص المحدّد + حمّل تفضيلات الخط
     if (!isView) {
         requestAnimationFrame(() => {
+            _anLoadPrefs();
             const ed = document.getElementById('anDetails');
             if (ed) ed.focus();
             _anBindZoomWheel();
         });
     }
+}
+
+/* ── تطبيق إعدادات الخط على بوكس الكتابة ── */
+function _anApplyFontPrefs() {
+    const ed = document.getElementById('anDetails');
+    const fam = document.getElementById('anFontFamily');
+    const sz  = document.getElementById('anFontSize');
+    if (!ed) return;
+    if (fam && fam.value) ed.style.fontFamily = fam.value + ", 'Tahoma', sans-serif";
+    if (sz  && sz.value)  ed.style.fontSize   = sz.value + 'px';
+}
+
+/* ── حفظ إعدادات الخط مشتركاً لجميع موظفي السيطرة ── */
+function _anSavePrefs(btn) {
+    const fam = document.getElementById('anFontFamily');
+    const sz  = document.getElementById('anFontSize');
+    if (!db.auditSettings || typeof db.auditSettings !== 'object') db.auditSettings = {};
+    db.auditSettings.fontFamily = fam ? fam.value : 'Arial';
+    db.auditSettings.fontSize   = sz  ? sz.value  : '15';
+    db.auditSettings.updatedAt  = Date.now();
+    db.auditSettings.updatedBy  = (currentUser && currentUser.name) || '—';
+    if (typeof saveAuditSettings === 'function') saveAuditSettings();
+    if (btn) {
+        const orig = btn.textContent;
+        btn.textContent = '✓';
+        btn.disabled = true;
+        setTimeout(() => { btn.textContent = orig; btn.disabled = false; }, 1500);
+    }
+}
+
+/* ── تحميل إعدادات الخط المحفوظة وتطبيقها ── */
+function _anLoadPrefs() {
+    const s = (db && db.auditSettings) || {};
+    const fam = document.getElementById('anFontFamily');
+    const sz  = document.getElementById('anFontSize');
+    if (fam && s.fontFamily) {
+        // إن لم يكن خياراً قياسياً أضفه
+        let found = false;
+        for (let i = 0; i < fam.options.length; i++) if (fam.options[i].value === s.fontFamily) { found = true; break; }
+        if (found) fam.value = s.fontFamily;
+    }
+    if (sz && s.fontSize) {
+        let found = false;
+        for (let i = 0; i < sz.options.length; i++) if (sz.options[i].value === s.fontSize) { found = true; break; }
+        if (found) sz.value = s.fontSize;
+    }
+    _anApplyFontPrefs();
 }
 
 /* ── تكبير/تصغير النص المحدّد بعجلة الماوس داخل بوكس الكتابة ── */
@@ -1075,17 +1199,18 @@ function submitAuditNote(complaintId, mode) {
     const _detText = _detEl ? (_detEl.innerText || _detEl.textContent || '').trim() : '';
 
     const fields = {
-        date:           document.getElementById('anDate').value.trim(),
-        time:           document.getElementById('anTime').value.trim(),
-        invoiceNumber:  document.getElementById('anInvNum').value.trim(),
-        invoiceValue:   document.getElementById('anInvValue').value.trim(),
-        user:           document.getElementById('anUser').value.trim(),
-        cashier:        document.getElementById('anCashier').value.trim(),
-        branch:         document.getElementById('anBranch').value.trim(),
-        details:        _detHtml,        // HTML غنيّ (يحوي ألوان/أحجام/محاذاة)
-        cameraNum:      document.getElementById('anCameraNum').value.trim(),
-        cameraTime:     document.getElementById('anCameraTime').value.trim(),
-        auditor:        document.getElementById('anAuditor').value.trim()
+        date:               document.getElementById('anDate').value.trim(),
+        time:               document.getElementById('anTime').value.trim(),
+        invoiceNumber:      document.getElementById('anInvNum').value.trim(),
+        invoiceValue:       document.getElementById('anInvValue').value.trim(),
+        user:               document.getElementById('anUser').value.trim(),
+        cashier:            document.getElementById('anCashier').value.trim(),
+        branch:             document.getElementById('anBranch').value.trim(),
+        details:            _detHtml,
+        cameraNum:          document.getElementById('anCameraNum').value.trim(),
+        cameraTime:         document.getElementById('anCameraTime').value.trim(),
+        auditor:            document.getElementById('anAuditor').value.trim(),
+        supervisorAction:   (document.getElementById('anSupervisorAction')?.value || '').trim()
     };
 
     const requiredKeys = ['date','time','invoiceNumber','invoiceValue','user','cashier','cameraNum','cameraTime','auditor'];
@@ -1337,6 +1462,18 @@ function printAuditNote(complaintId) {
         position:absolute;
         bottom:8px; left:10px;
     }
+    /* إجراء المسؤول pill عائم في الزاوية السفلى اليمنى */
+    .supervisor-bottom {
+        position:absolute;
+        bottom:8px; right:10px;
+    }
+    .supervisor-inline {
+        background:rgba(21,101,192,0.10) !important;
+        border-color:rgba(21,101,192,0.30) !important;
+    }
+    .supervisor-inline .auditor-inline-label {
+        color:#1565c0 !important;
+    }
     .controls {
         max-width:760px; margin:14px auto 0; text-align:center;
     }
@@ -1357,11 +1494,10 @@ function printAuditNote(complaintId) {
     }
     @media print {
         @page {
-            /* أفقي على A4 (297 × 210 mm) — landscape */
+            /* أفقي على A4 (297 × 210 mm) — landscape بهوامش صفر */
             size:A4 landscape;
             margin:0;
         }
-        /* ✅ إجبار الألوان والخلفيات على الظهور عند الطباعة */
         *, *::before, *::after {
             -webkit-print-color-adjust:exact !important;
             print-color-adjust:exact !important;
@@ -1371,45 +1507,65 @@ function printAuditNote(complaintId) {
             margin:0; padding:0; background:#fff;
             -webkit-print-color-adjust:exact;
             print-color-adjust:exact;
+            width:297mm; height:210mm;
+            overflow:hidden;   /* امنع تجاوز الصفحة */
         }
         body {
-            /* هوامش داخلية لـ A4 landscape (297 × 210 mm) */
-            padding:7mm 8mm !important;
-            min-height:210mm; box-sizing:border-box;
+            padding:4mm 5mm !important;
+            box-sizing:border-box;
+            width:297mm; height:210mm;
         }
         .controls { display:none !important; }
         .receipt {
-            box-shadow:none;
+            box-shadow:none !important;
             border:1.5px solid rgba(139,69,19,0.40) !important;
-            /* يملأ الصفحة الأفقية A4 بعد طرح padding الـ body (7+7 = 14mm) */
-            min-height:calc(210mm - 14mm) !important;
-            max-width:none !important; width:100% !important;
+            /* يملأ الصفحة A4 landscape (210 - 8 = 202 mm) */
+            height:calc(210mm - 8mm) !important;
+            max-height:calc(210mm - 8mm) !important;
+            width:calc(297mm - 10mm) !important;
+            max-width:none !important;
             margin:0 !important;
-            padding:12mm 14mm 10mm 14mm !important;
+            padding:5mm 8mm 5mm 8mm !important;
             display:flex; flex-direction:column;
             page-break-inside:avoid;
+            overflow:hidden;
         }
-        /* جعل منطقة الملاحظات تمتد بالمتاح المتبقي لتعبئة الفراغ */
+        /* الترويسة مضغوطة */
+        .head { padding-bottom:4mm !important; }
+        .brand { font-size:9px !important; letter-spacing:3px !important; margin-bottom:2px !important; }
+        .title { font-size:18px !important; }
+        .meta-block { margin:3mm 0 3mm !important; padding:4px 10px !important; font-size:11px !important; }
+        /* الجدول مضغوط */
+        table.fields { margin-top:2mm !important; }
+        table.fields-8 td.label { font-size:11px !important; padding:3px 3px !important; }
+        table.fields-8 td:not(.label) { font-size:11px !important; padding:4px 3px !important; }
+        /* منطقة الملاحظات تأخذ كل الباقي */
         .notes-area {
             flex:1 1 auto !important;
+            margin-top:3mm !important;
+            padding:5px !important;
             display:flex; flex-direction:column;
+            min-height:0;
+        }
+        .notes-box {
+            flex:1 1 auto !important;
+            padding:6px 10px 26px 10px !important;
+            display:flex; flex-direction:column;
+            min-height:0; overflow:hidden;
         }
         .notes-body {
             flex:1 1 auto !important;
-            min-height:40mm !important;
+            min-height:0 !important;
+            padding:4px 4px 4px 4px !important;
+            font-size:13px !important;
+            line-height:1.7 !important;
+            overflow:hidden;
         }
-        /* تقليل التباعد العمودي لاستيعاب الارتفاع الأقل */
-        .head { padding-bottom:10mm !important; }
-        .meta-block { margin:8px 0 10px !important; padding:6px 12px !important; }
-        table.fields { margin-top:8px !important; }
-        table.fields td { padding:6px 10px !important; font-size:12.5px !important; }
-        .notes-area { margin-top:10px !important; padding:10px 12px !important; }
-        .auditor { margin-top:14px !important; padding-top:12px !important; }
-        /* حافظ على بنية الجدول والقسم الذهبي والختم بألوانهم */
-        table.fields td.label, .meta-block, .notes-area, .auditor-name {
-            -webkit-print-color-adjust:exact !important;
-            print-color-adjust:exact !important;
-        }
+        .auditor-bottom { bottom:4px !important; left:6px !important; }
+        .supervisor-bottom { bottom:4px !important; right:6px !important; }
+        .auditor-inline { padding:2px 8px !important; }
+        .auditor-inline-name { padding:1px 8px !important; font-size:11.5px !important; min-width:130px !important; }
+        .auditor-inline-label { font-size:11.5px !important; }
     }
 </style>
 </head>
@@ -1466,6 +1622,12 @@ function printAuditNote(complaintId) {
                     <span class="auditor-inline">
                         <b class="auditor-inline-label">المدقق :</b>
                         <span class="auditor-inline-name">${sanitize(note.auditor)}</span>
+                    </span>
+                </div>
+                <div class="supervisor-bottom">
+                    <span class="auditor-inline supervisor-inline">
+                        <b class="auditor-inline-label">إجراء المسؤول :</b>
+                        <span class="auditor-inline-name">${sanitize(note.supervisorAction || '—')}</span>
                     </span>
                 </div>
             </div>
@@ -1618,6 +1780,9 @@ window.jumpToAuditNoteFromComplaint = jumpToAuditNoteFromComplaint;
 window._anSyncDayName = _anSyncDayName;
 window._anZoomSelection = _anZoomSelection;
 window._anBindZoomWheel = _anBindZoomWheel;
+window._anApplyFontPrefs = _anApplyFontPrefs;
+window._anSavePrefs = _anSavePrefs;
+window._anLoadPrefs = _anLoadPrefs;
 
 /* ══════════════════════════════════════════════════════
    حقن CSS فور تحميل الملف — لكي يحصل زر «📋 ملاحظات السيطرة»

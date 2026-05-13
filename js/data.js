@@ -446,7 +446,7 @@ async function loadAllData(force) {
     // عند الإجبار: لا ننتظر إن كان عالقاً — نُعيد ضبط العلَم ونتابع
     _isLoading = true;
     try {
-    const keys = ['Shaab_Master_DB','Shaab_Employees_DB','Shaab_Breaks_DB','Shaab_Sessions_DB','Shaab_AuditNotes_DB','Shaab_Compensations_DB'];
+    const keys = ['Shaab_Master_DB','Shaab_Employees_DB','Shaab_Breaks_DB','Shaab_Sessions_DB','Shaab_AuditNotes_DB','Shaab_Compensations_DB','Shaab_AuditSettings_DB'];
     if (IS_LOCAL) {
         db        = localStorage.getItem('Shaab_Master_DB')    ? JSON.parse(localStorage.getItem('Shaab_Master_DB'))    : { montasiat:[], inquiries:[], complaints:[] };
         employees = localStorage.getItem('Shaab_Employees_DB') ? JSON.parse(localStorage.getItem('Shaab_Employees_DB')) : [];
@@ -586,6 +586,14 @@ async function loadAllData(force) {
                 } catch (e) { console.warn('[loadAllData] failed to parse Shaab_Compensations_DB:', e); }
             }
             if (!Array.isArray(db.compensations)) db.compensations = [];
+            // 🛡️ إعدادات نموذج تدقيق السيطرة (مشتركة) — مفتاح مستقلّ
+            if (data['Shaab_AuditSettings_DB']) {
+                try {
+                    const _as = JSON.parse(data['Shaab_AuditSettings_DB']);
+                    if (_as && typeof _as === 'object') db.auditSettings = _as;
+                } catch (e) { console.warn('[loadAllData] failed to parse Shaab_AuditSettings_DB:', e); }
+            }
+            if (!db.auditSettings || typeof db.auditSettings !== 'object') db.auditSettings = {};
 
             // 🔒 خزّن إصدارات المفاتيح من السيرفر للحفاظ على التزامن في الحفظ القادم
             if (data['_versions'] && typeof data['_versions'] === 'object') {
@@ -1096,6 +1104,7 @@ function saveSessions()   { _push('Shaab_Sessions_DB',   JSON.stringify(sessions
 function savePriceList()  { _push('Shaab_PriceList_DB',  JSON.stringify(priceList)); }
 function saveAuditNotes()    { _push('Shaab_AuditNotes_DB',    JSON.stringify(db.auditNotes    || [])); }
 function saveCompensations() { _push('Shaab_Compensations_DB', JSON.stringify(db.compensations || [])); }
+function saveAuditSettings() { _push('Shaab_AuditSettings_DB', JSON.stringify(db.auditSettings || {})); }
 
 function _toLatinDigits(str) {
     return String(str)

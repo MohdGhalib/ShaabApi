@@ -26,7 +26,8 @@ public class StorageController : ControllerBase
         "Shaab_FCM_Tokens",
         "Shaab_Firebase_Creds",
         "Shaab_AuditNotes_DB",
-        "Shaab_Compensations_DB"
+        "Shaab_Compensations_DB",
+        "Shaab_AuditSettings_DB"
     ];
 
     // هذه المفاتيح لا يمكن تعديلها إلا من قِبل المدراء
