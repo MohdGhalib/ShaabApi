@@ -1063,10 +1063,10 @@ function openAuditNoteModal(complaintId, mode) {
                 </div>
 
                 <div class="an-body">
-                    <!-- معلومات الشكوى المرتبطة (عرض فقط) -->
-                    <div class="an-linked-info">
+                    <!-- معلومات الشكوى المرتبطة (عرض فقط — ملخّص ذكي + النص الكامل عند الـ hover) -->
+                    <div class="an-linked-info" title="${sanitize(complaint.notes || '')}">
                         🔗 <b>شكوى السيطرة المرتبطة:</b>
-                        <span class="an-linked-text">${sanitize((complaint.notes || '').substring(0, 140))}${(complaint.notes || '').length > 140 ? '…' : ''}</span>
+                        <span class="an-linked-text">${sanitize(_anSummarize(complaint.notes || '', 140))}</span>
                         <span class="an-linked-sep">//</span>
                         <b>الفرع:</b> <span class="an-linked-branch">${sanitize(complaint.branch || '—')}</span>
                     </div>
@@ -1497,6 +1497,37 @@ function _anFieldLabel(key) {
     return map[key] || key;
 }
 
+/* ══════════════════════════════════════════════════════
+   ملخّص ذكي لنصوص شكوى السيطرة الطويلة
+   استراتيجية محلية بدون LLM:
+   1) إزالة التكرار والمسافات الزائدة
+   2) محاولة قصّ عند نهاية جملة منطقية (. ، ؛ \n) قرب الطول المستهدف
+   3) أو القص عند حدّ كلمة + إضافة …
+   ══════════════════════════════════════════════════════ */
+function _anSummarize(text, maxLen) {
+    if (!text) return '';
+    const max = maxLen || 130;
+    let t = String(text)
+        .replace(/\s+/g, ' ')
+        .replace(/([.،؛!?])\1+/g, '$1')   // اختصار تكرار نفس علامة الترقيم
+        .trim();
+    if (t.length <= max) return t;
+
+    // 1) إن وُجدت جملة كاملة منطقية أقل من max — استخدمها
+    const sentenceMatch = t.match(/^[\s\S]{30,}?[.،؛\n!?]/);
+    if (sentenceMatch && sentenceMatch[0].length <= max) {
+        return sentenceMatch[0].trim();
+    }
+
+    // 2) قصّ عند آخر كلمة قبل max
+    let cut = t.substring(0, max);
+    const lastSpace = cut.lastIndexOf(' ');
+    if (lastSpace > max * 0.55) cut = cut.substring(0, lastSpace);
+    // أزل علامات ترقيم نهائية مزعجة
+    cut = cut.replace(/[\s.،؛,]+$/, '');
+    return cut + ' …';
+}
+
 /* ── حساب اسم اليوم بالعربية (للطباعة) ── */
 function _anPrintDay(dateStr) {
     const days = ['الأحد','الإثنين','الثلاثاء','الأربعاء','الخميس','الجمعة','السبت'];
@@ -1517,7 +1548,7 @@ function printAuditNote(complaintId) {
 
     const linkedC = (db.complaints || []).find(c => c.id == complaintId);
     const complaintLine = linkedC
-        ? `شكوى السيطرة المرتبطة: ${sanitize((linkedC.notes || '').substring(0, 100))}`
+        ? `شكوى السيطرة المرتبطة: ${sanitize(_anSummarize(linkedC.notes || '', 180))}`
         : 'شكوى السيطرة المرتبطة: —';
 
     const w = window.open('', '_blank', 'width=900,height=1100');
@@ -1797,7 +1828,7 @@ function printAuditNote(complaintId) {
         <div class="meta-block">
             <div class="meta-line">
                 <b>🔗 شكوى السيطرة المرتبطة:</b>
-                ${sanitize((linkedC && linkedC.notes) ? linkedC.notes.substring(0, 140) + ((linkedC.notes.length > 140) ? '…' : '') : '—')}
+                ${sanitize(_anSummarize((linkedC && linkedC.notes) || '—', 180))}
                 <span style="color:#a07838;font-weight:900;margin:0 6px;">//</span>
                 <b>الفرع:</b> ${sanitize(note.branch || (linkedC && linkedC.branch) || '—')}
             </div>
@@ -1938,7 +1969,7 @@ function renderAuditNotes() {
     container.innerHTML = notes.map(n => {
         const linkedC = (db.complaints || []).find(c => c.id == n.complaintId);
         const complaintInfo = linkedC
-            ? `<div style="font-size:11.5px;color:var(--text-dim);margin-top:4px;">🔗 شكوى السيطرة: <b style="color:#90caf9;">${sanitize((linkedC.notes || '').substring(0, 60))}${(linkedC.notes || '').length > 60 ? '…' : ''}</b></div>`
+            ? `<div style="font-size:11.5px;color:var(--text-dim);margin-top:4px;" title="${sanitize(linkedC.notes || '')}">🔗 شكوى السيطرة: <b style="color:#90caf9;">${sanitize(_anSummarize(linkedC.notes || '', 100))}</b></div>`
             : `<div style="font-size:11.5px;color:#ef9a9a;margin-top:4px;">⚠️ الشكوى المرتبطة لم تعد موجودة</div>`;
         // استخرج النص الخالص من HTML الغنيّ (إزالة كل الـ tags واستبدال الفراغات المتعددة)
         const _detailsPlain = (n.details || '')
@@ -2013,6 +2044,7 @@ window._anLoadPrefs = _anLoadPrefs;
 window._anDraftSend    = _anDraftSend;
 window._anDraftSave    = _anDraftSave;
 window._anDraftDiscard = _anDraftDiscard;
+window._anSummarize    = _anSummarize;
 
 /* ══════════════════════════════════════════════════════
    حقن CSS فور تحميل الملف — لكي يحصل زر «📋 ملاحظات السيطرة»
