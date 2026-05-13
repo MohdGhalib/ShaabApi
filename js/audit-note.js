@@ -389,18 +389,31 @@ function _anEnsureStyles() {
             bottom:8px; left:10px;
             z-index:3;
         }
-        /* إجراء المسؤول — pill عائم في الزاوية السفلى اليمنى بصرياً */
+        /* إجراء المسؤول — يمتدّ من اليمين حتى قبل بوكس المدقق على اليسار */
         #anModal .an-supervisor-bottom {
             position:absolute;
             bottom:8px; right:10px;
+            left:240px;   /* يحجز ~240px لبوكس المدقق على الجهة اليسرى */
             z-index:3;
         }
         #anModal .an-supervisor-inline {
             background:rgba(21,101,192,0.10) !important;
             border-color:rgba(21,101,192,0.30) !important;
+            display:flex !important;
+            width:100%;
+            box-sizing:border-box;
         }
         #anModal .an-supervisor-inline .an-auditor-label {
             color:#1565c0 !important;
+            flex-shrink:0;
+        }
+        #anModal .an-supervisor-inline input {
+            flex:1 1 auto !important;
+            min-width:0 !important;
+            width:auto !important;
+        }
+        @media (max-width:760px) {
+            #anModal .an-supervisor-bottom { left:200px; }
         }
         /* توقيع المدقق — inline داخل شريط الـ top الأبيض */
         #anModal .an-auditor-inline {
@@ -476,9 +489,9 @@ function _anEnsureStyles() {
             min-height:360px;
             padding:8px 6px 50px;   /* مساحة سفلى لتجنّب تغطية المدقق */
             flex:1 1 auto;
-            /* خط Arial Bold دائماً للكتابة الغنية */
-            font-family: Arial, 'Tahoma', sans-serif !important;
-            font-weight: bold !important;
+            /* خط افتراضي Arial Bold — قابل للتغيير عبر تفضيلات الخط */
+            font-family: Arial, 'Tahoma', sans-serif;
+            font-weight: bold;
             font-size:15px;
             line-height:1.75;
             color:#3a2818;
@@ -1077,8 +1090,12 @@ function _anApplyFontPrefs() {
     const fam = document.getElementById('anFontFamily');
     const sz  = document.getElementById('anFontSize');
     if (!ed) return;
-    if (fam && fam.value) ed.style.fontFamily = fam.value + ", 'Tahoma', sans-serif";
-    if (sz  && sz.value)  ed.style.fontSize   = sz.value + 'px';
+    if (fam && fam.value) {
+        ed.style.setProperty('font-family', fam.value + ", 'Tahoma', sans-serif", 'important');
+    }
+    if (sz && sz.value) {
+        ed.style.setProperty('font-size', sz.value + 'px', 'important');
+    }
 }
 
 /* ── حفظ إعدادات الخط مشتركاً لجميع موظفي السيطرة ── */
