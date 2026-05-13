@@ -282,26 +282,18 @@ function _anEnsureStyles() {
             box-shadow:0 1px 3px rgba(139,69,19,0.06);
             position:relative;   /* لتثبيت المدقق في الزاوية */
         }
-        /* العبارة الثابتة "بعد المتابعة والتدقيق :" في أعلى البوكس */
-        #anModal .an-prefix-static {
+        /* العبارة الثابتة "بعد المتابعة والتدقيق :" — تظهر إنلاين قبل النص مباشرة */
+        #anModal .an-notes-pad::before {
+            content: 'بعد المتابعة والتدقيق : ';
             font-family: Arial, 'Tahoma', sans-serif;
             font-weight: 900;
-            font-size: 14px;
             color:#075e54;
-            padding-bottom:4px;
-            border-bottom:1px dashed rgba(139,69,19,0.20);
-            margin-bottom:2px;
+            display:inline;
+            pointer-events:none;
+            -webkit-user-modify: read-only;
+            user-modify: read-only;
         }
-        /* placeholder للـ contenteditable الفارغ */
-        #anModal .an-notes-pad:empty:before {
-            content: attr(data-placeholder);
-            color:#a08770;
-            font-style:italic;
-            font-weight:normal;
-        }
-        #anModal .an-notes-pad.an-readonly {
-            cursor:default;
-        }
+        #anModal .an-notes-pad.an-readonly { cursor:default; }
         #anModal .an-notes-top {
             display:flex; align-items:center; gap:8px;
             flex-wrap:wrap;
@@ -958,7 +950,6 @@ function openAuditNoteModal(complaintId, mode) {
                     <!-- البوكس الأبيض الكبير — كتابة غنية + توقيع المدقق في الأسفل -->
                     <div class="an-notes-area">
                         <div class="an-notes-box">
-                            <div class="an-prefix-static">بعد المتابعة والتدقيق :</div>
                             <div id="anDetails" class="an-notes-pad${isView ? ' an-readonly' : ''}" ${isView ? '' : 'contenteditable="true"'} data-placeholder="اكتب التفاصيل ...">${(v('details') || '').replace(/^بعد المتابعة والتدقيق\s*:\s*/, '').trim()}</div>
                             <div class="an-auditor-bottom">
                                 <span class="an-auditor-inline">
@@ -1325,13 +1316,12 @@ function printAuditNote(complaintId) {
     .notes-box {
         position:relative;
     }
-    .prefix-static {
+    .notes-body::before {
+        content: 'بعد المتابعة والتدقيق : ';
         font-family: Arial, 'Tahoma', sans-serif;
-        font-weight:900; font-size:13.5px;
+        font-weight: 900;
         color:#075e54;
-        padding-bottom:3px;
-        border-bottom:1px dashed rgba(139,69,19,0.20);
-        margin-bottom:4px;
+        display:inline;
     }
     .notes-body {
         padding:8px 6px 50px;
@@ -1471,7 +1461,6 @@ function printAuditNote(complaintId) {
 
         <div class="notes-area">
             <div class="notes-box">
-                <div class="prefix-static">بعد المتابعة والتدقيق :</div>
                 <div class="notes-body">${(note.details || '—').replace(/^بعد المتابعة والتدقيق\s*:\s*/, '')}</div>
                 <div class="auditor-bottom">
                     <span class="auditor-inline">
