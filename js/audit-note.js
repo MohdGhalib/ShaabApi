@@ -1064,10 +1064,10 @@ function openAuditNoteModal(complaintId, mode) {
                 </div>
 
                 <div class="an-body">
-                    <!-- معلومات الشكوى المرتبطة (عرض النص بالكامل) -->
+                    <!-- معلومات الشكوى المرتبطة (مع اقتطاع بسيط ثم اسم الفرع) -->
                     <div class="an-linked-info">
                         🔗 <b>شكوى السيطرة المرتبطة:</b>
-                        <span class="an-linked-text">${sanitize(complaint.notes || '—')}</span>
+                        <span class="an-linked-text">${sanitize((complaint.notes || '').substring(0, 140))}${(complaint.notes || '').length > 140 ? '…' : ''}</span>
                         <span class="an-linked-sep">//</span>
                         <b>الفرع:</b> <span class="an-linked-branch">${sanitize(complaint.branch || '—')}</span>
                     </div>
@@ -1518,7 +1518,7 @@ function printAuditNote(complaintId) {
 
     const linkedC = (db.complaints || []).find(c => c.id == complaintId);
     const complaintLine = linkedC
-        ? `شكوى السيطرة المرتبطة: ${sanitize(linkedC.notes || '—')}`
+        ? `شكوى السيطرة المرتبطة: ${sanitize((linkedC.notes || '').substring(0, 100))}${(linkedC.notes || '').length > 100 ? '…' : ''}`
         : 'شكوى السيطرة المرتبطة: —';
 
     const w = window.open('', '_blank', 'width=900,height=1100');
@@ -1799,7 +1799,7 @@ function printAuditNote(complaintId) {
         <div class="meta-block">
             <div class="meta-line">
                 <b>🔗 شكوى السيطرة المرتبطة:</b>
-                ${sanitize((linkedC && linkedC.notes) || '—')}
+                ${sanitize(((linkedC && linkedC.notes) || '').substring(0, 180))}${((linkedC && linkedC.notes) || '').length > 180 ? '…' : ''}
                 <span style="color:#a07838;font-weight:900;margin:0 6px;">//</span>
                 <b>الفرع:</b> ${sanitize(note.branch || (linkedC && linkedC.branch) || '—')}
             </div>
@@ -1940,7 +1940,7 @@ function renderAuditNotes() {
     container.innerHTML = notes.map(n => {
         const linkedC = (db.complaints || []).find(c => c.id == n.complaintId);
         const complaintInfo = linkedC
-            ? `<div style="font-size:17px;color:var(--text-dim);margin-top:6px;line-height:1.7;font-weight:600;">🔗 شكوى السيطرة: <b style="color:#90caf9;">${sanitize(linkedC.notes || '—')}</b></div>`
+            ? `<div style="font-size:17px;color:var(--text-dim);margin-top:6px;line-height:1.7;font-weight:600;">🔗 شكوى السيطرة: <b style="color:#90caf9;">${sanitize((linkedC.notes || '').substring(0, 100))}${(linkedC.notes || '').length > 100 ? '…' : ''}</b></div>`
             : `<div style="font-size:17px;color:#ef9a9a;margin-top:6px;">⚠️ الشكوى المرتبطة لم تعد موجودة</div>`;
         // استخرج النص الخالص من HTML الغنيّ (إزالة كل الـ tags واستبدال الفراغات المتعددة)
         const _detailsPlain = (n.details || '')
