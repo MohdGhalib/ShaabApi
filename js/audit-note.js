@@ -1727,28 +1727,22 @@ function printAuditNote(complaintId) {
             margin:0; padding:0; background:#fff;
             -webkit-print-color-adjust:exact;
             print-color-adjust:exact;
-            width:297mm; height:210mm;
-            overflow:hidden;   /* امنع تجاوز الصفحة */
         }
         body {
-            padding:4mm 5mm !important;
+            padding:5mm 6mm !important;
             box-sizing:border-box;
-            width:297mm; height:210mm;
         }
         .controls { display:none !important; }
         .receipt {
             box-shadow:none !important;
             border:1.5px solid rgba(139,69,19,0.40) !important;
             /* يملأ الصفحة A4 landscape (210 - 8 = 202 mm) */
-            height:calc(210mm - 8mm) !important;
-            max-height:calc(210mm - 8mm) !important;
-            width:calc(297mm - 10mm) !important;
             max-width:none !important;
+            width:100% !important;
             margin:0 !important;
-            padding:5mm 8mm 5mm 8mm !important;
-            display:flex; flex-direction:column;
+            padding:6mm 8mm 6mm 8mm !important;
             page-break-inside:avoid;
-            overflow:hidden;
+            /* لا height/flex/overflow قسري — يأخذ ارتفاع المحتوى الطبيعي */
         }
         /* الترويسة مضغوطة */
         .head { padding-bottom:4mm !important; }
@@ -1759,27 +1753,20 @@ function printAuditNote(complaintId) {
         table.fields { margin-top:2mm !important; }
         table.fields-8 td.label { font-size:11px !important; padding:3px 3px !important; }
         table.fields-8 td:not(.label) { font-size:11px !important; padding:4px 3px !important; }
-        /* منطقة الملاحظات تأخذ كل الباقي */
+        /* منطقة الملاحظات بحجمها الطبيعي — لا تمديد قسري */
         .notes-area {
-            flex:1 1 auto !important;
             margin-top:3mm !important;
-            padding:5px !important;
-            display:flex; flex-direction:column;
-            min-height:0;
+            padding:6px !important;
         }
         .notes-box {
-            flex:1 1 auto !important;
-            padding:6px 10px 26px 10px !important;
-            display:flex; flex-direction:column;
-            min-height:0; overflow:hidden;
+            padding:8px 12px 36px 12px !important;
+            min-height:auto !important;
         }
         .notes-body {
-            flex:1 1 auto !important;
-            min-height:0 !important;
-            padding:4px 4px 4px 4px !important;
-            font-size:13px !important;
+            padding:4px 4px !important;
+            font-size:14px !important;
             line-height:1.7 !important;
-            overflow:hidden;
+            min-height:auto !important;
         }
         .auditor-bottom { bottom:4px !important; left:6px !important; }
         .supervisor-bottom { bottom:4px !important; right:6px !important; }
