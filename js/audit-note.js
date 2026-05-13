@@ -929,7 +929,7 @@ function printAuditNote(complaintId) {
 <meta charset="UTF-8">
 <title> </title>
 <style>
-    @page { size:A4; margin:15mm 12mm 18mm 12mm; }
+    @page { size:A4 landscape; margin:12mm 14mm; }
     * { box-sizing:border-box; }
     body {
         margin:0; padding:24px;
@@ -1023,8 +1023,8 @@ function printAuditNote(complaintId) {
     }
     @media print {
         @page {
-            size:A4;
-            /* صفر للهوامش لإلغاء ترويسة وذيل المتصفح، نتحكم بالداخل عبر body padding */
+            /* أفقي على A4 (297 × 210 mm) — landscape */
+            size:A4 landscape;
             margin:0;
         }
         /* ✅ إجبار الألوان والخلفيات على الظهور عند الطباعة */
@@ -1039,19 +1039,19 @@ function printAuditNote(complaintId) {
             print-color-adjust:exact;
         }
         body {
-            /* هوامش داخلية معتدلة ضمن A4 (210 × 297 mm) */
-            padding:8mm 8mm 8mm 8mm !important;
-            min-height:297mm; box-sizing:border-box;
+            /* هوامش داخلية لـ A4 landscape (297 × 210 mm) */
+            padding:7mm 8mm !important;
+            min-height:210mm; box-sizing:border-box;
         }
         .controls { display:none !important; }
         .receipt {
             box-shadow:none;
             border:1.5px solid rgba(139,69,19,0.40) !important;
-            /* تمدّد ليملأ الصفحة A4 بعد طرح padding الـ body (8+8 = 16mm) */
-            min-height:calc(297mm - 16mm) !important;
+            /* يملأ الصفحة الأفقية A4 بعد طرح padding الـ body (7+7 = 14mm) */
+            min-height:calc(210mm - 14mm) !important;
             max-width:none !important; width:100% !important;
             margin:0 !important;
-            padding:18mm 14mm 16mm 14mm !important;
+            padding:12mm 14mm 10mm 14mm !important;
             display:flex; flex-direction:column;
             page-break-inside:avoid;
         }
@@ -1062,8 +1062,15 @@ function printAuditNote(complaintId) {
         }
         .notes-body {
             flex:1 1 auto !important;
-            min-height:80mm !important;
+            min-height:40mm !important;
         }
+        /* تقليل التباعد العمودي لاستيعاب الارتفاع الأقل */
+        .head { padding-bottom:10mm !important; }
+        .meta-block { margin:8px 0 10px !important; padding:6px 12px !important; }
+        table.fields { margin-top:8px !important; }
+        table.fields td { padding:6px 10px !important; font-size:12.5px !important; }
+        .notes-area { margin-top:10px !important; padding:10px 12px !important; }
+        .auditor { margin-top:14px !important; padding-top:12px !important; }
         /* حافظ على بنية الجدول والقسم الذهبي والختم بألوانهم */
         table.fields td.label, .meta-block, .notes-area, .auditor-name {
             -webkit-print-color-adjust:exact !important;
