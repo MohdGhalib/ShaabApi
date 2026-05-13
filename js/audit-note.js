@@ -144,24 +144,39 @@ function _anEnsureStyles() {
         #anModal .an-row-5 { grid-template-columns:repeat(5, minmax(0,1fr)); }
         #anModal .an-row-4 { grid-template-columns:repeat(4, minmax(0,1fr)); }
         #anModal .an-row-6 { grid-template-columns:repeat(6, minmax(0,1fr)); }
-        #anModal .an-row-8 { grid-template-columns:repeat(8, minmax(0,1fr)); gap:5px 6px; padding:6px 8px; }
-        /* حقول مضغوطة للصف الـ 8 */
+        /* الأعمدة 8 — أحجام مخصصة: الوقت ورقم الفاتورة أضيق، اليوم أعرض */
+        #anModal .an-row-8 {
+            grid-template-columns:
+                1.5fr   /* اليوم (يحوي تاريخ + اسم اليوم) */
+                0.75fr  /* الوقت */
+                0.95fr  /* رقم الفاتورة */
+                1fr     /* قيمة الفاتورة */
+                0.95fr  /* اليوزر */
+                1.1fr   /* اسم الكاشير */
+                0.95fr  /* رقم الكاميرا */
+                0.85fr; /* وقت الكاميرا */
+            gap:5px 6px; padding:6px 8px;
+        }
         #anModal .an-row-8 .an-field label { font-size:9.5px; letter-spacing:0; }
         #anModal .an-row-8 .an-field input {
             font-size:11px; padding:4px 6px;
             border-radius:6px;
         }
-        #anModal .an-row-8 .an-day-name {
-            font-size:9.5px; padding:0 4px;
+        /* صف داخلي: التاريخ + اسم اليوم جنباً إلى جنب */
+        #anModal .an-date-inline {
+            display:flex; align-items:center; gap:4px;
+        }
+        #anModal .an-date-inline input {
+            flex:1 1 auto; min-width:0;
+        }
+        #anModal .an-date-inline .an-day-name {
+            font-size:10px; font-weight:800; color:#7a4a26;
+            background:rgba(192,147,93,0.15);
+            border-radius:5px; padding:2px 6px;
+            white-space:nowrap; flex-shrink:0;
+            margin:0;
         }
 
-        /* اسم اليوم تحت حقل التاريخ */
-        #anModal .an-day-name {
-            font-size:11px; font-weight:800; color:#7a4a26;
-            text-align:center; margin-top:2px;
-            background:rgba(192,147,93,0.10);
-            border-radius:6px; padding:1px 6px;
-        }
 
         /* خطّ معلومات الشكوى المرتبطة */
         #anModal .an-linked-info {
@@ -834,8 +849,10 @@ function openAuditNoteModal(complaintId, mode) {
                         <div class="an-row an-row-8">
                             <div class="an-field">
                                 <label>اليوم <span class="req">*</span></label>
-                                <input type="date" id="anDate" ${readonly} value="${v('date', dateStr)}" onchange="_anSyncDayName()">
-                                <span class="an-day-name" id="anDayName">—</span>
+                                <div class="an-date-inline">
+                                    <input type="date" id="anDate" ${readonly} value="${v('date', dateStr)}" onchange="_anSyncDayName()">
+                                    <span class="an-day-name" id="anDayName">—</span>
+                                </div>
                             </div>
                             <div class="an-field">
                                 <label>الوقت <span class="req">*</span></label>
@@ -1102,8 +1119,17 @@ function printAuditNote(complaintId) {
     table.fields-6 td:not(.label) {
         text-align:center; font-weight:700; font-size:13px;
     }
+    /* أعمدة 8 — أحجام مخصصة: الوقت أضيق، اليوم أعرض */
+    table.fields-8 col.col-day      { width:16%; }
+    table.fields-8 col.col-time     { width:9%; }
+    table.fields-8 col.col-invnum   { width:11%; }
+    table.fields-8 col.col-invval   { width:12%; }
+    table.fields-8 col.col-user     { width:11%; }
+    table.fields-8 col.col-cashier  { width:13%; }
+    table.fields-8 col.col-camnum   { width:11%; }
+    table.fields-8 col.col-camtime  { width:9%; }
     table.fields-8 td.label {
-        font-size:10.5px; width:12.5%; padding:5px 4px;
+        font-size:10.5px; padding:5px 4px;
     }
     table.fields-8 td:not(.label) {
         text-align:center; font-weight:700; font-size:11.5px; padding:6px 4px;
@@ -1264,6 +1290,10 @@ function printAuditNote(complaintId) {
         </div>
 
         <table class="fields fields-8">
+            <colgroup>
+                <col class="col-day"><col class="col-time"><col class="col-invnum"><col class="col-invval">
+                <col class="col-user"><col class="col-cashier"><col class="col-camnum"><col class="col-camtime">
+            </colgroup>
             <tr>
                 <td class="label">اليوم</td>
                 <td class="label">الوقت</td>
@@ -1275,7 +1305,10 @@ function printAuditNote(complaintId) {
                 <td class="label">⏰ وقت الكاميرا</td>
             </tr>
             <tr>
-                <td>${sanitize(_anPrintDay(note.date))} <span style="display:block;font-size:10px;color:#7a4a26;font-weight:700;">${sanitize(note.date)}</span></td>
+                <td>
+                    <span style="font-size:11px;color:#7a4a26;font-weight:700;background:rgba(192,147,93,0.15);padding:1px 6px;border-radius:5px;margin-left:6px;">${sanitize(_anPrintDay(note.date))}</span>
+                    ${sanitize(note.date)}
+                </td>
                 <td>${sanitize(note.time)}</td>
                 <td>${sanitize(note.invoiceNumber)}</td>
                 <td>${sanitize(note.invoiceValue)}</td>
