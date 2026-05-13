@@ -216,7 +216,28 @@ function _anEnsureStyles() {
             display:flex; flex-direction:column; gap:8px;
             flex:1 1 auto;
         }
-        /* رأس داخلي للبوكس: حقول الكاميرا + عبارة "بعد المتابعة والتدقيق" */
+        /* البوكس الأبيض الكبير (يحوي البيانات + الكتابة) */
+        #anModal .an-notes-box {
+            background:#fff;
+            border:1.5px solid rgba(139,69,19,0.30);
+            border-radius:10px;
+            padding:10px 14px 12px;
+            display:flex; flex-direction:column; gap:8px;
+            flex:1 1 auto; min-height:340px;
+            box-shadow:0 1px 3px rgba(139,69,19,0.06);
+        }
+        #anModal .an-notes-top {
+            display:flex; align-items:center; gap:8px;
+            flex-wrap:wrap;
+            padding-bottom:8px;
+            border-bottom:1.5px dashed rgba(139,69,19,0.25);
+            font-size:12px;
+        }
+        #anModal .an-seps {
+            font-weight:900; color:#a07838; letter-spacing:1px;
+            font-size:13px;
+        }
+        /* رأس داخلي قديم — احتفاظ لتوافق سابق */
         #anModal .an-notes-header {
             display:flex; align-items:center; gap:12px;
             flex-wrap:wrap;
@@ -258,32 +279,32 @@ function _anEnsureStyles() {
             border-radius:8px;
             letter-spacing:0.3px;
         }
-        /* توقيع المدقق داخل البوكس — أقصى اليسار */
+        /* توقيع المدقق — inline داخل شريط الـ top الأبيض */
         #anModal .an-auditor-inline {
-            display:flex; align-items:center; gap:8px;
-            align-self:flex-end;   /* في RTL: flex-end يضع العنصر يساراً بصرياً */
-            padding:4px 8px;
-            background:rgba(255,255,255,0.55);
-            border:1px solid rgba(139,69,19,0.20);
+            display:inline-flex; align-items:center; gap:6px;
+            margin-inline-start:auto;   /* يدفع للجهة الأخرى تلقائياً (يسار في RTL) */
+            padding:3px 10px;
+            background:rgba(212,170,90,0.10);
+            border:1px solid rgba(139,69,19,0.25);
             border-radius:8px;
-            margin-top:4px;
         }
         #anModal .an-auditor-inline .an-auditor-label {
             font-family:'Reem Kufi','Cairo',sans-serif;
-            font-size:13px; font-weight:900; color:#5c3919;
-            letter-spacing:1px;
+            font-size:12.5px; font-weight:900; color:#5c3919;
+            letter-spacing:0.5px;
             background:none !important; -webkit-text-fill-color:initial !important; color:#5c3919 !important;
             margin:0 !important;
+            white-space:nowrap;
         }
         #anModal .an-auditor-inline input {
             font-family:'Cairo','Tajawal',sans-serif;
-            font-size:13.5px; font-weight:800;
-            padding:4px 10px;
+            font-size:12.5px; font-weight:800;
+            padding:2px 8px;
             border:none;
             border-bottom:1.5px solid #5c3919;
             background:transparent;
             color:#3a2818;
-            min-width:200px;
+            min-width:140px;
             outline:none; text-align:start;
             transition:border-color 0.18s;
         }
@@ -330,9 +351,13 @@ function _anEnsureStyles() {
         }
         #anModal .an-notes-pad {
             width:100%; box-sizing:border-box;
-            min-height:340px; resize:vertical;
-            padding:14px 18px;
+            min-height:260px; resize:vertical;
+            padding:8px 6px;
             flex:1 1 auto;
+            /* إلغاء الإطار لأن البوكس الخارجي an-notes-box هو الذي يحويه */
+            border:none !important;
+            box-shadow:none !important;
+            background:transparent !important;
             font-family:'Cairo','Tajawal',sans-serif;
             font-size:13px; line-height:1.7;
             color:#3a2818;
@@ -825,23 +850,27 @@ function openAuditNoteModal(complaintId, mode) {
                         </div>
                     </div>
 
-                    <!-- منطقة الكتابة الكبيرة (تشغل ثلثَي الصفحة) -->
+                    <!-- البوكس الأبيض الكبير — يحوي كل البيانات الخفيفة + منطقة الكتابة -->
                     <div class="an-notes-area">
-                        <div class="an-notes-header">
-                            <span class="an-cam-cell">
-                                <span class="an-cam-mini">📷 رقم الكاميرا:</span>
-                                <input type="text" id="anCameraNum" ${readonly} value="${sanitize(v('cameraNum'))}" placeholder="رقم">
-                            </span>
-                            <span class="an-cam-cell">
-                                <span class="an-cam-mini">⏰ وقت الكاميرا:</span>
-                                <input type="time" id="anCameraTime" ${readonly} value="${v('cameraTime')}">
-                            </span>
-                            <span class="an-prefix-label">بعد المتابعة والتدقيق :</span>
-                        </div>
-                        <textarea id="anDetails" class="an-notes-pad" ${readonly} rows="10" placeholder="اكتب التفاصيل ...">${sanitize(v('details'))}</textarea>
-                        <div class="an-auditor-inline">
-                            <span class="an-auditor-label">المدقق :</span>
-                            <input type="text" id="anAuditor" ${readonly} value="${sanitize(v('auditor'))}" placeholder="اسم المدقق">
+                        <div class="an-notes-box">
+                            <div class="an-notes-top">
+                                <span class="an-cam-cell">
+                                    <span class="an-cam-mini">📷 رقم الكاميرا:</span>
+                                    <input type="text" id="anCameraNum" ${readonly} value="${sanitize(v('cameraNum'))}" placeholder="رقم">
+                                </span>
+                                <span class="an-seps">,,,</span>
+                                <span class="an-cam-cell">
+                                    <span class="an-cam-mini">⏰ وقت الكاميرا:</span>
+                                    <input type="time" id="anCameraTime" ${readonly} value="${v('cameraTime')}">
+                                </span>
+                                <span class="an-seps">,,,</span>
+                                <span class="an-prefix-label">بعد المتابعة والتدقيق :</span>
+                                <span class="an-auditor-inline">
+                                    <span class="an-auditor-label">المدقق :</span>
+                                    <input type="text" id="anAuditor" ${readonly} value="${sanitize(v('auditor'))}" placeholder="اسم المدقق">
+                                </span>
+                            </div>
+                            <textarea id="anDetails" class="an-notes-pad" ${readonly} rows="10" placeholder="اكتب التفاصيل ...">${sanitize(v('details'))}</textarea>
                         </div>
                     </div>
 
@@ -1069,56 +1098,64 @@ function printAuditNote(complaintId) {
         margin-top:12px;
         background:linear-gradient(135deg, #fff5dc 0%, #ffe9c2 100%);
         border:1.5px solid rgba(192,147,93,0.45);
-        border-radius:10px; padding:10px 14px;
+        border-radius:10px; padding:8px;
         display:flex; flex-direction:column;
         flex:1 1 auto;
     }
-    .notes-header {
-        display:flex; gap:14px; flex-wrap:wrap; align-items:center;
-        padding:6px 10px; margin-bottom:8px;
-        background:rgba(255,255,255,0.6);
-        border:1px solid rgba(192,147,93,0.45);
+    /* البوكس الأبيض الكبير الذي يحوي البيانات + الكتابة */
+    .notes-box {
+        background:#fff;
+        border:1.5px solid rgba(139,69,19,0.30);
         border-radius:8px;
-        font-size:12px;
+        padding:8px 12px 10px;
+        display:flex; flex-direction:column;
+        flex:1 1 auto;
     }
-    .notes-header .cam-cell { color:#3a2818; font-weight:700; }
-    .notes-header .cam-cell b { color:#5c3919; }
+    .notes-top {
+        display:flex; gap:8px; flex-wrap:wrap; align-items:center;
+        padding-bottom:8px;
+        border-bottom:1.5px dashed rgba(139,69,19,0.25);
+        font-size:12px; margin-bottom:8px;
+    }
+    .notes-top .cam-cell { color:#3a2818; font-weight:700; }
+    .notes-top .cam-cell b { color:#5c3919; }
+    .notes-top .seps {
+        font-weight:900; color:#a07838; letter-spacing:1px; font-size:13px;
+    }
     .prefix-label {
-        margin-inline-start:auto;
         font-size:13px; font-weight:900;
         color:#075e54;
         background:linear-gradient(135deg, rgba(37,211,102,0.16), rgba(37,211,102,0.06));
         border:1.2px solid rgba(37,211,102,0.45);
-        padding:4px 12px; border-radius:8px;
+        padding:3px 10px; border-radius:8px;
         letter-spacing:0.3px;
     }
+    .auditor-inline {
+        display:inline-flex; align-items:center; gap:6px;
+        margin-inline-start:auto;
+        padding:3px 10px;
+        background:rgba(212,170,90,0.10);
+        border:1px solid rgba(139,69,19,0.25);
+        border-radius:8px;
+    }
+    .auditor-inline-label {
+        font-size:12.5px; font-weight:900; color:#5c3919;
+        letter-spacing:0.5px;
+    }
+    .auditor-inline-name {
+        font-size:12.5px; font-weight:800; color:#3a2818;
+        border-bottom:1.5px solid #5c3919;
+        padding:1px 10px;
+        min-width:160px;
+        display:inline-block;
+    }
     .notes-body {
-        background:#fff; border:1.5px solid rgba(139,69,19,0.22); border-radius:8px;
-        padding:14px 16px;
+        padding:8px 6px;
         min-height:60mm;
         font-size:14px; line-height:1.9; color:#3a2818;
         white-space:pre-wrap;
         flex:1 1 auto;
-    }
-    .auditor-inline {
-        display:flex; align-items:center; gap:8px;
-        align-self:flex-end;   /* أقصى اليسار بصرياً في RTL */
-        padding:5px 12px;
-        background:rgba(255,255,255,0.55);
-        border:1px solid rgba(139,69,19,0.20);
-        border-radius:8px;
-        margin-top:8px;
-    }
-    .auditor-inline-label {
-        font-size:13.5px; font-weight:900; color:#5c3919;
-        letter-spacing:1px;
-    }
-    .auditor-inline-name {
-        font-size:14px; font-weight:800; color:#3a2818;
-        border-bottom:1.5px solid #5c3919;
-        padding:2px 12px;
-        min-width:200px;
-        display:inline-block;
+        background:transparent;
     }
     .controls {
         max-width:760px; margin:14px auto 0; text-align:center;
@@ -1232,15 +1269,19 @@ function printAuditNote(complaintId) {
         </table>
 
         <div class="notes-area">
-            <div class="notes-header">
-                <span class="cam-cell"><b>📷 رقم الكاميرا:</b> ${sanitize(note.cameraNum || '—')}</span>
-                <span class="cam-cell"><b>⏰ وقت الكاميرا:</b> ${sanitize(note.cameraTime || '—')}</span>
-                <span class="prefix-label">بعد المتابعة والتدقيق :</span>
-            </div>
-            <div class="notes-body">${sanitize(note.details || '—')}</div>
-            <div class="auditor-inline">
-                <span class="auditor-inline-label">المدقق :</span>
-                <span class="auditor-inline-name">${sanitize(note.auditor)}</span>
+            <div class="notes-box">
+                <div class="notes-top">
+                    <span class="cam-cell"><b>📷 رقم الكاميرا:</b> ${sanitize(note.cameraNum || '—')}</span>
+                    <span class="seps">,,,</span>
+                    <span class="cam-cell"><b>⏰ وقت الكاميرا:</b> ${sanitize(note.cameraTime || '—')}</span>
+                    <span class="seps">,,,</span>
+                    <span class="prefix-label">بعد المتابعة والتدقيق :</span>
+                    <span class="auditor-inline">
+                        <b class="auditor-inline-label">المدقق :</b>
+                        <span class="auditor-inline-name">${sanitize(note.auditor)}</span>
+                    </span>
+                </div>
+                <div class="notes-body">${sanitize(note.details || '—')}</div>
             </div>
         </div>
     </div>
