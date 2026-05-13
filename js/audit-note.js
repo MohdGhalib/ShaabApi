@@ -27,18 +27,18 @@ function _anEnsureStyles() {
         }
         #anModal.hidden { display:none; }
 
-        /* ──────── Wrap ──────── */
+        /* ──────── Wrap — بالعرض (landscape) من شاشة التعبئة ──────── */
         #anModal .an-wrap {
-            max-width:720px; width:100%; max-height:92vh;
+            max-width:1100px; width:100%; max-height:94vh;
             display:flex; flex-direction:column;
             animation:_anSlideUp 0.45s cubic-bezier(0.34,1.3,0.64,1);
         }
 
-        /* ──────── الشريط العلوي الأخضر (مطابق لـ c360) ──────── */
+        /* ──────── الشريط العلوي الأخضر — مضغوط ──────── */
         #anModal .an-instruction {
             background:linear-gradient(135deg,#25d366 0%,#128c7e 50%,#075e54 100%);
-            color:#fff; padding:14px 22px; border-radius:18px 18px 0 0;
-            display:flex; align-items:center; gap:14px;
+            color:#fff; padding:9px 20px; border-radius:14px 14px 0 0;
+            display:flex; align-items:center; gap:12px;
             border:1.5px solid rgba(37,211,102,0.5); border-bottom:0;
             box-shadow:0 -6px 26px rgba(7,94,84,0.45);
             position:relative; overflow:hidden;
@@ -49,9 +49,9 @@ function _anEnsureStyles() {
             pointer-events:none;
         }
         #anModal .an-instruction-icon {
-            width:38px; height:38px; background:rgba(255,255,255,0.22);
+            width:30px; height:30px; background:rgba(255,255,255,0.22);
             border-radius:50%; display:flex; align-items:center; justify-content:center;
-            font-size:19px; flex-shrink:0; border:1.5px solid rgba(255,255,255,0.35);
+            font-size:15px; flex-shrink:0; border:1.5px solid rgba(255,255,255,0.35);
         }
         #anModal .an-instruction-text {
             font-size:13.5px; font-weight:800; line-height:1.55; letter-spacing:0.2px;
@@ -95,19 +95,19 @@ function _anEnsureStyles() {
         }
         #anModal .an-close:hover { background:rgba(198,40,40,0.12); color:#c62828; transform:rotate(90deg); }
 
-        /* ──────── رأس الإيصال (مطابق لـ c360) ──────── */
+        /* ──────── رأس الإيصال — مضغوط ──────── */
         #anModal .an-receipt-head {
-            padding:24px 28px 18px; text-align:center;
+            padding:10px 24px 8px; text-align:center;
             border-bottom:2px dashed rgba(139,69,19,0.22);
             position:relative;
         }
         #anModal .an-brand {
-            font-size:10.5px; font-weight:800; color:#8b6f47;
-            letter-spacing:4px; margin-bottom:8px; text-transform:uppercase;
+            font-size:9px; font-weight:800; color:#8b6f47;
+            letter-spacing:3px; margin-bottom:3px; text-transform:uppercase;
         }
         #anModal .an-receipt-title {
-            font-size:20px; font-weight:900; color:#3a2818;
-            letter-spacing:0.3px; line-height:1.4;
+            font-size:16px; font-weight:900; color:#3a2818;
+            letter-spacing:0.3px; line-height:1.3;
         }
         #anModal .an-stamp {
             position:absolute; top:16px; right:22px;
@@ -120,16 +120,16 @@ function _anEnsureStyles() {
             opacity:0;
         }
 
-        /* ──────── جسم الفورم ──────── */
+        /* ──────── جسم الفورم — تباعد مضغوط ──────── */
         #anModal .an-body {
-            overflow-y:auto; padding:14px 28px 20px; flex:1; min-height:0;
+            overflow-y:auto; padding:8px 24px 14px; flex:1; min-height:0;
             position:relative;
         }
-        #anModal .an-section { margin-top:14px; }
+        #anModal .an-section { margin-top:8px; }
         #anModal .an-section-title {
-            font-size:13.5px; font-weight:900; color:#5c3919;
-            margin-bottom:10px;
-            display:flex; align-items:center; gap:8px;
+            font-size:12.5px; font-weight:900; color:#5c3919;
+            margin-bottom:6px;
+            display:flex; align-items:center; gap:6px;
             letter-spacing:0.3px;
         }
 
@@ -228,8 +228,8 @@ function _anEnsureStyles() {
         }
         #anModal .an-notes-pad {
             width:100%; box-sizing:border-box;
-            min-height:140px; resize:vertical;
-            padding:11px 14px;
+            min-height:240px; resize:vertical;
+            padding:12px 16px;
             font-family:'Cairo','Tajawal',sans-serif;
             font-size:13px; line-height:1.7;
             color:#3a2818;
@@ -247,16 +247,16 @@ function _anEnsureStyles() {
         #anModal .an-notes-pad::placeholder { color:#a08770; font-weight:600; }
         #anModal .an-notes-pad[readonly] { background:rgba(255,245,220,0.5); }
 
-        /* قسم المدقق */
+        /* قسم المدقق — مضغوط */
         #anModal .an-auditor-section {
             text-align:center;
-            padding:18px 16px 8px;
+            padding:10px 16px 4px;
             border-top:2px dashed rgba(139,69,19,0.22);
-            margin-top:8px;
+            margin-top:6px;
         }
         #anModal .an-auditor-label {
             font-size:11px; font-weight:800; color:#8b6f47;
-            letter-spacing:5px; margin-bottom:10px;
+            letter-spacing:5px; margin-bottom:6px;
             text-transform:uppercase;
         }
         #anModal .an-auditor-section input {
@@ -276,9 +276,9 @@ function _anEnsureStyles() {
         #anModal .an-auditor-section input:focus { border-bottom-color:#c0935d; }
         #anModal .an-auditor-section input::placeholder { color:#a08770; font-style:italic; font-weight:600; }
 
-        /* الأزرار السفلية */
+        /* الأزرار السفلية — مضغوط */
         #anModal .an-footer {
-            padding:16px 28px 18px;
+            padding:10px 24px 12px;
             display:flex; gap:10px; justify-content:center; flex-wrap:wrap;
             border-top:1px solid rgba(139,69,19,0.12);
             background:rgba(255,245,220,0.30);
