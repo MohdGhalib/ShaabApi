@@ -229,8 +229,8 @@ function _anEnsureStyles() {
             position:relative;
         }
         #anModal .an-brand {
-            font-size:9px; font-weight:800; color:#8b6f47;
-            letter-spacing:3px; margin-bottom:3px; text-transform:uppercase;
+            font-size:18px; font-weight:900; color:#8b6f47;
+            letter-spacing:2px; margin-bottom:6px;
         }
         #anModal .an-receipt-title {
             font-size:16px; font-weight:900; color:#3a2818;
@@ -1547,7 +1547,7 @@ function printAuditNote(complaintId) {
         position:relative;
     }
     .head { text-align:center; padding-bottom:18px; border-bottom:2px dashed rgba(139,69,19,0.30); position:relative; }
-    .brand { font-size:11px; font-weight:800; color:#8b6f47; letter-spacing:4px; margin-bottom:6px; text-transform:uppercase; }
+    .brand { font-size:22px; font-weight:900; color:#8b6f47; letter-spacing:2px; margin-bottom:8px; }
     .title { font-size:22px; font-weight:900; color:#3a2818; letter-spacing:0.5px; }
     .meta-block {
         margin:14px 0 18px;
@@ -1750,7 +1750,7 @@ function printAuditNote(complaintId) {
         }
         /* الترويسة مضغوطة */
         .head { padding-bottom:4mm !important; }
-        .brand { font-size:9px !important; letter-spacing:3px !important; margin-bottom:2px !important; }
+        .brand { font-size:20px !important; letter-spacing:2px !important; margin-bottom:4px !important; font-weight:900 !important; }
         .title { font-size:18px !important; }
         .meta-block { margin:3mm 0 3mm !important; padding:4px 10px !important; font-size:11px !important; }
         /* الجدول مضغوط */
@@ -1940,9 +1940,18 @@ function renderAuditNotes() {
         const complaintInfo = linkedC
             ? `<div style="font-size:11.5px;color:var(--text-dim);margin-top:4px;">🔗 شكوى السيطرة: <b style="color:#90caf9;">${sanitize((linkedC.notes || '').substring(0, 60))}${(linkedC.notes || '').length > 60 ? '…' : ''}</b></div>`
             : `<div style="font-size:11.5px;color:#ef9a9a;margin-top:4px;">⚠️ الشكوى المرتبطة لم تعد موجودة</div>`;
-        const detailsPreview = n.details
+        // استخرج النص الخالص من HTML الغنيّ (إزالة كل الـ tags واستبدال الفراغات المتعددة)
+        const _detailsPlain = (n.details || '')
+            .replace(/<style[^>]*>[\s\S]*?<\/style>/gi, '')
+            .replace(/<script[^>]*>[\s\S]*?<\/script>/gi, '')
+            .replace(/<\/?[^>]+(>|$)/g, ' ')   // إزالة كل الوسوم
+            .replace(/&nbsp;/g, ' ')
+            .replace(/&amp;/g, '&').replace(/&lt;/g, '<').replace(/&gt;/g, '>')
+            .replace(/\s+/g, ' ')
+            .trim();
+        const detailsPreview = _detailsPlain
             ? `<div style="margin-top:8px;padding:8px 12px;background:rgba(212,170,90,0.08);border-right:3px solid rgba(212,170,90,0.5);border-radius:6px;font-size:12.5px;color:var(--text-main);line-height:1.6;">
-                <b style="color:#d4aa5a;">📝 الملاحظات:</b> ${sanitize((n.details || '').substring(0, 200))}${(n.details || '').length > 200 ? '…' : ''}
+                <b style="color:#d4aa5a;">📝 الملاحظات:</b> ${sanitize(_detailsPlain.substring(0, 200))}${_detailsPlain.length > 200 ? '…' : ''}
               </div>` : '';
         return `
         <div data-an-cid="${n.complaintId}" style="background:linear-gradient(180deg,rgba(46,125,50,0.05),rgba(46,125,50,0.02));border:1px solid rgba(46,125,50,0.22);border-radius:12px;padding:14px 16px;margin-bottom:12px;transition:box-shadow 0.4s, background 0.4s;">
