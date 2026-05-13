@@ -584,6 +584,16 @@ function confirmAddMontasia() {
         if (!dateVal) return alert("يرجى تحديد تاريخ التسجيل السابق");
         if (!timeVal) return alert("يرجى تحديد وقت التسجيل السابق");
         if (!reasonVal) return alert("يرجى كتابة سبب التسجيل بوقت سابق");
+        // 🛡️ لا يُسمح بتاريخ/وقت في المستقبل
+        const _chosenMs = new Date(`${dateVal}T${timeVal}:00`).getTime();
+        if (Number.isFinite(_chosenMs) && _chosenMs > Date.now()) {
+            return alert(
+                '⚠️ لا يمكن تسجيل منتسية في وقت لم يأتِ بعد.\n\n' +
+                `الوقت الذي اخترته: ${dateVal} ${timeVal}\n` +
+                `الوقت الحالي:      ${new Date().toLocaleString('ar-EG')}\n\n` +
+                'يرجى اختيار تاريخ ووقت لا يتجاوز اللحظة الحالية.'
+            );
+        }
         const [y,m,d] = dateVal.split('-');
         const _h = parseInt(timeVal.split(':')[0]||0);
         const _m = (timeVal.split(':')[1]||'00');
@@ -740,6 +750,17 @@ function confirmDeliver() {
         const timeVal = document.getElementById('deliverPrevTime')?.value;
         if (!dateVal) return alert("يرجى تحديد تاريخ التسليم");
         if (!timeVal) return alert("يرجى تحديد وقت التسليم");
+        // 🛡️ تحقق: لا يُسمح بتاريخ/وقت في المستقبل
+        const _chosenMs = new Date(`${dateVal}T${timeVal}:00`).getTime();
+        const _nowMs    = Date.now();
+        if (Number.isFinite(_chosenMs) && _chosenMs > _nowMs) {
+            return alert(
+                '⚠️ لا يمكن تسجيل تسليم في وقت لم يأتِ بعد.\n\n' +
+                `الوقت الذي اخترته: ${dateVal} ${timeVal}\n` +
+                `الوقت الحالي:      ${new Date(_nowMs).toLocaleString('ar-EG')}\n\n` +
+                'يرجى اختيار تاريخ ووقت لا يتجاوز اللحظة الحالية.'
+            );
+        }
         // 🛡️ تحقق: وقت التسليم يجب ألا يكون قبل وقت التبليغ
         const _deliveryIso = `${dateVal}T${timeVal}:00`;
         if (item.iso && _deliveryIso < item.iso) {
