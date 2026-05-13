@@ -112,6 +112,77 @@ function _anEnsureStyles() {
         }
         #anModal .an-fc-save:hover { filter:brightness(1.10); }
         #anModal .an-fc-save:disabled { cursor:default; opacity:0.7; }
+
+        /* ──────── مربع المسودة قبل الإغلاق ──────── */
+        #anDraftDialog {
+            position:fixed; inset:0; z-index:99999;
+            background:rgba(15,10,8,0.74); backdrop-filter:blur(6px);
+            display:flex; align-items:center; justify-content:center;
+            padding:20px; direction:rtl;
+            font-family:'Cairo','Tajawal',sans-serif;
+            animation:_anSlideUp 0.25s ease-out;
+        }
+        #anDraftDialog .an-dd-box {
+            background:linear-gradient(180deg,#fdf8ef 0%,#faf2e3 100%);
+            border:1.5px solid rgba(139,69,19,0.30);
+            border-radius:16px;
+            padding:26px 30px 22px;
+            max-width:480px; width:100%;
+            box-shadow:0 30px 80px rgba(0,0,0,0.55);
+            text-align:center;
+        }
+        #anDraftDialog .an-dd-icon {
+            font-size:42px; margin-bottom:6px;
+        }
+        #anDraftDialog .an-dd-title {
+            font-size:18px; font-weight:900; color:#3a2818;
+            margin-bottom:6px;
+        }
+        #anDraftDialog .an-dd-msg {
+            font-size:13.5px; color:#5c3919; margin-bottom:18px; line-height:1.6;
+        }
+        #anDraftDialog .an-dd-actions {
+            display:flex; flex-direction:column; gap:9px;
+        }
+        #anDraftDialog .an-dd-btn {
+            font-family:'Cairo','Tajawal',sans-serif;
+            font-weight:900; font-size:13.5px;
+            padding:11px 18px;
+            border:1.5px solid transparent;
+            border-radius:10px;
+            cursor:pointer;
+            transition:filter 0.18s, transform 0.18s;
+            color:#fff;
+            box-shadow:0 3px 8px rgba(0,0,0,0.18);
+        }
+        #anDraftDialog .an-dd-btn:hover { filter:brightness(1.10); transform:translateY(-1px); }
+        #anDraftDialog .an-dd-send {
+            background:linear-gradient(135deg,#2e7d32,#1b5e20);
+        }
+        #anDraftDialog .an-dd-save {
+            background:linear-gradient(135deg,#1565c0,#0d47a1);
+        }
+        #anDraftDialog .an-dd-discard {
+            background:linear-gradient(135deg,#8a3617,#5d1f0d);
+        }
+        #anDraftDialog .an-dd-hint {
+            margin-top:14px;
+            font-size:11.5px; color:#8b6f47;
+            font-style:italic;
+        }
+
+        /* بادج «مسودة» في الترويسة عند استرجاع مسودة */
+        #anModal .an-draft-badge {
+            display:inline-flex; align-items:center; gap:4px;
+            background:linear-gradient(135deg,#1565c0,#0d47a1);
+            color:#fff;
+            font-size:11px; font-weight:900;
+            padding:3px 9px;
+            border-radius:8px;
+            margin-inline-end:6px;
+            border:1px solid rgba(255,255,255,0.32);
+            box-shadow:0 2px 5px rgba(13,71,161,0.32);
+        }
         /* عند وجود ضوابط الخط، زر العمل لا يدفع تلقائياً ولكن يبقى بجانبها */
         #anModal .an-font-controls ~ .an-header-action { margin-inline-start:6px; }
 
@@ -923,10 +994,20 @@ function openAuditNoteModal(complaintId, mode) {
     const dateStr = today.toISOString().substring(0, 10);
     const timeStr = today.toTimeString().substring(0, 5);
 
-    const v = (k, def='') => existing ? (existing[k] ?? def) : def;
+    // إذا كان وضعاً جديداً وتوجد مسودة لهذه الشكوى — استرجعها
+    const draft = (mode === 'new') ? _anLoadDraft(complaintId) : null;
+
+    const v = (k, def='') => {
+        if (draft && draft[k] != null && draft[k] !== '') return draft[k];
+        return existing ? (existing[k] ?? def) : def;
+    };
     const readonly = (mode === 'view') ? 'readonly' : '';
     const isView = (mode === 'view');
     const isEdit = (mode === 'edit');
+
+    // تتبّع الحالة الحالية لاستخدامها عند الإغلاق
+    _anCurrentComplaintId = complaintId;
+    _anCurrentMode = mode;
 
     const modal = document.createElement('div');
     modal.id = 'anModal';
@@ -936,11 +1017,12 @@ function openAuditNoteModal(complaintId, mode) {
             <div class="an-instruction">
                 <div class="an-instruction-icon">${isView ? '📋' : (isEdit ? '✏️' : '✍️')}</div>
                 <div class="an-instruction-text">
+                    ${draft ? '<span class="an-draft-badge">📝 مسودة</span>' : ''}
                     ${isView
                         ? 'نموذج تدقيق مُرسَل — اطلاعك على المحتوى فقط'
                         : (isEdit
                             ? 'تعديل نموذج التدقيق — مدير قسم السيطرة'
-                            : 'نموذج تدقيق السيطرة')}
+                            : (draft ? 'نموذج تدقيق السيطرة — تم استرجاع مسودتك السابقة' : 'نموذج تدقيق السيطرة'))}
                 </div>
                 ${isView ? '' : `
                 <span class="an-font-controls">
@@ -1199,9 +1281,125 @@ function _anSyncDayName() {
     } catch { spn.textContent = '—'; }
 }
 
-function closeAuditNoteModal() {
+function closeAuditNoteModal(forceClose) {
+    // إن كان وضعاً جديداً وأدخل المستخدم شيئاً، اعرض رسالة المسودة
+    if (!forceClose && _anCurrentMode === 'new' && _anIsDirty()) {
+        _anShowDraftDialog(_anCurrentComplaintId);
+        return;
+    }
     const m = document.getElementById('anModal');
     if (m) m.remove();
+    _anCurrentComplaintId = null;
+    _anCurrentMode = null;
+}
+
+/* ══════════════════════════════════════════════════════
+   نظام المسودات: حفظ / استعادة محلياً
+   ══════════════════════════════════════════════════════ */
+let _anCurrentComplaintId = null;
+let _anCurrentMode = null;
+const _AN_DRAFT_KEY = 'Shaab_AuditDrafts_Local';
+
+function _anIsDirty() {
+    const ids = ['anInvNum','anInvValue','anUser','anCashier','anCameraNum','anCameraTime','anAuditor','anSupervisorAction'];
+    for (const id of ids) {
+        const el = document.getElementById(id);
+        if (el && el.value && el.value.trim()) return true;
+    }
+    const ed = document.getElementById('anDetails');
+    if (ed) {
+        const txt = (ed.innerText || ed.textContent || '').trim();
+        if (txt) return true;
+    }
+    return false;
+}
+
+function _anReadCurrentForm() {
+    return {
+        date:               document.getElementById('anDate')?.value || '',
+        time:               document.getElementById('anTime')?.value || '',
+        invoiceNumber:      document.getElementById('anInvNum')?.value || '',
+        invoiceValue:       document.getElementById('anInvValue')?.value || '',
+        user:               document.getElementById('anUser')?.value || '',
+        cashier:            document.getElementById('anCashier')?.value || '',
+        branch:             document.getElementById('anBranch')?.value || '',
+        details:            document.getElementById('anDetails')?.innerHTML || '',
+        cameraNum:          document.getElementById('anCameraNum')?.value || '',
+        cameraTime:         document.getElementById('anCameraTime')?.value || '',
+        auditor:            document.getElementById('anAuditor')?.value || '',
+        supervisorAction:   document.getElementById('anSupervisorAction')?.value || ''
+    };
+}
+
+function _anSaveDraft(complaintId) {
+    try {
+        const map = JSON.parse(localStorage.getItem(_AN_DRAFT_KEY) || '{}');
+        map[complaintId] = {
+            ..._anReadCurrentForm(),
+            complaintId: complaintId,
+            savedAt: Date.now(),
+            savedBy: (currentUser && currentUser.name) || '—'
+        };
+        localStorage.setItem(_AN_DRAFT_KEY, JSON.stringify(map));
+        return true;
+    } catch (e) { console.warn('[audit-note] save draft failed:', e); return false; }
+}
+
+function _anLoadDraft(complaintId) {
+    try {
+        const map = JSON.parse(localStorage.getItem(_AN_DRAFT_KEY) || '{}');
+        return map[complaintId] || null;
+    } catch { return null; }
+}
+
+function _anClearDraft(complaintId) {
+    try {
+        const map = JSON.parse(localStorage.getItem(_AN_DRAFT_KEY) || '{}');
+        delete map[complaintId];
+        localStorage.setItem(_AN_DRAFT_KEY, JSON.stringify(map));
+    } catch {}
+}
+
+function _anShowDraftDialog(complaintId) {
+    // أزل أي رسالة سابقة
+    const old = document.getElementById('anDraftDialog');
+    if (old) old.remove();
+
+    const dlg = document.createElement('div');
+    dlg.id = 'anDraftDialog';
+    dlg.innerHTML = `
+        <div class="an-dd-box">
+            <div class="an-dd-icon">📝</div>
+            <div class="an-dd-title">لديك بيانات لم تُرسَل بعد</div>
+            <div class="an-dd-msg">ماذا تريد أن تفعل قبل الخروج؟</div>
+            <div class="an-dd-actions">
+                <button class="an-dd-btn an-dd-send" onclick="_anDraftSend(${complaintId})">📤 إرسال الرد</button>
+                <button class="an-dd-btn an-dd-save" onclick="_anDraftSave(${complaintId})">💾 حفظ كمسودة</button>
+                <button class="an-dd-btn an-dd-discard" onclick="_anDraftDiscard(${complaintId})">❌ إلغاء وخروج</button>
+            </div>
+            <div class="an-dd-hint">المسودة تُحفظ على جهازك ويمكنك العودة لها لاحقاً.</div>
+        </div>
+    `;
+    document.body.appendChild(dlg);
+}
+
+function _anDraftSend(complaintId) {
+    const dlg = document.getElementById('anDraftDialog'); if (dlg) dlg.remove();
+    if (typeof submitAuditNote === 'function') submitAuditNote(complaintId);
+}
+function _anDraftSave(complaintId) {
+    if (_anSaveDraft(complaintId)) {
+        const dlg = document.getElementById('anDraftDialog'); if (dlg) dlg.remove();
+        closeAuditNoteModal(true);
+        alert('💾 تم حفظ المسودة — يمكنك العودة لها لاحقاً عند فتح النموذج لنفس الشكوى.');
+    } else {
+        alert('⚠️ تعذّر حفظ المسودة');
+    }
+}
+function _anDraftDiscard(complaintId) {
+    _anClearDraft(complaintId);
+    const dlg = document.getElementById('anDraftDialog'); if (dlg) dlg.remove();
+    closeAuditNoteModal(true);
 }
 
 /* ══════════════════════════════════════════════════════
@@ -1281,7 +1479,10 @@ function submitAuditNote(complaintId, mode) {
     else if (typeof save === 'function') save();
     if (typeof _logAudit === 'function') _logAudit('addAuditNote', fields.branch, `تدقيق فاتورة #${fields.invoiceNumber}`, 'auditNote', note.id);
 
-    closeAuditNoteModal();
+    // نجاح الإرسال — امسح المسودة المحلية إن وُجدت
+    _anClearDraft(complaintId);
+
+    closeAuditNoteModal(true);  // إغلاق إجباري بدون مربع المسودة
     alert('✅ تم إرسال نموذج التدقيق إلى مدير السيطرة');
 }
 
@@ -1800,6 +2001,9 @@ window._anBindZoomWheel = _anBindZoomWheel;
 window._anApplyFontPrefs = _anApplyFontPrefs;
 window._anSavePrefs = _anSavePrefs;
 window._anLoadPrefs = _anLoadPrefs;
+window._anDraftSend    = _anDraftSend;
+window._anDraftSave    = _anDraftSave;
+window._anDraftDiscard = _anDraftDiscard;
 
 /* ══════════════════════════════════════════════════════
    حقن CSS فور تحميل الملف — لكي يحصل زر «📋 ملاحظات السيطرة»
