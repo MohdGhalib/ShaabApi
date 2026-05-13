@@ -133,31 +133,32 @@ function _anEnsureStyles() {
             letter-spacing:0.3px;
         }
 
-        /* صفوف الحقول */
+        /* صفوف الحقول — مضغوطة */
         #anModal .an-row {
-            display:grid; gap:10px 12px;
+            display:grid; gap:7px 10px;
             background:#fff;
             border:1.5px solid rgba(139,69,19,0.18);
-            border-radius:12px; padding:12px;
+            border-radius:10px; padding:8px 10px;
             box-shadow:0 2px 6px rgba(139,69,19,0.05);
         }
         #anModal .an-row-5 { grid-template-columns:repeat(5, minmax(0,1fr)); }
         #anModal .an-row-4 { grid-template-columns:repeat(4, minmax(0,1fr)); }
-        #anModal .an-field { display:flex; flex-direction:column; gap:5px; }
+        #anModal .an-field { display:flex; flex-direction:column; gap:3px; }
 
         #anModal .an-field label {
-            font-size:11.5px; font-weight:800; color:#5c3919;
-            display:flex; align-items:center; gap:5px;
-            letter-spacing:0.2px;
+            font-size:10.5px; font-weight:800; color:#5c3919;
+            display:flex; align-items:center; gap:4px;
+            letter-spacing:0.1px;
+            line-height:1.2;
         }
-        #anModal .an-field label .req { color:#c62828; font-size:13px; line-height:0; }
+        #anModal .an-field label .req { color:#c62828; font-size:11px; line-height:0; }
         #anModal .an-field input,
         #anModal .an-field textarea,
         #anModal .an-field select {
             font-family:'Cairo','Tajawal',sans-serif;
-            font-size:13px; padding:9px 12px;
-            border:1.5px solid rgba(139,69,19,0.22);
-            border-radius:10px;
+            font-size:12px; padding:6px 10px;
+            border:1.2px solid rgba(139,69,19,0.22);
+            border-radius:7px;
             background:#fff;
             color:#3a2818;
             font-weight:600;
@@ -179,12 +180,13 @@ function _anEnsureStyles() {
             cursor:default;
         }
 
-        /* منطقة الكتابة الكبيرة (تشبه شريط الملخّص في c360 لكن للكتابة) */
+        /* منطقة الكتابة الكبيرة — موسّعة بالعرض */
         #anModal .an-notes-area {
             background:linear-gradient(135deg, #fff5dc 0%, #ffe9c2 100%);
             border:1.5px solid rgba(192,147,93,0.45);
             border-radius:14px;
-            padding:14px 16px;
+            padding:12px 18px 14px;
+            margin-inline:-6px;   /* تمديد جانبي خفيف لتأخذ عرض أكبر داخل القسم */
             box-shadow:0 1px 3px rgba(139,69,19,0.08);
         }
         #anModal .an-notes-label {
@@ -228,8 +230,8 @@ function _anEnsureStyles() {
         }
         #anModal .an-notes-pad {
             width:100%; box-sizing:border-box;
-            min-height:240px; resize:vertical;
-            padding:12px 16px;
+            min-height:280px; resize:vertical;
+            padding:14px 18px;
             font-family:'Cairo','Tajawal',sans-serif;
             font-size:13px; line-height:1.7;
             color:#3a2818;
