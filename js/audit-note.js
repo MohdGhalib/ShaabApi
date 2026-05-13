@@ -143,6 +143,31 @@ function _anEnsureStyles() {
         }
         #anModal .an-row-5 { grid-template-columns:repeat(5, minmax(0,1fr)); }
         #anModal .an-row-4 { grid-template-columns:repeat(4, minmax(0,1fr)); }
+        #anModal .an-row-6 { grid-template-columns:repeat(6, minmax(0,1fr)); }
+
+        /* اسم اليوم تحت حقل التاريخ */
+        #anModal .an-day-name {
+            font-size:11px; font-weight:800; color:#7a4a26;
+            text-align:center; margin-top:2px;
+            background:rgba(192,147,93,0.10);
+            border-radius:6px; padding:1px 6px;
+        }
+
+        /* خطّ معلومات الشكوى المرتبطة */
+        #anModal .an-linked-info {
+            background:linear-gradient(135deg, rgba(25,118,210,0.05), rgba(25,118,210,0.02));
+            border:1px solid rgba(25,118,210,0.30);
+            border-radius:10px;
+            padding:8px 14px;
+            font-size:12.5px; color:#3a2818;
+            margin-bottom:8px; line-height:1.6;
+        }
+        #anModal .an-linked-info b { color:#1565c0; }
+        #anModal .an-linked-text { color:#3a2818; }
+        #anModal .an-linked-sep {
+            color:#a07838; font-weight:900; margin:0 6px;
+        }
+        #anModal .an-linked-branch { color:#5c3919; font-weight:800; }
         #anModal .an-field { display:flex; flex-direction:column; gap:3px; }
 
         #anModal .an-field label {
@@ -180,15 +205,90 @@ function _anEnsureStyles() {
             cursor:default;
         }
 
-        /* منطقة الكتابة الكبيرة — موسّعة بالعرض */
+        /* منطقة الكتابة الكبيرة — تشغل ثلثَي الصفحة */
         #anModal .an-notes-area {
             background:linear-gradient(135deg, #fff5dc 0%, #ffe9c2 100%);
             border:1.5px solid rgba(192,147,93,0.45);
             border-radius:14px;
-            padding:12px 18px 14px;
-            margin-inline:-6px;   /* تمديد جانبي خفيف لتأخذ عرض أكبر داخل القسم */
+            padding:10px 14px 10px;
+            margin-top:6px;
             box-shadow:0 1px 3px rgba(139,69,19,0.08);
+            display:flex; flex-direction:column; gap:8px;
+            flex:1 1 auto;
         }
+        /* رأس داخلي للبوكس: حقول الكاميرا + عبارة "بعد المتابعة والتدقيق" */
+        #anModal .an-notes-header {
+            display:flex; align-items:center; gap:12px;
+            flex-wrap:wrap;
+            padding:6px 10px;
+            background:rgba(255,255,255,0.6);
+            border:1px solid rgba(192,147,93,0.45);
+            border-radius:9px;
+        }
+        #anModal .an-cam-cell {
+            display:inline-flex; align-items:center; gap:5px;
+            font-size:11.5px;
+        }
+        #anModal .an-cam-mini { color:#5c3919; font-weight:800; white-space:nowrap; }
+        #anModal .an-cam-cell input {
+            font-family:'Cairo','Tajawal',sans-serif;
+            font-size:12px; font-weight:700;
+            padding:3px 8px;
+            border:1.2px solid rgba(139,69,19,0.30);
+            border-radius:6px;
+            background:#fff; color:#3a2818;
+            outline:none; width:90px; direction:rtl;
+            transition:border-color 0.18s, box-shadow 0.18s;
+        }
+        #anModal .an-cam-cell input[type=time] { width:110px; }
+        #anModal .an-cam-cell input:focus {
+            border-color:#c0935d;
+            box-shadow:0 0 0 2px rgba(192,147,93,0.18);
+        }
+        #anModal .an-cam-cell input[readonly] {
+            background:rgba(255,245,220,0.5); color:#5c3919; cursor:default;
+        }
+        #anModal .an-prefix-label {
+            margin-inline-start:auto;
+            font-size:13px; font-weight:900;
+            color:#075e54;
+            background:linear-gradient(135deg, rgba(37,211,102,0.16), rgba(37,211,102,0.06));
+            border:1.2px solid rgba(37,211,102,0.45);
+            padding:4px 12px;
+            border-radius:8px;
+            letter-spacing:0.3px;
+        }
+        /* توقيع المدقق داخل البوكس — أقصى اليسار */
+        #anModal .an-auditor-inline {
+            display:flex; align-items:center; gap:8px;
+            align-self:flex-end;   /* في RTL: flex-end يضع العنصر يساراً بصرياً */
+            padding:4px 8px;
+            background:rgba(255,255,255,0.55);
+            border:1px solid rgba(139,69,19,0.20);
+            border-radius:8px;
+            margin-top:4px;
+        }
+        #anModal .an-auditor-inline .an-auditor-label {
+            font-family:'Reem Kufi','Cairo',sans-serif;
+            font-size:13px; font-weight:900; color:#5c3919;
+            letter-spacing:1px;
+            background:none !important; -webkit-text-fill-color:initial !important; color:#5c3919 !important;
+            margin:0 !important;
+        }
+        #anModal .an-auditor-inline input {
+            font-family:'Cairo','Tajawal',sans-serif;
+            font-size:13.5px; font-weight:800;
+            padding:4px 10px;
+            border:none;
+            border-bottom:1.5px solid #5c3919;
+            background:transparent;
+            color:#3a2818;
+            min-width:200px;
+            outline:none; text-align:start;
+            transition:border-color 0.18s;
+        }
+        #anModal .an-auditor-inline input:focus { border-bottom-color:#c0935d; }
+        #anModal .an-auditor-inline input::placeholder { color:#a08770; font-style:italic; }
         #anModal .an-notes-label {
             font-size:12.5px; font-weight:800; color:#5c3919;
             margin-bottom:8px; letter-spacing:0.3px;
@@ -230,8 +330,9 @@ function _anEnsureStyles() {
         }
         #anModal .an-notes-pad {
             width:100%; box-sizing:border-box;
-            min-height:280px; resize:vertical;
+            min-height:340px; resize:vertical;
             padding:14px 18px;
+            flex:1 1 auto;
             font-family:'Cairo','Tajawal',sans-serif;
             font-size:13px; line-height:1.7;
             color:#3a2818;
@@ -679,19 +780,27 @@ function openAuditNoteModal(complaintId, mode) {
                 <span class="an-bean an-b2">☕</span>
 
                 <div class="an-receipt-head">
-                    <div class="an-brand">شركة محامص الشعب</div>
-                    <div class="an-receipt-title">نموذج تدقيق سيطرة</div>
+                    <div class="an-brand">🙦 شركة برافو لصناعة المكسرات والشوكولاتة. 🙤</div>
+                    <div class="an-receipt-title">تدقيق</div>
                     <div class="an-stamp">تدقيق رسمي</div>
                 </div>
 
                 <div class="an-body">
-                    <!-- الصف الأول: 5 حقول -->
+                    <!-- معلومات الشكوى المرتبطة (عرض فقط) -->
+                    <div class="an-linked-info">
+                        🔗 <b>شكوى السيطرة المرتبطة:</b>
+                        <span class="an-linked-text">${sanitize((complaint.notes || '').substring(0, 140))}${(complaint.notes || '').length > 140 ? '…' : ''}</span>
+                        <span class="an-linked-sep">//</span>
+                        <b>الفرع:</b> <span class="an-linked-branch">${sanitize(complaint.branch || '—')}</span>
+                    </div>
+
+                    <!-- صف واحد: 6 حقول (اليوم • الوقت • رقم الفاتورة • قيمة الفاتورة • اليوزر • اسم الكاشير) -->
                     <div class="an-section">
-                        <div class="an-section-title">📅 بيانات الفاتورة</div>
-                        <div class="an-row an-row-5">
+                        <div class="an-row an-row-6">
                             <div class="an-field">
                                 <label>اليوم <span class="req">*</span></label>
-                                <input type="date" id="anDate" ${readonly} value="${v('date', dateStr)}">
+                                <input type="date" id="anDate" ${readonly} value="${v('date', dateStr)}" onchange="_anSyncDayName()">
+                                <span class="an-day-name" id="anDayName">—</span>
                             </div>
                             <div class="an-field">
                                 <label>الوقت <span class="req">*</span></label>
@@ -709,56 +818,35 @@ function openAuditNoteModal(complaintId, mode) {
                                 <label>اليوزر <span class="req">*</span></label>
                                 <input type="text" id="anUser" ${readonly} value="${sanitize(v('user'))}" placeholder="—">
                             </div>
-                        </div>
-                    </div>
-
-                    <!-- الصف الثاني: 4 حقول -->
-                    <div class="an-section">
-                        <div class="an-section-title">🏪 بيانات الفرع والإرجاع</div>
-                        <div class="an-row an-row-4">
                             <div class="an-field">
-                                <label>الكاشير <span class="req">*</span></label>
+                                <label>اسم الكاشير <span class="req">*</span></label>
                                 <input type="text" id="anCashier" ${readonly} value="${sanitize(v('cashier'))}" placeholder="—">
                             </div>
-                            <div class="an-field">
-                                <label>الفرع <span class="req">*</span></label>
-                                <input type="text" id="anBranch" ${readonly} value="${sanitize(v('branch', complaint.branch || ''))}">
-                            </div>
-                            <div class="an-field">
-                                <label>مقدار الإرجاع <span class="req">*</span></label>
-                                <input type="text" id="anReturnAmt" ${readonly} value="${sanitize(v('returnAmount'))}" placeholder="—">
-                            </div>
-                            <div class="an-field">
-                                <label>سبب الإرجاع <span class="req">*</span></label>
-                                <input type="text" id="anReturnReason" ${readonly} value="${sanitize(v('returnReason'))}" placeholder="—">
-                            </div>
                         </div>
                     </div>
 
-                    <!-- منطقة الكتابة الكبيرة + حقلَي الكاميرا والوقت -->
-                    <div class="an-section">
-                        <div class="an-section-title">📝 ملاحظات التدقيق التفصيلية</div>
-                        <div class="an-notes-area">
-                            <div class="an-notes-label">
-                                <span class="an-notes-label-text">اكتب التفاصيل الكاملة <span class="req">*</span></span>
-                                <span class="an-camera-inline">
-                                    <span class="an-cam-mini">📷 الكاميرا:</span>
-                                    <input type="text" id="anCameraNum" ${readonly} value="${sanitize(v('cameraNum'))}" placeholder="رقم">
-                                </span>
-                                <span class="an-camera-inline">
-                                    <span class="an-cam-mini">⏰ الوقت:</span>
-                                    <input type="time" id="anCameraTime" ${readonly} value="${v('cameraTime')}">
-                                </span>
-                            </div>
-                            <textarea id="anDetails" class="an-notes-pad" ${readonly} rows="6" placeholder="اكتب هنا ملاحظات السيطرة بالتفصيل ...">${sanitize(v('details') || (isView || isEdit ? '' : 'بعد المتابعة والتدقيق : \n'))}</textarea>
+                    <!-- منطقة الكتابة الكبيرة (تشغل ثلثَي الصفحة) -->
+                    <div class="an-notes-area">
+                        <div class="an-notes-header">
+                            <span class="an-cam-cell">
+                                <span class="an-cam-mini">📷 رقم الكاميرا:</span>
+                                <input type="text" id="anCameraNum" ${readonly} value="${sanitize(v('cameraNum'))}" placeholder="رقم">
+                            </span>
+                            <span class="an-cam-cell">
+                                <span class="an-cam-mini">⏰ وقت الكاميرا:</span>
+                                <input type="time" id="anCameraTime" ${readonly} value="${v('cameraTime')}">
+                            </span>
+                            <span class="an-prefix-label">بعد المتابعة والتدقيق :</span>
+                        </div>
+                        <textarea id="anDetails" class="an-notes-pad" ${readonly} rows="10" placeholder="اكتب التفاصيل ...">${sanitize(v('details'))}</textarea>
+                        <div class="an-auditor-inline">
+                            <span class="an-auditor-label">المدقق :</span>
+                            <input type="text" id="anAuditor" ${readonly} value="${sanitize(v('auditor'))}" placeholder="اسم المدقق">
                         </div>
                     </div>
 
-                    <!-- توقيع المدقق -->
-                    <div class="an-auditor-section">
-                        <div class="an-auditor-label">المدقق</div>
-                        <input type="text" id="anAuditor" ${readonly} value="${sanitize(v('auditor'))}" placeholder="اسم المدقق">
-                    </div>
+                    <!-- الفرع المخفي (يُحفظ تلقائياً من الشكوى) -->
+                    <input type="hidden" id="anBranch" value="${sanitize(v('branch', complaint.branch || ''))}">
                 </div>
 
                 <div class="an-err" id="anErr"></div>
@@ -786,25 +874,23 @@ function openAuditNoteModal(complaintId, mode) {
         if (e.target === modal) closeAuditNoteModal();
     });
 
-    // حماية الـ prefix «بعد المتابعة والتدقيق : » من الحذف في وضع جديد
-    if (!isView && !isEdit) {
-        const ta = document.getElementById('anDetails');
-        const PFX = 'بعد المتابعة والتدقيق : ';
-        if (ta) {
-            // إذا أزال المستخدم البداية أعِدها
-            ta.addEventListener('input', () => {
-                if (!ta.value.startsWith(PFX)) {
-                    ta.value = PFX + (ta.value.startsWith('بعد ') ? ta.value.replace(/^بعد[^:]*:\s*/, '') : ta.value.replace(/^\s*/, ''));
-                }
-            });
-            // ضع المؤشر بعد الـ prefix
-            requestAnimationFrame(() => {
-                ta.focus();
-                const len = ta.value.length;
-                ta.setSelectionRange(len, len);
-            });
-        }
-    }
+    // اعرض اسم اليوم بناءً على التاريخ الحالي
+    _anSyncDayName();
+}
+
+/* ── حساب اسم اليوم بالعربية وعرضه تحت حقل التاريخ ── */
+function _anSyncDayName() {
+    const dEl = document.getElementById('anDate');
+    const spn = document.getElementById('anDayName');
+    if (!dEl || !spn) return;
+    const days = ['الأحد','الإثنين','الثلاثاء','الأربعاء','الخميس','الجمعة','السبت'];
+    const val = dEl.value;
+    if (!val) { spn.textContent = '—'; return; }
+    try {
+        const d = new Date(val + 'T00:00:00');
+        if (!isNaN(d)) spn.textContent = days[d.getDay()];
+        else spn.textContent = '—';
+    } catch { spn.textContent = '—'; }
 }
 
 function closeAuditNoteModal() {
@@ -819,12 +905,6 @@ function submitAuditNote(complaintId, mode) {
     const errEl = document.getElementById('anErr');
     const showErr = (msg) => { if (errEl) { errEl.textContent = msg; errEl.classList.add('show'); } };
 
-    const PFX = 'بعد المتابعة والتدقيق : ';
-    let detailsVal = document.getElementById('anDetails').value.trim();
-    if (!detailsVal.startsWith(PFX.trim()) && !detailsVal.startsWith(PFX)) {
-        detailsVal = PFX + detailsVal;
-    }
-
     const fields = {
         date:           document.getElementById('anDate').value.trim(),
         time:           document.getElementById('anTime').value.trim(),
@@ -833,24 +913,16 @@ function submitAuditNote(complaintId, mode) {
         user:           document.getElementById('anUser').value.trim(),
         cashier:        document.getElementById('anCashier').value.trim(),
         branch:         document.getElementById('anBranch').value.trim(),
-        returnAmount:   document.getElementById('anReturnAmt').value.trim(),
-        returnReason:   document.getElementById('anReturnReason').value.trim(),
-        details:        detailsVal,
+        details:        document.getElementById('anDetails').value.trim(),
         cameraNum:      document.getElementById('anCameraNum').value.trim(),
         cameraTime:     document.getElementById('anCameraTime').value.trim(),
         auditor:        document.getElementById('anAuditor').value.trim()
     };
 
-    // كل الحقول إجبارية ما عدا الكاميرا والوقت — إن أردت إجبارها أيضاً قم بإزالة هذا الفلتر
-    const requiredKeys = ['date','time','invoiceNumber','invoiceValue','user','cashier','branch','returnAmount','returnReason','details','cameraNum','cameraTime','auditor'];
+    const requiredKeys = ['date','time','invoiceNumber','invoiceValue','user','cashier','details','cameraNum','cameraTime','auditor'];
     const missing = requiredKeys.find(k => !fields[k]);
     if (missing) {
         showErr('⚠️ يرجى تعبئة جميع الحقول — حقل "' + _anFieldLabel(missing) + '" مفقود');
-        return;
-    }
-    // تحقق أن الموظف كتب شيئاً بعد الـ prefix
-    if (fields.details.trim() === PFX.trim() || fields.details.trim() === PFX.trim() + ':' ) {
-        showErr('⚠️ يرجى كتابة تفاصيل المتابعة بعد عبارة "بعد المتابعة والتدقيق :"');
         return;
     }
 
@@ -901,13 +973,23 @@ function submitAuditNote(complaintId, mode) {
 function _anFieldLabel(key) {
     const map = {
         date:'اليوم', time:'الوقت', invoiceNumber:'رقم الفاتورة', invoiceValue:'قيمة الفاتورة',
-        user:'اليوزر', cashier:'الكاشير', branch:'الفرع',
-        returnAmount:'مقدار الإرجاع', returnReason:'سبب الإرجاع',
-        details:'ملاحظات التدقيق التفصيلية',
+        user:'اليوزر', cashier:'اسم الكاشير', branch:'الفرع',
+        details:'تفاصيل التدقيق',
         cameraNum:'رقم الكاميرا', cameraTime:'وقت الكاميرا',
         auditor:'المدقق'
     };
     return map[key] || key;
+}
+
+/* ── حساب اسم اليوم بالعربية (للطباعة) ── */
+function _anPrintDay(dateStr) {
+    const days = ['الأحد','الإثنين','الثلاثاء','الأربعاء','الخميس','الجمعة','السبت'];
+    if (!dateStr) return '—';
+    try {
+        const d = new Date(dateStr + 'T00:00:00');
+        if (!isNaN(d)) return days[d.getDay()];
+    } catch {}
+    return '—';
 }
 
 /* ══════════════════════════════════════════════════════
@@ -974,36 +1056,69 @@ function printAuditNote(complaintId) {
     table.fields td.label {
         background:#fbf3df;
         font-weight:800; color:#5c3919;
-        width:30%; white-space:nowrap;
-    }
-    .notes-area {
-        margin-top:18px;
-        background:#fff5dc; border:1.5px solid rgba(192,147,93,0.45);
-        border-radius:10px; padding:14px 16px;
-    }
-    .notes-title { font-size:12.5px; font-weight:800; color:#5c3919; margin-bottom:8px; letter-spacing:0.3px; }
-    .notes-body {
-        background:#fff; border:1.5px solid rgba(139,69,19,0.22); border-radius:8px;
-        padding:12px 14px;
-        min-height:120px;
-        font-size:13.5px; line-height:1.8; color:#3a2818;
-        white-space:pre-wrap;
-    }
-    .auditor {
-        margin-top:26px; padding-top:18px;
-        border-top:2px dashed rgba(139,69,19,0.30);
+        white-space:nowrap;
         text-align:center;
     }
-    .auditor-label {
-        font-size:11.5px; font-weight:800; color:#8b6f47;
-        letter-spacing:5px; margin-bottom:8px; text-transform:uppercase;
+    table.fields-6 td.label {
+        font-size:12px; width:16.66%;
     }
-    .auditor-name {
-        display:inline-block;
-        font-size:17px; font-weight:800;
-        padding:6px 24px 4px;
+    table.fields-6 td:not(.label) {
+        text-align:center; font-weight:700; font-size:13px;
+    }
+    .notes-area {
+        margin-top:12px;
+        background:linear-gradient(135deg, #fff5dc 0%, #ffe9c2 100%);
+        border:1.5px solid rgba(192,147,93,0.45);
+        border-radius:10px; padding:10px 14px;
+        display:flex; flex-direction:column;
+        flex:1 1 auto;
+    }
+    .notes-header {
+        display:flex; gap:14px; flex-wrap:wrap; align-items:center;
+        padding:6px 10px; margin-bottom:8px;
+        background:rgba(255,255,255,0.6);
+        border:1px solid rgba(192,147,93,0.45);
+        border-radius:8px;
+        font-size:12px;
+    }
+    .notes-header .cam-cell { color:#3a2818; font-weight:700; }
+    .notes-header .cam-cell b { color:#5c3919; }
+    .prefix-label {
+        margin-inline-start:auto;
+        font-size:13px; font-weight:900;
+        color:#075e54;
+        background:linear-gradient(135deg, rgba(37,211,102,0.16), rgba(37,211,102,0.06));
+        border:1.2px solid rgba(37,211,102,0.45);
+        padding:4px 12px; border-radius:8px;
+        letter-spacing:0.3px;
+    }
+    .notes-body {
+        background:#fff; border:1.5px solid rgba(139,69,19,0.22); border-radius:8px;
+        padding:14px 16px;
+        min-height:60mm;
+        font-size:14px; line-height:1.9; color:#3a2818;
+        white-space:pre-wrap;
+        flex:1 1 auto;
+    }
+    .auditor-inline {
+        display:flex; align-items:center; gap:8px;
+        align-self:flex-end;   /* أقصى اليسار بصرياً في RTL */
+        padding:5px 12px;
+        background:rgba(255,255,255,0.55);
+        border:1px solid rgba(139,69,19,0.20);
+        border-radius:8px;
+        margin-top:8px;
+    }
+    .auditor-inline-label {
+        font-size:13.5px; font-weight:900; color:#5c3919;
+        letter-spacing:1px;
+    }
+    .auditor-inline-name {
+        font-size:14px; font-weight:800; color:#3a2818;
         border-bottom:1.5px solid #5c3919;
-        color:#3a2818;
+        padding:2px 12px;
+        min-width:200px;
+        display:inline-block;
     }
     .controls {
         max-width:760px; margin:14px auto 0; text-align:center;
@@ -1085,35 +1200,48 @@ function printAuditNote(complaintId) {
     <div class="receipt">
         <div class="head">
             <div class="brand">🙦 شركة برافو لصناعة المكسرات والشوكولاتة. 🙤</div>
-            <div class="title">نموذج تدقيق سيطرة</div>
+            <div class="title">تدقيق</div>
         </div>
 
         <div class="meta-block">
-            <div class="meta-line"><b>${complaintLine}</b></div>
+            <div class="meta-line">
+                <b>🔗 شكوى السيطرة المرتبطة:</b>
+                ${sanitize((linkedC && linkedC.notes) ? linkedC.notes.substring(0, 140) + ((linkedC.notes.length > 140) ? '…' : '') : '—')}
+                <span style="color:#a07838;font-weight:900;margin:0 6px;">//</span>
+                <b>الفرع:</b> ${sanitize(note.branch || (linkedC && linkedC.branch) || '—')}
+            </div>
         </div>
 
-        <table class="fields">
-            <tr><td class="label">📅 اليوم</td><td>${sanitize(note.date)}</td>
-                <td class="label">⏰ الوقت</td><td>${sanitize(note.time)}</td></tr>
-            <tr><td class="label">🧾 رقم الفاتورة</td><td>${sanitize(note.invoiceNumber)}</td>
-                <td class="label">💰 قيمة الفاتورة</td><td>${sanitize(note.invoiceValue)}</td></tr>
-            <tr><td class="label">👤 اليوزر</td><td>${sanitize(note.user)}</td>
-                <td class="label">💼 الكاشير</td><td>${sanitize(note.cashier)}</td></tr>
-            <tr><td class="label">🏪 الفرع</td><td colspan="3">${sanitize(note.branch)}</td></tr>
-            <tr><td class="label">💵 مقدار الإرجاع</td><td>${sanitize(note.returnAmount)}</td>
-                <td class="label">📝 سبب الإرجاع</td><td>${sanitize(note.returnReason)}</td></tr>
-            <tr><td class="label">📷 رقم الكاميرا</td><td>${sanitize(note.cameraNum || '—')}</td>
-                <td class="label">⏱ وقت الكاميرا</td><td>${sanitize(note.cameraTime || '—')}</td></tr>
+        <table class="fields fields-6">
+            <tr>
+                <td class="label">اليوم</td>
+                <td class="label">الوقت</td>
+                <td class="label">رقم الفاتورة</td>
+                <td class="label">قيمة الفاتورة</td>
+                <td class="label">اليوزر</td>
+                <td class="label">اسم الكاشير</td>
+            </tr>
+            <tr>
+                <td>${sanitize(_anPrintDay(note.date))} <span style="display:block;font-size:11px;color:#7a4a26;font-weight:700;">${sanitize(note.date)}</span></td>
+                <td>${sanitize(note.time)}</td>
+                <td>${sanitize(note.invoiceNumber)}</td>
+                <td>${sanitize(note.invoiceValue)}</td>
+                <td>${sanitize(note.user)}</td>
+                <td>${sanitize(note.cashier)}</td>
+            </tr>
         </table>
 
         <div class="notes-area">
-            <div class="notes-title">📝 ملاحظات التدقيق التفصيلية</div>
+            <div class="notes-header">
+                <span class="cam-cell"><b>📷 رقم الكاميرا:</b> ${sanitize(note.cameraNum || '—')}</span>
+                <span class="cam-cell"><b>⏰ وقت الكاميرا:</b> ${sanitize(note.cameraTime || '—')}</span>
+                <span class="prefix-label">بعد المتابعة والتدقيق :</span>
+            </div>
             <div class="notes-body">${sanitize(note.details || '—')}</div>
-        </div>
-
-        <div class="auditor">
-            <div class="auditor-label">━━ المدقق ━━</div>
-            <div class="auditor-name">${sanitize(note.auditor)}</div>
+            <div class="auditor-inline">
+                <span class="auditor-inline-label">المدقق :</span>
+                <span class="auditor-inline-name">${sanitize(note.auditor)}</span>
+            </div>
         </div>
     </div>
 
@@ -1260,6 +1388,7 @@ window.canSeeAuditNotesTab      = canSeeAuditNotesTab;
 window._anNotifyAlreadyFilled   = _anNotifyAlreadyFilled;
 window.printAuditNote           = printAuditNote;
 window.jumpToAuditNoteFromComplaint = jumpToAuditNoteFromComplaint;
+window._anSyncDayName = _anSyncDayName;
 
 /* ══════════════════════════════════════════════════════
    حقن CSS فور تحميل الملف — لكي يحصل زر «📋 ملاحظات السيطرة»
