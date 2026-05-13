@@ -441,8 +441,9 @@ function setToken(t) {
 function getSavedToken() { return localStorage.getItem('_shaab_token'); }
 
 /* ── جلب كل البيانات ── */
-async function loadAllData() {
-    if (_isLoading) return;
+async function loadAllData(force) {
+    if (_isLoading && !force) return;
+    // عند الإجبار: لا ننتظر إن كان عالقاً — نُعيد ضبط العلَم ونتابع
     _isLoading = true;
     try {
     const keys = ['Shaab_Master_DB','Shaab_Employees_DB','Shaab_Breaks_DB','Shaab_Sessions_DB'];
@@ -1041,7 +1042,8 @@ async function reloadTable(btn) {
         btn.innerHTML = '⏳ جاري التحديث...';
     }
     try {
-        if (typeof loadAllData === 'function') await loadAllData();
+        // إجبار التحديث حتى لو كان هناك load سابق عالق
+        if (typeof loadAllData === 'function') await loadAllData(true);
         if (typeof renderAll === 'function') renderAll();
     } catch (e) {
         console.error('[reloadTable] failed:', e);
