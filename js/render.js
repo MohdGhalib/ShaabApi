@@ -874,7 +874,13 @@ function _renderTableC(get, isAdmin) {
 
         const _hasAN = (typeof hasAuditNote === 'function') && hasAuditNote(x.id);
         const _isCtrlMgr = currentUser && (currentUser.title === 'مدير قسم السيطرة' || currentUser.empId === '1111');
-        const _canOpenAN = currentUser && (currentUser.isAdmin || currentUser.role === 'control_employee' || currentUser.role === 'control_sub' || currentUser.role === 'cc_manager' || _isCtrlMgr);
+        // حصرياً للسيطرة (موظف/فرعي) + مدير قسم السيطرة + admin — لا يظهر لـ cc_manager ولا cc_employee
+        const _canOpenAN = currentUser && (
+            currentUser.isAdmin
+            || currentUser.role === 'control_employee'
+            || currentUser.role === 'control_sub'
+            || _isCtrlMgr
+        );
         let _auditBtnHtml = '';
         if (_canOpenAN) {
             const _spacer = x.file ? ' ' : '<br>';

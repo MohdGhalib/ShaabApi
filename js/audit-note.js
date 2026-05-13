@@ -277,9 +277,30 @@ function _anEnsureStyles() {
             border:1.5px solid rgba(139,69,19,0.30);
             border-radius:10px;
             padding:10px 14px 12px;
-            display:flex; flex-direction:column; gap:8px;
+            display:flex; flex-direction:column; gap:6px;
             flex:1 1 auto; min-height:340px;
             box-shadow:0 1px 3px rgba(139,69,19,0.06);
+            position:relative;   /* لتثبيت المدقق في الزاوية */
+        }
+        /* العبارة الثابتة "بعد المتابعة والتدقيق :" في أعلى البوكس */
+        #anModal .an-prefix-static {
+            font-family: Arial, 'Tahoma', sans-serif;
+            font-weight: 900;
+            font-size: 14px;
+            color:#075e54;
+            padding-bottom:4px;
+            border-bottom:1px dashed rgba(139,69,19,0.20);
+            margin-bottom:2px;
+        }
+        /* placeholder للـ contenteditable الفارغ */
+        #anModal .an-notes-pad:empty:before {
+            content: attr(data-placeholder);
+            color:#a08770;
+            font-style:italic;
+            font-weight:normal;
+        }
+        #anModal .an-notes-pad.an-readonly {
+            cursor:default;
         }
         #anModal .an-notes-top {
             display:flex; align-items:center; gap:8px;
@@ -334,13 +355,11 @@ function _anEnsureStyles() {
             border-radius:8px;
             letter-spacing:0.3px;
         }
-        /* صف المدقق — في أسفل بوكس الكتابة على اليسار بصرياً */
+        /* المدقق — pill عائم في الزاوية السفلى اليسرى بصرياً (لا يحجز سطراً) */
         #anModal .an-auditor-bottom {
-            display:flex;
-            justify-content:flex-end;   /* في RTL = أقصى اليسار بصرياً */
-            margin-top:8px;
-            padding-top:8px;
-            border-top:1.5px dashed rgba(139,69,19,0.25);
+            position:absolute;
+            bottom:8px; left:10px;
+            z-index:3;
         }
         /* توقيع المدقق — inline داخل شريط الـ top الأبيض */
         #anModal .an-auditor-inline {
@@ -413,9 +432,18 @@ function _anEnsureStyles() {
         }
         #anModal .an-notes-pad {
             width:100%; box-sizing:border-box;
-            min-height:360px; resize:vertical;
-            padding:8px 6px;
+            min-height:360px;
+            padding:8px 6px 50px;   /* مساحة سفلى لتجنّب تغطية المدقق */
             flex:1 1 auto;
+            /* خط Arial Bold دائماً للكتابة الغنية */
+            font-family: Arial, 'Tahoma', sans-serif !important;
+            font-weight: bold !important;
+            font-size:15px;
+            line-height:1.75;
+            color:#3a2818;
+            outline:none;
+            direction:rtl;
+            overflow-y:auto;
             /* إلغاء الإطار لأن البوكس الخارجي an-notes-box هو الذي يحويه */
             border:none !important;
             box-shadow:none !important;
@@ -927,10 +955,11 @@ function openAuditNoteModal(complaintId, mode) {
                         </div>
                     </div>
 
-                    <!-- البوكس الأبيض الكبير — كتابة + توقيع المدقق في الأسفل -->
+                    <!-- البوكس الأبيض الكبير — كتابة غنية + توقيع المدقق في الأسفل -->
                     <div class="an-notes-area">
                         <div class="an-notes-box">
-                            <textarea id="anDetails" class="an-notes-pad" ${readonly} rows="14" placeholder="اكتب التفاصيل ...">${sanitize(v('details') || (isView || isEdit ? '' : 'بعد المتابعة والتدقيق : \n'))}</textarea>
+                            <div class="an-prefix-static">بعد المتابعة والتدقيق :</div>
+                            <div id="anDetails" class="an-notes-pad${isView ? ' an-readonly' : ''}" ${isView ? '' : 'contenteditable="true"'} data-placeholder="اكتب التفاصيل ...">${(v('details') || '').replace(/^بعد المتابعة والتدقيق\s*:\s*/, '').trim()}</div>
                             <div class="an-auditor-bottom">
                                 <span class="an-auditor-inline">
                                     <span class="an-auditor-label">المدقق :</span>
@@ -964,23 +993,63 @@ function openAuditNoteModal(complaintId, mode) {
     // اعرض اسم اليوم بناءً على التاريخ الحالي
     _anSyncDayName();
 
-    // حماية الـ prefix «بعد المتابعة والتدقيق : » من الحذف في وضع جديد
-    if (!isView && !isEdit) {
-        const ta = document.getElementById('anDetails');
-        const PFX = 'بعد المتابعة والتدقيق : ';
-        if (ta) {
-            ta.addEventListener('input', () => {
-                if (!ta.value.startsWith(PFX)) {
-                    ta.value = PFX + (ta.value.startsWith('بعد ') ? ta.value.replace(/^بعد[^:]*:\s*/, '') : ta.value.replace(/^\s*/, ''));
-                }
-            });
-            requestAnimationFrame(() => {
-                ta.focus();
-                const len = ta.value.length;
-                ta.setSelectionRange(len, len);
-            });
-        }
+    // ركّز على بوكس الكتابة الغنية + اربط سكرول الماوس لتكبير النص المحدّد
+    if (!isView) {
+        requestAnimationFrame(() => {
+            const ed = document.getElementById('anDetails');
+            if (ed) ed.focus();
+            _anBindZoomWheel();
+        });
     }
+}
+
+/* ── تكبير/تصغير النص المحدّد بعجلة الماوس داخل بوكس الكتابة ── */
+function _anZoomSelection(delta) {
+    const sel = window.getSelection();
+    if (!sel || !sel.rangeCount || sel.isCollapsed) return false;
+    const range = sel.getRangeAt(0);
+    const ed = document.getElementById('anDetails');
+    if (!ed || !ed.contains(range.commonAncestorContainer)) return false;
+
+    // احصل على الحجم الحالي عند بداية التحديد
+    const startNode = range.startContainer.nodeType === 1 ? range.startContainer : range.startContainer.parentElement;
+    const cs = window.getComputedStyle(startNode);
+    const cur = parseFloat(cs.fontSize) || 16;
+    const next = Math.max(10, Math.min(56, cur + delta));
+
+    const span = document.createElement('span');
+    span.style.fontSize = next + 'px';
+    try {
+        range.surroundContents(span);
+    } catch (e) {
+        // التحديد يعبر عدة عناصر — استخدم استخراج + تغليف
+        const frag = range.extractContents();
+        span.appendChild(frag);
+        range.insertNode(span);
+    }
+    // أعد تحديد المحتوى بداخل الـ span
+    sel.removeAllRanges();
+    const r2 = document.createRange();
+    r2.selectNodeContents(span);
+    sel.addRange(r2);
+    return true;
+}
+
+function _anBindZoomWheel() {
+    const ed = document.getElementById('anDetails');
+    if (!ed || ed._anWheelBound) return;
+    ed._anWheelBound = true;
+    ed.addEventListener('wheel', (e) => {
+        const sel = window.getSelection();
+        if (!sel || !sel.rangeCount || sel.isCollapsed) return;
+        if (!ed.contains(sel.anchorNode)) return;
+        // سكرول لأعلى = تكبير، لأسفل = تصغير
+        const delta = (e.deltaY < 0) ? 2 : -2;
+        if (_anZoomSelection(delta)) {
+            e.preventDefault();
+            e.stopPropagation();
+        }
+    }, { passive: false });
 }
 
 /* ── حساب اسم اليوم بالعربية وعرضه تحت حقل التاريخ ── */
@@ -1010,6 +1079,10 @@ function submitAuditNote(complaintId, mode) {
     const errEl = document.getElementById('anErr');
     const showErr = (msg) => { if (errEl) { errEl.textContent = msg; errEl.classList.add('show'); } };
 
+    const _detEl = document.getElementById('anDetails');
+    const _detHtml = _detEl ? _detEl.innerHTML.trim() : '';
+    const _detText = _detEl ? (_detEl.innerText || _detEl.textContent || '').trim() : '';
+
     const fields = {
         date:           document.getElementById('anDate').value.trim(),
         time:           document.getElementById('anTime').value.trim(),
@@ -1018,16 +1091,20 @@ function submitAuditNote(complaintId, mode) {
         user:           document.getElementById('anUser').value.trim(),
         cashier:        document.getElementById('anCashier').value.trim(),
         branch:         document.getElementById('anBranch').value.trim(),
-        details:        document.getElementById('anDetails').value.trim(),
+        details:        _detHtml,        // HTML غنيّ (يحوي ألوان/أحجام/محاذاة)
         cameraNum:      document.getElementById('anCameraNum').value.trim(),
         cameraTime:     document.getElementById('anCameraTime').value.trim(),
         auditor:        document.getElementById('anAuditor').value.trim()
     };
 
-    const requiredKeys = ['date','time','invoiceNumber','invoiceValue','user','cashier','details','cameraNum','cameraTime','auditor'];
+    const requiredKeys = ['date','time','invoiceNumber','invoiceValue','user','cashier','cameraNum','cameraTime','auditor'];
     const missing = requiredKeys.find(k => !fields[k]);
     if (missing) {
         showErr('⚠️ يرجى تعبئة جميع الحقول — حقل "' + _anFieldLabel(missing) + '" مفقود');
+        return;
+    }
+    if (!_detText) {
+        showErr('⚠️ يرجى كتابة تفاصيل التدقيق');
         return;
     }
 
@@ -1245,13 +1322,30 @@ function printAuditNote(complaintId) {
         min-width:160px;
         display:inline-block;
     }
+    .notes-box {
+        position:relative;
+    }
+    .prefix-static {
+        font-family: Arial, 'Tahoma', sans-serif;
+        font-weight:900; font-size:13.5px;
+        color:#075e54;
+        padding-bottom:3px;
+        border-bottom:1px dashed rgba(139,69,19,0.20);
+        margin-bottom:4px;
+    }
     .notes-body {
-        padding:8px 6px;
+        padding:8px 6px 50px;
         min-height:60mm;
+        font-family: Arial, 'Tahoma', sans-serif;
+        font-weight: bold;
         font-size:14px; line-height:1.9; color:#3a2818;
-        white-space:pre-wrap;
         flex:1 1 auto;
         background:transparent;
+    }
+    /* المدقق pill عائم في الزاوية السفلى اليسرى بصرياً */
+    .auditor-bottom {
+        position:absolute;
+        bottom:8px; left:10px;
     }
     .controls {
         max-width:760px; margin:14px auto 0; text-align:center;
@@ -1377,7 +1471,8 @@ function printAuditNote(complaintId) {
 
         <div class="notes-area">
             <div class="notes-box">
-                <div class="notes-body">${sanitize(note.details || '—')}</div>
+                <div class="prefix-static">بعد المتابعة والتدقيق :</div>
+                <div class="notes-body">${(note.details || '—').replace(/^بعد المتابعة والتدقيق\s*:\s*/, '')}</div>
                 <div class="auditor-bottom">
                     <span class="auditor-inline">
                         <b class="auditor-inline-label">المدقق :</b>
@@ -1532,6 +1627,8 @@ window._anNotifyAlreadyFilled   = _anNotifyAlreadyFilled;
 window.printAuditNote           = printAuditNote;
 window.jumpToAuditNoteFromComplaint = jumpToAuditNoteFromComplaint;
 window._anSyncDayName = _anSyncDayName;
+window._anZoomSelection = _anZoomSelection;
+window._anBindZoomWheel = _anBindZoomWheel;
 
 /* ══════════════════════════════════════════════════════
    حقن CSS فور تحميل الملف — لكي يحصل زر «📋 ملاحظات السيطرة»
