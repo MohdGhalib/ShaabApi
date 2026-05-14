@@ -9,10 +9,16 @@ let sessions    = [];
 let priceList   = [];
 let currentUser = null;
 
-/* ── سجل التدقيق ── */
+/* ── سجل التدقيق ──
+   ⚠️ تنبيه مهم: كل سجل يجب أن يحمل حقل id فريد.
+   بدون id، عند حدوث conflict أثناء _push للسيرفر، تقوم دالة
+   _mergeLocalIntoServerDb بتجاهل السجلات بلا id واستبدال auditLog
+   المحلي بنسخة السيرفر — مما يفقد سجلات الموظف الحالي. */
 function _logAudit(action, entity, summary, refType, refId) {
     if (!db.auditLog) db.auditLog = [];
+    const _now = Date.now();
     db.auditLog.push({
+        id:      _now + '_' + (currentUser?.empId || 'X') + '_' + Math.random().toString(36).slice(2, 8),
         action,
         entity,
         summary,
@@ -23,10 +29,10 @@ function _logAudit(action, entity, summary, refType, refId) {
         refId:   refId   != null ? refId : null,
         time:    now(),
         iso:     iso(),
-        ts:      Date.now()
+        ts:      _now
     });
     // الاحتفاظ بسجلات آخر 7 أيام لكل موظف
-    const cutoff = Date.now() - 7 * 24 * 60 * 60 * 1000;
+    const cutoff = _now - 7 * 24 * 60 * 60 * 1000;
     db.auditLog = db.auditLog.filter(e => (e.ts || 0) >= cutoff);
 }
 
@@ -609,6 +615,23 @@ async function loadAllData(force) {
     if (!db.compensations) db.compensations = [];
     if (!db.auditNotes) db.auditNotes = [];
     if (!db.branchInfo || typeof db.branchInfo !== 'object') db.branchInfo = {};
+
+    // ترحيل تلقائي: ضمان وجود id فريد لكل سجل تدقيق قديم.
+    // بدون id، عند conflict مع السيرفر تُفقد السجلات لأن _mergeLocalIntoServerDb
+    // يستخدم id كمفتاح للمقارنة. السجلات القديمة قبل هذا التحديث لا تملك id.
+    {
+        let _auditIdsBackfilled = 0;
+        for (const e of db.auditLog) {
+            if (e && e.id == null) {
+                e.id = (e.ts || Date.now()) + '_legacy_' + Math.random().toString(36).slice(2, 8);
+                _auditIdsBackfilled++;
+            }
+        }
+        if (_auditIdsBackfilled > 0) {
+            console.log('[AuditLog] backfilled', _auditIdsBackfilled, 'legacy entries with stable ids');
+            _push('Shaab_Master_DB', JSON.stringify(db));
+        }
+    }
 
     // حذف تلقائي: إزالة العناصر المحذوفة منذ أكثر من 30 يوماً
     const _purgeCutoff = Date.now() - 30 * 24 * 60 * 60 * 1000;
