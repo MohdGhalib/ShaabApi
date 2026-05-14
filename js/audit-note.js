@@ -461,11 +461,15 @@ function _anEnsureStyles() {
             bottom:8px; left:10px;
             z-index:3;
         }
-        /* إجراء المسؤول — يمتدّ من اليمين حتى قبل بوكس المدقق على اليسار */
+        /* إجراء المسؤول — يَظهر في التدفق الطبيعي بعد نص الشكوى بسطرين،
+           ويتراصف بصرياً مع المدقق إذا امتلأ الجدول بالشكوى */
         #anModal .an-supervisor-bottom {
-            position:absolute;
-            bottom:8px; right:10px;
-            left:240px;   /* يحجز ~240px لبوكس المدقق على الجهة اليسرى */
+            align-self:flex-end;
+            margin-top:2em;        /* سطران تقريباً تحت نص الشكوى */
+            margin-bottom:8px;     /* يحاذي ارتفاع المدقق المثبت أسفل */
+            margin-inline-end:0;
+            max-width:calc(100% - 240px); /* لا يصطدم ببوكس المدقق على اليسار */
+            box-sizing:border-box;
             z-index:3;
         }
         #anModal .an-supervisor-inline {
@@ -485,7 +489,7 @@ function _anEnsureStyles() {
             width:auto !important;
         }
         @media (max-width:760px) {
-            #anModal .an-supervisor-bottom { left:200px; }
+            #anModal .an-supervisor-bottom { max-width:calc(100% - 200px); }
         }
         /* توقيع المدقق — inline داخل شريط الـ top الأبيض */
         #anModal .an-auditor-inline {
@@ -558,9 +562,9 @@ function _anEnsureStyles() {
         }
         #anModal .an-notes-pad {
             width:100%; box-sizing:border-box;
-            min-height:360px;
-            padding:8px 6px 50px;   /* مساحة سفلى لتجنّب تغطية المدقق */
-            flex:1 1 auto;
+            min-height:200px;
+            padding:8px 6px 8px;   /* بدون مساحة سفلى قسرية — البوكس يمتد للأسفل بنفسه */
+            flex:0 0 auto;          /* لا يستهلك كل المساحة — يدع البوكس يمتد للأسفل خالياً */
             /* خط افتراضي Arial Bold — قابل للتغيير عبر تفضيلات الخط */
             font-family: Arial, 'Tahoma', sans-serif;
             font-weight: bold;
@@ -1532,11 +1536,14 @@ function printAuditNote(complaintId) {
 <style>
     @page { size:A4 landscape; margin:12mm 14mm; }
     * { box-sizing:border-box; }
+    html, body { height:100%; }
     body {
         margin:0; padding:24px;
         font-family:'Cairo','Tajawal','Segoe UI', Tahoma, sans-serif;
         color:#3a2818; background:#fff;
         direction:rtl;
+        display:flex; flex-direction:column;
+        min-height:100vh;
     }
     .receipt {
         max-width:760px; margin:0 auto;
@@ -1546,6 +1553,9 @@ function printAuditNote(complaintId) {
         padding:28px 32px;
         box-shadow:0 4px 12px rgba(74,40,18,0.16);
         position:relative;
+        display:flex; flex-direction:column;
+        flex:1 1 auto;          /* يملأ ارتفاع الورقة كاملاً — حد الجدول يصل إلى الأسفل */
+        width:100%;
     }
     .head { text-align:center; padding-bottom:18px; border-bottom:2px dashed rgba(139,69,19,0.30); position:relative; }
     .brand { font-size:22px; font-weight:900; color:#8b6f47; letter-spacing:2px; margin-bottom:8px; }
@@ -1669,12 +1679,12 @@ function printAuditNote(complaintId) {
         display:inline;
     }
     .notes-body {
-        padding:8px 6px 50px;
-        min-height:60mm;
+        padding:8px 6px 8px;
+        min-height:30mm;
         font-family: Arial, 'Tahoma', sans-serif;
         font-weight: bold;
         font-size:14px; line-height:1.9; color:#3a2818;
-        flex:1 1 auto;
+        flex:0 0 auto;   /* يأخذ ارتفاع المحتوى — لا يلتهم كل المساحة */
         background:transparent;
     }
     /* المدقق pill عائم في الزاوية السفلى اليسرى بصرياً */
@@ -1682,10 +1692,14 @@ function printAuditNote(complaintId) {
         position:absolute;
         bottom:8px; left:10px;
     }
-    /* إجراء المسؤول pill عائم في الزاوية السفلى اليمنى */
+    /* إجراء المسؤول — في التدفق الطبيعي بعد الشكوى بسطرين،
+       يتراصف بصرياً مع المدقق إذا امتلأ الجدول بنص الشكوى */
     .supervisor-bottom {
-        position:absolute;
-        bottom:8px; right:10px;
+        align-self:flex-end;
+        margin-top:2em;
+        margin-bottom:8px;
+        max-width:calc(100% - 200px);
+        box-sizing:border-box;
     }
     .supervisor-inline {
         background:rgba(21,101,192,0.10) !important;
@@ -1725,24 +1739,28 @@ function printAuditNote(complaintId) {
         }
         html, body {
             margin:0; padding:0; background:#fff;
+            height:100%;
             -webkit-print-color-adjust:exact;
             print-color-adjust:exact;
         }
         body {
             padding:5mm 6mm !important;
             box-sizing:border-box;
+            display:flex !important; flex-direction:column !important;
+            min-height:100vh !important;
         }
         .controls { display:none !important; }
         .receipt {
             box-shadow:none !important;
             border:1.5px solid rgba(139,69,19,0.40) !important;
-            /* يملأ الصفحة A4 landscape (210 - 8 = 202 mm) */
+            /* يملأ الصفحة A4 landscape كاملاً — حد الجدول يصل إلى نهاية الورقة */
             max-width:none !important;
             width:100% !important;
             margin:0 !important;
             padding:6mm 8mm 6mm 8mm !important;
             page-break-inside:avoid;
-            /* لا height/flex/overflow قسري — يأخذ ارتفاع المحتوى الطبيعي */
+            display:flex !important; flex-direction:column !important;
+            flex:1 1 auto !important;
         }
         /* الترويسة مضغوطة */
         .head { padding-bottom:4mm !important; }
