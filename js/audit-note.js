@@ -462,12 +462,17 @@ function _anEnsureStyles() {
             z-index:3;
         }
         /* إجراء المسؤول — يَظهر في التدفق الطبيعي بعد نص الشكوى بسطرين،
-           في أقصى اليمين (RTL = flex-start) ويتراصف بصرياً مع المدقق إذا امتلأ الجدول */
+           في أقصى اليمين (RTL = flex-start) ويتراصف بصرياً مع المدقق إذا امتلأ الجدول.
+           قابل للتوسيع يدوياً بالسحب نحو اليسار عبر resize:horizontal */
         #anModal .an-supervisor-bottom {
             align-self:flex-start;     /* RTL: flex-start = أقصى اليمين */
             margin-top:2em;             /* سطران تقريباً تحت نص الشكوى */
             margin-bottom:8px;          /* يحاذي ارتفاع المدقق المثبت أسفل */
+            width:320px;                /* عرض ابتدائي — يقبل السحب لتوسيعه */
+            min-width:200px;
             max-width:calc(100% - 240px); /* لا يصطدم ببوكس المدقق على اليسار */
+            resize:horizontal;          /* مقبض السحب لتوسيع/تضييق العرض يدوياً */
+            overflow:auto;              /* مطلوب لتفعيل resize */
             box-sizing:border-box;
             z-index:3;
         }
