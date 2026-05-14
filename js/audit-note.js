@@ -1173,22 +1173,55 @@ function openAuditNoteModal(complaintId, mode) {
             const ed = document.getElementById('anDetails');
             if (ed) ed.focus();
             _anBindZoomWheel();
+
+            /* تتبّع الحقل المُركَّز عليه: نص الشكوى ↔ إجراء المسؤول.
+               عند تغيير القائمة المنسدلة "حجم الخط" يطبَّق على آخر حقل ركّز عليه المستخدم */
+            window._anLastFontTarget = 'details';
+            modal.addEventListener('focusin', (e) => {
+                if (!e.target) return;
+                if (e.target.id === 'anDetails') {
+                    window._anLastFontTarget = 'details';
+                    _anSyncFontDropdownTo('anDetails');
+                } else if (e.target.id === 'anSupervisorAction') {
+                    window._anLastFontTarget = 'supervisor';
+                    _anSyncFontDropdownTo('anSupervisorAction');
+                }
+            });
         });
     }
 }
 
-/* ── تطبيق إعدادات الخط على بوكس الكتابة ── */
+/* ── تطبيق إعدادات الخط على بوكس الكتابة المُركَّز عليه حالياً
+       (نص الشكوى افتراضياً — أو بوكس إجراء المسؤول إن كان آخر مُركَّز) ── */
 function _anApplyFontPrefs() {
-    const ed = document.getElementById('anDetails');
+    const targetId = window._anLastFontTarget === 'supervisor' ? 'anSupervisorAction' : 'anDetails';
+    const target = document.getElementById(targetId);
     const fam = document.getElementById('anFontFamily');
     const sz  = document.getElementById('anFontSize');
-    if (!ed) return;
+    if (!target) return;
     if (fam && fam.value) {
-        ed.style.setProperty('font-family', fam.value + ", 'Tahoma', sans-serif", 'important');
+        target.style.setProperty('font-family', fam.value + ", 'Tahoma', sans-serif", 'important');
     }
     if (sz && sz.value) {
-        ed.style.setProperty('font-size', sz.value + 'px', 'important');
+        target.style.setProperty('font-size', sz.value + 'px', 'important');
     }
+}
+
+/* ── يقرأ حجم الخط الفعلي لبوكس ما ويُحدّث القائمة المنسدلة لتعكسه ── */
+function _anSyncFontDropdownTo(targetId) {
+    const t = document.getElementById(targetId);
+    const sz = document.getElementById('anFontSize');
+    if (!t || !sz) return;
+    const cs = window.getComputedStyle(t);
+    const px = Math.round(parseFloat(cs.fontSize) || 15);
+    /* اختر أقرب قيمة موجودة في القائمة بدلاً من إضافة قيم جديدة */
+    let best = sz.options[0]?.value;
+    let bestDiff = Infinity;
+    for (let i = 0; i < sz.options.length; i++) {
+        const d = Math.abs(parseInt(sz.options[i].value, 10) - px);
+        if (d < bestDiff) { bestDiff = d; best = sz.options[i].value; }
+    }
+    if (best != null) sz.value = best;
 }
 
 /* ── حفظ إعدادات الخط مشتركاً لجميع موظفي السيطرة ── */
