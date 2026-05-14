@@ -462,12 +462,11 @@ function _anEnsureStyles() {
             z-index:3;
         }
         /* إجراء المسؤول — يَظهر في التدفق الطبيعي بعد نص الشكوى بسطرين،
-           ويتراصف بصرياً مع المدقق إذا امتلأ الجدول بالشكوى */
+           في أقصى اليمين (RTL = flex-start) ويتراصف بصرياً مع المدقق إذا امتلأ الجدول */
         #anModal .an-supervisor-bottom {
-            align-self:flex-end;
-            margin-top:2em;        /* سطران تقريباً تحت نص الشكوى */
-            margin-bottom:8px;     /* يحاذي ارتفاع المدقق المثبت أسفل */
-            margin-inline-end:0;
+            align-self:flex-start;     /* RTL: flex-start = أقصى اليمين */
+            margin-top:2em;             /* سطران تقريباً تحت نص الشكوى */
+            margin-bottom:8px;          /* يحاذي ارتفاع المدقق المثبت أسفل */
             max-width:calc(100% - 240px); /* لا يصطدم ببوكس المدقق على اليسار */
             box-sizing:border-box;
             z-index:3;
@@ -482,11 +481,13 @@ function _anEnsureStyles() {
         #anModal .an-supervisor-inline .an-auditor-label {
             color:#1565c0 !important;
             flex-shrink:0;
+            font-size:19px !important;   /* ~1.5× الحجم الأصلي 12.5px */
         }
         #anModal .an-supervisor-inline input {
             flex:1 1 auto !important;
             min-width:0 !important;
             width:auto !important;
+            font-size:19px !important;   /* ~1.5× الحجم الأصلي 12.5px */
         }
         @media (max-width:760px) {
             #anModal .an-supervisor-bottom { max-width:calc(100% - 200px); }
@@ -1693,13 +1694,19 @@ function printAuditNote(complaintId) {
         bottom:8px; left:10px;
     }
     /* إجراء المسؤول — في التدفق الطبيعي بعد الشكوى بسطرين،
-       يتراصف بصرياً مع المدقق إذا امتلأ الجدول بنص الشكوى */
+       في أقصى اليمين (RTL = flex-start) ويتراصف مع المدقق إذا امتلأ الجدول */
     .supervisor-bottom {
-        align-self:flex-end;
+        align-self:flex-start;       /* RTL: flex-start = أقصى اليمين */
         margin-top:2em;
         margin-bottom:8px;
         max-width:calc(100% - 200px);
         box-sizing:border-box;
+    }
+    .supervisor-inline .auditor-inline-label {
+        font-size:19px !important;   /* ~1.5× الحجم الأصلي 12.5px */
+    }
+    .supervisor-inline .auditor-inline-name {
+        font-size:19px !important;   /* ~1.5× الحجم الأصلي 12.5px */
     }
     .supervisor-inline {
         background:rgba(21,101,192,0.10) !important;
@@ -1787,10 +1794,12 @@ function printAuditNote(complaintId) {
             min-height:auto !important;
         }
         .auditor-bottom { bottom:4px !important; left:6px !important; }
-        .supervisor-bottom { bottom:4px !important; right:6px !important; }
         .auditor-inline { padding:2px 8px !important; }
         .auditor-inline-name { padding:1px 8px !important; font-size:11.5px !important; min-width:130px !important; }
         .auditor-inline-label { font-size:11.5px !important; }
+        /* بوكس إجراء المسؤول — خط أكبر بـ ~1.5× من المدقق */
+        .supervisor-inline .auditor-inline-label { font-size:17px !important; }
+        .supervisor-inline .auditor-inline-name { font-size:17px !important; min-width:160px !important; }
     }
 </style>
 </head>
