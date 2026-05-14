@@ -871,7 +871,10 @@ function _mergeLocalIntoServerDb(localBefore) {
     let merged = false;
 
     // (1) مصفوفات السجلات
-    const arrKeys = ['montasiat', 'inquiries', 'complaints', 'compensations', 'auditLog'];
+    // ⚠️ كل مصفوفة هنا يجب أن تحوي سجلات بحقل id فريد، وإلا تُفقد عند conflict.
+    // أضفنا 'messages' و 'auditNotes' بعد اكتشاف فقدان الرسائل عند تعارض الإصدارات
+    // (الرسائل لا تملك مفتاح تخزين منفصل، فالاعتماد كلياً على دمج Master_DB).
+    const arrKeys = ['montasiat', 'inquiries', 'complaints', 'compensations', 'auditLog', 'messages', 'auditNotes'];
     for (const k of arrKeys) {
         const localArr = Array.isArray(localBefore[k]) ? localBefore[k] : [];
         if (!Array.isArray(db[k])) db[k] = [];

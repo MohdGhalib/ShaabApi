@@ -536,7 +536,7 @@ function _abBuildMergedData(snap) {
         const baseDb = JSON.parse((snap.data && snap.data['Shaab_Master_DB']) || '{}');
         const liveDb = JSON.parse(live['Shaab_Master_DB']                     || '{}');
         const merged = Object.assign({}, baseDb);
-        for (const sk of ['montasiat','inquiries','complaints','compensations','auditLog']) {
+        for (const sk of ['montasiat','inquiries','complaints','compensations','auditLog','messages','auditNotes']) {
             merged[sk] = _abMergeArrayById(baseDb[sk], liveDb[sk], ts);
         }
         out['Shaab_Master_DB'] = JSON.stringify(merged);
