@@ -1835,8 +1835,9 @@ function printAuditNote(complaintId) {
         .auditor-inline { padding:2px 8px !important; }
         .auditor-inline-name { padding:1px 8px !important; font-size:11.5px !important; min-width:130px !important; }
         .auditor-inline-label { font-size:11.5px !important; }
-        /* بوكس إجراء المسؤول — خط أكبر بـ ~1.5× من المدقق */
-        .supervisor-inline .auditor-inline-label { font-size:17px !important; }
+        /* بوكس إجراء المسؤول — أثناء الطباعة: نخفي تسمية "إجراء المسؤول :"
+           ونُبقي النص فقط، مع الالتزام بقواعد الموضع والحجم السابقة */
+        .supervisor-inline .auditor-inline-label { display:none !important; }
         .supervisor-inline .auditor-inline-name { font-size:17px !important; min-width:160px !important; }
     }
 </style>
