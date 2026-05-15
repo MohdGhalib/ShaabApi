@@ -650,6 +650,11 @@ async function loadAllData(force) {
         }
     }
 
+    // 🛡️ استعادة أصناف الأسعار المعلَّقة (التي ربما لم تصل السيرفر قبل refresh مفاجئ)
+    if (typeof _recoverPendingPriceList === 'function') {
+        try { _recoverPendingPriceList(); } catch (e) { console.error('[loadAllData] recover priceList failed:', e); }
+    }
+
     // حذف تلقائي: إزالة العناصر المحذوفة منذ أكثر من 30 يوماً
     const _purgeCutoff = Date.now() - 30 * 24 * 60 * 60 * 1000;
     const _shouldPurge = (x) => x.deleted && x.deletedAtTs && x.deletedAtTs < _purgeCutoff;
@@ -804,6 +809,10 @@ function _push(key, value) {
             if (typeof data.version === 'number') _versions[key] = data.version;
         } catch {}
         if (key === 'Shaab_Master_DB') _conflictRetryCount = 0;
+        // 🛡️ أصناف الأسعار وصلت السيرفر بأمان — نظّف النسخة الاحتياطية المحلية
+        if (key === 'Shaab_PriceList_DB') {
+            try { localStorage.removeItem(_PL_PENDING_KEY); } catch {}
+        }
 
         /* 🛡️ Sync Queue: علّم السجلات المرسَلة كمؤكَّدة على السيرفر */
         if (_sqSnap && typeof __sq_markConfirmed === 'function') {
@@ -1177,7 +1186,39 @@ async function reloadTable(btn) {
 function saveEmployees()  { _push('Shaab_Employees_DB',  JSON.stringify(employees)); }
 function saveBreaks()     { _push('Shaab_Breaks_DB',     JSON.stringify(breaks));    }
 function saveSessions()   { _push('Shaab_Sessions_DB',   JSON.stringify(sessions));  }
-function savePriceList()  { _push('Shaab_PriceList_DB',  JSON.stringify(priceList)); }
+/* PriceList Pending Backup Key — يضمن عدم فقدان الأصناف المضافة لو ألغيت الصفحة
+   قبل اكتمال fetch إلى السيرفر (مثلاً Reload فوري بعد إضافة "جوز هند") */
+const _PL_PENDING_KEY = '_shaab_pl_pending_backup';
+function savePriceList() {
+    // 🛡️ حفظ محلي فوري قبل الـ fetch — يقاوم: page refresh / network failure / overrride من polling
+    try { localStorage.setItem(_PL_PENDING_KEY, JSON.stringify(priceList || [])); } catch {}
+    _push('Shaab_PriceList_DB', JSON.stringify(priceList));
+}
+/* استرجاع الأصناف المحلية المعلقة (التي لم تصل السيرفر بعد) ودمجها مع priceList الحالي */
+function _recoverPendingPriceList() {
+    try {
+        const _raw = localStorage.getItem(_PL_PENDING_KEY);
+        if (!_raw) return;
+        const _backup = JSON.parse(_raw);
+        if (!Array.isArray(_backup)) { localStorage.removeItem(_PL_PENDING_KEY); return; }
+        if (!Array.isArray(priceList)) priceList = [];
+        const _serverIds = new Set();
+        for (const x of priceList) if (x && x.id != null) _serverIds.add(x.id);
+        const _lost = _backup.filter(x => x && x.id != null && !_serverIds.has(x.id));
+        if (_lost.length) {
+            console.warn('[PriceList] recovering', _lost.length, 'pending item(s) lost before server confirmation:', _lost.map(x=>x.name));
+            priceList = [..._lost, ...priceList];
+            _push('Shaab_PriceList_DB', JSON.stringify(priceList));
+            // النسخة الاحتياطية تظل قائمة حتى يؤكد _push نجاحه عبر تحديث _versions
+            // إذا فشل _push مرة أخرى ستحاول الاسترجاع في التحميل التالي
+        } else {
+            // كل الأصناف موجودة على السيرفر — يمكن تنظيف النسخة الاحتياطية
+            localStorage.removeItem(_PL_PENDING_KEY);
+        }
+    } catch (e) {
+        console.error('[PriceList] recover pending failed:', e);
+    }
+}
 function saveAuditNotes()    { _push('Shaab_AuditNotes_DB',    JSON.stringify(db.auditNotes    || [])); }
 function saveCompensations() { _push('Shaab_Compensations_DB', JSON.stringify(db.compensations || [])); }
 function saveAuditSettings() { _push('Shaab_AuditSettings_DB', JSON.stringify(db.auditSettings || {})); }
