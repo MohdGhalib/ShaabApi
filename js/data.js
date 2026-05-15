@@ -451,6 +451,33 @@ async function loadAllData(force) {
     if (_isLoading && !force) return;
     // عند الإجبار: لا ننتظر إن كان عالقاً — نُعيد ضبط العلَم ونتابع
     _isLoading = true;
+
+    /* 🛡️ التقط التعديلات المحلية المعلقة (التي لم تُحفظ على السيرفر بعد)
+       قبل استبدال db ببيانات السيرفر — يحمي من race بين save() المؤجَّل
+       (debounce 300ms) و loadAllData المتزامن من SSE/polling/visibilitychange.
+       مثال على المشكلة: حجز منتسية لزبون → m.reservedFor يُضاف محلياً →
+       polling يفجّر loadAllData قبل اكتمال الحفظ → الحجز يضيع نهائياً. */
+    const _pendingEditsByType = {
+        montasiat:  new Map(),
+        inquiries:  new Map(),
+        complaints: new Map()
+    };
+    try {
+        if (typeof _lastSavedRecords === 'object' && _lastSavedRecords) {
+            for (const type of ['montasiat', 'inquiries', 'complaints']) {
+                const arr = (db && Array.isArray(db[type])) ? db[type] : [];
+                const lastMap = _lastSavedRecords[type] || new Map();
+                const target = _pendingEditsByType[type];
+                for (const r of arr) {
+                    if (!r || r.id == null) continue;
+                    const cur = JSON.stringify(r);
+                    const last = lastMap.get(r.id);
+                    if (last == null || last !== cur) target.set(r.id, r);
+                }
+            }
+        }
+    } catch (e) { console.warn('[loadAllData] pending capture failed:', e); }
+
     try {
     const keys = ['Shaab_Master_DB','Shaab_Employees_DB','Shaab_Breaks_DB','Shaab_Sessions_DB','Shaab_AuditNotes_DB','Shaab_Compensations_DB','Shaab_AuditSettings_DB'];
     if (IS_LOCAL) {
@@ -749,10 +776,37 @@ async function loadAllData(force) {
     } finally {
         _isLoading = false;
     }
-    /* 🚀 Phase 5b: init tracking of last-saved record state for diff-based save */
+    /* 🚀 Phase 5b: init tracking of last-saved record state for diff-based save
+       ⚠️ يجب أن يُنفَّذ قبل استعادة التعديلات المعلقة بحيث يبقى lastMap = حالة السيرفر،
+       فيرصد _diffRecords التعديلات المستعادة كـ updates ويرسلها في الـ save التالي. */
     if (typeof _initLastSavedRecords === 'function') {
         try { _initLastSavedRecords(); } catch (e) { console.warn('[Phase5b] init failed:', e); }
     }
+
+    /* 🛡️ استعادة التعديلات المحلية المعلقة فوق بيانات السيرفر — يضمن أن
+       حجز المنتسيات، تعديلات الاستفسارات والشكاوى التي لم تصل السيرفر بعد
+       لا تُمحى عند loadAllData المتزامن. */
+    try {
+        for (const type of ['montasiat', 'inquiries', 'complaints']) {
+            const pending = _pendingEditsByType[type];
+            if (!pending || pending.size === 0) continue;
+            if (!Array.isArray(db[type])) db[type] = [];
+            const byId = new Map();
+            for (let i = 0; i < db[type].length; i++) {
+                const r = db[type][i];
+                if (r && r.id != null) byId.set(r.id, i);
+            }
+            let _restored = 0;
+            for (const [id, rec] of pending.entries()) {
+                const idx = byId.get(id);
+                if (idx == null) { db[type].unshift(rec); _restored++; }
+                else { db[type][idx] = rec; _restored++; }
+            }
+            if (_restored > 0) {
+                console.warn(`[loadAllData] restored ${_restored} pending ${type} edit(s) over server data`);
+            }
+        }
+    } catch (e) { console.error('[loadAllData] pending restore failed:', e); }
 }
 
 /* ── حفظ البيانات ──
