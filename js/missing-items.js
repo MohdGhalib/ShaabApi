@@ -899,24 +899,27 @@ function deleteMontasia(id) {
 }
 
 function startEditMontasia(id) {
-    /* للسجلات متعددة الأصناف (محامص الشعب: وزن/قيمة، أو متعدد الأصناف)،
-       افتح المحرر المتقدم الذي يعرض الأصناف الفعلية ويعدّلها بشكل صحيح،
-       بدلاً من inline textarea الذي يقرأ x.notes فقط (وهو فارغ لهذه الأنواع
-       لأن البيانات في rec.items / rec.roastItemName / rec.roastItemValue …). */
+    /* نفتح بوكس النص الـ inline لجميع الأنواع.
+       للسجلات متعددة الأصناف (محامص الشعب: وزن/قيمة، أو متعدد الأصناف)،
+       نملأ الـ textarea بنص مُلخّص للأصناف (_buildItemsExportText)، لأن
+       rec.notes فارغ لهذه الأنواع. عند الحفظ، saveEditMontasia يمسح
+       الحقول البنيوية كي يظهر النص الجديد كملاحظة عادية. */
     const rec = (db.montasiat || []).find(x => x.id === id);
-    if (rec && typeof openMultiItemEditModal === 'function') {
-        const hasItems    = Array.isArray(rec.items) && rec.items.length > 0;
-        const t = rec.type || '';
-        // ندعم الكتابتَين (محامص / محمص) — في الكود نفسه اختلاف إملائي قديم
-        const isRoastery  = t === 'اصناف محمص الشعب' || t === 'اصناف محامص الشعب';
-        const isMultiType = t === 'متعدد الأصناف';
-        if (hasItems || isRoastery || isMultiType) {
-            openMultiItemEditModal(id);
-            return;
-        }
-    }
     const box = document.getElementById(`edit-${id}`);
-    if (box) box.style.display = box.style.display==='none' ? 'block' : 'none';
+    if (box) {
+        const willShow = (box.style.display === 'none');
+        if (willShow && rec && typeof _buildItemsExportText === 'function') {
+            const t = rec.type || '';
+            const isRoastery  = t === 'اصناف محمص الشعب' || t === 'اصناف محامص الشعب';
+            const isMultiType = t === 'متعدد الأصناف';
+            const hasItems    = Array.isArray(rec.items) && rec.items.length > 0;
+            if ((isRoastery || isMultiType || hasItems) && !(rec.notes || '').trim()) {
+                const ta = document.getElementById(`editText-${id}`);
+                if (ta) ta.value = _buildItemsExportText(rec);
+            }
+        }
+        box.style.display = willShow ? 'block' : 'none';
+    }
 }
 
 function saveEditMontasia(id) {
@@ -924,7 +927,21 @@ function saveEditMontasia(id) {
     if (!newText) return alert("يرجى كتابة التفاصيل");
     const item = db.montasiat.find(x => x.id===id);
     if (item) {
-        item.notes=newText; item.editedBy=currentUser.name;
+        item.notes = newText;
+        item.editedBy = currentUser.name;
+        /* تحويل السجل إلى ملاحظة نصية: نمسح الحقول البنيوية كي يظهر النص
+           المُعدَّل في العرض بدلاً من بقايا الأصناف (محامص/متعدد/أخرى). */
+        const t = item.type || '';
+        const wasStructured = (Array.isArray(item.items) && item.items.length > 0)
+            || t === 'اصناف محمص الشعب' || t === 'اصناف محامص الشعب' || t === 'متعدد الأصناف';
+        if (wasStructured) {
+            item.items = [];
+            delete item.roastItemName;
+            delete item.roastItemValue;
+            delete item.roastItemWeight;
+            delete item.roastSubType;
+            item.type = 'أخرى';
+        }
         if (typeof _logAudit === 'function') _logAudit('editMontasiaNotes', item.branch || '—', `${(newText||'').substring(0,40)}`, 'montasia', item.id);
         save();
     }
