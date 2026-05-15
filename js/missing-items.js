@@ -899,6 +899,22 @@ function deleteMontasia(id) {
 }
 
 function startEditMontasia(id) {
+    /* للسجلات متعددة الأصناف (محامص الشعب: وزن/قيمة، أو متعدد الأصناف)،
+       افتح المحرر المتقدم الذي يعرض الأصناف الفعلية ويعدّلها بشكل صحيح،
+       بدلاً من inline textarea الذي يقرأ x.notes فقط (وهو فارغ لهذه الأنواع
+       لأن البيانات في rec.items / rec.roastItemName / rec.roastItemValue …). */
+    const rec = (db.montasiat || []).find(x => x.id === id);
+    if (rec && typeof openMultiItemEditModal === 'function') {
+        const hasItems    = Array.isArray(rec.items) && rec.items.length > 0;
+        const t = rec.type || '';
+        // ندعم الكتابتَين (محامص / محمص) — في الكود نفسه اختلاف إملائي قديم
+        const isRoastery  = t === 'اصناف محمص الشعب' || t === 'اصناف محامص الشعب';
+        const isMultiType = t === 'متعدد الأصناف';
+        if (hasItems || isRoastery || isMultiType) {
+            openMultiItemEditModal(id);
+            return;
+        }
+    }
     const box = document.getElementById(`edit-${id}`);
     if (box) box.style.display = box.style.display==='none' ? 'block' : 'none';
 }
