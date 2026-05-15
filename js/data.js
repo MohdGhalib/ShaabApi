@@ -633,6 +633,23 @@ async function loadAllData(force) {
         }
     }
 
+    // ترحيل تلقائي: ضمان وجود id لكل صنف في قائمة الأسعار.
+    // بدون id لا يمكن دمج الإضافات المحلية بعد conflict — يُسبّب فقدان الأصناف المُضافة
+    // حديثاً (مثل "جوز هند") عند تعارض الإصدارات.
+    if (Array.isArray(priceList)) {
+        let _priceIdsBackfilled = 0;
+        for (const it of priceList) {
+            if (it && it.id == null) {
+                it.id = Date.now() + '_legacy_' + Math.random().toString(36).slice(2, 8);
+                _priceIdsBackfilled++;
+            }
+        }
+        if (_priceIdsBackfilled > 0) {
+            console.log('[PriceList] backfilled', _priceIdsBackfilled, 'legacy items with stable ids');
+            if (typeof savePriceList === 'function') savePriceList();
+        }
+    }
+
     // حذف تلقائي: إزالة العناصر المحذوفة منذ أكثر من 30 يوماً
     const _purgeCutoff = Date.now() - 30 * 24 * 60 * 60 * 1000;
     const _shouldPurge = (x) => x.deleted && x.deletedAtTs && x.deletedAtTs < _purgeCutoff;
@@ -840,9 +857,42 @@ async function _handleVersionConflict(key) {
             }
             // لا توجد تعديلات محلية تستحق الدمج — مجرد تحديث
             _conflictRetryCount = 0;
+        } else if (key === 'Shaab_PriceList_DB') {
+            /* قائمة الأسعار: تحوي تعديلات بشرية يجب الحفاظ عليها (مثلاً إضافة "جوز هند").
+               نأخذ snapshot قبل تحديث السيرفر ثم ندمج الإضافات/التعديلات المحلية. */
+            let _plLocalBefore;
+            try {
+                _plLocalBefore = Array.isArray(priceList) ? JSON.parse(JSON.stringify(priceList)) : [];
+            } catch { _plLocalBefore = []; }
+            await loadAllData();
+            try {
+                const _serverById = new Map();
+                for (const x of (priceList || [])) if (x && x.id != null) _serverById.set(x.id, x);
+                const _adds = [];
+                let _editsChanged = false;
+                for (const lx of _plLocalBefore) {
+                    if (!lx || lx.id == null) continue;
+                    const sx = _serverById.get(lx.id);
+                    if (!sx) {
+                        _adds.push(lx);              // عنصر مُضاف محلياً ولم يصل السيرفر
+                    } else if (JSON.stringify(lx) !== JSON.stringify(sx)) {
+                        _serverById.set(lx.id, lx);  // تعديل محلي يفوز على نسخة السيرفر
+                        _editsChanged = true;
+                    }
+                }
+                if (_adds.length || _editsChanged) {
+                    priceList = [
+                        ..._adds,
+                        ...(priceList || []).map(x => (x && x.id != null) ? (_serverById.get(x.id) || x) : x)
+                    ];
+                    if (typeof savePriceList === 'function') savePriceList();   // أعد الحفظ تلقائياً
+                    console.log(`[conflict] ${key} merged: +${_adds.length} adds, edits=${_editsChanged}`);
+                }
+            } catch (e) { console.error('[conflict] priceList merge failed:', e); }
+            if (typeof renderAll === 'function') renderAll();
         } else {
-            // مفاتيح أخرى (employees / breaks / sessions / priceList): مجرد تحديث + toast
-            /* مفاتيح غير Master_DB (sessions/employees/breaks/priceList):
+            // مفاتيح أخرى (employees / breaks / sessions): مجرد تحديث + toast
+            /* مفاتيح غير Master_DB (sessions/employees/breaks):
                عادةً race condition عابر (heartbeat ضد recordLogin مثلاً)
                → اكتفِ بتحديث صامت بدون toast مزعج */
             await loadAllData();

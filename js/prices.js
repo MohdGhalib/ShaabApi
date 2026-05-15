@@ -396,7 +396,11 @@ function addPriceItem() {
     }
 
     if (!Array.isArray(priceList)) priceList = [];
-    priceList.unshift({ name, weight, price });
+    // ⚠️ id ضروري لتفادي فقدان العنصر عند conflict مع السيرفر — انظر _handleVersionConflict
+    priceList.unshift({
+        id: Date.now() + '_' + Math.random().toString(36).slice(2, 8),
+        name, weight, price
+    });
     savePriceList();
 
     if (typeof _logAudit === 'function') {
