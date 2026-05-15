@@ -316,7 +316,11 @@ function toggleRoastSubMode() {
     if (wrap) wrap.style.display = sub ? '' : 'none';
 }
 
-/* ── تعديل سريع للنوع وحالة التسليم (لمدير الكول سنتر فقط) ── */
+/* ── تعديل سريع للنوع وحالة التسليم (لمدير الكول سنتر فقط) ──
+   تصميم مبسّط: عند فتح فورم تعديل النوع، نُظهر فقط القائمة المنسدلة للنوع.
+   لو النوع = "اصناف محمص الشعب"، نُظهر أيضاً radio لاختيار وزن/قيمة فقط.
+   كل حقول التفاصيل (الاسم، القيمة، الوزن، الملاحظات) تبقى مخفية —
+   تُحفظ القيم الموجودة سابقاً في السجل كما هي. */
 function _onTypeEditChange(id) {
     const sel   = document.getElementById('typeEditSel-' + id);
     const cash  = document.getElementById('typeEditCash-' + id);
@@ -324,24 +328,23 @@ function _onTypeEditChange(id) {
     const roast = document.getElementById('typeEditRoast-' + id);
     const wF    = document.getElementById('typeEditRoastWeight-' + id);
     const vF    = document.getElementById('typeEditRoastValue-' + id);
+    // حقول التفاصيل دائماً مخفية في وضع تعديل النوع — المستخدم يغيّر النوع فقط
     if (cash)  cash.style.display  = 'none';
     if (other) other.style.display = 'none';
-    if (roast) roast.style.display = 'none';
     if (wF)    wF.style.display    = 'none';
     if (vF)    vF.style.display    = 'none';
-    document.querySelectorAll(`input[name="typeEditSub-${id}"]`).forEach(r => r.checked = false);
+    if (roast) roast.style.display = 'none';
     const v = sel?.value || '';
-    if (v === 'نقدي' && cash) cash.style.display = 'flex';
-    else if (v === 'اخرى' && other) other.style.display = 'flex';
-    else if (v === 'اصناف محمص الشعب' && roast) roast.style.display = 'flex';
+    // فقط لـ "اصناف محمص الشعب" نُظهر radio الفرع الفرعي (وزن/قيمة)
+    if (v === 'اصناف محمص الشعب' && roast) roast.style.display = 'flex';
 }
 
 function _onTypeEditSubChange(id) {
-    const sub = document.querySelector(`input[name="typeEditSub-${id}"]:checked`)?.value || '';
+    // لا نُظهر أي حقول تفاصيل عند تغيير الفرع الفرعي — يكفي اختيار وزن/قيمة
     const wF = document.getElementById('typeEditRoastWeight-' + id);
     const vF = document.getElementById('typeEditRoastValue-' + id);
-    if (wF) wF.style.display = sub === 'وزن'  ? 'flex' : 'none';
-    if (vF) vF.style.display = sub === 'قيمة' ? 'flex' : 'none';
+    if (wF) wF.style.display = 'none';
+    if (vF) vF.style.display = 'none';
 }
 
 /* علم عالمي لإيقاف الـ polling/SSE عن إعادة الرسم أثناء تعديل inline
@@ -414,11 +417,12 @@ function saveMontasiaType(id) {
     const _extras = {};
     let   _newNotes = null;            // null = لا تُعدَّل التفاصيل
     if (newType === 'نقدي') {
+        /* القيمة المالية والملاحظة اختيارية في وضع تعديل النوع — تُبقى القيمة
+           الحالية من السجل لو ترك المستخدم الحقل فارغاً (أو الحقل مخفي). */
         const mv = (document.getElementById('typeEditMissingValue-' + id)?.value || '').trim();
-        if (!mv) return alert('يرجى إدخال القيمة المالية المفقودة');
-        _extras.missingValue = mv;
+        _extras.missingValue = mv || (item.missingValue || '');
         const nc = (document.getElementById('typeEditNotesCash-' + id)?.value || '').trim();
-        _newNotes = nc;                // اختيارية
+        if (nc) _newNotes = nc;
     } else if (newType === 'اخرى') {
         const no = (document.getElementById('typeEditNotesOther-' + id)?.value || '').trim();
         /* النص اختياري: إن كتب المستخدم شيئاً نحفظه؛ وإلا نُبقي item.notes
