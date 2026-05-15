@@ -1577,6 +1577,11 @@ function _initSSE() {
         if (_isSaving) {
             await new Promise(r => { const id = setInterval(() => { if (!_isSaving) { clearInterval(id); r(); } }, 200); });
         }
+        /* إن كان المستخدم في تعديل inline (تغيير نوع منتسية، إلخ)، انتظر حتى يغلقه
+           حتى لا يُعاد رسم الجدول فوق اختياراته */
+        if (window._anyInlineEditOpen) {
+            await new Promise(r => { const id = setInterval(() => { if (!window._anyInlineEditOpen) { clearInterval(id); r(); } }, 300); });
+        }
         _snapshotComplaints();
         try { await loadAllData(); safeRenderAll(); _checkNewAssignments(); } catch(e) {}
     });
@@ -1918,6 +1923,9 @@ function _scheduleSync() {
     const delay = document.hidden ? Math.max(_syncDelay, 60_000) : _syncDelay;
     _syncTimer = setTimeout(async () => {
         if (!currentUser) { _scheduleSync(); return; }
+        /* لا نقاطع المستخدم لو كان يحرّر inline (تغيير نوع منتسية، إلخ).
+           إعادة رسم الجدول تُغلق الـ panel وتُفقد اختياراته. نؤجل لتك التالية. */
+        if (window._anyInlineEditOpen) { _scheduleSync(); return; }
         try {
             await loadAllData();
             if (!document.hidden) renderAll();   // لا حاجة لإعادة الرسم لو التبويب مخفي
@@ -1935,6 +1943,8 @@ document.addEventListener('visibilitychange', () => {
         clearTimeout(_syncTimer);
         _syncDelay = 20_000;
         (async () => {
+            /* احترم تعديل inline قيد التنفيذ — لا تُعد الرسم فوق الـ panel */
+            if (window._anyInlineEditOpen) { _scheduleSync(); return; }
             try { await loadAllData(); renderAll(); } catch(e) { /* صامت */ }
             _scheduleSync();
         })();

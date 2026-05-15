@@ -344,6 +344,12 @@ function _onTypeEditSubChange(id) {
     if (vF) vF.style.display = sub === 'قيمة' ? 'flex' : 'none';
 }
 
+/* علم عالمي لإيقاف الـ polling/SSE عن إعادة الرسم أثناء تعديل inline
+   حتى لا تختفي شاشة تغيير النوع كل 20 ثانية على المستخدم */
+if (typeof window !== 'undefined' && typeof window._anyInlineEditOpen === 'undefined') {
+    window._anyInlineEditOpen = false;
+}
+
 function editMontasiaType(id) {
     if (currentUser?.role !== 'cc_manager') return;
     const item = db.montasiat.find(x => x.id === id);
@@ -359,9 +365,22 @@ function editMontasiaType(id) {
     if (sel) sel.value = item.type || 'اخرى';
     // Pre-fill extra fields
     const _setVal = (eid, val) => { const el = document.getElementById(eid); if (el) el.value = val || ''; };
+    /* لو الملاحظات فارغة لكن السجل بنيوي (محامص الشعب أو متعدد الأصناف)،
+       نولِّد نصاً مُلخّصاً من الحقول الفعلية كي لا يضطر المستخدم لإعادة كتابة كل شيء
+       عند التحويل إلى "اخرى" أو "نقدي". */
+    let _notesPrefill = item.notes || '';
+    if (!_notesPrefill.trim() && typeof _buildItemsExportText === 'function') {
+        const t = item.type || '';
+        const isRoastery  = t === 'اصناف محمص الشعب' || t === 'اصناف محامص الشعب';
+        const isMultiType = t === 'متعدد الأصناف';
+        const hasItems    = Array.isArray(item.items) && item.items.length > 0;
+        if (isRoastery || isMultiType || hasItems) {
+            _notesPrefill = _buildItemsExportText(item) || '';
+        }
+    }
     _setVal('typeEditMissingValue-' + id, item.missingValue);
-    _setVal('typeEditNotesCash-'    + id, item.notes);
-    _setVal('typeEditNotesOther-'   + id, item.notes);
+    _setVal('typeEditNotesCash-'    + id, _notesPrefill);
+    _setVal('typeEditNotesOther-'   + id, _notesPrefill);
     _setVal('typeEditRoastValueW-' + id,  item.roastItemValue);
     _setVal('typeEditRoastNameW-' + id,   item.roastItemName);
     _setVal('typeEditRoastWeightW-' + id, item.roastItemWeight);
@@ -369,6 +388,7 @@ function editMontasiaType(id) {
     _setVal('typeEditRoastValueV-' + id,  item.roastItemValue);
     if (view) view.style.display = 'none';
     if (edit) edit.style.display = 'flex';
+    window._anyInlineEditOpen = true;   // أوقف polling مؤقتاً
     _onTypeEditChange(id);
     if (item.roastSubType) {
         const subRadio = document.querySelector(`input[name="typeEditSub-${id}"][value="${item.roastSubType}"]`);
@@ -381,6 +401,7 @@ function cancelMontasiaTypeEdit(id) {
     const edit = document.getElementById('typeEdit-' + id);
     if (edit) edit.style.display = 'none';
     if (view) view.style.display = 'flex';
+    window._anyInlineEditOpen = false;   // أعِد تفعيل polling
 }
 
 function saveMontasiaType(id) {
@@ -400,8 +421,14 @@ function saveMontasiaType(id) {
         _newNotes = nc;                // اختيارية
     } else if (newType === 'اخرى') {
         const no = (document.getElementById('typeEditNotesOther-' + id)?.value || '').trim();
-        if (!no) return alert('يرجى كتابة التفاصيل');
-        _newNotes = no;
+        /* النص اختياري: إن كتب المستخدم شيئاً نحفظه؛ وإلا نُبقي item.notes
+           على حاله أو نولّد ملخصاً من الحقول البنيوية الموجودة. */
+        if (no) {
+            _newNotes = no;
+        } else if (!(item.notes || '').trim() && typeof _buildItemsExportText === 'function') {
+            const _gen = _buildItemsExportText(item);
+            if (_gen) _newNotes = _gen;
+        }
     } else if (newType === 'اصناف محمص الشعب') {
         const sub = document.querySelector(`input[name="typeEditSub-${id}"]:checked`)?.value || '';
         if (!sub) return alert('يرجى اختيار "وزن" أو "قيمة"');
@@ -434,6 +461,7 @@ function saveMontasiaType(id) {
     Object.assign(item, _extras);
     if (_newNotes !== null) item.notes = _newNotes;
     if (typeof _logAudit === 'function') _logAudit('editMontasiaType', item.branch || '—', `${_montasiaSummary(item).substring(0,40)} → ${newType}`, 'montasia', item.id);
+    window._anyInlineEditOpen = false;   // أعِد تفعيل polling
     save();
     renderAll();
 }
