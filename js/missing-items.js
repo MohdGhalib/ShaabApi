@@ -430,20 +430,24 @@ function saveMontasiaType(id) {
             if (_gen) _newNotes = _gen;
         }
     } else if (newType === 'اصناف محمص الشعب') {
+        /* الـ sub-type (وزن/قيمة) فقط هو المطلوب — أمّا حقول التفاصيل
+           (اسم الصنف، القيمة المالية، الوزن) فاختيارية. لو ترك المستخدم
+           حقلاً فارغاً، نُبقي القيمة الحالية المخزّنة في السجل بدلاً من إجباره
+           على إعادة الإدخال (المستخدم يريد فقط تغيير النوع/الفرع الفرعي). */
         const sub = document.querySelector(`input[name="typeEditSub-${id}"]:checked`)?.value || '';
         if (!sub) return alert('يرجى اختيار "وزن" أو "قيمة"');
         _extras.roastSubType = sub;
+        const _readOrKeep = (eid, existing) => {
+            const raw = (document.getElementById(eid)?.value || '').trim();
+            return raw || (existing || '');
+        };
         if (sub === 'وزن') {
-            const v  = (document.getElementById('typeEditRoastValueW-' + id)?.value  || '').trim();
-            const nm = (document.getElementById('typeEditRoastNameW-' + id)?.value   || '').trim();
-            const w  = (document.getElementById('typeEditRoastWeightW-' + id)?.value || '').trim();
-            if (!v || !nm || !w) return alert('يرجى إكمال (القيمة المالية، اسم الصنف، الوزن)');
-            _extras.roastItemValue = v; _extras.roastItemName = nm; _extras.roastItemWeight = w;
+            _extras.roastItemValue  = _readOrKeep('typeEditRoastValueW-'  + id, item.roastItemValue);
+            _extras.roastItemName   = _readOrKeep('typeEditRoastNameW-'   + id, item.roastItemName);
+            _extras.roastItemWeight = _readOrKeep('typeEditRoastWeightW-' + id, item.roastItemWeight);
         } else {
-            const nm = (document.getElementById('typeEditRoastNameV-' + id)?.value  || '').trim();
-            const v  = (document.getElementById('typeEditRoastValueV-' + id)?.value || '').trim();
-            if (!nm || !v) return alert('يرجى إكمال (اسم الصنف، القيمة المالية)');
-            _extras.roastItemName = nm; _extras.roastItemValue = v;
+            _extras.roastItemName  = _readOrKeep('typeEditRoastNameV-'  + id, item.roastItemName);
+            _extras.roastItemValue = _readOrKeep('typeEditRoastValueV-' + id, item.roastItemValue);
         }
     }
 
