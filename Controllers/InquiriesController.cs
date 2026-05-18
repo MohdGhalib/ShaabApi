@@ -84,6 +84,24 @@ public class InquiriesController : ControllerBase
         return Ok(new { ok = true, id });
     }
 
+    // Hard delete (permanent purge) — used by trash bin only.
+    // Restricted to admin / cc_manager.
+    [HttpDelete("{id:long}/purge")]
+    public async Task<IActionResult> Purge(long id)
+    {
+        var isAdmin = User.FindFirst("isAdmin")?.Value == "true";
+        var role    = User.FindFirst("role")?.Value ?? "";
+        if (!isAdmin && role != "cc_manager") return Forbid();
+
+        var entity = await _db.Inquiries.FindAsync(id);
+        if (entity == null) return NotFound(new { error = "not found", id });
+
+        _db.Inquiries.Remove(entity);
+        await _db.SaveChangesAsync();
+        _ = SseController.Broadcast("reload", "1");
+        return Ok(new { ok = true, id, purged = true });
+    }
+
     private static readonly HashSet<string> _typedFields = new(StringComparer.Ordinal)
     {
         "id", "seq", "city", "branch", "phone", "type", "notes",

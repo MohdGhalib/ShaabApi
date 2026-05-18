@@ -187,6 +187,33 @@ function restoreComplaint(id) {
     renderTrash();
 }
 
+/* ── HARD purge: يطلب الـ endpoint المخصّص للحذف النهائي مباشرةً ──
+   نتجاوز save()/diff لأن DELETE العادي على السيرفر = soft-delete فقط (يعيد deleted=true)،
+   فلو مررنا عبر save() ستظل السجلات على DB وتعود عند التحميل التالي. */
+async function _hardPurge(type, ids) {
+    const urlBase = `api/${type}`;
+    const failed = [];
+    for (const id of ids) {
+        try {
+            const res = await fetch(`${urlBase}/${id}/purge`, {
+                method: 'DELETE',
+                headers: { 'Authorization': `Bearer ${_token}` }
+            });
+            if (!res.ok && res.status !== 404) {
+                failed.push({ id, status: res.status });
+                continue;
+            }
+            // إزالة محلية + تحديث snapshot للـ per-record diff حتى لا يعيد إرسال DELETE
+            db[type] = (db[type] || []).filter(x => x.id !== id);
+            try { _lastSavedRecords?.[type]?.delete(id); } catch {}
+        } catch (e) {
+            console.error(`[trash] purge ${type}/${id} failed:`, e);
+            failed.push({ id, err: String(e) });
+        }
+    }
+    return failed;
+}
+
 /* ── الحذف النهائي اليدوي (فردي) ── */
 function purgeMontasia(id) {
     if (!_canPurgeTrash()) return;
@@ -197,12 +224,13 @@ function purgeMontasia(id) {
         `<div style="font-weight:700;color:var(--accent-red);margin-bottom:6px;">حذف منتسية نهائياً</div>
          <div style="color:var(--text-main);">${sanitize(item.branch||'—')} — ${sanitize(item.type||'—')}</div>
          <div style="color:var(--text-dim);font-size:12px;margin-top:4px;">${sanitize(summary)}</div>`,
-        () => {
-            db.montasiat = (db.montasiat||[]).filter(x => x.id !== id);
+        async () => {
+            const failed = await _hardPurge('montasiat', [id]);
+            if (failed.length) { alert('تعذّر الحذف النهائي. حاول مرة أخرى.'); return; }
             _selTrash.M.delete(id);
             _logAudit('purgeMontasia', item.branch || '—', `${item.branch} — ${summary}`);
-            save();
             renderTrash();
+            if (typeof renderAll === 'function') renderAll();
         }
     );
 }
@@ -215,12 +243,13 @@ function purgeInquiry(id) {
         `<div style="font-weight:700;color:var(--accent-red);margin-bottom:6px;">حذف استفسار نهائياً</div>
          <div style="color:var(--text-main);">${sanitize(item.branch||'—')} — ${sanitize(item.type||'—')}</div>
          <div style="color:var(--text-dim);font-size:12px;margin-top:4px;">${sanitize((item.notes||'').substring(0,80))}</div>`,
-        () => {
-            db.inquiries = (db.inquiries||[]).filter(x => x.id !== id);
+        async () => {
+            const failed = await _hardPurge('inquiries', [id]);
+            if (failed.length) { alert('تعذّر الحذف النهائي. حاول مرة أخرى.'); return; }
             _selTrash.I.delete(id);
             _logAudit('purgeInquiry', item.branch || '—', `${item.branch} — ${item.type}`);
-            save();
             renderTrash();
+            if (typeof renderAll === 'function') renderAll();
         }
     );
 }
@@ -233,12 +262,13 @@ function purgeComplaint(id) {
         `<div style="font-weight:700;color:var(--accent-red);margin-bottom:6px;">حذف شكوى نهائياً</div>
          <div style="color:var(--text-main);">${sanitize(item.branch||'—')}</div>
          <div style="color:var(--text-dim);font-size:12px;margin-top:4px;">${sanitize((item.notes||'').substring(0,80))}</div>`,
-        () => {
-            db.complaints = (db.complaints||[]).filter(x => x.id !== id);
+        async () => {
+            const failed = await _hardPurge('complaints', [id]);
+            if (failed.length) { alert('تعذّر الحذف النهائي. حاول مرة أخرى.'); return; }
             _selTrash.C.delete(id);
             _logAudit('purgeComplaint', item.branch || '—', `${item.branch} — ${(item.notes||'').substring(0,40)}`);
-            save();
             renderTrash();
+            if (typeof renderAll === 'function') renderAll();
         }
     );
 }
@@ -247,12 +277,12 @@ function purgeComplaint(id) {
 function bulkPurgeTrash(key) {
     if (!_canPurgeTrash()) return;
     const sel = _selTrash[key]; if (!sel || !sel.size) return;
-    const arrName = key === 'M' ? 'montasiat' : key === 'I' ? 'inquiries' : 'complaints';
-    const label   = key === 'M' ? 'منتسية'   : key === 'I' ? 'استفسار'   : 'شكوى';
+    const arrName  = key === 'M' ? 'montasiat' : key === 'I' ? 'inquiries' : 'complaints';
+    const label    = key === 'M' ? 'منتسية'   : key === 'I' ? 'استفسار'   : 'شكوى';
     const auditTag = key === 'M' ? 'purgeMontasia' : key === 'I' ? 'purgeInquiry' : 'purgeComplaint';
 
-    const ids = new Set(sel);
-    const items = (db[arrName] || []).filter(x => ids.has(x.id));
+    const ids = [...sel];
+    const items = (db[arrName] || []).filter(x => ids.includes(x.id));
     if (!items.length) return;
 
     const preview = items.slice(0, 8).map(x =>
@@ -265,12 +295,15 @@ function bulkPurgeTrash(key) {
 
     showDeleteConfirm(
         `<div style="font-weight:700;color:var(--accent-red);margin-bottom:8px;">سيتم حذف ${items.length} ${label} نهائياً</div>${preview}${more}`,
-        () => {
-            db[arrName] = (db[arrName] || []).filter(x => !ids.has(x.id));
-            items.forEach(x => _logAudit(auditTag, x.branch || '—', `${x.branch||'—'} — ${(x.notes||x.type||'').substring(0,60)}`));
-            sel.clear();
-            save();
+        async () => {
+            const failed = await _hardPurge(arrName, ids);
+            const purgedIds = new Set(ids.filter(id => !failed.some(f => f.id === id)));
+            items.filter(x => purgedIds.has(x.id))
+                 .forEach(x => _logAudit(auditTag, x.branch || '—', `${x.branch||'—'} — ${(x.notes||x.type||'').substring(0,60)}`));
+            purgedIds.forEach(id => sel.delete(id));
             renderTrash();
+            if (typeof renderAll === 'function') renderAll();
+            if (failed.length) alert(`تعذّر حذف ${failed.length} عنصر — حاول مرة أخرى.`);
         }
     );
 }
