@@ -1255,10 +1255,11 @@ function toggleCountComplaint(id) {
 ══════════════════════════════════════════════════════ */
 
 function _setCompFieldsLocked(locked) {
+    const countryEl= document.getElementById('compCountry');
     const cityEl   = document.getElementById('compCity');
     const branchEl = document.getElementById('compBranch');
     const notesEl  = document.getElementById('compNotes');
-    [cityEl, branchEl].forEach(el => {
+    [countryEl, cityEl, branchEl].forEach(el => {
         if (!el) return;
         el.disabled = locked;
         el.style.opacity = locked ? '0.6' : '';
@@ -1280,14 +1281,31 @@ function onCompComplaintSelect() {
     }
     const complaint = (db.complaints || []).find(c => c.id === Number(cid));
     if (!complaint) return;
-    // ملء المحافظة والفرع
-    const cityEl = document.getElementById('compCity');
+
+    const country = complaint.country
+        || (typeof _countryForCity === 'function' ? _countryForCity(complaint.city) : '');
+
+    const countryEl = document.getElementById('compCountry');
+    const cityEl    = document.getElementById('compCity');
+    const branchEl  = document.getElementById('compBranch');
+
+    // 1) الدولة أولاً ثم تعبئة المحافظات الخاصة بها
+    if (countryEl && country) {
+        countryEl.value = country;
+        if (typeof updateCities === 'function') {
+            updateCities('compCountry', 'compCity', 'compBranch');
+        }
+    }
+    // 2) المحافظة ثم تعبئة فروعها
     if (cityEl && complaint.city) {
         cityEl.value = complaint.city;
         updateBranches('compCity', 'compBranch');
-        const branchEl = document.getElementById('compBranch');
-        if (branchEl && complaint.branch) branchEl.value = complaint.branch;
     }
+    // 3) الفرع
+    if (branchEl && complaint.branch) {
+        branchEl.value = complaint.branch;
+    }
+
     // ملء نص الشكوى
     const notesEl = document.getElementById('compNotes');
     if (notesEl) notesEl.value = complaint.notes || '';
