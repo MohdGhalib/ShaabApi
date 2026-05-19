@@ -695,20 +695,52 @@ async function loadAllData(force) {
     }
 
     // ترحيل تلقائي: ضمان وجود id لكل صنف في قائمة الأسعار.
-    // بدون id لا يمكن دمج الإضافات المحلية بعد conflict — يُسبّب فقدان الأصناف المُضافة
-    // حديثاً (مثل "جوز هند") عند تعارض الإصدارات.
+    // ⚠️ نستخدم id حتمياً مبني على (name|weight) بدلاً من Date.now()+random:
+    //   ids عشوائية مختلفة على كل جهاز كانت تجعل _recoverPendingPriceList يرى
+    //   نفس الصنف كـ "مفقود" ويُكرّره عشرات المرات بمرور المزامنات.
     if (Array.isArray(priceList)) {
         let _priceIdsBackfilled = 0;
         for (const it of priceList) {
             if (it && it.id == null) {
-                it.id = Date.now() + '_legacy_' + Math.random().toString(36).slice(2, 8);
+                const _seedStr = String(it.name || '') + '|' + String(it.weight || '');
+                let _h = 0;
+                for (let i = 0; i < _seedStr.length; i++) _h = ((_h << 5) - _h + _seedStr.charCodeAt(i)) | 0;
+                it.id = 'auto_' + (_h >>> 0).toString(36) + '_' + _seedStr.length;
                 _priceIdsBackfilled++;
             }
         }
         if (_priceIdsBackfilled > 0) {
-            console.log('[PriceList] backfilled', _priceIdsBackfilled, 'legacy items with stable ids');
+            console.log('[PriceList] backfilled', _priceIdsBackfilled, 'legacy items with deterministic ids');
             if (typeof savePriceList === 'function') savePriceList();
         }
+    }
+
+    // 🛡️ شفاء تكرار الأصناف في القائمة: نتيجة تفاعل سيئ بين الـ legacy
+    //   backfill (ids عشوائية مختلفة على كل جهاز) مع _recoverPendingPriceList
+    //   ومسح الـ backup المؤجَّل — كان نفس الصنف يعود بـ id جديد فيُحسب "مفقود"
+    //   ويُضاف من جديد. النتيجة: عشرات النسخ لكل صنف.
+    //   نُبقي أول نسخة فقط حسب (name|weight). نحفظ النتيجة للسيرفر إذا تغيّر شيء.
+    if (Array.isArray(priceList) && priceList.length > 1) {
+        try {
+            const seen = new Map();   // key=name|weight -> kept item
+            const kept = [];
+            let dups = 0;
+            for (const it of priceList) {
+                if (!it) continue;
+                const key = String(it.name || '').trim() + '|' + String(it.weight || '').trim();
+                if (seen.has(key)) {
+                    dups++;
+                    continue;
+                }
+                seen.set(key, it);
+                kept.push(it);
+            }
+            if (dups > 0) {
+                console.warn('[PriceList] removed', dups, 'duplicate items by (name|weight)');
+                priceList = kept;
+                if (typeof savePriceList === 'function') savePriceList();
+            }
+        } catch (e) { console.error('[PriceList] dedup failed:', e); }
     }
 
     // 🛡️ شفاء تكرار seq في الاستفسارات (نشأ تاريخياً عن race بين عميلَين
@@ -1391,8 +1423,19 @@ function _recoverPendingPriceList() {
         if (!Array.isArray(_backup)) { localStorage.removeItem(_PL_PENDING_KEY); return; }
         if (!Array.isArray(priceList)) priceList = [];
         const _serverIds = new Set();
-        for (const x of priceList) if (x && x.id != null) _serverIds.add(x.id);
-        const _lost = _backup.filter(x => x && x.id != null && !_serverIds.has(x.id));
+        const _serverNW  = new Set();   // مطابقة بـ name+weight أيضاً — تحمي من id mismatch
+        for (const x of priceList) {
+            if (x && x.id != null) _serverIds.add(x.id);
+            if (x) _serverNW.add(String(x.name || '').trim() + '|' + String(x.weight || '').trim());
+        }
+        // عنصر يُعتبر "مفقود" فقط لو غاب بـ id وبـ (name|weight) معاً
+        const _lost = _backup.filter(x => {
+            if (!x || x.id == null) return false;
+            if (_serverIds.has(x.id)) return false;
+            const nw = String(x.name || '').trim() + '|' + String(x.weight || '').trim();
+            if (_serverNW.has(nw)) return false;
+            return true;
+        });
         if (_lost.length) {
             console.warn('[PriceList] recovering', _lost.length, 'pending item(s) lost before server confirmation:', _lost.map(x=>x.name));
             priceList = [..._lost, ...priceList];
