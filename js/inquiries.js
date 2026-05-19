@@ -837,6 +837,26 @@ function jumpToInquiry(seq) {
     }, 200);
 }
 
+/* الانتقال لاستفسار محدد بالـ id الفريد (Date.now()) — أدق من الـ seq
+   لأن seq قد يتكرر بين سجلات محذوفة/مستوردة. */
+function jumpToInquiryById(id) {
+    if (id == null) return;
+    switchTab('i');
+    setTimeout(() => {
+        const rows = document.querySelectorAll('#tableI tbody tr');
+        let _matched = false;
+        rows.forEach(r => {
+            r.style.outline = '';
+            if (String(r.dataset.id) === String(id)) {
+                r.style.outline = '2px solid var(--accent-red)';
+                r.scrollIntoView({ behavior:'smooth', block:'center' });
+                _matched = true;
+            }
+        });
+        if (!_matched) alert('لم يتم العثور على الاستفسار المرتبط');
+    }, 200);
+}
+
 function toggleCountInquiry(id) {
     const inq = db.inquiries.find(x => x.id === id);
     if (!inq || inq.type !== 'شكوى') return;

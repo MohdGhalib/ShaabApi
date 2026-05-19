@@ -1595,3 +1595,23 @@ function jumpToMontasia(serial) {
     }, 250);
 }
 
+/* الانتقال للمنتسية بالـ id الفريد (Date.now()) — يستخدمه ربط الاستفسارات
+   كي لا يتأثّر بتكرار الـ serial بين سجلات مختلفة. */
+function jumpToMontasiaById(id) {
+    if (id == null) return;
+    if (typeof switchTab === 'function') switchTab('m');
+    setTimeout(() => {
+        const rows = document.querySelectorAll('#tableM tbody tr');
+        let _matched = false;
+        rows.forEach(r => {
+            r.style.outline = '';
+            if (String(r.dataset.id) === String(id)) {
+                r.style.outline = '2px solid var(--accent-red)';
+                r.scrollIntoView({ behavior:'smooth', block:'center' });
+                _matched = true;
+            }
+        });
+        if (!_matched) alert('لم يتم العثور على المنتسية المرتبطة');
+    }, 250);
+}
+
