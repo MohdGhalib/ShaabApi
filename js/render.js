@@ -709,19 +709,12 @@ function _renderTableI(get) {
     _pg.I = _pageI;
     const rows = allRowsI.slice((_pageI - 1) * _sizeI, _pageI * _sizeI);
     const _tbodyIRows = rows; // kept for select-all check below
+    const isCCMgrI = currentUser?.role === 'cc_manager' || currentUser?.isAdmin;
+    const _iqEditIcon = (fn, label) => isCCMgrI
+        ? ` <button onclick="${fn}" title="تعديل ${label}" style="background:none;border:none;cursor:pointer;color:var(--text-dim);padding:0 4px;font-size:11px;vertical-align:middle;">✏️</button>`
+        : '';
+
     tbodyI.innerHTML = rows.map(x => {
-        const editBox = canManage ? `
-            <div id="inqEdit-${x.id}" style="display:none;margin-top:10px;background:var(--bg-input);border:1px solid var(--border);border-radius:10px;padding:12px;">
-                <div style="margin-bottom:8px;">
-                    <label style="font-size:12px;color:var(--text-dim);display:block;margin-bottom:4px;">رقم الهاتف</label>
-                    <input type="text" id="inqPhone-${x.id}" value="${sanitize(x.phone)}" style="width:100%;padding:6px 10px;border-radius:8px;">
-                </div>
-                <div style="margin-bottom:10px;">
-                    <label style="font-size:12px;color:var(--text-dim);display:block;margin-bottom:4px;">الملاحظات</label>
-                    <textarea id="inqNotes-${x.id}" rows="2" style="width:100%;">${sanitize(x.notes||'')}</textarea>
-                </div>
-                <button class="btn btn-main" style="width:100%;padding:7px;font-size:12px;" onclick="saveEditInquiry(${x.id})">حفظ التعديل</button>
-            </div>` : '';
         const canCountI = (currentUser?.role === 'cc_manager' || currentUser?.isAdmin) && x.type === 'شكوى';
         const _linkedC  = canCountI ? db.complaints.find(c => !c.deleted && String(c.linkedInqSeq) === String(x.seq)) : null;
         const countedI  = canCountI && (_linkedC ? !!_linkedC.countedByCC : !!x.countedByCC);
@@ -737,8 +730,7 @@ function _renderTableI(get) {
 
         const actions = canManage ? `
             <td style="white-space:nowrap;">
-                <button class="btn-edit-sm" onclick="startEditInquiry(${x.id})">✏️ تعديل</button>
-                <button class="btn-delete-sm" style="margin-top:4px;" onclick="deleteInquiry(${x.id})">🗑</button>
+                <button class="btn-delete-sm" onclick="deleteInquiry(${x.id})">🗑</button>
                 ${countBtnI}
             </td>` : (canCountI ? `<td>${countBtnI}</td>` : '<td></td>');
         // بادج نوع الشكوى الفرعي + بيانات الشكوى المالية إن وُجدت
@@ -777,7 +769,7 @@ function _renderTableI(get) {
             : '';
         return `<tr data-id="${x.id}">
             <td><span class="seq-badge" title="الرقم التسلسلي">#${x.seq||'—'}</span></td>
-            <td><b>${x.branch}</b><br><small>${x.city}</small></td>
+            <td><b>${sanitize(x.branch)}</b>${_iqEditIcon(`editInquiryBranch(${x.id})`,'الفرع والمحافظة')}<br><small>${sanitize(x.city)}</small></td>
             <td>${(() => {
                 const _ph = sanitize(x.phone);
                 const _isCC = currentUser?.role === 'cc_manager' || currentUser?.role === 'cc_employee';
@@ -786,18 +778,19 @@ function _renderTableI(get) {
                 const _inner = _isCC
                     ? `<span class="c360-phone-link" onclick="openCustomer360('${_ph}')" title="عرض ملف الزبون">${_ph}</span>`
                     : _ph;
-                return `<span class="phone-cell-wrap">${_inner}${_badge}</span>`;
+                return `<span class="phone-cell-wrap">${_inner}${_badge}</span>${_iqEditIcon(`editInquiryPhone(${x.id})`,'رقم الجوال')}`;
             })()}</td>
             <td>
-                <span class="emp-badge">${x.type||'—'}</span>${ctBadge}${_existsTag}${notifyBtnI}
+                <span class="emp-badge">${x.type||'—'}</span>${_iqEditIcon(`editInquiryType(${x.id})`,'نوع الاستفسار')}${ctBadge}${_existsTag}${notifyBtnI}
                 ${_itemBadge}
-                ${x.notes?`<br><span class="text-box-cell" style="font-size:13px;color:var(--text-dim)">${sanitize(x.notes)}</span>`:''}
+                ${x.notes
+                    ? `<br><span class="text-box-cell" style="font-size:13px;color:var(--text-dim)">${sanitize(x.notes)}</span>${_iqEditIcon(`editInquiryNotes(${x.id})`,'نص الاستفسار')}`
+                    : (isCCMgrI ? `<br>${_iqEditIcon(`editInquiryNotes(${x.id})`,'نص الاستفسار')}<span style="font-size:11px;color:var(--text-dim);">— لا يوجد نص —</span>` : '')}
                 ${_serialHtml}
                 ${finFieldsHtml}
-                ${editBox}
             </td>
-            <td><small style="color:var(--text-main)">${typeof _empNameHTML==='function'?_empNameHTML(x.addedBy||'—'):sanitize(x.addedBy||'—')}</small></td>
-            <td><small>${_toLatinDigits(x.time)}</small></td>
+            <td><small style="color:var(--text-main)">${typeof _empNameHTML==='function'?_empNameHTML(x.addedBy||'—'):sanitize(x.addedBy||'—')}</small>${_iqEditIcon(`editInquiryAddedBy(${x.id})`,'اسم الموظف')}</td>
+            <td><small>${_toLatinDigits(x.time)}</small>${_iqEditIcon(`editInquiryTime(${x.id})`,'الوقت')}</td>
             ${actions}
         </tr>`;
     }).join('');

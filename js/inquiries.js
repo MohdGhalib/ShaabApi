@@ -575,23 +575,251 @@ function deleteInquiry(id) {
     );
 }
 
-function startEditInquiry(id) {
-    const box = document.getElementById(`inqEdit-${id}`);
-    if (box) box.style.display = box.style.display === 'none' ? 'block' : 'none';
+/* ══════════════════════════════════════════════════════
+   تعديل حقول الاستفسار — مدير الكول سنتر/المدير فقط
+   - أيقونة قلم ✏️ بجانب كل حقل قابل للتعديل في جدول الاستفسارات
+   - الحقول: الفرع/المحافظة، الجوال، النوع، النص، الموظف، الوقت
+══════════════════════════════════════════════════════ */
+function _canEditInquiry() {
+    return currentUser?.role === 'cc_manager' || currentUser?.isAdmin;
 }
 
-function saveEditInquiry(id) {
-    const phone = document.getElementById(`inqPhone-${id}`)?.value.trim();
-    const notes = document.getElementById(`inqNotes-${id}`)?.value.trim();
-    if (!phone) return alert("يرجى إدخال رقم الهاتف");
-    const item = db.inquiries.find(x => x.id === id);
-    if (item) {
-        item.phone   = phone;
-        item.notes   = notes;
-        item.editedBy = currentUser.name;
-        if (typeof _logAudit === 'function') _logAudit('editInquiry', item.branch || '—', `${item.type} — ${(notes||'').substring(0,40)}`);
-        save();
+function _iqFmtTime(dateStr, timeStr) {
+    const [y, mo, d] = dateStr.split('-');
+    const [hh, mm]   = timeStr.split(':');
+    const h    = parseInt(hh, 10);
+    const ampm = h >= 12 ? 'PM' : 'AM';
+    const h12  = h % 12 || 12;
+    return `${parseInt(d,10)}/${parseInt(mo,10)}/${y}، ${h12}:${mm}:00 ${ampm}`;
+}
+function _iqParseTime(rawStr, isoStr) {
+    let dateStr = '', timeStr = '';
+    if (isoStr && /^\d{4}-\d{2}-\d{2}$/.test(isoStr)) dateStr = isoStr;
+    if (!rawStr) return { date: dateStr, time: timeStr };
+    const s = String(rawStr);
+    const dm = s.match(/(\d{1,4})[\/\-](\d{1,2})[\/\-](\d{1,4})/);
+    if (!dateStr && dm) {
+        let y, mo, d;
+        if (dm[1].length === 4) { y = dm[1]; mo = dm[2]; d = dm[3]; }
+        else                    { d = dm[1]; mo = dm[2]; y = dm[3]; }
+        dateStr = `${y}-${String(mo).padStart(2,'0')}-${String(d).padStart(2,'0')}`;
     }
+    const tm = s.match(/(\d{1,2}):(\d{2})(?::\d{2})?\s*(AM|PM|am|pm)?/);
+    if (tm) {
+        let h = parseInt(tm[1], 10);
+        const m = tm[2];
+        const ap = (tm[3] || '').toUpperCase();
+        if (ap === 'PM' && h < 12) h += 12;
+        else if (ap === 'AM' && h === 12) h = 0;
+        timeStr = `${String(h).padStart(2,'0')}:${m}`;
+    }
+    return { date: dateStr, time: timeStr };
+}
+
+const _IQ_TYPE_OPTIONS = [
+    "شكوى","استفسار عن أصناف","استفسار عن منتسيات","استفسار عن عروض",
+    "موظفين شركات توصيل","موظف محامص الشعب","أوقات الدوام",
+    "تحويل اقسام داخلي","توظيف وشؤون موظفين","طلبية",
+    "تحويل لمولات او بوابة الشعب","أخرى"
+];
+
+function closeEditInquiryModal() {
+    const o = document.getElementById('_iqEditOverlay');
+    if (o) o.remove();
+}
+
+function _openEditInquiryModal(id, mode) {
+    if (!_canEditInquiry()) return;
+    const item = (db.inquiries || []).find(x => String(x.id) === String(id));
+    if (!item) return;
+    closeEditInquiryModal();
+
+    let title = '', bodyHtml = '';
+    const headerGrad = 'linear-gradient(135deg,#1976d2,#0d47a1)';
+
+    if (mode === 'branch') {
+        title = '📍 تعديل المحافظة والفرع';
+        bodyHtml = `
+            <div style="font-size:11px;color:var(--text-dim);margin-bottom:10px;background:var(--bg-input);padding:8px 10px;border-radius:8px;">
+                الحالي: <b style="color:var(--text-main);">${sanitize(item.city || '—')}</b> / <b style="color:var(--text-main);">${sanitize(item.branch || '—')}</b>
+            </div>
+            <label style="display:block;margin-bottom:5px;font-size:12px;color:var(--text-dim);">المحافظة:</label>
+            <select id="_iqCity" style="width:100%;padding:8px 10px;background:var(--bg-input);color:var(--text-main);border:1px solid var(--border);border-radius:8px;font-family:Cairo;margin-bottom:12px;box-sizing:border-box;"></select>
+            <label style="display:block;margin-bottom:5px;font-size:12px;color:var(--text-dim);">الفرع:</label>
+            <select id="_iqBranch" style="width:100%;padding:8px 10px;background:var(--bg-input);color:var(--text-main);border:1px solid var(--border);border-radius:8px;font-family:Cairo;box-sizing:border-box;"></select>`;
+    } else if (mode === 'time') {
+        title = '🕐 تعديل وقت الاستفسار';
+        const parsed = _iqParseTime(item.time, item.iso);
+        bodyHtml = `
+            <div style="font-size:11px;color:var(--text-dim);margin-bottom:10px;background:var(--bg-input);padding:8px 10px;border-radius:8px;">
+                الحالي: <b style="color:var(--text-main);">${sanitize(item.time || '—')}</b>
+            </div>
+            <label style="display:block;margin-bottom:5px;font-size:12px;color:var(--text-dim);">التاريخ:</label>
+            <input id="_iqDate" type="date" value="${parsed.date}" style="width:100%;padding:8px 10px;background:var(--bg-input);color:var(--text-main);border:1px solid var(--border);border-radius:8px;font-family:Cairo;margin-bottom:10px;box-sizing:border-box;">
+            <label style="display:block;margin-bottom:5px;font-size:12px;color:var(--text-dim);">الوقت:</label>
+            <input id="_iqTime" type="time" value="${parsed.time}" style="width:100%;padding:8px 10px;background:var(--bg-input);color:var(--text-main);border:1px solid var(--border);border-radius:8px;font-family:Cairo;box-sizing:border-box;">`;
+    } else if (mode === 'addedBy') {
+        title = '👤 تعديل اسم الموظف';
+        const _ccTitles = ['مدير الكول سنتر', 'موظف كول سنتر', 'موظف ميديا'];
+        const _cur = item.addedBy || '';
+        const _list = (typeof employees !== 'undefined' && Array.isArray(employees))
+            ? employees.filter(e => !e.deleted && _ccTitles.includes(e.title))
+            : [];
+        if (_cur && !_list.some(e => e.name === _cur)) _list.unshift({ name: _cur, title: '—' });
+        const opts = '<option value="">— اختر موظف —</option>' +
+            _list.map(e => `<option value="${sanitize(e.name)}" ${e.name === _cur ? 'selected' : ''}>${sanitize(e.name)}${e.title && e.title !== '—' ? ' — ' + sanitize(e.title) : ''}</option>`).join('');
+        bodyHtml = `
+            <div style="font-size:11px;color:var(--text-dim);margin-bottom:10px;background:var(--bg-input);padding:8px 10px;border-radius:8px;">
+                الحالي: <b style="color:var(--text-main);">${sanitize(_cur || '—')}</b>
+            </div>
+            <label style="display:block;margin-bottom:5px;font-size:12px;color:var(--text-dim);">الموظف (الكول سنتر/الميديا):</label>
+            <select id="_iqEmp" style="width:100%;padding:8px 10px;background:var(--bg-input);color:var(--text-main);border:1px solid var(--border);border-radius:8px;font-family:Cairo;box-sizing:border-box;">${opts}</select>`;
+    } else if (mode === 'type') {
+        title = '🏷️ تعديل نوع الاستفسار';
+        const _cur = item.type || '';
+        const opts = '<option value="">— اختر النوع —</option>' +
+            _IQ_TYPE_OPTIONS.map(t => `<option value="${sanitize(t)}" ${t === _cur ? 'selected' : ''}>${sanitize(t)}</option>`).join('');
+        bodyHtml = `
+            <div style="font-size:11px;color:var(--text-dim);margin-bottom:10px;background:var(--bg-input);padding:8px 10px;border-radius:8px;">
+                الحالي: <b style="color:var(--text-main);">${sanitize(_cur || '—')}</b>
+            </div>
+            <label style="display:block;margin-bottom:5px;font-size:12px;color:var(--text-dim);">نوع الاستفسار:</label>
+            <select id="_iqType" style="width:100%;padding:8px 10px;background:var(--bg-input);color:var(--text-main);border:1px solid var(--border);border-radius:8px;font-family:Cairo;box-sizing:border-box;">${opts}</select>`;
+    } else if (mode === 'notes') {
+        title = '📝 تعديل نص الاستفسار';
+        const _cur = item.notes || '';
+        bodyHtml = `
+            <div style="font-size:11px;color:var(--text-dim);margin-bottom:10px;background:var(--bg-input);padding:8px 10px;border-radius:8px;max-height:120px;overflow:auto;">
+                الحالي: <b style="color:var(--text-main);">${sanitize(_cur || '—')}</b>
+            </div>
+            <label style="display:block;margin-bottom:5px;font-size:12px;color:var(--text-dim);">النص:</label>
+            <textarea id="_iqNotes" rows="5" style="width:100%;padding:8px 10px;background:var(--bg-input);color:var(--text-main);border:1px solid var(--border);border-radius:8px;font-family:Cairo;box-sizing:border-box;resize:vertical;">${sanitize(_cur)}</textarea>`;
+    } else if (mode === 'phone') {
+        title = '📞 تعديل رقم الجوال';
+        const _cur = item.phone || '';
+        bodyHtml = `
+            <div style="font-size:11px;color:var(--text-dim);margin-bottom:10px;background:var(--bg-input);padding:8px 10px;border-radius:8px;">
+                الحالي: <b style="color:var(--text-main);">${sanitize(_cur || '—')}</b>
+            </div>
+            <label style="display:block;margin-bottom:5px;font-size:12px;color:var(--text-dim);">رقم الجوال:</label>
+            <input id="_iqPhone" type="tel" value="${sanitize(_cur)}" style="width:100%;padding:8px 10px;background:var(--bg-input);color:var(--text-main);border:1px solid var(--border);border-radius:8px;font-family:Cairo;box-sizing:border-box;">`;
+    }
+
+    const overlay = document.createElement('div');
+    overlay.id = '_iqEditOverlay';
+    overlay.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.6);z-index:100002;display:flex;align-items:center;justify-content:center;font-family:Cairo;padding:16px;';
+    overlay.onclick = (e) => { if (e.target === overlay) closeEditInquiryModal(); };
+    overlay.innerHTML = `
+        <div style="background:var(--bg-card);color:var(--text-main);border:1px solid var(--border);border-radius:14px;width:420px;max-width:96vw;display:flex;flex-direction:column;box-shadow:0 20px 60px rgba(0,0,0,0.5);">
+            <div style="padding:14px 18px;border-bottom:1px solid var(--border);display:flex;justify-content:space-between;align-items:center;background:${headerGrad};color:#fff;border-radius:14px 14px 0 0;">
+                <h3 style="margin:0;font-size:15px;">${title}</h3>
+                <button onclick="closeEditInquiryModal()" style="background:none;border:none;color:#fff;cursor:pointer;font-size:18px;">✕</button>
+            </div>
+            <div style="padding:16px 18px;">
+                ${bodyHtml}
+                <div style="display:flex;gap:8px;justify-content:flex-end;margin-top:16px;">
+                    <button onclick="closeEditInquiryModal()" style="padding:8px 14px;border:1px solid var(--border);border-radius:8px;background:var(--bg-input);color:var(--text-main);cursor:pointer;font-family:Cairo;font-weight:700;font-size:12px;">إلغاء</button>
+                    <button onclick="saveEditInquiryModal(${id}, '${mode}')" style="padding:8px 18px;border:none;border-radius:8px;background:linear-gradient(135deg,#2e7d32,#1b5e20);color:#fff;cursor:pointer;font-family:Cairo;font-weight:700;font-size:12px;">💾 حفظ</button>
+                </div>
+            </div>
+        </div>`;
+    document.body.appendChild(overlay);
+
+    if (mode === 'branch') {
+        const cityEl = document.getElementById('_iqCity');
+        const brEl   = document.getElementById('_iqBranch');
+        const country = item.country || (typeof _countryForCity === 'function' ? _countryForCity(item.city) : 'الأردن');
+        const cdata = (typeof COUNTRIES_DATA !== 'undefined') ? COUNTRIES_DATA[country] : null;
+        const regions = cdata && cdata.regions ? cdata.regions : {};
+        if (cityEl) {
+            cityEl.innerHTML = '<option value="">— اختر —</option>' +
+                Object.keys(regions).map(c => `<option value="${c}">${c}</option>`).join('');
+            cityEl.value = item.city || '';
+        }
+        const repop = () => {
+            if (!brEl || !cityEl) return;
+            const branches = regions[cityEl.value] || [];
+            brEl.innerHTML = '<option value="">— اختر —</option>' +
+                branches.map(b => `<option value="${b}">${b}</option>`).join('');
+        };
+        if (cityEl) cityEl.onchange = repop;
+        repop();
+        if (brEl) brEl.value = item.branch || '';
+    }
+}
+
+function editInquiryBranch(id)  { _openEditInquiryModal(id, 'branch'); }
+function editInquiryPhone(id)   { _openEditInquiryModal(id, 'phone'); }
+function editInquiryType(id)    { _openEditInquiryModal(id, 'type'); }
+function editInquiryNotes(id)   { _openEditInquiryModal(id, 'notes'); }
+function editInquiryAddedBy(id) { _openEditInquiryModal(id, 'addedBy'); }
+function editInquiryTime(id)    { _openEditInquiryModal(id, 'time'); }
+
+function saveEditInquiryModal(id, mode) {
+    if (!_canEditInquiry()) return;
+    const item = (db.inquiries || []).find(x => String(x.id) === String(id));
+    if (!item) return;
+
+    if (mode === 'branch') {
+        const newCity   = (document.getElementById('_iqCity')?.value   || '').trim();
+        const newBranch = (document.getElementById('_iqBranch')?.value || '').trim();
+        if (!newCity || !newBranch) return alert('يرجى اختيار المحافظة والفرع');
+        if (item.city === newCity && item.branch === newBranch) { closeEditInquiryModal(); return; }
+        const oldRef = `${item.city || '—'} / ${item.branch || '—'}`;
+        item.city   = newCity;
+        item.branch = newBranch;
+        if (typeof _logAudit === 'function')
+            _logAudit('editInquiryBranch', `${newCity} / ${newBranch}`, `${oldRef} → ${newCity} / ${newBranch}`, 'inquiry', item.id);
+    } else if (mode === 'phone') {
+        const newPhone = (document.getElementById('_iqPhone')?.value || '').trim();
+        if (!newPhone) return alert('رقم الجوال مطلوب');
+        if (newPhone === (item.phone || '')) { closeEditInquiryModal(); return; }
+        const oldRef = item.phone || '—';
+        item.phone = newPhone;
+        if (typeof _logAudit === 'function')
+            _logAudit('editInquiryPhone', item.branch || '—', `${oldRef} → ${newPhone}`, 'inquiry', item.id);
+    } else if (mode === 'type') {
+        const newType = (document.getElementById('_iqType')?.value || '').trim();
+        if (!newType) return alert('يرجى اختيار نوع الاستفسار');
+        if (newType === (item.type || '')) { closeEditInquiryModal(); return; }
+        const oldRef = item.type || '—';
+        item.type = newType;
+        if (typeof _logAudit === 'function')
+            _logAudit('editInquiryType', item.branch || '—', `${oldRef} → ${newType}`, 'inquiry', item.id);
+    } else if (mode === 'notes') {
+        const newNotes = (document.getElementById('_iqNotes')?.value || '').trim();
+        if (newNotes === (item.notes || '')) { closeEditInquiryModal(); return; }
+        const _short = s => (s || '—').substring(0, 30);
+        const oldRef = _short(item.notes);
+        item.notes = newNotes;
+        if (typeof _logAudit === 'function')
+            _logAudit('editInquiryNotes', item.branch || '—', `${oldRef} → ${_short(newNotes)}`, 'inquiry', item.id);
+    } else if (mode === 'addedBy') {
+        const newEmp = (document.getElementById('_iqEmp')?.value || '').trim();
+        if (!newEmp) return alert('يرجى اختيار اسم الموظف');
+        if (newEmp === (item.addedBy || '')) { closeEditInquiryModal(); return; }
+        const oldRef = item.addedBy || '—';
+        item.addedBy = newEmp;
+        if (typeof _logAudit === 'function')
+            _logAudit('editInquiryAddedBy', item.branch || '—', `${oldRef} → ${newEmp}`, 'inquiry', item.id);
+    } else if (mode === 'time') {
+        const dateVal = (document.getElementById('_iqDate')?.value || '').trim();
+        const timeVal = (document.getElementById('_iqTime')?.value || '').trim();
+        if (!dateVal) return alert('يرجى تحديد التاريخ');
+        if (!timeVal) return alert('يرجى تحديد الوقت');
+        const newStr = _iqFmtTime(dateVal, timeVal);
+        const oldRef = item.time || '—';
+        item.time = newStr;
+        item.iso  = dateVal;
+        if (typeof _logAudit === 'function')
+            _logAudit('editInquiryTime', item.branch || '—', `${oldRef} → ${newStr}`, 'inquiry', item.id);
+    }
+
+    item.editedBy   = currentUser?.name || '—';
+    item.editedAtTs = Date.now();
+    if (typeof save === 'function') save();
+    if (typeof renderAll === 'function') renderAll();
+    closeEditInquiryModal();
 }
 
 function jumpToInquiry(seq) {
