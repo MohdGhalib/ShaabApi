@@ -1177,25 +1177,43 @@ function save() {
     _saveDebounceTimer = setTimeout(async () => {
         _saveDebounceTimer = null;
 
-        /* 🚀 Phase 5b: dispatch per-record changes first */
-        let perRecordOk = true;
-        try {
-            await _flushPerRecordChanges();
-        } catch (e) {
-            console.error('[Phase5b] per-record flush failed, falling back to full blob:', e);
-            perRecordOk = false;
-        }
+        /* 🛡️ احجز SSE/polling طوال دورة الحفظ (per-record + lite blob)
+           وإلا فإن بثّ "reload" الذي يُطلقه السيرفر بعد PUT الفردي يستطيع
+           تشغيل loadAllData قبل اكتمال _initLastSavedRecords،
+           فيقع race يُرجع التسليم لـ "قيد الانتظار". */
+        _isSaving = true;
+        clearTimeout(_savingTimer);
+        const _safetyTimer = setTimeout(() => {
+            if (_isSaving) console.warn('[save] safety release after 60s');
+            _isSaving = false;
+        }, 60_000);
 
-        if (perRecordOk) {
-            /* lite blob — لا نُرسل المصفوفات (تأتي من /api/* عند القراءة) */
-            const liteDb = { ...db };
-            delete liteDb.inquiries;
-            delete liteDb.montasiat;
-            delete liteDb.complaints;
-            _push('Shaab_Master_DB', JSON.stringify(liteDb));
-        } else {
-            /* fallback: full blob لو فشل per-record dispatch */
-            _push('Shaab_Master_DB', JSON.stringify(db));
+        try {
+            /* 🚀 Phase 5b: dispatch per-record changes first */
+            let perRecordOk = true;
+            try {
+                await _flushPerRecordChanges();
+            } catch (e) {
+                console.error('[Phase5b] per-record flush failed, falling back to full blob:', e);
+                perRecordOk = false;
+            }
+
+            if (perRecordOk) {
+                /* lite blob — لا نُرسل المصفوفات (تأتي من /api/* عند القراءة) */
+                const liteDb = { ...db };
+                delete liteDb.inquiries;
+                delete liteDb.montasiat;
+                delete liteDb.complaints;
+                _push('Shaab_Master_DB', JSON.stringify(liteDb));
+            } else {
+                /* fallback: full blob لو فشل per-record dispatch */
+                _push('Shaab_Master_DB', JSON.stringify(db));
+            }
+        } finally {
+            clearTimeout(_safetyTimer);
+            /* لا نُحرّر _isSaving هنا فوراً — _push داخلياً يضبطه ويُحرّره
+               على then/catch، وذلك يغطّي البقية الفعلية من الـ HTTP request.
+               فقط نتأكد أنه لم يبقَ عالقاً لو خرجنا من try بدون استدعاء _push. */
         }
     }, 300);
 }
