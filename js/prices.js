@@ -2,7 +2,41 @@
    PRICES — Price list view & edit (cc_manager only)
 ══════════════════════════════════════════════════════ */
 
+/* ⚡ أنماط مُستخرَجة من inline styles لتقليل حجم HTML الناتج وتسريع
+   parse + layout عند رسم قوائم طويلة (الإطار السابق كان ~2KB inline لكل صنف). */
+let _pricesStylesInjected = false;
+function _injectPricesStyles() {
+    if (_pricesStylesInjected) return;
+    _pricesStylesInjected = true;
+    const css = `
+        .p-h-cell{padding:10px 12px;font-size:13px;font-weight:700;color:#fff;background:var(--accent-red);white-space:nowrap;}
+        .p-cell{padding:9px 12px;font-size:13px;border-bottom:1px solid var(--border);word-break:break-word;align-content:center;}
+        .p-cell-c{text-align:center;}
+        .p-cell-r{text-align:right;}
+        .p-row-hidden{opacity:0.45;}
+        .p-row-sel{background:rgba(211,47,47,0.07);}
+        .p-name{font-weight:600;}
+        .p-dim{color:var(--text-dim);}
+        .p-price{font-weight:700;color:#2e7d32;font-size:15px;}
+        .p-tag{margin-right:6px;font-size:11px;background:rgba(0,0,0,0.18);color:var(--text-dim);padding:2px 7px;border-radius:6px;}
+        .p-chk{accent-color:var(--accent-red);width:15px;height:15px;cursor:pointer;}
+        .p-chkw{accent-color:#fff;}
+        .p-chkb{accent-color:#1976d2;}
+        .p-btn{border:none;border-radius:8px;padding:5px 10px;cursor:pointer;font-family:'Cairo';font-size:12px;font-weight:700;}
+        .p-btn-view{background:linear-gradient(135deg,#1976d2,#0d47a1);color:#fff;}
+        .p-btn-edit{margin-right:4px;background:rgba(211,47,47,0.12);border:1px solid rgba(211,47,47,0.3);color:var(--accent-red);font-weight:400;}
+        .p-btn-tg-on{margin-right:4px;background:rgba(46,125,50,0.12);border:1px solid rgba(46,125,50,0.35);color:#2e7d32;font-weight:400;}
+        .p-btn-tg-off{margin-right:4px;background:rgba(100,100,100,0.1);border:1px solid rgba(100,100,100,0.25);color:var(--text-dim);font-weight:400;}
+        .p-btn-del{margin-right:4px;background:rgba(211,47,47,0.1);border:1px solid rgba(211,47,47,0.25);color:var(--accent-red);font-weight:400;}
+    `;
+    const tag = document.createElement('style');
+    tag.id = '_prices_styles';
+    tag.textContent = css;
+    document.head.appendChild(tag);
+}
+
 function renderPrices() {
+    _injectPricesStyles();
     const canEdit = perm('editPrices');
     // إظهار زر "إضافة صنف" فقط لأصحاب الصلاحية
     const _addBtn = document.getElementById('btnTogglePriceAdd');
@@ -12,6 +46,10 @@ function renderPrices() {
         if (_addForm) _addForm.style.display = 'none';
     }
     const search  = (document.getElementById('priceSearchInput')?.value || '').trim().toLowerCase();
+    // ⚡ فهرس واحد عبر Map بدلاً من priceList.indexOf لكل صنف داخل forEach
+    //   — O(n) بدلاً من O(n²). فرق كبير عند ~300 صنف.
+    const _idxByItem = new Map();
+    for (let i = 0; i < priceList.length; i++) _idxByItem.set(priceList[i], i);
     const list    = priceList.filter(item =>
         (canEdit || !item.hidden) &&
         (!search ||
@@ -42,119 +80,69 @@ function renderPrices() {
             </button>
         </div>` : '';
 
-    const allVisibleSelected = list.length > 0 && list.every(item => _selP.has(priceList.indexOf(item)));
+    const allVisibleSelected = list.length > 0 && list.every(item => _selP.has(_idxByItem.get(item)));
 
     // أعمدة الشبكة حسب الصلاحية
     const COLS = canEdit
         ? '4% 5% 30% 20% 13% 28%'
         : '5% 5% 36% 24% 14% 16%';
 
-    // أنماط الخلايا
-    const hCell = 'padding:10px 12px;font-size:13px;font-weight:700;color:#fff;background:var(--accent-red);white-space:nowrap;';
-    const dCell = 'padding:9px 12px;font-size:13px;border-bottom:1px solid var(--border);word-break:break-word;align-content:center;';
-
     // صف العناوين
-    const headersHtml = canEdit
-        ? `<div style="${hCell}text-align:center;border-radius:8px 0 0 0;">
-               <input type="checkbox" id="chkAllP" ${allVisibleSelected?'checked':''}
-                   style="accent-color:#fff;width:15px;height:15px;cursor:pointer;"
-                   onchange="selectAllP(this.checked)">
-           </div>
-           <div style="${hCell}text-align:right;">#</div>
-           <div style="${hCell}text-align:right;">اسم الصنف</div>
-           <div style="${hCell}text-align:right;">الوزن / الوحدة</div>
-           <div style="${hCell}text-align:center;">السعر (د.أ)</div>
-           <div style="${hCell}text-align:center;border-radius:0 8px 0 0;">إجراءات</div>`
-        : `<div style="${hCell}text-align:center;border-radius:8px 0 0 0;">
-               <input type="checkbox" id="chkAllP" ${allVisibleSelected?'checked':''}
-                   style="accent-color:#fff;width:15px;height:15px;cursor:pointer;"
-                   onchange="selectAllP(this.checked)">
-           </div>
-           <div style="${hCell}text-align:right;">#</div>
-           <div style="${hCell}text-align:right;">اسم الصنف</div>
-           <div style="${hCell}text-align:right;">الوزن / الوحدة</div>
-           <div style="${hCell}text-align:center;">السعر (د.أ)</div>
-           <div style="${hCell}text-align:center;border-radius:0 8px 0 0;">عرض</div>`;
+    const chkCls = canEdit ? 'p-chk p-chkw' : 'p-chk p-chkb';
+    const headersHtml =
+        `<div class="p-h-cell p-cell-c" style="border-radius:8px 0 0 0;">
+             <input type="checkbox" id="chkAllP" ${allVisibleSelected?'checked':''}
+                 class="${chkCls}" onchange="selectAllP(this.checked)">
+         </div>
+         <div class="p-h-cell p-cell-r">#</div>
+         <div class="p-h-cell p-cell-r">اسم الصنف</div>
+         <div class="p-h-cell p-cell-r">الوزن / الوحدة</div>
+         <div class="p-h-cell p-cell-c">السعر (د.أ)</div>
+         <div class="p-h-cell p-cell-c" style="border-radius:0 8px 0 0;">${canEdit ? 'إجراءات' : 'عرض'}</div>`;
 
-    // صفوف البيانات
+    // صفوف البيانات — استعمال classes بدل inline styles لتقليل حجم HTML
     let rowsHtml = '';
     if (list.length === 0) {
         rowsHtml = `<div style="grid-column:1/-1;text-align:center;padding:40px;color:var(--text-dim);">لا يوجد نتائج للبحث</div>`;
     } else {
-        list.forEach((item, visIdx) => {
-            const realIdx  = priceList.indexOf(item);
+        // بنية واحدة من أجزاء HTML تُجمَّع في النهاية — أسرع من concatenation متكرر
+        const parts = [];
+        for (let i = 0; i < list.length; i++) {
+            const item     = list[i];
+            const realIdx  = _idxByItem.get(item);
             const isHidden = !!item.hidden;
             const isChecked = _selP.has(realIdx);
-            const rowExtra = isHidden
-                ? 'opacity:0.45;'
-                : isChecked
-                ? 'background:rgba(211,47,47,0.07);'
-                : '';
+            const rowCls = 'p-cell' + (isHidden ? ' p-row-hidden' : (isChecked ? ' p-row-sel' : ''));
+            const name = sanitize(item.name);
+            const wt   = sanitize(item.weight);
+            const hiddenTag = isHidden ? '<span class="p-tag">مُخفى</span>' : '';
 
-            const cellBase = dCell + rowExtra;
-
-            rowsHtml += canEdit
-                ? `<div style="${cellBase}text-align:center;" data-price-row="${realIdx}">
-                       <input type="checkbox" class="chk-p" data-idx="${realIdx}" ${isChecked?'checked':''}
-                           style="accent-color:var(--accent-red);width:15px;height:15px;cursor:pointer;"
-                           onchange="toggleSelP(${realIdx},this.checked)">
-                   </div>
-                   <div style="${cellBase}color:var(--text-dim);" data-price-row="${realIdx}">${visIdx + 1}</div>
-                   <div style="${cellBase}font-weight:600;" data-price-row="${realIdx}">
-                       ${sanitize(item.name)}
-                       ${isHidden ? `<span style="margin-right:6px;font-size:11px;background:rgba(0,0,0,0.18);color:var(--text-dim);padding:2px 7px;border-radius:6px;">مُخفى</span>` : ''}
-                   </div>
-                   <div style="${cellBase}color:var(--text-dim);" data-price-row="${realIdx}">${sanitize(item.weight)}</div>
-                   <div style="${cellBase}text-align:center;" id="price-cell-${realIdx}" data-price-row="${realIdx}">
-                       <span style="font-weight:700;color:#2e7d32;font-size:15px;">${item.price}</span>
-                   </div>
-                   <div style="${cellBase}text-align:center;white-space:nowrap;" data-price-row="${realIdx}">
-                       <button onclick="_showPriceCardSingle(${realIdx})"
-                           style="background:linear-gradient(135deg,#1976d2,#0d47a1);border:none;border-radius:8px;
-                                  padding:5px 10px;cursor:pointer;color:#fff;font-family:'Cairo';font-size:12px;font-weight:700;">
-                           👁 عرض
-                       </button>
-                       <button onclick="startEditPrice(${realIdx})" id="edit-btn-${realIdx}"
-                           style="margin-right:4px;background:rgba(211,47,47,0.12);border:1px solid rgba(211,47,47,0.3);border-radius:8px;
-                                  padding:5px 10px;cursor:pointer;color:var(--accent-red);font-family:'Cairo';font-size:12px;">
-                           ✏️
-                       </button>
-                       <button onclick="togglePriceHidden(${realIdx})"
-                           style="margin-right:4px;background:${isHidden?'rgba(46,125,50,0.12)':'rgba(100,100,100,0.1)'};
-                                  border:1px solid ${isHidden?'rgba(46,125,50,0.35)':'rgba(100,100,100,0.25)'};
-                                  border-radius:8px;padding:5px 10px;cursor:pointer;
-                                  color:${isHidden?'#2e7d32':'var(--text-dim)'};font-family:'Cairo';font-size:12px;">
-                           ${isHidden ? '👁' : '🙈'}
-                       </button>
-                       <button onclick="deletePrice(${realIdx})"
-                           style="margin-right:4px;background:rgba(211,47,47,0.1);border:1px solid rgba(211,47,47,0.25);
-                                  border-radius:8px;padding:5px 10px;cursor:pointer;color:var(--accent-red);
-                                  font-family:'Cairo';font-size:12px;">
-                           🗑
-                       </button>
-                   </div>`
-                : `<div style="${cellBase}text-align:center;">
-                       <input type="checkbox" class="chk-p" data-idx="${realIdx}" ${isChecked?'checked':''}
-                           style="accent-color:#1976d2;width:15px;height:15px;cursor:pointer;"
-                           onchange="toggleSelP(${realIdx},this.checked)">
-                   </div>
-                   <div style="${cellBase}color:var(--text-dim);">${visIdx + 1}</div>
-                   <div style="${cellBase}font-weight:600;">
-                       ${sanitize(item.name)}
-                       ${isHidden ? `<span style="margin-right:6px;font-size:11px;background:rgba(0,0,0,0.18);color:var(--text-dim);padding:2px 7px;border-radius:6px;">مُخفى</span>` : ''}
-                   </div>
-                   <div style="${cellBase}color:var(--text-dim);">${sanitize(item.weight)}</div>
-                   <div style="${cellBase}text-align:center;" id="price-cell-${realIdx}">
-                       <span style="font-weight:700;color:#2e7d32;font-size:15px;">${item.price}</span>
-                   </div>
-                   <div style="${cellBase}text-align:center;">
-                       <button onclick="_showPriceCardSingle(${realIdx})"
-                           style="background:linear-gradient(135deg,#1976d2,#0d47a1);border:none;border-radius:8px;
-                                  padding:5px 12px;cursor:pointer;color:#fff;font-family:'Cairo';font-size:12px;font-weight:700;">
-                           👁 عرض
-                       </button>
-                   </div>`;
-        });
+            if (canEdit) {
+                parts.push(
+                    `<div class="${rowCls} p-cell-c"><input type="checkbox" class="${chkCls}" data-idx="${realIdx}" ${isChecked?'checked':''} onchange="toggleSelP(${realIdx},this.checked)"></div>`
+                    + `<div class="${rowCls} p-dim">${i+1}</div>`
+                    + `<div class="${rowCls} p-name">${name}${hiddenTag}</div>`
+                    + `<div class="${rowCls} p-dim">${wt}</div>`
+                    + `<div class="${rowCls} p-cell-c" id="price-cell-${realIdx}"><span class="p-price">${item.price}</span></div>`
+                    + `<div class="${rowCls} p-cell-c" style="white-space:nowrap;">`
+                    +   `<button class="p-btn p-btn-view" onclick="_showPriceCardSingle(${realIdx})">👁 عرض</button>`
+                    +   `<button class="p-btn p-btn-edit" id="edit-btn-${realIdx}" onclick="startEditPrice(${realIdx})">✏️</button>`
+                    +   `<button class="p-btn ${isHidden?'p-btn-tg-on':'p-btn-tg-off'}" onclick="togglePriceHidden(${realIdx})">${isHidden?'👁':'🙈'}</button>`
+                    +   `<button class="p-btn p-btn-del" onclick="deletePrice(${realIdx})">🗑</button>`
+                    + `</div>`
+                );
+            } else {
+                parts.push(
+                    `<div class="${rowCls} p-cell-c"><input type="checkbox" class="${chkCls}" data-idx="${realIdx}" ${isChecked?'checked':''} onchange="toggleSelP(${realIdx},this.checked)"></div>`
+                    + `<div class="${rowCls} p-dim">${i+1}</div>`
+                    + `<div class="${rowCls} p-name">${name}${hiddenTag}</div>`
+                    + `<div class="${rowCls} p-dim">${wt}</div>`
+                    + `<div class="${rowCls} p-cell-c" id="price-cell-${realIdx}"><span class="p-price">${item.price}</span></div>`
+                    + `<div class="${rowCls} p-cell-c"><button class="p-btn p-btn-view" onclick="_showPriceCardSingle(${realIdx})">👁 عرض</button></div>`
+                );
+            }
+        }
+        rowsHtml = parts.join('');
     }
 
     document.getElementById('priceListContainer').innerHTML = bulkBarHtml + `
