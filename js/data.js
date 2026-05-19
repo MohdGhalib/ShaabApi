@@ -478,6 +478,20 @@ async function loadAllData(force) {
         }
     } catch (e) { console.warn('[loadAllData] pending capture failed:', e); }
 
+    /* 🛡️ التقط سجلات التدقيق المحلية (auditLog) قبل استبدال db.
+       auditLog لا يدخل في الـ _pendingEditsByType (ليس له endpoint per-record)
+       ويُكتَب فقط ضمن Master_DB blob — لذا race بين user يضيف سجل تدقيق
+       و loadAllData من polling/SSE يمسح السجلات المحلية الجديدة. الحل:
+       احفظ مراجع كل السجلات الموجودة حالياً مع ids ثم أعد المفقود منها بعد التحميل. */
+    const _pendingAuditLog = [];
+    try {
+        if (db && Array.isArray(db.auditLog)) {
+            for (const e of db.auditLog) {
+                if (e && e.id) _pendingAuditLog.push(e);
+            }
+        }
+    } catch (e) { console.warn('[loadAllData] audit pending capture failed:', e); }
+
     try {
     const keys = ['Shaab_Master_DB','Shaab_Employees_DB','Shaab_Breaks_DB','Shaab_Sessions_DB','Shaab_AuditNotes_DB','Shaab_Compensations_DB','Shaab_AuditSettings_DB'];
     if (IS_LOCAL) {
@@ -807,6 +821,30 @@ async function loadAllData(force) {
             }
         }
     } catch (e) { console.error('[loadAllData] pending restore failed:', e); }
+
+    /* 🛡️ استعادة سجلات التدقيق المحلية المفقودة من ردّ السيرفر — يحمي من
+       race condition عند: مستخدم يُسجّل عملية → polling يفجّر loadAllData قبل
+       اكتمال _push لـ Master_DB → السيرفر يرجع auditLog بدون سجلات هذا
+       المستخدم → السجلات تختفي ثم يحفظها هذا الحفظ التالي خالية فيُمحى أثرها. */
+    try {
+        if (_pendingAuditLog.length > 0) {
+            if (!Array.isArray(db.auditLog)) db.auditLog = [];
+            const serverIds = new Set();
+            for (const e of db.auditLog) {
+                if (e && e.id) serverIds.add(e.id);
+            }
+            let _auditRestored = 0;
+            for (const e of _pendingAuditLog) {
+                if (!serverIds.has(e.id)) {
+                    db.auditLog.push(e);
+                    _auditRestored++;
+                }
+            }
+            if (_auditRestored > 0) {
+                console.warn(`[loadAllData] restored ${_auditRestored} local audit entries missing from server`);
+            }
+        }
+    } catch (e) { console.error('[loadAllData] audit restore failed:', e); }
 }
 
 /* ── حفظ البيانات ──
