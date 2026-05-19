@@ -699,6 +699,64 @@ async function loadAllData(force) {
         }
     }
 
+    // 🛡️ شفاء تكرار seq في الاستفسارات (نشأ تاريخياً عن race بين عميلَين
+    // يقرآن نفس db.inquiriesnqSeq قبل تزامنها): الأقدم بـ id يحتفظ بـ seq،
+    // الأحدث يُعاد ترقيمها لرقم فريد، ويُحدَّث m.reservedFor.inqSeq تبعاً.
+    if (Array.isArray(db.inquiries) && db.inquiries.length > 0) {
+        try {
+            const _bySeq = new Map();
+            let _maxSeq = 0;
+            for (const q of db.inquiries) {
+                if (!q || q.deleted) continue;
+                const s = +q.seq;
+                if (!Number.isFinite(s) || s <= 0) continue;
+                if (s > _maxSeq) _maxSeq = s;
+                if (!_bySeq.has(s)) _bySeq.set(s, []);
+                _bySeq.get(s).push(q);
+            }
+            const _renumberMap = new Map();   // oldSeq+inqId -> newSeq (للتحديث في reservedFor)
+            const _renamedIds  = new Map();   // inqId -> newSeq
+            for (const [seq, group] of _bySeq.entries()) {
+                if (group.length < 2) continue;
+                // أقدم بـ id يحتفظ بالـ seq؛ البقية تُعاد ترقيمها
+                group.sort((a, b) => (a.id || 0) - (b.id || 0));
+                for (let i = 1; i < group.length; i++) {
+                    _maxSeq++;
+                    const oldSeq = group[i].seq;
+                    group[i].seq = _maxSeq;
+                    _renamedIds.set(group[i].id, _maxSeq);
+                    console.warn(`[Inquiries] dedup seq: id=${group[i].id} #${oldSeq} → #${_maxSeq}`);
+                }
+            }
+            if (_renamedIds.size > 0) {
+                // حدّث mتعلّقة بأي منتسية تُشير لاستفسار أُعيد ترقيمه
+                if (Array.isArray(db.montasiat)) {
+                    for (const m of db.montasiat) {
+                        if (m && m.reservedFor && m.reservedFor.inqId != null) {
+                            const ns = _renamedIds.get(m.reservedFor.inqId);
+                            if (ns != null) m.reservedFor.inqSeq = ns;
+                        }
+                    }
+                }
+                // وحدّث linkedInqSeq على الشكاوى المرتبطة
+                if (Array.isArray(db.complaints)) {
+                    for (const c of db.complaints) {
+                        if (!c || !c.linkedInqSeq) continue;
+                        // ابحث عن الاستفسار المُعاد ترقيمه عبر مطابقة linkedInqId إن وجد
+                        if (c.linkedInqId != null) {
+                            const ns = _renamedIds.get(c.linkedInqId);
+                            if (ns != null) c.linkedInqSeq = ns;
+                        }
+                    }
+                }
+                // ارفع العدّاد ليبدأ من بعد آخر seq مستخدم
+                if ((db.inquiriesnqSeq || 0) <= _maxSeq) db.inquiriesnqSeq = _maxSeq + 1;
+                console.warn(`[Inquiries] healed ${_renamedIds.size} duplicate seq(s); counter → ${db.inquiriesnqSeq}`);
+                _push('Shaab_Master_DB', JSON.stringify(db));
+            }
+        } catch (e) { console.error('[Inquiries] dedup failed:', e); }
+    }
+
     // حذف تلقائي: إزالة العناصر المحذوفة منذ أكثر من 30 يوماً
     const _purgeCutoff = Date.now() - 30 * 24 * 60 * 60 * 1000;
     const _shouldPurge = (x) => x.deleted && x.deletedAtTs && x.deletedAtTs < _purgeCutoff;

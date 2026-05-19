@@ -471,8 +471,17 @@ function addInquiry() {
     }
 
     if (!db.inquiriesnqSeq) db.inquiriesnqSeq = 1;
+    // 🛡️ منع تكرار seq عند race condition بين عميلَين: خذ الأكبر من العدّاد
+    // ومن أعلى seq موجود فعلاً في البيانات + 1.
+    let _maxExistingSeq = 0;
+    for (const q of (db.inquiries || [])) {
+        const s = +q?.seq || 0;
+        if (s > _maxExistingSeq) _maxExistingSeq = s;
+    }
+    const _nextSeq = Math.max(db.inquiriesnqSeq, _maxExistingSeq + 1);
+    db.inquiriesnqSeq = _nextSeq + 1;
     const baseRec = {
-        id: Date.now(), seq: db.inquiriesnqSeq++,
+        id: Date.now(), seq: _nextSeq,
         country: co || _countryForCity(c), city:c, branch:b, phone:p,
         type:t, notes:n,
         complaintType: ct || null,
@@ -888,8 +897,16 @@ function addMediaNote() {
     if (!city || !branch || !phone || !notes) return alert('يرجى إكمال جميع الحقول');
 
     if (!db.inquiriesnqSeq) db.inquiriesnqSeq = 1;
+    // 🛡️ منع تكرار seq — نفس منطق addInquiry أعلاه
+    let _maxExistingSeq2 = 0;
+    for (const q of (db.inquiries || [])) {
+        const s = +q?.seq || 0;
+        if (s > _maxExistingSeq2) _maxExistingSeq2 = s;
+    }
+    const _nextSeq2 = Math.max(db.inquiriesnqSeq, _maxExistingSeq2 + 1);
+    db.inquiriesnqSeq = _nextSeq2 + 1;
     db.inquiries.unshift({
-        id: Date.now(), seq: db.inquiriesnqSeq++,
+        id: Date.now(), seq: _nextSeq2,
         city, branch, phone, type: 'شكوى', notes,
         time: now(), iso: iso(), addedBy: currentUser.name
     });
