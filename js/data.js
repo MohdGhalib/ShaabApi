@@ -674,6 +674,14 @@ async function loadAllData(force) {
         }
     }
 
+    // 🛡️ استعادة أصناف الأسعار المعلَّقة (التي ربما لم تصل السيرفر قبل refresh مفاجئ)
+    // ⚠️ يجب أن تسبق legacy backfill أدناه: backfill يستدعي savePriceList الذي يكتب
+    //   على _PL_PENDING_KEY في localStorage، فإن نُفِّذ قبل الاستعادة لمحى نسخة
+    //   احتياطية المستخدم (الأصناف المضافة حديثاً) بنسخة السيرفر القديمة.
+    if (typeof _recoverPendingPriceList === 'function') {
+        try { _recoverPendingPriceList(); } catch (e) { console.error('[loadAllData] recover priceList failed:', e); }
+    }
+
     // ترحيل تلقائي: ضمان وجود id لكل صنف في قائمة الأسعار.
     // بدون id لا يمكن دمج الإضافات المحلية بعد conflict — يُسبّب فقدان الأصناف المُضافة
     // حديثاً (مثل "جوز هند") عند تعارض الإصدارات.
@@ -689,11 +697,6 @@ async function loadAllData(force) {
             console.log('[PriceList] backfilled', _priceIdsBackfilled, 'legacy items with stable ids');
             if (typeof savePriceList === 'function') savePriceList();
         }
-    }
-
-    // 🛡️ استعادة أصناف الأسعار المعلَّقة (التي ربما لم تصل السيرفر قبل refresh مفاجئ)
-    if (typeof _recoverPendingPriceList === 'function') {
-        try { _recoverPendingPriceList(); } catch (e) { console.error('[loadAllData] recover priceList failed:', e); }
     }
 
     // حذف تلقائي: إزالة العناصر المحذوفة منذ أكثر من 30 يوماً
