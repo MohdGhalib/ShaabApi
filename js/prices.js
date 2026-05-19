@@ -100,15 +100,22 @@ function renderPrices() {
          <div class="p-h-cell p-cell-c">السعر (د.أ)</div>
          <div class="p-h-cell p-cell-c" style="border-radius:0 8px 0 0;">${canEdit ? 'إجراءات' : 'عرض'}</div>`;
 
-    // صفوف البيانات — استعمال classes بدل inline styles لتقليل حجم HTML
+    // ⚡ pagination — نرسم 50 صنفاً فقط في المرّة الواحدة، لتفادي ثقل DOM
+    //    عند 300+ صنف. التنقل بين الصفحات لحظي. البحث يعيد لصفحة 1.
+    if (_pricePage > Math.max(1, Math.ceil(list.length / _PRICE_PAGE_SIZE))) _pricePage = 1;
+    const totalPages = Math.max(1, Math.ceil(list.length / _PRICE_PAGE_SIZE));
+    const startIdx = (_pricePage - 1) * _PRICE_PAGE_SIZE;
+    const endIdx   = Math.min(startIdx + _PRICE_PAGE_SIZE, list.length);
+    const pageItems = list.slice(startIdx, endIdx);
+
+    // صفوف البيانات — استعمال classes بدل inline styles + event delegation
     let rowsHtml = '';
     if (list.length === 0) {
         rowsHtml = `<div style="grid-column:1/-1;text-align:center;padding:40px;color:var(--text-dim);">لا يوجد نتائج للبحث</div>`;
     } else {
-        // بنية واحدة من أجزاء HTML تُجمَّع في النهاية — أسرع من concatenation متكرر
         const parts = [];
-        for (let i = 0; i < list.length; i++) {
-            const item     = list[i];
+        for (let i = 0; i < pageItems.length; i++) {
+            const item     = pageItems[i];
             const realIdx  = _idxByItem.get(item);
             const isHidden = !!item.hidden;
             const isChecked = _selP.has(realIdx);
@@ -116,33 +123,64 @@ function renderPrices() {
             const name = sanitize(item.name);
             const wt   = sanitize(item.weight);
             const hiddenTag = isHidden ? '<span class="p-tag">مُخفى</span>' : '';
+            const rowNum = startIdx + i + 1;
 
             if (canEdit) {
                 parts.push(
-                    `<div class="${rowCls} p-cell-c"><input type="checkbox" class="${chkCls}" data-idx="${realIdx}" ${isChecked?'checked':''} onchange="toggleSelP(${realIdx},this.checked)"></div>`
-                    + `<div class="${rowCls} p-dim">${i+1}</div>`
+                    `<div class="${rowCls} p-cell-c"><input type="checkbox" class="${chkCls}" data-pchk="${realIdx}" ${isChecked?'checked':''}></div>`
+                    + `<div class="${rowCls} p-dim">${rowNum}</div>`
                     + `<div class="${rowCls} p-name">${name}${hiddenTag}</div>`
                     + `<div class="${rowCls} p-dim">${wt}</div>`
                     + `<div class="${rowCls} p-cell-c" id="price-cell-${realIdx}"><span class="p-price">${item.price}</span></div>`
                     + `<div class="${rowCls} p-cell-c" style="white-space:nowrap;">`
-                    +   `<button class="p-btn p-btn-view" onclick="_showPriceCardSingle(${realIdx})">👁 عرض</button>`
-                    +   `<button class="p-btn p-btn-edit" id="edit-btn-${realIdx}" onclick="startEditPrice(${realIdx})">✏️</button>`
-                    +   `<button class="p-btn ${isHidden?'p-btn-tg-on':'p-btn-tg-off'}" onclick="togglePriceHidden(${realIdx})">${isHidden?'👁':'🙈'}</button>`
-                    +   `<button class="p-btn p-btn-del" onclick="deletePrice(${realIdx})">🗑</button>`
+                    +   `<button class="p-btn p-btn-view" data-pact="view" data-pidx="${realIdx}">👁 عرض</button>`
+                    +   `<button class="p-btn p-btn-edit" id="edit-btn-${realIdx}" data-pact="edit" data-pidx="${realIdx}">✏️</button>`
+                    +   `<button class="p-btn ${isHidden?'p-btn-tg-on':'p-btn-tg-off'}" data-pact="toggle" data-pidx="${realIdx}">${isHidden?'👁':'🙈'}</button>`
+                    +   `<button class="p-btn p-btn-del" data-pact="del" data-pidx="${realIdx}">🗑</button>`
                     + `</div>`
                 );
             } else {
                 parts.push(
-                    `<div class="${rowCls} p-cell-c"><input type="checkbox" class="${chkCls}" data-idx="${realIdx}" ${isChecked?'checked':''} onchange="toggleSelP(${realIdx},this.checked)"></div>`
-                    + `<div class="${rowCls} p-dim">${i+1}</div>`
+                    `<div class="${rowCls} p-cell-c"><input type="checkbox" class="${chkCls}" data-pchk="${realIdx}" ${isChecked?'checked':''}></div>`
+                    + `<div class="${rowCls} p-dim">${rowNum}</div>`
                     + `<div class="${rowCls} p-name">${name}${hiddenTag}</div>`
                     + `<div class="${rowCls} p-dim">${wt}</div>`
                     + `<div class="${rowCls} p-cell-c" id="price-cell-${realIdx}"><span class="p-price">${item.price}</span></div>`
-                    + `<div class="${rowCls} p-cell-c"><button class="p-btn p-btn-view" onclick="_showPriceCardSingle(${realIdx})">👁 عرض</button></div>`
+                    + `<div class="${rowCls} p-cell-c"><button class="p-btn p-btn-view" data-pact="view" data-pidx="${realIdx}">👁 عرض</button></div>`
                 );
             }
         }
         rowsHtml = parts.join('');
+    }
+
+    // شريط الصفحات — يظهر فقط لو يوجد أكثر من صفحة
+    let pageBarHtml = '';
+    if (totalPages > 1) {
+        const _pgBtn = (label, page, disabled, active) =>
+            `<button class="p-btn" ${disabled?'disabled':''} data-pgo="${page}"
+                style="background:${active?'var(--accent-red)':'var(--bg-input)'};color:${active?'#fff':'var(--text-main)'};
+                       border:1px solid var(--border);min-width:34px;opacity:${disabled?'0.4':'1'};
+                       cursor:${disabled?'default':'pointer'};">${label}</button>`;
+        const buttons = [];
+        buttons.push(_pgBtn('« السابق', _pricePage - 1, _pricePage === 1, false));
+        const _pages = [];
+        if (totalPages <= 7) for (let p = 1; p <= totalPages; p++) _pages.push(p);
+        else {
+            _pages.push(1);
+            if (_pricePage > 3) _pages.push('…');
+            for (let p = Math.max(2, _pricePage-1); p <= Math.min(totalPages-1, _pricePage+1); p++) _pages.push(p);
+            if (_pricePage < totalPages - 2) _pages.push('…');
+            _pages.push(totalPages);
+        }
+        for (const p of _pages) {
+            if (p === '…') buttons.push('<span style="padding:0 6px;color:var(--text-dim);">…</span>');
+            else buttons.push(_pgBtn(String(p), p, false, p === _pricePage));
+        }
+        buttons.push(_pgBtn('التالي »', _pricePage + 1, _pricePage === totalPages, false));
+        pageBarHtml = `<div style="display:flex;gap:6px;justify-content:center;align-items:center;margin-top:14px;flex-wrap:wrap;">
+            <span style="color:var(--text-dim);font-size:12px;margin-left:8px;">${startIdx+1}–${endIdx} من ${list.length}</span>
+            ${buttons.join('')}
+        </div>`;
     }
 
     document.getElementById('priceListContainer').innerHTML = bulkBarHtml + `
@@ -151,10 +189,51 @@ function renderPrices() {
                 ${headersHtml}
                 ${rowsHtml}
             </div>
-        </div>`;
+        </div>
+        ${pageBarHtml}`;
+
+    _bindPriceContainerEvents();
 }
 
-function filterPrices() { renderPrices(); }
+/* ── pagination state ── */
+const _PRICE_PAGE_SIZE = 50;
+let _pricePage = 1;
+function _gotoPricePage(p) {
+    _pricePage = Math.max(1, p|0);
+    renderPrices();
+}
+
+/* ── event delegation: نربط مستمعاً واحداً على الحاوية بدل آلاف الـ onclick
+   inline — يُسرّع الـ parsing ويُقلل استهلاك الذاكرة بشكل ملحوظ. ── */
+let _priceEventsBound = false;
+function _bindPriceContainerEvents() {
+    if (_priceEventsBound) return;
+    const container = document.getElementById('priceListContainer');
+    if (!container) return;
+    _priceEventsBound = true;
+    container.addEventListener('click', (e) => {
+        const pgBtn = e.target.closest('[data-pgo]');
+        if (pgBtn && !pgBtn.disabled) { _gotoPricePage(+pgBtn.dataset.pgo); return; }
+        const btn = e.target.closest('[data-pact]');
+        if (!btn) return;
+        const idx = +btn.dataset.pidx;
+        const act = btn.dataset.pact;
+        if (act === 'view')        _showPriceCardSingle(idx);
+        else if (act === 'edit') {
+            const input = document.getElementById(`price-input-${idx}`);
+            if (input) savePrice(idx); else startEditPrice(idx);
+        }
+        else if (act === 'toggle') togglePriceHidden(idx);
+        else if (act === 'del')    deletePrice(idx);
+    });
+    container.addEventListener('change', (e) => {
+        const chk = e.target.closest('input[data-pchk]');
+        if (!chk) return;
+        toggleSelP(+chk.dataset.pchk, chk.checked);
+    });
+}
+
+function filterPrices() { _pricePage = 1; renderPrices(); }
 
 /* ── التحديد المتعدد ── */
 function toggleSelP(realIdx, checked) {
