@@ -492,6 +492,18 @@ async function loadAllData(force) {
         }
     } catch (e) { console.warn('[loadAllData] audit pending capture failed:', e); }
 
+    /* 🛡️ نفس الحماية لقائمة الأسعار: حتى لو فشل localStorage backup أو نظّفه
+       _push ناجح سابق، احفظ مراجع للأصناف الموجودة في الذاكرة الآن لتعيد
+       استرجاع أي صنف يُحذف بالخطأ من ردّ السيرفر (race مع tab/user آخر). */
+    const _pendingPriceList = [];
+    try {
+        if (Array.isArray(priceList)) {
+            for (const x of priceList) {
+                if (x && x.id != null) _pendingPriceList.push(x);
+            }
+        }
+    } catch (e) { console.warn('[loadAllData] priceList pending capture failed:', e); }
+
     try {
     const keys = ['Shaab_Master_DB','Shaab_Employees_DB','Shaab_Breaks_DB','Shaab_Sessions_DB','Shaab_AuditNotes_DB','Shaab_Compensations_DB','Shaab_AuditSettings_DB'];
     if (IS_LOCAL) {
@@ -962,10 +974,13 @@ function _push(key, value) {
             if (typeof data.version === 'number') _versions[key] = data.version;
         } catch {}
         if (key === 'Shaab_Master_DB') _conflictRetryCount = 0;
-        // 🛡️ أصناف الأسعار وصلت السيرفر بأمان — نظّف النسخة الاحتياطية المحلية
-        if (key === 'Shaab_PriceList_DB') {
-            try { localStorage.removeItem(_PL_PENDING_KEY); } catch {}
-        }
+        /* 🛡️ ملاحظة: لا ننظّف _PL_PENDING_KEY فور نجاح _push.
+           استجابة 200 تعني فقط أن السيرفر قَبِل الكتابة الآن، لكنها لا
+           تضمن أن الـ GET التالي سيرجع نفس البيانات (race بين instances،
+           استبدال من tab/user آخر بنسخة قديمة، الخ). لذا ننظّف الـ backup
+           فقط من داخل _recoverPendingPriceList بعد loadAllData يؤكد أن
+           جميع الأصناف موجودة فعلاً في رد السيرفر. هذا يضمن أن أي صنف
+           يُضاف ثم يختفي صامتاً من السيرفر يُستعاد في التحميل التالي. */
 
         /* 🛡️ Sync Queue: علّم السجلات المرسَلة كمؤكَّدة على السيرفر */
         if (_sqSnap && typeof __sq_markConfirmed === 'function') {
