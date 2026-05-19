@@ -926,7 +926,7 @@ async function loadAllData(force) {
 function _push(key, value) {
     if (IS_LOCAL) {
         localStorage.setItem(key, value);
-        return;
+        return Promise.resolve({ ok: true });
     }
     // ضبط علامة الحفظ الجاري لمنع SSE من تحميل بيانات قديمة
     _isSaving = true;
@@ -946,7 +946,7 @@ function _push(key, value) {
         ? (() => { try { return __sq_beforePush(db); } catch { return null; } })()
         : null;
 
-    fetch('api/storage', {
+    return fetch('api/storage', {
         method:  'POST',
         headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${_token}` },
         body:    body
@@ -964,9 +964,9 @@ function _push(key, value) {
                 }
             } catch {}
             await _handleVersionConflict(key);
-            return;
+            return { ok: true, conflict: true };   // النزاع تمت معالجته داخلياً
         }
-        if (!r.ok) { if (!_isUnloading) _showSaveError(); return; }
+        if (!r.ok) { if (!_isUnloading) _showSaveError(); return { ok: false, status: r.status }; }
 
         // ✓ نجح — احفظ الإصدار الجديد + أعِد ضبط عدّاد محاولات التعارض
         try {
@@ -986,11 +986,13 @@ function _push(key, value) {
         if (_sqSnap && typeof __sq_markConfirmed === 'function') {
             try { __sq_markConfirmed(_sqSnap); } catch {}
         }
+        return { ok: true };
     }).catch(() => {
         _isSaving = false;
         clearTimeout(_savingTimer);
         /* لا تُظهر toast لو الصفحة قيد إعادة التحميل/الخروج — fetch مُلغى بسبب navigation */
         if (!_isUnloading) _showSaveError();
+        return { ok: false, network: true };
     });
 }
 
@@ -1378,7 +1380,7 @@ const _PL_PENDING_KEY = '_shaab_pl_pending_backup';
 function savePriceList() {
     // 🛡️ حفظ محلي فوري قبل الـ fetch — يقاوم: page refresh / network failure / overrride من polling
     try { localStorage.setItem(_PL_PENDING_KEY, JSON.stringify(priceList || [])); } catch {}
-    _push('Shaab_PriceList_DB', JSON.stringify(priceList));
+    return _push('Shaab_PriceList_DB', JSON.stringify(priceList));
 }
 /* استرجاع الأصناف المحلية المعلقة (التي لم تصل السيرفر بعد) ودمجها مع priceList الحالي */
 function _recoverPendingPriceList() {

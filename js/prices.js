@@ -445,7 +445,7 @@ function togglePriceAddForm(forceState) {
 }
 
 /* ── إضافة صنف جديد لقائمة الأسعار ── */
-function addPriceItem() {
+async function addPriceItem() {
     if (!perm('editPrices')) return alert('فقط مدير الكول سنتر يمكنه إضافة الأصناف');
     const name   = (document.getElementById('newPriceName')?.value   || '').trim();
     const weight = (document.getElementById('newPriceWeight')?.value || '').trim();
@@ -468,13 +468,38 @@ function addPriceItem() {
         id: Date.now() + '_' + Math.random().toString(36).slice(2, 8),
         name, weight, price
     });
-    savePriceList();
+
+    // عطّل الزر مؤقتاً لإظهار حالة "جاري الحفظ" ومنع نقرات متكررة
+    const saveBtn = document.querySelector('[onclick="addPriceItem()"]');
+    const _origBtnHTML = saveBtn ? saveBtn.innerHTML : null;
+    if (saveBtn) { saveBtn.disabled = true; saveBtn.innerHTML = '⏳ جاري الحفظ...'; }
 
     if (typeof _logAudit === 'function') {
         _logAudit('addPrice', '—', `${name} — ${weight} — ${price} د.أ`);
     }
 
-    // امسح وأخفِ + أعد الرسم
+    // ⚠️ انتظر تأكيد السيرفر فعلياً قبل اعتبار الإضافة ناجحة — يحلّ مشكلة
+    //    "أضفت من الجهاز A ولم أجد على الجهاز B" حيث المتصفح أُغلق قبل
+    //    اكتمال الـ fetch فالصنف ظل في localStorage فقط ولم يصل السيرفر.
+    let _saveOk = false;
+    try {
+        const res = await savePriceList();
+        _saveOk = !!(res && res.ok);
+    } catch (e) {
+        console.error('[prices] save failed:', e);
+        _saveOk = false;
+    }
+
+    if (saveBtn && _origBtnHTML != null) { saveBtn.disabled = false; saveBtn.innerHTML = _origBtnHTML; }
+
+    if (!_saveOk) {
+        alert('⚠️ تعذّر حفظ الصنف على السيرفر — تحقق من الاتصال وأعد المحاولة.\n\nالصنف محفوظ محلياً ولن يضيع، لكنه قد لا يظهر على أجهزة أخرى حتى يصل السيرفر.');
+        // لا نخفي النموذج ولا نمسح الحقول — يستطيع المستخدم إعادة المحاولة
+        renderPrices();
+        return;
+    }
+
+    // ✓ تأكد السيرفر — امسح وأخفِ + أعد الرسم
     togglePriceAddForm(false);
     renderPrices();
 }
