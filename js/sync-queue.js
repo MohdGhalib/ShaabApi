@@ -12,6 +12,30 @@
 const SQ_STORAGE_KEY        = '_shaab_sync_pending';
 const SQ_LAST_CONFIRMED_KEY = '_shaab_sync_last_confirmed';
 
+/* 🛡️ (CRITICAL FIX, 2026-05-20) تنظيف طارئ لـ localStorage عند بدء التشغيل.
+   لو الـ storage > 80% من السعة (~5MB)، نمسح مفاتيح sync-queue القديمة.
+   البيانات الأساسية (Master_DB، Employees، إلخ) محمية — تأتي من السيرفر دائماً.
+   نسخة sync-queue القديمة كانت تخزّن سجلات كاملة → بضع MB لكل مستخدم نشط. */
+(function _sqEmergencyCleanupOnStartup() {
+    try {
+        let total = 0;
+        for (let i = 0; i < localStorage.length; i++) {
+            const k = localStorage.key(i);
+            if (!k) continue;
+            const v = localStorage.getItem(k) || '';
+            total += k.length + v.length;
+        }
+        const QUOTA_ESTIMATE = 5 * 1024 * 1024; // ~5MB browser default
+        if (total > QUOTA_ESTIMATE * 0.8) {
+            console.warn(`[SQ] localStorage at ${(total/1024/1024).toFixed(2)}MB — running emergency cleanup of sync-queue keys`);
+            try { localStorage.removeItem(SQ_STORAGE_KEY); } catch {}
+            try { localStorage.removeItem(SQ_LAST_CONFIRMED_KEY); } catch {}
+            // الـ PL pending backup يُعاد بناؤه عند الحاجة
+            try { localStorage.removeItem('_shaab_pl_pending_backup'); } catch {}
+        }
+    } catch (e) { console.warn('[SQ] startup storage check failed:', e); }
+})();
+
 const SQ_TYPES = {
     inquiry:   { arrayKey: 'inquiries',  labelAr: 'استفسار',           idField: 'id' },
     montasia:  { arrayKey: 'montasiat',  labelAr: 'منتسية (محامص)',    idField: 'id' },
@@ -153,7 +177,16 @@ function __sq_beforePush(dbObj) {
 /* ── يُستدعى بعد نجاح _push (HTTP 200) ── */
 function __sq_markConfirmed(sentSnapshot) {
     if (!sentSnapshot || !sentSnapshot.records) return;
-    _sqLastConfirmed = sentSnapshot;
+    /* 🛡️ (CRITICAL FIX, 2026-05-20) خزّن في lastConfirmed نسخة "خفيفة" فقط:
+       hash + type + id لكل سجل. لا حاجة لتخزين record كاملاً ولا summary —
+       lastConfirmed يُستخدم فقط لمقارنة hashes لكشف التغييرات.
+       يقلّل حجم localStorage بنسبة ~70%+ ويمنع QuotaExceededError. */
+    const _liteRecords = {};
+    for (const key in sentSnapshot.records) {
+        const r = sentSnapshot.records[key];
+        if (r) _liteRecords[key] = { type: r.type, id: r.id, hash: r.hash };
+    }
+    _sqLastConfirmed = { ts: sentSnapshot.ts, records: _liteRecords };
     _sqPersistLastConfirmed();
 
     /* أزل من الطابور كل ما تأكد بنفس الـ hash */
