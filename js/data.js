@@ -449,6 +449,18 @@ function getSavedToken() { return localStorage.getItem('_shaab_token'); }
 /* ── جلب كل البيانات ── */
 async function loadAllData(force) {
     if (_isLoading && !force) return;
+    /* 🔍 (Diagnostics, 2026-05-20) Watchdog شامل لكامل دورة loadAllData.
+       يلتقط حالة كل منتسية مُسلَّمة قبل البدء — ويقارن في النهاية لاكتشاف
+       أي revert غير متعمَّد (revert رسمي = approveMontasia فقط). */
+    const _watchdogBefore = (() => {
+        try {
+            const m = new Map();
+            for (const r of (db?.montasiat || [])) {
+                if (r && r.id != null && r.status === 'تم التسليم') m.set(r.id, r.status);
+            }
+            return m;
+        } catch { return new Map(); }
+    })();
     // عند الإجبار: لا ننتظر إن كان عالقاً — نُعيد ضبط العلَم ونتابع
     _isLoading = true;
 
@@ -642,6 +654,9 @@ async function loadAllData(force) {
                         }
                     } catch (e) { console.warn('[loadAllData] recent-dispatch force-capture failed:', e); }
 
+                    /* 🔍 (Diagnostics) سجِّل النسخة القديمة قبل الاستبدال — للـ watchdog */
+                    const _preReplaceM = Array.isArray(db?.montasiat) ? db.montasiat.slice() : [];
+
                     const _parsed = JSON.parse(_masterStr);
                     db = _parsed;
                     /* 🔄 Phase 4b/4c: استبدل السجلات بالـ endpoints الجديدة لو نجحت،
@@ -649,6 +664,9 @@ async function loadAllData(force) {
                     if (Array.isArray(_newMontasiat))  db.montasiat  = _newMontasiat;
                     if (Array.isArray(_newInquiries))  db.inquiries  = _newInquiries;
                     if (Array.isArray(_newComplaints)) db.complaints = _newComplaints;
+
+                    /* 🔍 (Diagnostics) ابحث عن أي revert تسليم — خلال الاستبدال (قبل pending restore) */
+                    _watchDeliveryReverts(_preReplaceM, db.montasiat, 'loadAllData/server-fetch');
                     // 🔄 طبّق التعديلات المحلية الأحدث فوق بيانات السيرفر (مقارنة بالـ timestamp)
                     if (_localBranchInfo) {
                         if (!db.branchInfo || typeof db.branchInfo !== 'object') db.branchInfo = {};
@@ -948,6 +966,18 @@ async function loadAllData(force) {
     }
     } finally {
         _isLoading = false;
+        /* 🔍 (Diagnostics) قارن حالة المنتسيات المُسلَّمة قبل/بعد loadAllData كاملاً */
+        try {
+            for (const [id, oldStatus] of _watchdogBefore) {
+                const cur = (db?.montasiat || []).find(r => r && r.id === id);
+                if (!cur) {
+                    console.error(`🚨 [REVERT-LOADALL] montasia ${id} DISAPPEARED after loadAllData! was '${oldStatus}'`);
+                } else if (cur.status !== 'تم التسليم') {
+                    console.error(`🚨 [REVERT-LOADALL] montasia ${id} reverted in loadAllData: '${oldStatus}' → '${cur.status}'`);
+                    console.error('🚨 [REVERT-LOADALL] Record now:', JSON.stringify(cur));
+                }
+            }
+        } catch (e) { console.warn('[loadAllData watchdog] failed:', e); }
     }
     /* 🚀 Phase 5b: init tracking of last-saved record state for diff-based save
        ⚠️ يجب أن يُنفَّذ قبل استعادة التعديلات المعلقة بحيث يبقى lastMap = حالة السيرفر،
@@ -1308,12 +1338,33 @@ let _lastSavedRecords = {
    2. SSE broadcasts تصل قبل اكتمال commit للقراءة
    3. أي race ينطوي على قراءة من السيرفر خلال ثوانٍ من الكتابة الناجحة
    loadAllData يفرض الاحتفاظ بالنسخة المحلية لأي سجل ضمن نافذة الـ 10s. */
-const _RECENT_DISPATCH_MS = 10_000;
+const _RECENT_DISPATCH_MS = 60_000;  // 60s — covers Railway replica lag spikes
 let _recentlyDispatched = {
     inquiries:  new Map(),  // id -> { ts, snapshot }
     montasiat:  new Map(),
     complaints: new Map()
 };
+
+/* 🔍 (Diagnostics, 2026-05-20) Watchdog لاكتشاف لحظة revert لمنتسية مُسلَّمة.
+   عند كل استبدال لـ db.montasiat، نقارن status للسجلات بين النسخة القديمة
+   والجديدة. أي سجل كان 'تم التسليم' وأصبح 'قيد الانتظار' → نطبع تحذير
+   كامل مع stack trace ومعلومات السجل. */
+function _watchDeliveryReverts(beforeArr, afterArr, source) {
+    try {
+        if (!Array.isArray(beforeArr) || !Array.isArray(afterArr)) return;
+        const beforeMap = new Map();
+        for (const r of beforeArr) if (r && r.id != null) beforeMap.set(r.id, r.status);
+        for (const r of afterArr) {
+            if (!r || r.id == null) continue;
+            const oldStatus = beforeMap.get(r.id);
+            if (oldStatus === 'تم التسليم' && r.status !== 'تم التسليم') {
+                console.error(`🚨 [REVERT] montasia ${r.id} reverted: '${oldStatus}' → '${r.status}' | source=${source}`);
+                console.error('🚨 [REVERT] Stack:', new Error().stack);
+                console.error('🚨 [REVERT] Record:', JSON.stringify(r));
+            }
+        }
+    } catch (e) { console.warn('[watchDeliveryReverts] failed:', e); }
+}
 
 function _initLastSavedRecords() {
     for (const type of ['inquiries', 'montasiat', 'complaints']) {
