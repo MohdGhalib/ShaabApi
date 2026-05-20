@@ -294,13 +294,33 @@ app.Use(async (ctx, next) =>
 app.UseStaticFiles(new StaticFileOptions
 {
     FileProvider = new PhysicalFileProvider(app.Environment.ContentRootPath),
-    RequestPath  = ""
+    RequestPath  = "",
+    OnPrepareResponse = ctx =>
+    {
+        // 🛡️ HTML files: لا تُخزَّن في cache. أي تحديث في الـ ?v= يصل فوراً.
+        // باقي الأصول (JS/CSS/images): تُخزَّن سنة كاملة. التحديث يحدث عبر ?v= فقط.
+        var name = ctx.File.Name;
+        if (name.EndsWith(".html", StringComparison.OrdinalIgnoreCase))
+        {
+            ctx.Context.Response.Headers["Cache-Control"] = "no-store, no-cache, must-revalidate, max-age=0";
+            ctx.Context.Response.Headers["Pragma"] = "no-cache";
+            ctx.Context.Response.Headers["Expires"] = "0";
+        }
+        else
+        {
+            ctx.Context.Response.Headers["Cache-Control"] = "public, max-age=31536000";
+        }
+    }
 });
 
 // توجيه الصفحة الرئيسية
 app.MapGet("/", async context =>
 {
     context.Response.ContentType = "text/html; charset=utf-8";
+    // 🛡️ منع تخزين index.html في cache — يضمن أن كل تحديث ?v= يصل لجميع المتصفحات فوراً
+    context.Response.Headers["Cache-Control"] = "no-store, no-cache, must-revalidate, max-age=0";
+    context.Response.Headers["Pragma"] = "no-cache";
+    context.Response.Headers["Expires"] = "0";
     await context.Response.SendFileAsync(
         Path.Combine(app.Environment.ContentRootPath, "index.html"));
 });
@@ -309,6 +329,10 @@ app.MapGet("/", async context =>
 app.MapGet("/admin", async context =>
 {
     context.Response.ContentType = "text/html; charset=utf-8";
+    // 🛡️ منع تخزين admin.html في cache — نفس المنطق
+    context.Response.Headers["Cache-Control"] = "no-store, no-cache, must-revalidate, max-age=0";
+    context.Response.Headers["Pragma"] = "no-cache";
+    context.Response.Headers["Expires"] = "0";
     await context.Response.SendFileAsync(
         Path.Combine(app.Environment.ContentRootPath, "admin.html"));
 });
