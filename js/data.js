@@ -614,6 +614,34 @@ async function loadAllData(force) {
                         }
                     } catch (e) { console.warn('[loadAllData] post-fetch pending capture failed:', e); }
 
+                    /* 🛡️ (Fix #3, 2026-05-20) فرض التقاط أي سجل مُرسَل خلال آخر 10 ثوانٍ —
+                       حتى لو _lastSavedRecords تطابق (Fix #2 لن يلتقطه). يحمي من:
+                       - Replica lag: السيرفر ردّ 200 لكن نقطة قراءة منفصلة ترى بيانات قديمة
+                       - SSE broadcast يصل قبل اكتمال commit للقراءة
+                       - أي سيناريو يفقد فيه التحديث في الانتقال بين الكتابة والقراءة
+                       النسخة المحلية تفوز طوال نافذة الـ 10s، ثم نثق بالسيرفر. */
+                    try {
+                        const _nowTs = Date.now();
+                        for (const _type of ['montasiat', 'inquiries', 'complaints']) {
+                            const _recentMap = _recentlyDispatched[_type];
+                            if (!_recentMap || _recentMap.size === 0) continue;
+                            const _arr = (db && Array.isArray(db[_type])) ? db[_type] : [];
+                            const _target = _pendingEditsByType[_type];
+                            if (!_target) continue;
+                            for (const _r of _arr) {
+                                if (!_r || _r.id == null) continue;
+                                const _recent = _recentMap.get(_r.id);
+                                if (!_recent) continue;
+                                if (_nowTs - _recent.ts > _RECENT_DISPATCH_MS) {
+                                    _recentMap.delete(_r.id);
+                                    continue;
+                                }
+                                // فرض الاحتفاظ بالنسخة المحلية بصرف النظر عن أي شيء
+                                _target.set(_r.id, _r);
+                            }
+                        }
+                    } catch (e) { console.warn('[loadAllData] recent-dispatch force-capture failed:', e); }
+
                     const _parsed = JSON.parse(_masterStr);
                     db = _parsed;
                     /* 🔄 Phase 4b/4c: استبدل السجلات بالـ endpoints الجديدة لو نجحت،
@@ -1275,6 +1303,18 @@ let _lastSavedRecords = {
     complaints: new Map()
 };
 
+/* 🛡️ (Fix #3, 2026-05-20) سجل التحديثات المُرسَلة حديثاً — يحمي من:
+   1. Replica lag: السيرفر يردّ 200 لكن قراءة لاحقة (loadAllData) ترى بيانات قديمة
+   2. SSE broadcasts تصل قبل اكتمال commit للقراءة
+   3. أي race ينطوي على قراءة من السيرفر خلال ثوانٍ من الكتابة الناجحة
+   loadAllData يفرض الاحتفاظ بالنسخة المحلية لأي سجل ضمن نافذة الـ 10s. */
+const _RECENT_DISPATCH_MS = 10_000;
+let _recentlyDispatched = {
+    inquiries:  new Map(),  // id -> { ts, snapshot }
+    montasiat:  new Map(),
+    complaints: new Map()
+};
+
 function _initLastSavedRecords() {
     for (const type of ['inquiries', 'montasiat', 'complaints']) {
         const arr = (db && Array.isArray(db[type])) ? db[type] : [];
@@ -1322,12 +1362,25 @@ async function _dispatchOne(method, url, body) {
 async function _flushPerRecordChanges() {
     const tasks = [];
     let summary = '';
+    const _dispatchTs = Date.now();
     for (const type of ['inquiries', 'montasiat', 'complaints']) {
         const diff = _diffRecords(type);
         const urlBase = `api/${type}`;
-        for (const rec of diff.created) tasks.push(_dispatchOne('POST', urlBase, rec));
-        for (const rec of diff.updated) tasks.push(_dispatchOne('PUT', `${urlBase}/${rec.id}`, rec));
-        for (const id  of diff.deleted) tasks.push(_dispatchOne('DELETE', `${urlBase}/${id}`, null));
+        // 🛡️ (Fix #3) سجِّل كل إرسال — loadAllData سيفرض الاحتفاظ بالنسخة المحلية
+        // خلال نافذة 10s حتى لو السيرفر ردّ ببيانات قديمة (replica lag).
+        const recentMap = _recentlyDispatched[type] || (_recentlyDispatched[type] = new Map());
+        for (const rec of diff.created) {
+            recentMap.set(rec.id, { ts: _dispatchTs, snapshot: JSON.stringify(rec) });
+            tasks.push(_dispatchOne('POST', urlBase, rec));
+        }
+        for (const rec of diff.updated) {
+            recentMap.set(rec.id, { ts: _dispatchTs, snapshot: JSON.stringify(rec) });
+            tasks.push(_dispatchOne('PUT', `${urlBase}/${rec.id}`, rec));
+        }
+        for (const id of diff.deleted) {
+            recentMap.set(id, { ts: _dispatchTs, snapshot: null }); // null = deleted
+            tasks.push(_dispatchOne('DELETE', `${urlBase}/${id}`, null));
+        }
         if (diff.created.length || diff.updated.length || diff.deleted.length) {
             summary += ` ${type[0].toUpperCase()}+${diff.created.length}/~${diff.updated.length}/-${diff.deleted.length}`;
         }
