@@ -654,8 +654,14 @@ async function loadAllData(force) {
                         }
                     } catch (e) { console.warn('[loadAllData] recent-dispatch force-capture failed:', e); }
 
-                    /* 🔍 (Diagnostics) سجِّل النسخة القديمة قبل الاستبدال — للـ watchdog */
-                    const _preReplaceM = Array.isArray(db?.montasiat) ? db.montasiat.slice() : [];
+                    /* 🛡️ (CRITICAL FIX, 2026-05-20) احفظ المصفوفات الحالية قبل الاستبدال.
+                       السبب: lite blob لا يحوي montasiat/inquiries/complaints، فلو فشل
+                       fetch إلى /api/montasiat (أو inquiries/complaints) ولم يعد _newX
+                       كمصفوفة، فإن db[X] سيصبح undefined → كل السجلات تختفي!
+                       هذا هو سبب الكارثة في الـ watchdog logs (مئات المنتسيات DISAPPEARED). */
+                    const _preReplaceM = Array.isArray(db?.montasiat)  ? db.montasiat.slice()  : null;
+                    const _preReplaceI = Array.isArray(db?.inquiries)  ? db.inquiries.slice()  : null;
+                    const _preReplaceC = Array.isArray(db?.complaints) ? db.complaints.slice() : null;
 
                     const _parsed = JSON.parse(_masterStr);
                     db = _parsed;
@@ -665,8 +671,48 @@ async function loadAllData(force) {
                     if (Array.isArray(_newInquiries))  db.inquiries  = _newInquiries;
                     if (Array.isArray(_newComplaints)) db.complaints = _newComplaints;
 
+                    /* 🛡️ (CRITICAL FIX) لو ضاعت أي مصفوفة (فشل fetch + lite blob فارغ)،
+                       استعد النسخة المحلية كاحتياط. أفضل من فقدان البيانات. */
+                    if (!Array.isArray(db.montasiat) && _preReplaceM) {
+                        db.montasiat = _preReplaceM;
+                        console.warn('🚨 [DATA-GUARD] /api/montasiat fetch failed AND lite blob has no montasiat — restored', _preReplaceM.length, 'records from local memory');
+                    }
+                    if (!Array.isArray(db.inquiries) && _preReplaceI) {
+                        db.inquiries = _preReplaceI;
+                        console.warn('🚨 [DATA-GUARD] /api/inquiries fetch failed AND lite blob has no inquiries — restored', _preReplaceI.length, 'records from local memory');
+                    }
+                    if (!Array.isArray(db.complaints) && _preReplaceC) {
+                        db.complaints = _preReplaceC;
+                        console.warn('🚨 [DATA-GUARD] /api/complaints fetch failed AND lite blob has no complaints — restored', _preReplaceC.length, 'records from local memory');
+                    }
+
+                    /* 🛡️ (CRITICAL FIX) كشف انكماش كارثي: السيرفر ردّ بمصفوفة فارغة أو
+                       منكمشة بشدة (>50% drop) رغم وجود سجلات محلية كثيرة — مؤشر على
+                       fetch ناقص أو server bug. لا نثق بهذه البيانات — نحتفظ بالمحلية. */
+                    if (Array.isArray(db.montasiat) && _preReplaceM && _preReplaceM.length >= 10) {
+                        const _shrinkPct = ((_preReplaceM.length - db.montasiat.length) / _preReplaceM.length) * 100;
+                        if (_shrinkPct >= 50) {
+                            console.warn(`🚨 [DATA-GUARD] /api/montasiat returned ${db.montasiat.length} records but local had ${_preReplaceM.length} (${_shrinkPct.toFixed(0)}% shrink) — keeping local to prevent data loss`);
+                            db.montasiat = _preReplaceM;
+                        }
+                    }
+                    if (Array.isArray(db.inquiries) && _preReplaceI && _preReplaceI.length >= 10) {
+                        const _shrinkPct = ((_preReplaceI.length - db.inquiries.length) / _preReplaceI.length) * 100;
+                        if (_shrinkPct >= 50) {
+                            console.warn(`🚨 [DATA-GUARD] /api/inquiries returned ${db.inquiries.length} records but local had ${_preReplaceI.length} (${_shrinkPct.toFixed(0)}% shrink) — keeping local`);
+                            db.inquiries = _preReplaceI;
+                        }
+                    }
+                    if (Array.isArray(db.complaints) && _preReplaceC && _preReplaceC.length >= 10) {
+                        const _shrinkPct = ((_preReplaceC.length - db.complaints.length) / _preReplaceC.length) * 100;
+                        if (_shrinkPct >= 50) {
+                            console.warn(`🚨 [DATA-GUARD] /api/complaints returned ${db.complaints.length} records but local had ${_preReplaceC.length} (${_shrinkPct.toFixed(0)}% shrink) — keeping local`);
+                            db.complaints = _preReplaceC;
+                        }
+                    }
+
                     /* 🔍 (Diagnostics) ابحث عن أي revert تسليم — خلال الاستبدال (قبل pending restore) */
-                    _watchDeliveryReverts(_preReplaceM, db.montasiat, 'loadAllData/server-fetch');
+                    _watchDeliveryReverts(_preReplaceM || [], db.montasiat, 'loadAllData/server-fetch');
                     // 🔄 طبّق التعديلات المحلية الأحدث فوق بيانات السيرفر (مقارنة بالـ timestamp)
                     if (_localBranchInfo) {
                         if (!db.branchInfo || typeof db.branchInfo !== 'object') db.branchInfo = {};
