@@ -34,14 +34,39 @@ function _sqLoad() {
     catch { _sqLastConfirmed = { records: {} }; }
 }
 
+/* 🛡️ (CRITICAL FIX, 2026-05-20) معالجة QuotaExceededError بإسقاط أقدم
+   السجلات. localStorage محدود بـ ~5MB. لو امتلأ، نُسقط 50% من الأقدم
+   ونحاول مرة أخرى. لو ما زال يفشل، نسجّل الخطأ ونمضي بدون persistence
+   (الذاكرة لا تزال تحوي الطابور — لن نفقد الـ retry capability خلال الجلسة). */
 function _sqPersist() {
     try { localStorage.setItem(SQ_STORAGE_KEY, JSON.stringify(_sqPending)); }
-    catch (e) { console.error('[SQ] persist pending failed:', e); }
+    catch (e) {
+        if (e && e.name === 'QuotaExceededError') {
+            console.warn('[SQ] persist pending: quota exceeded — trimming oldest 50%');
+            const entries = Object.entries(_sqPending).sort((a, b) => (a[1].addedTs || 0) - (b[1].addedTs || 0));
+            const dropCount = Math.floor(entries.length / 2);
+            for (let i = 0; i < dropCount; i++) delete _sqPending[entries[i][0]];
+            try { localStorage.setItem(SQ_STORAGE_KEY, JSON.stringify(_sqPending)); }
+            catch (e2) { console.error('[SQ] persist pending still failed after trim — keeping in-memory only:', e2); }
+        } else {
+            console.error('[SQ] persist pending failed:', e);
+        }
+    }
 }
 
 function _sqPersistLastConfirmed() {
     try { localStorage.setItem(SQ_LAST_CONFIRMED_KEY, JSON.stringify(_sqLastConfirmed)); }
-    catch (e) { console.error('[SQ] persist last-confirmed failed:', e); }
+    catch (e) {
+        if (e && e.name === 'QuotaExceededError') {
+            console.warn('[SQ] persist last-confirmed: quota exceeded — clearing pending queue & retrying');
+            // Drop the pending queue entirely (in-memory still works for current session)
+            try { localStorage.removeItem(SQ_STORAGE_KEY); } catch {}
+            try { localStorage.setItem(SQ_LAST_CONFIRMED_KEY, JSON.stringify(_sqLastConfirmed)); }
+            catch (e2) { console.error('[SQ] persist last-confirmed still failed — keeping in-memory only:', e2); }
+        } else {
+            console.error('[SQ] persist last-confirmed failed:', e);
+        }
+    }
 }
 
 /* ── hash بسيط للسجل لكشف التغييرات ── */

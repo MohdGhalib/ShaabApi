@@ -816,6 +816,12 @@ async function loadAllData(force) {
     // ⚠️ نستخدم id حتمياً مبني على (name|weight) بدلاً من Date.now()+random:
     //   ids عشوائية مختلفة على كل جهاز كانت تجعل _recoverPendingPriceList يرى
     //   نفس الصنف كـ "مفقود" ويُكرّره عشرات المرات بمرور المزامنات.
+    /* 🛡️ (CRITICAL FIX, 2026-05-20) Backfill PriceList IDs مرة واحدة فقط لكل جلسة.
+       السبب: إذا فشل savePriceList بـ 409 conflict، السيرفر لا يحفظ → loadAllData
+       التالي يفتقد IDs مرة أخرى → backfill → save → 409 → loop لا نهائي يستنزف
+       localStorage ويغرق Console بالأخطاء.
+       الحل: backfill في الذاكرة (مجاناً) لكن savePriceList مرة واحدة فقط.
+       لو فشل الـ save مرة، ندع الـ IDs في الذاكرة دون إعادة محاولة دوريّة. */
     if (Array.isArray(priceList)) {
         let _priceIdsBackfilled = 0;
         for (const it of priceList) {
@@ -829,7 +835,12 @@ async function loadAllData(force) {
         }
         if (_priceIdsBackfilled > 0) {
             console.log('[PriceList] backfilled', _priceIdsBackfilled, 'legacy items with deterministic ids');
-            if (typeof savePriceList === 'function') savePriceList();
+            if (!window._plBackfillSavedThisSession && typeof savePriceList === 'function') {
+                window._plBackfillSavedThisSession = true;
+                savePriceList();
+            } else if (window._plBackfillSavedThisSession) {
+                console.log('[PriceList] backfill IDs applied in-memory only (save already attempted this session)');
+            }
         }
     }
 
