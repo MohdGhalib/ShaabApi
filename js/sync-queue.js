@@ -13,24 +13,49 @@ const SQ_STORAGE_KEY        = '_shaab_sync_pending';
 const SQ_LAST_CONFIRMED_KEY = '_shaab_sync_last_confirmed';
 
 /* 🛡️ (CRITICAL FIX, 2026-05-20) تنظيف طارئ لـ localStorage عند بدء التشغيل.
-   لو الـ storage > 80% من السعة (~5MB)، نمسح مفاتيح sync-queue القديمة.
-   البيانات الأساسية (Master_DB، Employees، إلخ) محمية — تأتي من السيرفر دائماً.
-   نسخة sync-queue القديمة كانت تخزّن سجلات كاملة → بضع MB لكل مستخدم نشط. */
+   لو الـ storage > 60% من السعة (~3MB من 5MB)، نمسح/نقلّم:
+   1. Shaab_AutoBackups (الأخطر — 100 snapshot × عدة ميغابايت!)
+   2. مفاتيح sync-queue القديمة
+   3. PL pending backup
+   البيانات الأساسية تأتي من السيرفر — لا نخسر شيئاً جوهرياً. */
 (function _sqEmergencyCleanupOnStartup() {
     try {
+        const sizeOf = (k) => (localStorage.getItem(k) || '').length + k.length;
         let total = 0;
+        const sizes = {};
         for (let i = 0; i < localStorage.length; i++) {
             const k = localStorage.key(i);
             if (!k) continue;
-            const v = localStorage.getItem(k) || '';
-            total += k.length + v.length;
+            const sz = sizeOf(k);
+            sizes[k] = sz;
+            total += sz;
         }
-        const QUOTA_ESTIMATE = 5 * 1024 * 1024; // ~5MB browser default
-        if (total > QUOTA_ESTIMATE * 0.8) {
-            console.warn(`[SQ] localStorage at ${(total/1024/1024).toFixed(2)}MB — running emergency cleanup of sync-queue keys`);
+        const QUOTA_ESTIMATE = 5 * 1024 * 1024;
+        if (total > QUOTA_ESTIMATE * 0.6) {
+            // طباعة المفاتيح الكبرى للتشخيص
+            const top = Object.entries(sizes).sort((a, b) => b[1] - a[1]).slice(0, 5);
+            console.warn(`[SQ] localStorage at ${(total/1024/1024).toFixed(2)}MB — top keys:`,
+                top.map(([k, s]) => `${k}=${(s/1024).toFixed(0)}KB`).join(', '));
+
+            // 1. التشذيب الأخطر: Shaab_AutoBackups
+            try {
+                const _ab = JSON.parse(localStorage.getItem('Shaab_AutoBackups') || '[]');
+                if (Array.isArray(_ab) && _ab.length > 5) {
+                    const _trimmed = _ab.slice(-5); // احتفظ بآخر 5 فقط
+                    localStorage.setItem('Shaab_AutoBackups', JSON.stringify(_trimmed));
+                    console.warn(`[SQ] trimmed Shaab_AutoBackups: ${_ab.length} → ${_trimmed.length} snapshots`);
+                }
+            } catch (e) {
+                // لو فشل، احذف الكل بدلاً من ترك مفتاح فاسد
+                try { localStorage.removeItem('Shaab_AutoBackups'); } catch {}
+                console.warn('[SQ] failed to trim Shaab_AutoBackups — removed entirely:', e);
+            }
+
+            // 2. sync-queue
             try { localStorage.removeItem(SQ_STORAGE_KEY); } catch {}
             try { localStorage.removeItem(SQ_LAST_CONFIRMED_KEY); } catch {}
-            // الـ PL pending backup يُعاد بناؤه عند الحاجة
+
+            // 3. PL pending (يُعاد بناؤه عند الحاجة)
             try { localStorage.removeItem('_shaab_pl_pending_backup'); } catch {}
         }
     } catch (e) { console.warn('[SQ] startup storage check failed:', e); }
@@ -151,7 +176,11 @@ function __sq_beforePush(dbObj) {
     const snap = _sqTakeSnapshot(dbObj);
     const lastRecs = (_sqLastConfirmed && _sqLastConfirmed.records) || {};
 
-    /* أي سجل بـ hash مختلف عن آخر مؤكد → ضعه في الطابور */
+    /* 🛡️ (CRITICAL FIX, 2026-05-20) لا نخزّن record/summary في _sqPending —
+       يضخّمها بمعدل ~2KB/سجل ويفيض localStorage عند مئات السجلات. UI
+       يستخدم summary فقط للعرض في واجهة الطابور؛ نُبقيه لكن مختصر (60 حرف).
+       crash recovery الذي كان يستعيد record من pending إلى db عند refresh
+       غير حاسم — تقليل الـ quota أهم لاستقرار النظام. */
     for (const key in snap.records) {
         const cur = snap.records[key];
         const lst = lastRecs[key];
@@ -161,8 +190,7 @@ function __sq_beforePush(dbObj) {
                 type:    cur.type,
                 id:      cur.id,
                 hash:    cur.hash,
-                summary: cur.summary,
-                record:  cur.record,
+                summary: (cur.summary || '').substring(0, 60), // مختصر للعرض فقط
                 addedTs: prev ? prev.addedTs : Date.now(),
                 attempts:(prev ? prev.attempts : 0) + 1,
                 lastTryTs: Date.now()
