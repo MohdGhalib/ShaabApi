@@ -588,6 +588,32 @@ async function loadAllData(force) {
                     const _localBranchInfo = (db && typeof db.branchInfo === 'object')
                         ? JSON.parse(JSON.stringify(db.branchInfo))
                         : null;
+
+                    /* 🛡️ (Fix #2, 2026-05-20) التقط pending edits مرة ثانية هنا —
+                       في نفس sync tick قبل استبدال db مباشرة. الالتقاط الأول في
+                       بداية loadAllData (سطر 460) يفوته أي تعديل يحدث خلال نافذة
+                       fetch (100-500ms). مثال: موظف يضغط "تسليم" خلال fetch →
+                       التعديل لا يُلتقط → db يُستبدل ببيانات السيرفر القديمة →
+                       restore لا يجد البند في pending Map → التسليم يضيع.
+                       الالتقاط هنا (post-fetch, pre-replace) يُغلق النافذة. */
+                    try {
+                        if (typeof _lastSavedRecords === 'object' && _lastSavedRecords) {
+                            for (const _type of ['montasiat', 'inquiries', 'complaints']) {
+                                const _arr = (db && Array.isArray(db[_type])) ? db[_type] : [];
+                                const _lastMap = _lastSavedRecords[_type] || new Map();
+                                const _target = _pendingEditsByType[_type];
+                                if (!_target) continue;
+                                for (const _r of _arr) {
+                                    if (!_r || _r.id == null) continue;
+                                    if (_target.has(_r.id)) continue; // الالتقاط الأول كافٍ (نفس reference)
+                                    const _cur = JSON.stringify(_r);
+                                    const _last = _lastMap.get(_r.id);
+                                    if (_last == null || _last !== _cur) _target.set(_r.id, _r);
+                                }
+                            }
+                        }
+                    } catch (e) { console.warn('[loadAllData] post-fetch pending capture failed:', e); }
+
                     const _parsed = JSON.parse(_masterStr);
                     db = _parsed;
                     /* 🔄 Phase 4b/4c: استبدل السجلات بالـ endpoints الجديدة لو نجحت،
@@ -1314,6 +1340,19 @@ async function _flushPerRecordChanges() {
 }
 
 function save() {
+    /* 🛡️ (Fix #1, 2026-05-20) احجز SSE/polling فوراً عند استدعاء save() — قبل
+       debounce — لإغلاق race window: في السابق كان _isSaving=true يُضبط داخل
+       setTimeout بعد 300ms، فيستطيع SSE/polling تشغيل loadAllData خلال هذه
+       النافذة ويمسح التعديل المحلي (مثل تسليم منتسية يعود "قيد الانتظار").
+       الضبط هنا (قبل debounce) يُغلق النافذة. _safetyTimer يُحرَّر في finally
+       داخل setTimeout، أو بعد 60s كاحتياط لو فشل دفع التعديل. */
+    _isSaving = true;
+    clearTimeout(_savingTimer);
+    const _safetyTimer = setTimeout(() => {
+        if (_isSaving) console.warn('[save] safety release after 60s');
+        _isSaving = false;
+    }, 60_000);
+
     renderAll();
     if (typeof _updateBadges === 'function') _updateBadges();
     /* 🛡️ Sync Queue: احفظ الطابور فوراً قبل الـ debounce لتجنّب فقدان الإدخالات
@@ -1324,17 +1363,7 @@ function save() {
     if (_saveDebounceTimer) clearTimeout(_saveDebounceTimer);
     _saveDebounceTimer = setTimeout(async () => {
         _saveDebounceTimer = null;
-
-        /* 🛡️ احجز SSE/polling طوال دورة الحفظ (per-record + lite blob)
-           وإلا فإن بثّ "reload" الذي يُطلقه السيرفر بعد PUT الفردي يستطيع
-           تشغيل loadAllData قبل اكتمال _initLastSavedRecords،
-           فيقع race يُرجع التسليم لـ "قيد الانتظار". */
-        _isSaving = true;
-        clearTimeout(_savingTimer);
-        const _safetyTimer = setTimeout(() => {
-            if (_isSaving) console.warn('[save] safety release after 60s');
-            _isSaving = false;
-        }, 60_000);
+        // _isSaving و _safetyTimer أُعدّا في بداية save() — لا تكرار هنا.
 
         try {
             /* 🚀 Phase 5b: dispatch per-record changes first */
