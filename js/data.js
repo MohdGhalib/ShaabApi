@@ -1550,17 +1550,20 @@ function save() {
                 perRecordOk = false;
             }
 
-            if (perRecordOk) {
-                /* lite blob — لا نُرسل المصفوفات (تأتي من /api/* عند القراءة) */
-                const liteDb = { ...db };
-                delete liteDb.inquiries;
-                delete liteDb.montasiat;
-                delete liteDb.complaints;
-                _push('Shaab_Master_DB', JSON.stringify(liteDb));
-            } else {
-                /* fallback: full blob لو فشل per-record dispatch */
-                _push('Shaab_Master_DB', JSON.stringify(db));
+            /* lite blob دائماً — لا نُرسل المصفوفات (تأتي من /api/* عند القراءة).
+               🛑 (Fix, 2026-06-07) حتى في حالة فشل per-record لا نرسل blob كاملاً:
+               الطلب الضخم (صور base64) يرفضه HTTP/2 لدى Railway (ERR_HTTP2_PROTOCOL_ERROR).
+               السجلات التي فشل إرسالها per-record محفوظة في sync-queue (localStorage)
+               وتُعاد، و_lastSavedRecords لم تُحدَّث عند الفشل فيُعاد رصدها كـ diff في
+               الحفظ التالي. */
+            if (!perRecordOk) {
+                console.warn('[Phase5b] per-record dispatch failed — lite blob saved; records will retry via sync-queue/diff');
             }
+            const liteDb = { ...db };
+            delete liteDb.inquiries;
+            delete liteDb.montasiat;
+            delete liteDb.complaints;
+            _push('Shaab_Master_DB', JSON.stringify(liteDb));
         } finally {
             clearTimeout(_safetyTimer);
             /* لا نُحرّر _isSaving هنا فوراً — _push داخلياً يضبطه ويُحرّره
@@ -1570,13 +1573,26 @@ function save() {
     }, 300);
 }
 
-/* أرسِل أي حفظ مؤجَّل فوراً — يُستدعى عند مغادرة الصفحة لتجنّب فقدان البيانات */
-function _flushPendingSave() {
-    if (_saveDebounceTimer) {
-        clearTimeout(_saveDebounceTimer);
-        _saveDebounceTimer = null;
-        _push('Shaab_Master_DB', JSON.stringify(db));
+/* أرسِل أي حفظ مؤجَّل فوراً — يُستدعى عند مغادرة الصفحة / blur / إعادة محاولة الطابور.
+   🛑 (Fix, 2026-06-07) في السابق كان يرسل db كاملاً (JSON.stringify(db)) بكل المصفوفات
+   وصور base64 → طلب ضخم يرفضه HTTP/2 لدى Railway بـ ERR_HTTP2_PROTOCOL_ERROR، فيفشل
+   الـ fetch ("فشل الحفظ") ويتكرر بلا توقف من طابور المزامنة (__sq_retryNow كل 10s).
+   الحل: أرسِل السجلات عبر نقاط per-record (صغيرة) + lite blob فقط — نفس منطق save(). */
+async function _flushPendingSave() {
+    if (!_saveDebounceTimer) return;
+    clearTimeout(_saveDebounceTimer);
+    _saveDebounceTimer = null;
+    try {
+        if (typeof _flushPerRecordChanges === 'function') await _flushPerRecordChanges();
+    } catch (e) {
+        /* per-record قد يفشل — الطابور (sync-queue) + diff في التحميل التالي يغطّيان الإعادة */
+        console.warn('[_flushPendingSave] per-record flush failed:', e);
     }
+    const liteDb = { ...db };
+    delete liteDb.inquiries;
+    delete liteDb.montasiat;
+    delete liteDb.complaints;
+    _push('Shaab_Master_DB', JSON.stringify(liteDb));
 }
 if (typeof window !== 'undefined') {
     window.addEventListener('beforeunload', _flushPendingSave);
