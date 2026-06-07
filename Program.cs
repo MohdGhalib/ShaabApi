@@ -164,6 +164,25 @@ using (var scope = app.Services.CreateScope())
             created_by VARCHAR(100) NULL,
             created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
             INDEX idx_files_ref (ref_type, ref_id)
+        ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;"),
+
+        // ── audit log in its own table (off the Master_DB blob) → months of retention ──
+        ("audit_log", @"CREATE TABLE IF NOT EXISTS audit_log (
+            id VARCHAR(80) PRIMARY KEY,
+            action VARCHAR(50) NULL,
+            entity VARCHAR(200) NULL,
+            summary TEXT NULL,
+            by_name VARCHAR(100) NULL,
+            emp_id VARCHAR(20) NULL,
+            role VARCHAR(40) NULL,
+            ref_type VARCHAR(30) NULL,
+            ref_id VARCHAR(40) NULL,
+            time VARCHAR(50) NULL,
+            iso VARCHAR(50) NULL,
+            ts BIGINT NOT NULL DEFAULT 0,
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            INDEX idx_audit_ts (ts),
+            INDEX idx_audit_emp (emp_id)
         ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;")
     };
 
@@ -178,6 +197,19 @@ using (var scope = app.Services.CreateScope())
         {
             Console.WriteLine($"[startup] ⚠ CREATE TABLE {tableName} failed: {ex.Message}");
         }
+    }
+
+    // ── retention: purge audit_log entries older than 6 months (180 days) ──
+    try
+    {
+        var auditCutoff = DateTimeOffset.UtcNow.AddDays(-180).ToUnixTimeMilliseconds();
+        var purged = await db.Database.ExecuteSqlRawAsync(
+            "DELETE FROM audit_log WHERE ts > 0 AND ts < {0}", auditCutoff);
+        if (purged > 0) Console.WriteLine($"[startup] ✓ Purged {purged} audit_log entries older than 180 days");
+    }
+    catch (Exception ex)
+    {
+        Console.WriteLine($"[startup] ⚠ audit_log purge failed: {ex.Message}");
     }
 
     // ── Phase 4a fix: serial column INT → VARCHAR(30) to match JSON blob semantics ──

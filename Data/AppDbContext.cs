@@ -12,6 +12,7 @@ public class AppDbContext : DbContext
     public DbSet<Montasia>     Montasiat   => Set<Montasia>();
     public DbSet<Complaint>    Complaints  => Set<Complaint>();
     public DbSet<FileBlob>     Files       => Set<FileBlob>();
+    public DbSet<AuditEntry>   AuditLog    => Set<AuditEntry>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -52,6 +53,13 @@ public class AppDbContext : DbContext
         {
             entity.Property(e => e.CreatedAt).HasDefaultValueSql("CURRENT_TIMESTAMP");
             entity.HasIndex(e => new { e.RefType, e.RefId });
+        });
+
+        modelBuilder.Entity<AuditEntry>(entity =>
+        {
+            entity.Property(e => e.CreatedAt).HasDefaultValueSql("CURRENT_TIMESTAMP");
+            entity.HasIndex(e => e.Ts);
+            entity.HasIndex(e => e.EmpId);
         });
     }
 }
