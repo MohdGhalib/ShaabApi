@@ -44,7 +44,7 @@ class _AddMontasiaTabState extends State<AddMontasiaTab> {
   }
 
   Future<void> _loadAssigned() async {
-    final emps = await ApiService.fetchEmployeesDb(widget.token);
+    final emps = await ApiService.fetchEmployees(widget.token);
     if (emps == null || !mounted) return;
     final emp = emps
         .where((e) => e['empId']?.toString() == widget.empId)

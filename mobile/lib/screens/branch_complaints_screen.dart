@@ -52,7 +52,7 @@ class _BranchComplaintsScreenState extends State<BranchComplaintsScreen>
     // قراءة الفروع المخصصة للموظف
     List<String> assignedBranches = [];
     if (widget.empId.isNotEmpty) {
-      final emps = await ApiService.fetchEmployeesDb(widget.token);
+      final emps = await ApiService.fetchEmployees(widget.token);
       if (emps != null) {
         final emp = emps.where((e) => e['empId']?.toString() == widget.empId).firstOrNull;
         if (emp != null) {

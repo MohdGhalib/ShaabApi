@@ -151,6 +151,14 @@ class ApiService {
   static Future<bool> updateMontasia(String token, dynamic id, Map<String, dynamic> r) => _updateRecord(token, 'montasiat', id, r);
   static Future<bool> updateComplaint(String token, dynamic id, Map<String, dynamic> r) => _updateRecord(token, 'complaints', id, r);
 
+  // قراءة الموظفين عبر GET /api/employees (جدول الظل، بدون أسرار). يعود إلى الـ blob
+  // إن فشل/فرغ — أمان حتى قبل اكتمال المزامنة. (الكتابة وتسجيل الدخول يبقيان على الـ blob.)
+  static Future<List<Map<String, dynamic>>?> fetchEmployees(String token) async {
+    final list = await _fetchList(token, 'employees');
+    if (list != null && list.isNotEmpty) return list.cast<Map<String, dynamic>>();
+    return fetchEmployeesDb(token);
+  }
+
   // ── قراءة قاعدة بيانات الموظفين ─────────────────────────────────────
   static Future<List<Map<String, dynamic>>?> fetchEmployeesDb(
       String token) async {
