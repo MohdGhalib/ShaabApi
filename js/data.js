@@ -427,6 +427,10 @@ const IS_LOCAL = location.protocol === 'file:';
 let _token     = null;
 let _isLoading = false;
 let _isSaving  = false;          // يمنع SSE من تحميل بيانات قديمة أثناء الحفظ
+/* 🛡️ (Fix, 2026-06-07) لا يُضبط true إلا بعد نجاح أول loadAllData من السيرفر.
+   يمنع _push من دفع حالة محلية فارغة (db الافتراضي) فوق بيانات الخادم عندما
+   يفشل التحميل الأولي على جهاز جديد — كان يسبب مسح auditLog/الجلسات/الرسائل. */
+let _initialLoadOk = false;
 let _isUnloading = false;        // يمنع toast الخطأ أثناء logout/reload (fetch يُلغى)
 if (typeof window !== 'undefined') {
     window.addEventListener('beforeunload', () => { _isUnloading = true; });
@@ -569,6 +573,8 @@ async function loadAllData(force) {
             if (res.status === 401) { location.reload(); return; }
             if (!res.ok) throw new Error('Server error ' + res.status);
             const data = await res.json();
+            /* ✅ نجح التحميل من السيرفر — من الآن يُسمح بدفع Master_DB (db سيُملأ أدناه) */
+            _initialLoadOk = true;
 
             /* اقرأ السجلات الجديدة مبكراً — لو فشل أي منها، نُكمل على JSON blob */
             let _newMontasiat = null, _newInquiries = null, _newComplaints = null;
@@ -1105,6 +1111,14 @@ function _push(key, value) {
     if (IS_LOCAL) {
         localStorage.setItem(key, value);
         return Promise.resolve({ ok: true });
+    }
+    /* 🛡️ (Fix, 2026-06-07) لا تدفع أي شيء للخادم قبل نجاح أول تحميل: على جهاز
+       جديد إذا فشل loadAllData الأولي تبقى db/employees/sessions على القيم
+       الافتراضية الفارغة، فيدهس هذا الدفعُ بياناتِ الخادم (auditLog/الجلسات/
+       الرسائل). نرفض الدفع حتى يؤكّد التحميل أننا رأينا بيانات الخادم. */
+    if (!_initialLoadOk) {
+        console.warn('[_push] محظور — لم يكتمل التحميل الأولي بعد (حماية من دهس بيانات الخادم):', key);
+        return Promise.resolve({ ok: false, blocked: true });
     }
     // ضبط علامة الحفظ الجاري لمنع SSE من تحميل بيانات قديمة
     _isSaving = true;

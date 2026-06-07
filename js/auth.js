@@ -316,7 +316,15 @@ async function login() {
             return;
         }
         // تحميل البيانات بعد الحصول على الـ token
-        try { await loadAllData(); } catch(e) { /* نكمل الدخول حتى لو فشل التحميل */ }
+        try { await loadAllData(); } catch(e) { console.error('[login] loadAllData failed:', e); }
+        /* 🛡️ (Fix, 2026-06-07) لا تُكمل الدخول إذا فشل التحميل الأولي: الحفظ سيُحظر
+           (حماية بيانات الخادم من الدهس بحالة فارغة)، والعمل بلا حفظ يضيّع تعديلات
+           المستخدم. ننبّه ونُعيد المحاولة بدل المتابعة بصمت. */
+        if (!IS_LOCAL && typeof _initialLoadOk !== 'undefined' && !_initialLoadOk) {
+            alert('تعذّر تحميل البيانات من الخادم — تحقق من اتصال الإنترنت. سيُعاد تحميل الصفحة.');
+            location.reload();
+            return;
+        }
     }
 
     document.getElementById("loginPage").style.display = "none";
