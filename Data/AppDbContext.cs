@@ -13,6 +13,7 @@ public class AppDbContext : DbContext
     public DbSet<Complaint>    Complaints  => Set<Complaint>();
     public DbSet<FileBlob>     Files       => Set<FileBlob>();
     public DbSet<AuditEntry>   AuditLog    => Set<AuditEntry>();
+    public DbSet<Employee>     Employees   => Set<Employee>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -60,6 +61,11 @@ public class AppDbContext : DbContext
             entity.Property(e => e.CreatedAt).HasDefaultValueSql("CURRENT_TIMESTAMP");
             entity.HasIndex(e => e.Ts);
             entity.HasIndex(e => e.EmpId);
+        });
+
+        modelBuilder.Entity<Employee>(entity =>
+        {
+            entity.Property(e => e.CreatedAt).HasDefaultValueSql("CURRENT_TIMESTAMP");
         });
     }
 }

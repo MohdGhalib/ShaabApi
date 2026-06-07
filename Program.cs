@@ -48,6 +48,7 @@ builder.Services.AddControllers();
 builder.Services.AddHttpContextAccessor();
 builder.Services.AddScoped<FcmService>();
 builder.Services.AddScoped<PerRecordSyncService>();
+builder.Services.AddScoped<EmployeeSyncService>();
 
 // JWT Authentication
 var jwtKey = builder.Configuration["Jwt:Key"]!;
@@ -167,6 +168,17 @@ using (var scope = app.Services.CreateScope())
         ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;"),
 
         // ── audit log in its own table (off the Master_DB blob) → months of retention ──
+        // ── shadow employees table (synced from Shaab_Employees_DB; auth still uses blob) ──
+        ("employees", @"CREATE TABLE IF NOT EXISTS employees (
+            emp_id VARCHAR(20) PRIMARY KEY,
+            name VARCHAR(100) NULL,
+            title VARCHAR(100) NULL,
+            salt VARCHAR(64) NULL,
+            password_hash VARCHAR(200) NULL,
+            data JSON NULL,
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+        ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;"),
+
         ("audit_log", @"CREATE TABLE IF NOT EXISTS audit_log (
             id VARCHAR(80) PRIMARY KEY,
             action VARCHAR(50) NULL,

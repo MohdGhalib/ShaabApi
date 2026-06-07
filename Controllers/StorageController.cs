@@ -36,10 +36,12 @@ public class StorageController : ControllerBase
     private readonly AppDbContext         _db;
     private readonly FcmService           _fcm;
     private readonly PerRecordSyncService _perRecordSync;
+    private readonly EmployeeSyncService  _employeeSync;
 
-    public StorageController(AppDbContext db, FcmService fcm, PerRecordSyncService perRecordSync)
+    public StorageController(AppDbContext db, FcmService fcm, PerRecordSyncService perRecordSync, EmployeeSyncService employeeSync)
     {
         _perRecordSync = perRecordSync;
+        _employeeSync  = employeeSync;
         _db = db;
         _fcm = fcm;
     }
@@ -265,6 +267,14 @@ public class StorageController : ControllerBase
             {
                 Console.WriteLine($"[DUAL-WRITE] outer guard caught: {ex.Message}");
             }
+        }
+
+        // 🔄 Shadow employees table: mirror Shaab_Employees_DB → employees on each save
+        // (blob stays the source of truth for auth; this backs GET /api/employees).
+        if (body.Key == "Shaab_Employees_DB" && !string.IsNullOrEmpty(body.Value))
+        {
+            try { await _employeeSync.SyncFromBlobAsync(body.Value); }
+            catch (Exception ex) { Console.WriteLine($"[EMP-SYNC] outer guard caught: {ex.Message}"); }
         }
 
         // إرسال حدث SSE لجميع المتصلين (fire-and-forget)
