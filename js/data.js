@@ -1140,9 +1140,9 @@ async function loadAllData(force) {
                     _auditRestored++;
                 }
             }
-            if (_auditRestored > 0) {
-                console.warn(`[loadAllData] restored ${_auditRestored} local audit entries missing from server`);
-            }
+            /* (audit_log table) لم نعد نُحذّر: السجل خرج من الـ blob → السجلات
+               المحلية دائماً "غير موجودة" في الـ blob ويعاد دمجها مع جدول الخادم
+               عبر _fetchAuditFromServer. هذا سلوك متوقّع وليس خطأً. */
         }
     } catch (e) { console.error('[loadAllData] audit restore failed:', e); }
 
