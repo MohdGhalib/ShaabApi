@@ -538,13 +538,13 @@ function addInquiry() {
                 alert('صورة الصنف أكبر من 5MB — لن تُرفق');
                 db.inquiries.unshift({ ...recWithFile, qualityPhoto: null });
             } else {
-                const r2 = new FileReader();
-                r2.onload = e2 => {
-                    db.inquiries.unshift({ ...recWithFile, qualityPhoto: e2.target.result });
+                // 📤 (Migration #11) ارفع صورة الجودة إلى /api/files واحفظ الرابط بدل base64
+                (async () => {
+                    const photoUrl = await _uploadFile(f, 'inquiry', baseRec.id);
+                    db.inquiries.unshift({ ...recWithFile, qualityPhoto: photoUrl });
                     if (typeof _logAudit === 'function') _logAudit('addInquiry', baseRec.branch || '—', `${baseRec.type} — ${(baseRec.notes||baseRec.itemName||baseRec.offerName||'').substring(0,40)}`, 'inquiry', baseRec.id);
                     _afterSave();
-                };
-                r2.readAsDataURL(f);
+                })();
                 return;
             }
         } else {

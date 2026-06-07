@@ -67,15 +67,15 @@ function addControl() {
     };
 
     if (fileInput.files && fileInput.files[0]) {
-        const reader = new FileReader();
-        reader.onload = e => {
-            db.complaints.unshift({ ...base, file:e.target.result });
+        // 📤 (Migration #11) ارفع الفاتورة إلى /api/files واحفظ الرابط بدل base64
+        (async () => {
+            const fileUrl = await _uploadFile(fileInput.files[0], 'complaint', base.id);
+            db.complaints.unshift({ ...base, file: fileUrl });
             if (typeof _logAudit === 'function') _logAudit('addComplaint', base.branch || '—', `${(base.notes||'').substring(0,40)}`);
             save();
             _notifyComplaint();
             resetControlForm();
-        };
-        reader.readAsDataURL(fileInput.files[0]);
+        })();
     } else if (inheritedFile) {
         // نقل المرفق المحجوز من الاستفسار المرتبط
         db.complaints.unshift({ ...base, file: inheritedFile });

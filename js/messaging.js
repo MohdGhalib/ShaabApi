@@ -112,16 +112,13 @@ async function _sendComposedMessage(encName, replyToId) {
     if (!_canMessage(name)) return alert('غير مصرح');
     const text = (document.getElementById('_msgComposeText')?.value || '').trim();
     if (!text && !_pendingAttachments.length) return alert('اكتب رسالة أو أضف مرفقًا');
+    // 📤 (Migration #11) ارفع المرفقات إلى /api/files واحفظ الرابط بدل base64.
+    // نُبقي اسم الحقل dataUrl حتى يبقى كود العرض دون تغيير (يقبل رابطاً أو data URL).
     const attachments = [];
     for (const f of _pendingAttachments) {
         try {
-            const dataUrl = await new Promise((res, rej) => {
-                const r = new FileReader();
-                r.onload = () => res(r.result);
-                r.onerror = rej;
-                r.readAsDataURL(f);
-            });
-            attachments.push({ name: f.name, type: f.type, size: f.size, dataUrl });
+            const dataUrl = await _uploadFile(f, 'message', '');
+            if (dataUrl) attachments.push({ name: f.name, type: f.type, size: f.size, dataUrl });
         } catch {}
     }
     _ensureMessages();

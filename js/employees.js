@@ -393,12 +393,24 @@ function uploadEmployeePhoto(empId, input) {
             const sx = (img.width - minSide) / 2;
             const sy = (img.height - minSide) / 2;
             ctx.drawImage(img, sx, sy, minSide, minSide, 0, 0, size, size);
-            emp.photo = canvas.toDataURL('image/jpeg', 0.8);
-            if (typeof saveEmployees === 'function') saveEmployees();
-            if (typeof _logAudit === 'function') { _logAudit('uploadPhoto', '—', `صورة لـ ${emp.name}`); save(); }
-            input.value = '';
-            if (typeof refreshSidebarAvatar === 'function' && currentUser?.empId === emp.empId) refreshSidebarAvatar();
-            renderEmployees();
+            const _finish = () => {
+                if (typeof saveEmployees === 'function') saveEmployees();
+                if (typeof _logAudit === 'function') { _logAudit('uploadPhoto', '—', `صورة لـ ${emp.name}`); save(); }
+                input.value = '';
+                if (typeof refreshSidebarAvatar === 'function' && currentUser?.empId === emp.empId) refreshSidebarAvatar();
+                renderEmployees();
+            };
+            // 📤 (Migration #11) ارفع الصورة المضغوطة إلى /api/files واحفظ الرابط بدل base64
+            canvas.toBlob(async (blob) => {
+                try {
+                    const url = await _uploadFile(new File([blob], `emp_${empId}.jpg`, { type: 'image/jpeg' }), 'employee', empId);
+                    emp.photo = url || canvas.toDataURL('image/jpeg', 0.8);
+                } catch (err) {
+                    console.warn('[uploadEmployeePhoto] upload failed, fallback base64:', err);
+                    emp.photo = canvas.toDataURL('image/jpeg', 0.8);
+                }
+                _finish();
+            }, 'image/jpeg', 0.8);
         };
         img.src = e.target.result;
     };
