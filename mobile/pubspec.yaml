@@ -1,7 +1,7 @@
 name: shaab_app
 description: تطبيق الشعب - نظام المنتسيات
 publish_to: 'none'
-version: 1.0.1+30
+version: 1.0.2+31
 
 environment:
   sdk: '>=3.0.0 <4.0.0'
@@ -12,6 +12,7 @@ dependencies:
 
   # شبكة واستيثاق
   http: ^1.2.0
+  http_parser: ^4.0.2   # لضبط نوع المحتوى عند رفع الصور إلى /api/files
   shared_preferences: ^2.2.2
   local_auth: ^2.2.0
 

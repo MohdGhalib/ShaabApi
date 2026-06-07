@@ -501,7 +501,8 @@ class _MyMontasiatScreenState extends State<MyMontasiatScreen>
     final delivered = status == 'تم التسليم';
     final waiting   = status == 'قيد الاستلام';   // ينتظر موافقة CC
     final rejected  = status == 'مرفوضة';
-    final hasPhoto  = item['photoBase64'] != null;
+    final photoUrl  = item['photoUrl'] as String?;        // (Migration #11) رابط الصورة الجديد
+    final hasPhoto  = photoUrl != null || item['photoBase64'] != null;
 
     Color statusColor;
     if (delivered)    statusColor = const Color(0xFF81C784);
@@ -599,12 +600,21 @@ class _MyMontasiatScreenState extends State<MyMontasiatScreen>
               padding: const EdgeInsets.fromLTRB(14, 10, 14, 0),
               child: ClipRRect(
                 borderRadius: BorderRadius.circular(10),
-                child: Image.memory(
-                  base64Decode(item['photoBase64'] as String),
-                  height: 140,
-                  width: double.infinity,
-                  fit: BoxFit.cover,
-                ),
+                // (Migration #11) رابط جديد عبر Image.network، أو base64 قديم عبر Image.memory
+                child: photoUrl != null
+                    ? Image.network(
+                        photoUrl.startsWith('http') ? photoUrl : '$kBaseUrl$photoUrl',
+                        height: 140,
+                        width: double.infinity,
+                        fit: BoxFit.cover,
+                        errorBuilder: (c, e, s) => const SizedBox.shrink(),
+                      )
+                    : Image.memory(
+                        base64Decode(item['photoBase64'] as String),
+                        height: 140,
+                        width: double.infinity,
+                        fit: BoxFit.cover,
+                      ),
               ),
             ),
 

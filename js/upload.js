@@ -55,7 +55,23 @@ async function _uploadFile(file, refType, refId) {
     }
 }
 
+/**
+ * مصدر صورة المنتسية للعرض: يدعم الصيغة الجديدة (رابط photoUrl /api/files)
+ * والقديمة (photoBase64 — base64 خام). يُرجع '' إن لم توجد صورة.
+ */
+function _montasiaPhotoSrc(rec) {
+    if (!rec) return '';
+    if (rec.photoUrl) return String(rec.photoUrl);          // الجديد: رابط
+    if (rec.photoBase64) {
+        const v = String(rec.photoBase64);
+        if (/^(https?:|\/|api\/)/i.test(v)) return v;       // رابط مخزّن بالخطأ في الحقل القديم
+        return 'data:image/jpeg;base64,' + v;               // القديم: base64 خام
+    }
+    return '';
+}
+
 if (typeof window !== 'undefined') {
-    window._uploadFile    = _uploadFile;
-    window._fileToDataUrl = _fileToDataUrl;
+    window._uploadFile       = _uploadFile;
+    window._fileToDataUrl    = _fileToDataUrl;
+    window._montasiaPhotoSrc = _montasiaPhotoSrc;
 }

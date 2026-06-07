@@ -119,15 +119,14 @@ class _AddMontasiaTabState extends State<AddMontasiaTab> {
 
   void _removePhoto() => setState(() => _photo = null);
 
-  Future<String?> _compressAndEncode(File file) async {
+  Future<List<int>?> _compressToBytes(File file) async {
     final compressed = await FlutterImageCompress.compressWithFile(
       file.absolute.path,
       quality: 60,
       minWidth: 800,
       minHeight: 800,
     );
-    if (compressed == null) return null;
-    return base64Encode(compressed);
+    return compressed;
   }
 
   String _formatTime() {
@@ -152,11 +151,25 @@ class _AddMontasiaTabState extends State<AddMontasiaTab> {
       return;
     }
 
+    final mId = DateTime.now().millisecondsSinceEpoch;
+
+    // 📤 (Migration #11) ارفع الصورة إلى /api/files واحفظ الرابط بدل base64.
+    // عند فشل الرفع نعود إلى base64 حتى لا تضيع الصورة.
+    String? photoUrl;
     String? photoBase64;
-    if (_photo != null) photoBase64 = await _compressAndEncode(_photo!);
+    if (_photo != null) {
+      final bytes = await _compressToBytes(_photo!);
+      if (bytes != null) {
+        photoUrl = await ApiService.uploadImageBytes(
+          widget.token, bytes,
+          filename: 'montasia_$mId.jpg', refType: 'montasia', refId: '$mId',
+        );
+        if (photoUrl == null) photoBase64 = base64Encode(bytes);
+      }
+    }
 
     final montasia = <String, dynamic>{
-      'id':          DateTime.now().millisecondsSinceEpoch,
+      'id':          mId,
       'city':        _city,
       'branch':      _branch,
       'notes':       notes,
@@ -169,6 +182,7 @@ class _AddMontasiaTabState extends State<AddMontasiaTab> {
       'empId':       widget.empId,
       'deliveredBy': '',
       'source':      'mobile',
+      if (photoUrl    != null) 'photoUrl':    photoUrl,
       if (photoBase64 != null) 'photoBase64': photoBase64,
     };
 

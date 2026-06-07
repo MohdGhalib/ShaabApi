@@ -478,9 +478,11 @@ function _renderTableM(get, isAdmin) {
         } else if (x.type === 'متعدد الأصناف' && typeof _renderItemsCellHTML === 'function') {
             extraInfo = `<div style="margin-top:6px;background:rgba(76,175,80,0.05);border:1px dashed rgba(76,175,80,0.3);border-radius:8px;padding:6px 8px;">${_renderItemsCellHTML(x)}</div>`;
         }
-        const photoCell = x.photoBase64
+        const _photoSrc = (typeof _montasiaPhotoSrc === 'function') ? _montasiaPhotoSrc(x)
+                          : (x.photoBase64 ? 'data:image/jpeg;base64,' + x.photoBase64 : '');
+        const photoCell = _photoSrc
             ? `<div style="margin-top:6px;">
-                   <img src="data:image/jpeg;base64,${x.photoBase64}"
+                   <img src="${_photoSrc}"
                         style="max-width:90px;max-height:70px;border-radius:6px;cursor:pointer;border:1px solid rgba(255,255,255,0.1);"
                         onclick="_showPhoto('${x.id}')" title="عرض الصورة"/>
                </div>` : '';

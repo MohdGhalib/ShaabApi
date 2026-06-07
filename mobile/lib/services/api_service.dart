@@ -1,10 +1,39 @@
 import 'dart:convert';
 import 'package:http/http.dart' as http;
+import 'package:http_parser/http_parser.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../constants.dart';
 
 class ApiService {
   static const _tokenKey = '_shaab_token';
+
+  // ── رفع صورة إلى /api/files وإرجاع الرابط (/api/files/{id}) ──────────
+  // (Migration #11) بدل تخزين base64 داخل Master_DB. يُرجع null عند الفشل.
+  static Future<String?> uploadImageBytes(
+      String token, List<int> bytes,
+      {String filename = 'photo.jpg', String? refType, String? refId}) async {
+    try {
+      final req = http.MultipartRequest('POST', Uri.parse('$kBaseUrl/api/files'));
+      req.headers['Authorization'] = 'Bearer $token';
+      req.files.add(http.MultipartFile.fromBytes(
+        'file', bytes,
+        filename: filename,
+        contentType: MediaType('image', 'jpeg'),
+      ));
+      if (refType != null) req.fields['refType'] = refType;
+      if (refId   != null) req.fields['refId']   = refId;
+
+      final streamed = await req.send().timeout(const Duration(seconds: 30));
+      final res = await http.Response.fromStream(streamed);
+      if (res.statusCode == 200) {
+        final data = jsonDecode(res.body) as Map<String, dynamic>;
+        return data['url'] as String?;
+      }
+      return null;
+    } catch (_) {
+      return null;
+    }
+  }
 
   // ── حفظ / قراءة التوكن ──────────────────────────────────────────────
   static Future<void> saveToken(String token) async {
