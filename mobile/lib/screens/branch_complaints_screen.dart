@@ -113,9 +113,16 @@ class _BranchComplaintsScreenState extends State<BranchComplaintsScreen>
     item['branchResolution']   = text.trim();
     item['branchResolvedBy']   = widget.name;
     item['branchResolvedAt']   = DateTime.now().toIso8601String();
-    await ApiService.updateComplaint(widget.token, item['id'], item);
+    final ok = await ApiService.updateComplaint(widget.token, item['id'], item);
     if (!mounted) return;
-    _load();
+    if (ok) {
+      _load();
+    } else {
+      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
+        content: Text('فشل الحفظ، حاول مرة أخرى', textDirection: TextDirection.rtl),
+        backgroundColor: Colors.red,
+      ));
+    }
   }
 
   void _showResolveDialog(Map<String, dynamic> item) {

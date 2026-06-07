@@ -36,7 +36,9 @@ public class AuditController : ControllerBase
         if (!exists)
         {
             _db.AuditLog.Add(e);
-            await _db.SaveChangesAsync();
+            // idempotent: لو سبق طلب متزامن بنفس الـ id فأدخله، نتجاهل تعارض المفتاح الأساسي
+            try { await _db.SaveChangesAsync(); }
+            catch (DbUpdateException) { /* duplicate id inserted concurrently — treat as success */ }
         }
         return Ok(new { ok = true, id = e.Id });
     }
@@ -68,7 +70,11 @@ public class AuditController : ControllerBase
             _db.AuditLog.Add(e);
             added++;
         }
-        if (added > 0) await _db.SaveChangesAsync();
+        if (added > 0)
+        {
+            try { await _db.SaveChangesAsync(); }
+            catch (DbUpdateException) { /* overlapping ids across concurrent bulks — best-effort */ }
+        }
         return Ok(new { ok = true, added });
     }
 

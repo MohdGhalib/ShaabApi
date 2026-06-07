@@ -184,7 +184,16 @@ public class AdminMigrationController : ControllerBase
             {
                 var v = bi[oldName]?.DeepClone();
                 bi.Remove(oldName);
-                if (!bi.ContainsKey(newName)) bi[newName] = v;
+                if (!bi.ContainsKey(newName))
+                {
+                    bi[newName] = v;
+                }
+                else
+                {
+                    // الهدف موجود مسبقاً = دمج وليس إعادة تسمية. لا نطمس إعداد الهدف،
+                    // لكن نُسجّل تحذيراً صريحاً بدل فقدان إعداد الفرع القديم بصمت.
+                    Console.WriteLine($"[RENAME-BRANCH] ⚠ branchInfo merge: target '{newName}' already exists — kept target config, discarded source '{oldName}' config.");
+                }
                 changed++;
             }
         }
@@ -308,8 +317,12 @@ public class AdminMigrationController : ControllerBase
         int n = 0;
         foreach (var r in rows)
         {
-            var url = _StoreImageBlob(r.QualityPhoto, "inquiry", r.Id.ToString(), r.AddedBy);
-            if (url != null) { r.QualityPhoto = url; n++; }
+            try
+            {
+                var url = _StoreImageBlob(r.QualityPhoto, "inquiry", r.Id.ToString(), r.AddedBy);
+                if (url != null) { r.QualityPhoto = url; n++; }
+            }
+            catch (Exception ex) { Console.WriteLine($"[BACKFILL-IMG] inquiry {r.Id} skip: {ex.Message}"); }
         }
         if (n > 0) await _db.SaveChangesAsync();
         return n;
@@ -326,8 +339,12 @@ public class AdminMigrationController : ControllerBase
         int n = 0;
         foreach (var r in rows)
         {
-            var url = _StoreImageBlob(r.File, "complaint", r.Id.ToString(), r.AddedBy);
-            if (url != null) { r.File = url; n++; }
+            try
+            {
+                var url = _StoreImageBlob(r.File, "complaint", r.Id.ToString(), r.AddedBy);
+                if (url != null) { r.File = url; n++; }
+            }
+            catch (Exception ex) { Console.WriteLine($"[BACKFILL-IMG] complaint {r.Id} skip: {ex.Message}"); }
         }
         if (n > 0) await _db.SaveChangesAsync();
         return n;
@@ -341,17 +358,21 @@ public class AdminMigrationController : ControllerBase
         int n = 0;
         foreach (var r in rows)
         {
-            if (string.IsNullOrEmpty(r.Data)) continue;
-            JsonNode? node;
-            try { node = JsonNode.Parse(r.Data); } catch { continue; }
-            if (node is not JsonObject obj) continue;
-            var pb = _SafeStr(obj["photoBase64"]);
-            var url = _StoreImageBlob(pb, "montasia", r.Id.ToString(), r.AddedBy);
-            if (url == null) continue;
-            obj.Remove("photoBase64");
-            obj["photoUrl"] = url;
-            r.Data = obj.ToJsonString();
-            n++;
+            try
+            {
+                if (string.IsNullOrEmpty(r.Data)) continue;
+                JsonNode? node;
+                try { node = JsonNode.Parse(r.Data); } catch { continue; }
+                if (node is not JsonObject obj) continue;
+                var pb = _SafeStr(obj["photoBase64"]);
+                var url = _StoreImageBlob(pb, "montasia", r.Id.ToString(), r.AddedBy);
+                if (url == null) continue;
+                obj.Remove("photoBase64");
+                obj["photoUrl"] = url;
+                r.Data = obj.ToJsonString();
+                n++;
+            }
+            catch (Exception ex) { Console.WriteLine($"[BACKFILL-IMG] montasia {r.Id} skip: {ex.Message}"); }
         }
         if (n > 0) await _db.SaveChangesAsync();
         return n;

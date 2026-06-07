@@ -81,6 +81,8 @@ public class FilesController : ControllerBase
 
         // Content is immutable per id → cache hard so the browser fetches each image once.
         Response.Headers["Cache-Control"] = "public, max-age=31536000, immutable";
+        // defense-in-depth: don't let the browser MIME-sniff a stored file into something executable
+        Response.Headers["X-Content-Type-Options"] = "nosniff";
         return File(f.Data, string.IsNullOrEmpty(f.Mime) ? "application/octet-stream" : f.Mime);
     }
 }
