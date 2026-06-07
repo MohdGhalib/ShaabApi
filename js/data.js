@@ -17,7 +17,7 @@ let currentUser = null;
 function _logAudit(action, entity, summary, refType, refId) {
     if (!db.auditLog) db.auditLog = [];
     const _now = Date.now();
-    db.auditLog.push({
+    const _entry = {
         id:      _now + '_' + (currentUser?.empId || 'X') + '_' + Math.random().toString(36).slice(2, 8),
         action,
         entity,
@@ -30,11 +30,54 @@ function _logAudit(action, entity, summary, refType, refId) {
         time:    now(),
         iso:     iso(),
         ts:      _now
-    });
-    // الاحتفاظ بسجلات آخر 7 أيام لكل موظف
-    const cutoff = _now - 7 * 24 * 60 * 60 * 1000;
-    db.auditLog = db.auditLog.filter(e => (e.ts || 0) >= cutoff);
+    };
+    db.auditLog.push(_entry);
+
+    /* 📤 (audit_log table) أرسل السطر للخادم ليُحفظ في جدول مستقل (احتفاظ 6 أشهر)
+       بدل الاعتماد على Master_DB blob. الإرسال append آمن (لا يدهس شيئاً) لذا لا
+       يحتاج _initialLoadOk. */
+    if (!(typeof IS_LOCAL !== 'undefined' && IS_LOCAL)) {
+        try {
+            const _tok = (typeof getSavedToken === 'function') ? getSavedToken() : localStorage.getItem('_shaab_token');
+            if (_tok) {
+                fetch('api/audit', {
+                    method:  'POST',
+                    headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + _tok },
+                    body:    JSON.stringify(_entry)
+                }).catch(() => {});
+            }
+        } catch {}
+    }
+
+    /* إبقاء عدد معقول في الذاكرة فقط (السجل التاريخي الكامل يُجلب من /api/audit
+       عند فتح التبويب). لا تقليم زمني — الاحتفاظ طويل المدى مسؤولية الخادم. */
+    if (db.auditLog.length > 3000) db.auditLog = db.auditLog.slice(-3000);
 }
+
+/* جلب سجل التدقيق من الجدول المستقل (/api/audit) ودمجه في db.auditLog.
+   - loadAllData يستدعيه بنافذة قصيرة (7 أيام) لكشف الخمول عبر الموظفين — throttled.
+   - تبويب التدقيق يستدعيه بـ force وبنافذة كاملة (حتى 180 يوماً). */
+let _lastAuditFetchTs = 0;
+async function _fetchAuditFromServer(days, force) {
+    if (typeof IS_LOCAL !== 'undefined' && IS_LOCAL) return;
+    const _tok = (typeof getSavedToken === 'function') ? getSavedToken() : localStorage.getItem('_shaab_token');
+    if (!_tok) return;
+    const _nowF = Date.now();
+    if (!force && _nowF - _lastAuditFetchTs < 60_000) return; // كبح الجلب الخلفي
+    _lastAuditFetchTs = _nowF;
+    const fromTs = _nowF - (days || 7) * 24 * 60 * 60 * 1000;
+    try {
+        const res = await fetch('api/audit?fromTs=' + fromTs, { headers: { 'Authorization': 'Bearer ' + _tok } });
+        if (!res.ok) return;
+        const server = await res.json();
+        if (!Array.isArray(server)) return;
+        const byId = new Map();
+        for (const e of server) if (e && e.id) byId.set(e.id, e);
+        for (const e of (db.auditLog || [])) if (e && e.id && !byId.has(e.id)) byId.set(e.id, e);
+        db.auditLog = Array.from(byId.values()).sort((a, b) => (b.ts || 0) - (a.ts || 0));
+    } catch (e) { console.warn('[audit] fetch from server failed:', e); }
+}
+if (typeof window !== 'undefined') window._fetchAuditFromServer = _fetchAuditFromServer;
 
 /* ── صوت الإشعار (consideration.mp3) ── */
 let _notifAudio    = null;
@@ -1102,6 +1145,10 @@ async function loadAllData(force) {
             }
         }
     } catch (e) { console.error('[loadAllData] audit restore failed:', e); }
+
+    /* 📥 (audit_log table) اجلب حركات آخر 7 أيام من الجدول المستقل (throttled داخلياً)
+       حتى يبقى كشف خمول الموظفين يعمل بعد إخراج auditLog من الـ blob. fire-and-forget. */
+    try { if (typeof _fetchAuditFromServer === 'function') _fetchAuditFromServer(7); } catch {}
 }
 
 /* ── حفظ البيانات ──
@@ -1606,6 +1653,7 @@ function save() {
             delete liteDb.inquiries;
             delete liteDb.montasiat;
             delete liteDb.complaints;
+            delete liteDb.auditLog;   // (audit_log table) لم يعد يُحفظ في الـ blob
             _push('Shaab_Master_DB', JSON.stringify(liteDb));
         } finally {
             clearTimeout(_safetyTimer);
@@ -1635,6 +1683,7 @@ async function _flushPendingSave() {
     delete liteDb.inquiries;
     delete liteDb.montasiat;
     delete liteDb.complaints;
+    delete liteDb.auditLog;   // (audit_log table) لم يعد يُحفظ في الـ blob
     _push('Shaab_Master_DB', JSON.stringify(liteDb));
 }
 if (typeof window !== 'undefined') {

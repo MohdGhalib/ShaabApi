@@ -407,4 +407,10 @@ function renderAuditLog() {
     }
 
     _renderAuditTable();
+    /* 📥 (audit_log table) اجلب السجل الكامل (حتى 180 يوماً) من الجدول المستقل ثم أعد العرض */
+    if (typeof _fetchAuditFromServer === 'function') {
+        _fetchAuditFromServer(180, true).then(() => {
+            try { _renderAuditTable(); } catch {}
+        });
+    }
 }
