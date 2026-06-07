@@ -834,13 +834,12 @@ async function loadAllData(force) {
             }
         }
         if (_priceIdsBackfilled > 0) {
-            console.log('[PriceList] backfilled', _priceIdsBackfilled, 'legacy items with deterministic ids');
-            if (!window._plBackfillSavedThisSession && typeof savePriceList === 'function') {
-                window._plBackfillSavedThisSession = true;
-                savePriceList();
-            } else if (window._plBackfillSavedThisSession) {
-                console.log('[PriceList] backfill IDs applied in-memory only (save already attempted this session)');
-            }
+            /* 🛡️ (Fix, 2026-06-07) الـ IDs هنا حتمية (hash من name|weight): كل جهاز
+               يحسب نفس الـ id في كل تحميل، فلا حاجة لحفظها على السيرفر. الحفظ السابق
+               (savePriceList أثناء loadAllData) كان يسبب 409 على Shaab_PriceList_DB
+               عند بدء كل جلسة (الإصدار غير محدّث أثناء التحميل) بلا أي فائدة، فيُغرق
+               الـ Console ويستنزف. نُبقيها في الذاكرة فقط — لا حفظ. */
+            console.log('[PriceList] backfilled', _priceIdsBackfilled, 'legacy items with deterministic ids (in-memory only — no save)');
         }
     }
 
@@ -867,7 +866,13 @@ async function loadAllData(force) {
             if (dups > 0) {
                 console.warn('[PriceList] removed', dups, 'duplicate items by (name|weight)');
                 priceList = kept;
-                if (typeof savePriceList === 'function') savePriceList();
+                /* 🛡️ (Fix, 2026-06-07) احفظ التنظيف مرة واحدة فقط لكل جلسة: لو فشل
+                   بـ 409 لا نعيد المحاولة دورياً (التنظيف يبقى في الذاكرة للعرض)،
+                   لتجنّب حلقة savePriceList→409→reload→dedup→save أثناء loadAllData. */
+                if (!window._plDedupSavedThisSession && typeof savePriceList === 'function') {
+                    window._plDedupSavedThisSession = true;
+                    savePriceList();
+                }
             }
         } catch (e) { console.error('[PriceList] dedup failed:', e); }
     }
