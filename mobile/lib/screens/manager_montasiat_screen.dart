@@ -45,13 +45,13 @@ class _ManagerMontasiatScreenState extends State<ManagerMontasiatScreen>
 
   Future<void> _load() async {
     setState(() { _loading = true; _error = null; });
-    final db = await ApiService.fetchMasterDb(widget.token);
+    final montasiat = await ApiService.fetchMontasiat(widget.token);
     if (!mounted) return;
-    if (db == null) {
+    if (montasiat == null) {
       setState(() { _loading = false; _error = 'تعذّر الاتصال بالسيرفر'; });
       return;
     }
-    final all = (db['montasiat'] as List? ?? [])
+    final all = montasiat
         .cast<Map<String, dynamic>>()
         .where((x) => x['deleted'] != true)
         .toList();
@@ -68,16 +68,10 @@ class _ManagerMontasiatScreenState extends State<ManagerMontasiatScreen>
 
   // ── موافقة ──────────────────────────────────────────────────────────
   Future<void> _approve(Map<String, dynamic> item) async {
-    final db = await ApiService.fetchMasterDb(widget.token);
-    if (db == null) { _snack('تعذّر الاتصال', isError: true); return; }
-    final list = (db['montasiat'] as List).cast<Map<String, dynamic>>();
-    final idx  = list.indexWhere((x) => x['id'] == item['id']);
-    if (idx == -1) { _snack('لم يُعثر على المنتسية', isError: true); return; }
-    list[idx]['status']     = 'قيد الانتظار';
-    list[idx]['approvedBy'] = widget.name;
-    list[idx]['approvedAt'] = _nowStr();
-    db['montasiat'] = list;
-    final ok = await ApiService.saveMasterDb(widget.token, db);
+    item['status']     = 'قيد الانتظار';
+    item['approvedBy'] = widget.name;
+    item['approvedAt'] = _nowStr();
+    final ok = await ApiService.updateMontasia(widget.token, item['id'], item);
     if (!mounted) return;
     ok ? _snack('تمت الموافقة ✓') : _snack('فشل الحفظ', isError: true);
     _load();
@@ -85,15 +79,9 @@ class _ManagerMontasiatScreenState extends State<ManagerMontasiatScreen>
 
   // ── رفض ─────────────────────────────────────────────────────────────
   Future<void> _reject(Map<String, dynamic> item) async {
-    final db = await ApiService.fetchMasterDb(widget.token);
-    if (db == null) { _snack('تعذّر الاتصال', isError: true); return; }
-    final list = (db['montasiat'] as List).cast<Map<String, dynamic>>();
-    final idx  = list.indexWhere((x) => x['id'] == item['id']);
-    if (idx == -1) return;
-    list[idx]['status']     = 'مرفوضة';
-    list[idx]['rejectedBy'] = widget.name;
-    db['montasiat'] = list;
-    final ok = await ApiService.saveMasterDb(widget.token, db);
+    item['status']     = 'مرفوضة';
+    item['rejectedBy'] = widget.name;
+    final ok = await ApiService.updateMontasia(widget.token, item['id'], item);
     if (!mounted) return;
     ok ? _snack('تم الرفض') : _snack('فشل الحفظ', isError: true);
     _load();
@@ -185,20 +173,14 @@ class _ManagerMontasiatScreenState extends State<ManagerMontasiatScreen>
     );
 
     if (result == null) return;
-    final db = await ApiService.fetchMasterDb(widget.token);
-    if (db == null) { _snack('تعذّر الاتصال', isError: true); return; }
-    final list = (db['montasiat'] as List).cast<Map<String, dynamic>>();
-    final idx  = list.indexWhere((x) => x['id'] == item['id']);
-    if (idx == -1) return;
-    list[idx]['status']      = 'تم التسليم';
-    list[idx]['deliveredBy'] = widget.name;
-    list[idx]['dt']          = _nowStr();
+    item['status']      = 'تم التسليم';
+    item['deliveredBy'] = widget.name;
+    item['dt']          = _nowStr();
     if (result['type'] == 'other') {
-      list[idx]['deliveryCity']   = result['city'];
-      list[idx]['deliveryBranch'] = result['branch'];
+      item['deliveryCity']   = result['city'];
+      item['deliveryBranch'] = result['branch'];
     }
-    db['montasiat'] = list;
-    final ok = await ApiService.saveMasterDb(widget.token, db);
+    final ok = await ApiService.updateMontasia(widget.token, item['id'], item);
     if (!mounted) return;
     ok ? _snack('تم التسليم بنجاح ✓') : _snack('فشل الحفظ', isError: true);
     _load();

@@ -105,6 +105,52 @@ class ApiService {
     return null;
   }
 
+  // ── per-record: montasiat / inquiries / complaints (Migration #11) ──
+  // قراءة وكتابة كل سجل على حدة بدل دفع Master_DB الكامل (يمنع الدهس + يخفّف الطلبات).
+  static Future<List<dynamic>?> _fetchList(String token, String type) async {
+    try {
+      final res = await http.get(
+        Uri.parse('$kBaseUrl/api/$type'),
+        headers: {'Authorization': 'Bearer $token'},
+      ).timeout(const Duration(seconds: 20));
+      if (res.statusCode == 200) return jsonDecode(res.body) as List;
+    } catch (_) {}
+    return null;
+  }
+
+  static Future<List<dynamic>?> fetchMontasiat(String token) => _fetchList(token, 'montasiat');
+  static Future<List<dynamic>?> fetchInquiries(String token) => _fetchList(token, 'inquiries');
+  static Future<List<dynamic>?> fetchComplaints(String token) => _fetchList(token, 'complaints');
+
+  static Future<bool> _createRecord(
+      String token, String type, Map<String, dynamic> record) async {
+    try {
+      final res = await http.post(
+        Uri.parse('$kBaseUrl/api/$type'),
+        headers: {'Content-Type': 'application/json', 'Authorization': 'Bearer $token'},
+        body: jsonEncode(record),
+      ).timeout(const Duration(seconds: 20));
+      return res.statusCode == 200;
+    } catch (_) { return false; }
+  }
+
+  // PUT يستبدل كل الحقول → نرسل السجل الكامل (المعدَّل في الذاكرة) لا delta.
+  static Future<bool> _updateRecord(
+      String token, String type, dynamic id, Map<String, dynamic> record) async {
+    try {
+      final res = await http.put(
+        Uri.parse('$kBaseUrl/api/$type/$id'),
+        headers: {'Content-Type': 'application/json', 'Authorization': 'Bearer $token'},
+        body: jsonEncode(record),
+      ).timeout(const Duration(seconds: 20));
+      return res.statusCode == 200;
+    } catch (_) { return false; }
+  }
+
+  static Future<bool> createMontasia(String token, Map<String, dynamic> r) => _createRecord(token, 'montasiat', r);
+  static Future<bool> updateMontasia(String token, dynamic id, Map<String, dynamic> r) => _updateRecord(token, 'montasiat', id, r);
+  static Future<bool> updateComplaint(String token, dynamic id, Map<String, dynamic> r) => _updateRecord(token, 'complaints', id, r);
+
   // ── قراءة قاعدة بيانات الموظفين ─────────────────────────────────────
   static Future<List<Map<String, dynamic>>?> fetchEmployeesDb(
       String token) async {

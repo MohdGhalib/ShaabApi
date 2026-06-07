@@ -44,13 +44,13 @@ class _ControlMontasiatScreenState extends State<ControlMontasiatScreen>
 
   Future<void> _load() async {
     setState(() { _loading = true; _error = null; });
-    final db = await ApiService.fetchMasterDb(widget.token);
+    final montasiat = await ApiService.fetchMontasiat(widget.token);
     if (!mounted) return;
-    if (db == null) {
+    if (montasiat == null) {
       setState(() { _loading = false; _error = 'تعذّر الاتصال بالسيرفر'; });
       return;
     }
-    final all = (db['montasiat'] as List? ?? [])
+    final all = montasiat
         .cast<Map<String, dynamic>>()
         .where((x) => x['deleted'] != true)
         .toList();

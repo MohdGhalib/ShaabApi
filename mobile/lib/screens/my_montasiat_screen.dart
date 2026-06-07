@@ -111,13 +111,13 @@ class _MyMontasiatScreenState extends State<MyMontasiatScreen>
 
   Future<void> _load() async {
     setState(() { _loading = true; _error = null; });
-    final db = await ApiService.fetchMasterDb(widget.token);
+    final montasiat = await ApiService.fetchMontasiat(widget.token);
     if (!mounted) return;
-    if (db == null) {
+    if (montasiat == null) {
       setState(() { _loading = false; _error = 'تعذّر الاتصال بالسيرفر'; });
       return;
     }
-    final all = (db['montasiat'] as List? ?? [])
+    final all = montasiat
         .cast<Map<String, dynamic>>()
         .where((x) {
           if (x['deleted'] == true) return false;
@@ -448,29 +448,21 @@ class _MyMontasiatScreenState extends State<MyMontasiatScreen>
   // ── تأكيد الحفظ ─────────────────────────────────────────────────────
   Future<void> _commitDeliver(
       Map<String, dynamic> item, Map<String, dynamic> delivery) async {
-    final db = await ApiService.fetchMasterDb(widget.token);
-    if (db == null) { _snack('تعذّر الاتصال بالسيرفر', isError: true); return; }
-
-    final list = (db['montasiat'] as List).cast<Map<String, dynamic>>();
-    final idx  = list.indexWhere((x) => x['id'] == item['id']);
-    if (idx == -1) { _snack('لم يُعثر على المنتسية', isError: true); return; }
-
     final now = DateTime.now();
     final timeStr =
         '${now.hour.toString().padLeft(2, '0')}:${now.minute.toString().padLeft(2, '0')}'
         ' | ${now.day.toString().padLeft(2, '0')}/${now.month.toString().padLeft(2, '0')}/${now.year}';
 
-    list[idx]['status']      = 'تم التسليم';
-    list[idx]['deliveredBy'] = widget.name;
-    list[idx]['dt']          = timeStr;
-
+    // 📤 (Migration #11) عدّل السجل الكامل في الذاكرة وأرسله عبر PUT /api/montasiat/{id}
+    item['status']      = 'تم التسليم';
+    item['deliveredBy'] = widget.name;
+    item['dt']          = timeStr;
     if (delivery['type'] == 'other') {
-      list[idx]['deliveryCity']   = delivery['city'];
-      list[idx]['deliveryBranch'] = delivery['branch'];
+      item['deliveryCity']   = delivery['city'];
+      item['deliveryBranch'] = delivery['branch'];
     }
 
-    db['montasiat'] = list;
-    final ok = await ApiService.saveMasterDb(widget.token, db);
+    final ok = await ApiService.updateMontasia(widget.token, item['id'], item);
     if (!mounted) return;
 
     if (ok) {

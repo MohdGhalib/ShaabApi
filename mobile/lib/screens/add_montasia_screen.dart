@@ -144,13 +144,6 @@ class _AddMontasiaTabState extends State<AddMontasiaTab> {
 
     setState(() { _submitting = true; });
 
-    final db = await ApiService.fetchMasterDb(widget.token);
-    if (db == null) {
-      setState(() => _submitting = false);
-      _err('تعذّر الاتصال بالسيرفر');
-      return;
-    }
-
     final mId = DateTime.now().millisecondsSinceEpoch;
 
     // 📤 (Migration #11) ارفع الصورة إلى /api/files واحفظ الرابط بدل base64.
@@ -186,11 +179,8 @@ class _AddMontasiaTabState extends State<AddMontasiaTab> {
       if (photoBase64 != null) 'photoBase64': photoBase64,
     };
 
-    final list = (db['montasiat'] as List? ?? []);
-    list.insert(0, montasia);
-    db['montasiat'] = list;
-
-    final ok = await ApiService.saveMasterDb(widget.token, db);
+    // 📤 (Migration #11) إنشاء عبر POST /api/montasiat بدل دفع Master_DB الكامل
+    final ok = await ApiService.createMontasia(widget.token, montasia);
     if (!mounted) return;
     setState(() => _submitting = false);
 

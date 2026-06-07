@@ -25,10 +25,10 @@ class StatusChecker {
     final name  = prefs.getString('_shaab_name')  ?? '';
     if (token.isEmpty || name.isEmpty) return;
 
-    final db = await ApiService.fetchMasterDb(token);
-    if (db == null) return;
+    final montasiat = await ApiService.fetchMontasiat(token);
+    if (montasiat == null) return;
 
-    final items = (db['montasiat'] as List? ?? [])
+    final items = montasiat
         .cast<Map<String, dynamic>>()
         .where((x) =>
             x['deleted'] != true &&
