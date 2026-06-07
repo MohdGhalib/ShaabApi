@@ -1139,7 +1139,13 @@ function _push(key, value) {
             await _handleVersionConflict(key);
             return { ok: true, conflict: true };   // النزاع تمت معالجته داخلياً
         }
-        if (!r.ok) { if (!_isUnloading) _showSaveError(); return { ok: false, status: r.status }; }
+        if (!r.ok) {
+            const _kb = Math.round((body ? body.length : 0) / 1024);
+            console.error(`[_push] SAVE FAILED key=${key} status=${r.status} payload=${_kb}KB` +
+                (r.status === 413 ? ' ← PAYLOAD TOO LARGE (server limit 10MB)' : ''));
+            if (!_isUnloading) _showSaveError(r.status, key, _kb);
+            return { ok: false, status: r.status };
+        }
 
         // ✓ نجح — احفظ الإصدار الجديد + أعِد ضبط عدّاد محاولات التعارض
         try {
@@ -1160,11 +1166,12 @@ function _push(key, value) {
             try { __sq_markConfirmed(_sqSnap); } catch {}
         }
         return { ok: true };
-    }).catch(() => {
+    }).catch((err) => {
         _isSaving = false;
         clearTimeout(_savingTimer);
+        console.error(`[_push] SAVE FAILED key=${key} (network/abort):`, err);
         /* لا تُظهر toast لو الصفحة قيد إعادة التحميل/الخروج — fetch مُلغى بسبب navigation */
-        if (!_isUnloading) _showSaveError();
+        if (!_isUnloading) _showSaveError('network', key);
         return { ok: false, network: true };
     });
 }
@@ -1357,18 +1364,25 @@ function _showConflictToast() {
     el._t = setTimeout(() => { el.style.display = 'none'; }, 5000);
 }
 
-function _showSaveError() {
+function _showSaveError(detail, key, kb) {
     let el = document.getElementById('_saveErrToast');
     if (!el) {
         el = document.createElement('div');
         el.id = '_saveErrToast';
         el.style.cssText = 'position:fixed;bottom:20px;left:50%;transform:translateX(-50%);background:#c62828;color:#fff;padding:10px 22px;border-radius:10px;font-family:Cairo;font-size:14px;z-index:9999;box-shadow:0 4px 16px rgba(0,0,0,0.3);';
-        el.textContent   = '⚠️ فشل الحفظ — تحقق من الاتصال';
         document.body.appendChild(el);
     }
+    /* رسالة تشخيصية: 413 = البيانات أكبر من حدّ الخادم (10MB)؛ 401 = الجلسة منتهية
+       (يلزم إعادة دخول)؛ network = انقطاع اتصال فعلي. */
+    let msg = '⚠️ فشل الحفظ — تحقق من الاتصال';
+    if (detail === 413)            msg = `⚠️ فشل الحفظ — حجم البيانات كبير جداً (${kb || '?'}KB يتجاوز 10MB)`;
+    else if (detail === 401)       msg = '⚠️ فشل الحفظ — انتهت الجلسة، أعد تسجيل الدخول';
+    else if (detail === 'network') msg = '⚠️ فشل الحفظ — تحقق من الاتصال بالإنترنت';
+    else if (typeof detail === 'number') msg = `⚠️ فشل الحفظ (رمز ${detail})`;
+    el.textContent = msg;
     el.style.display = 'block';
     clearTimeout(el._t);
-    el._t = setTimeout(() => { el.style.display = 'none'; }, 4000);
+    el._t = setTimeout(() => { el.style.display = 'none'; }, 5000);
 }
 
 /* تجميع (debounce) لطلبات الحفظ المتتالية:
