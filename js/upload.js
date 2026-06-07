@@ -75,3 +75,7 @@ if (typeof window !== 'undefined') {
     window._fileToDataUrl    = _fileToDataUrl;
     window._montasiaPhotoSrc = _montasiaPhotoSrc;
 }
+/* node: تصدير الدالة النقية للاختبار (لا يؤثر على المتصفح) */
+if (typeof module !== 'undefined' && module.exports) {
+    module.exports = { _montasiaPhotoSrc };
+}

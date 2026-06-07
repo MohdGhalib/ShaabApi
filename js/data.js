@@ -1503,29 +1503,8 @@ function _watchDeliveryReverts(beforeArr, afterArr, source) {
     } catch (e) { console.warn('[watchDeliveryReverts] failed:', e); }
 }
 
-/* 🛡️ (Fix, 2026-06-07) مقارنة قانونية للسجلات: ترتيب مفاتيح موحّد + معاملة
-   null/undefined/'' كـ"غياب". السبب: الخادم (ToDto) يُعيد الحقول بترتيب ثابت
-   ويملأ الفارغ بـ null، بينما السجل المحلي قد يحوي '' أو يُسقط الحقل أو يرتّبه
-   مختلفاً → JSON.stringify الصارم يجعلها "مختلفة أبداً" (مثل offerName: '' محلياً
-   مقابل null من الخادم) → حلقة إرسال/409 لا نهائية. المقارنة القانونية تُنهيها:
-   لا يُعتبر السجل معدّلاً إلا عند اختلاف محتوى حقيقي. تُستخدم في كل مواقع المقارنة. */
-function _canonRec(rec) {
-    const norm = (v) => {
-        if (v === null || v === undefined || v === '') return undefined;
-        if (Array.isArray(v)) return v.map(norm);
-        if (typeof v === 'object') {
-            const out = {};
-            for (const k of Object.keys(v).sort()) {
-                const nv = norm(v[k]);
-                if (nv !== undefined) out[k] = nv;
-            }
-            return out;
-        }
-        return v;
-    };
-    try { return JSON.stringify(norm(rec)) ?? ''; }
-    catch { try { return JSON.stringify(rec); } catch { return ''; } }
-}
+/* 🛡️ (Fix, 2026-06-07) المقارنة القانونية _canonRec انتُقلت إلى js/lib/canon.js
+   (مُحمَّل قبل data.js) لتكون قابلة للاختبار. تُستخدم في كل مواقع المقارنة أدناه. */
 
 function _initLastSavedRecords() {
     for (const type of ['inquiries', 'montasiat', 'complaints']) {

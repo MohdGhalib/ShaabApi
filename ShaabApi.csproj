@@ -37,4 +37,11 @@
     <None Remove="نظام ادارة محامص الشعب\**\*" />
   </ItemGroup>
 
+  <!-- استبعاد مشروع الاختبارات من بناء/نشر التطبيق الرئيسي (له csproj مستقل) -->
+  <ItemGroup>
+    <Compile Remove="ShaabApi.Tests\**\*.cs" />
+    <Content Remove="ShaabApi.Tests\**\*" />
+    <None Remove="ShaabApi.Tests\**\*" />
+  </ItemGroup>
+
 </Project>

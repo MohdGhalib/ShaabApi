@@ -4,5 +4,8 @@ obj/
 .vs/
 appsettings.Development.json
 *.log
-whatsapp-service/wa-session/
 .claude/
+
+# اختبارات: استبعاد ملفات البناء
+ShaabApi.Tests/bin/
+ShaabApi.Tests/obj/
