@@ -5,6 +5,7 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using ShaabApi.Data;
+using ShaabApi.Models;
 using ShaabApi.Services;
 
 namespace ShaabApi.Controllers;
@@ -207,6 +208,195 @@ public class AdminMigrationController : ControllerBase
             await _db.SaveChangesAsync();
         }
         return changed;
+    }
+
+    public record BackfillImagesReq(int? MaxPerType);
+
+    /// <summary>
+    /// Migration #11 Phase 4 — convert existing base64 images into the files table.
+    /// Walks per-record tables (inquiry.qualityPhoto, complaint.file, montasia.data.photoBase64)
+    /// + Master_DB messages attachments + Employees photos. Each base64 → a files row, the field
+    /// becomes /api/files/{id}. Idempotent: already-URL values are skipped. Re-run until counts=0.
+    /// Tables are processed in batches (MaxPerType, default 50) to bound memory.
+    /// </summary>
+    [HttpPost("backfill-images")]
+    [RequestSizeLimit(2_000_000)]
+    public async Task<IActionResult> BackfillImages([FromBody] BackfillImagesReq? req)
+    {
+        if (!_IsAuthorized()) return Forbid();
+        var sw = Stopwatch.StartNew();
+        int limit = (req?.MaxPerType is int m && m > 0 && m <= 500) ? m : 50;
+
+        int inq = await _BackfillInquiries(limit);
+        int cmp = await _BackfillComplaints(limit);
+        int mnt = await _BackfillMontasiat(limit);
+        int msg = await _BackfillBlobMessages();
+        int emp = await _BackfillEmployees();
+
+        sw.Stop();
+        var userEmpId = User.FindFirst("empId")?.Value ?? "?";
+        Console.WriteLine($"[BACKFILL-IMG] by={userEmpId} inq={inq} cmp={cmp} mnt={mnt} msg={msg} emp={emp} in {sw.ElapsedMilliseconds}ms");
+
+        bool tablesMaybeMore = inq == limit || cmp == limit || mnt == limit;
+        return Ok(new
+        {
+            ok = true,
+            converted = new { inquiries = inq, complaints = cmp, montasiat = mnt, messages = msg, employees = emp },
+            batchLimit = limit,
+            moreLikely = tablesMaybeMore,
+            durationMs = sw.ElapsedMilliseconds,
+            note = tablesMaybeMore
+                ? "A table hit the batch limit — re-run this endpoint until all counts are 0."
+                : "All base64 images migrated. Idempotent — re-running is safe (skips URLs)."
+        });
+    }
+
+    /// <summary>Decode a base64/data-URL value → files row → return /api/files/{id}.
+    /// Returns null if value is empty, already a URL, or not valid base64.</summary>
+    private string? _StoreImageBlob(string? val, string refType, string? refId, string? createdBy)
+    {
+        if (string.IsNullOrWhiteSpace(val)) return null;
+        var v = val.Trim();
+        if (v.StartsWith("/api/files/") || v.StartsWith("api/files/")
+            || v.StartsWith("http://") || v.StartsWith("https://")) return null; // already migrated
+
+        string mime = "image/jpeg";
+        string b64;
+        if (v.StartsWith("data:"))
+        {
+            var comma = v.IndexOf(',');
+            if (comma < 5) return null;
+            var header = v.Substring(5, comma - 5);                 // between "data:" and ","
+            var semi = header.IndexOf(';');
+            var mm = (semi >= 0 ? header.Substring(0, semi) : header).Trim();
+            if (!string.IsNullOrEmpty(mm)) mime = mm;
+            b64 = v.Substring(comma + 1);
+        }
+        else b64 = v;
+
+        b64 = b64.Replace("\n", "").Replace("\r", "").Replace(" ", "");
+        if (b64.Length < 32) return null;                           // too short to be a real image
+        byte[] bytes;
+        try { bytes = Convert.FromBase64String(b64); }
+        catch { return null; }                                      // not valid base64 — leave as-is
+        if (bytes.Length == 0 || bytes.Length > 15 * 1024 * 1024) return null;
+
+        var id = Guid.NewGuid().ToString("N");
+        _db.Files.Add(new FileBlob
+        {
+            Id = id, Mime = mime, Data = bytes, SizeBytes = bytes.Length,
+            RefType = refType, RefId = refId, CreatedBy = createdBy, CreatedAt = DateTime.UtcNow
+        });
+        return $"/api/files/{id}";
+    }
+
+    private static string? _SafeStr(JsonNode? n)
+    {
+        if (n is JsonValue v)
+            return v.TryGetValue<string>(out var s) ? s : v.ToString();
+        return null;
+    }
+
+    private async Task<int> _BackfillInquiries(int limit)
+    {
+        var rows = await _db.Inquiries
+            .Where(i => i.QualityPhoto != null && i.QualityPhoto != ""
+                && !i.QualityPhoto.StartsWith("/api/files/")
+                && !i.QualityPhoto.StartsWith("api/files/")
+                && !i.QualityPhoto.StartsWith("http"))
+            .Take(limit).ToListAsync();
+        int n = 0;
+        foreach (var r in rows)
+        {
+            var url = _StoreImageBlob(r.QualityPhoto, "inquiry", r.Id.ToString(), r.AddedBy);
+            if (url != null) { r.QualityPhoto = url; n++; }
+        }
+        if (n > 0) await _db.SaveChangesAsync();
+        return n;
+    }
+
+    private async Task<int> _BackfillComplaints(int limit)
+    {
+        var rows = await _db.Complaints
+            .Where(c => c.File != null && c.File != ""
+                && !c.File.StartsWith("/api/files/")
+                && !c.File.StartsWith("api/files/")
+                && !c.File.StartsWith("http"))
+            .Take(limit).ToListAsync();
+        int n = 0;
+        foreach (var r in rows)
+        {
+            var url = _StoreImageBlob(r.File, "complaint", r.Id.ToString(), r.AddedBy);
+            if (url != null) { r.File = url; n++; }
+        }
+        if (n > 0) await _db.SaveChangesAsync();
+        return n;
+    }
+
+    private async Task<int> _BackfillMontasiat(int limit)
+    {
+        var rows = await _db.Montasiat
+            .Where(m => m.Data != null && m.Data.Contains("photoBase64"))
+            .Take(limit).ToListAsync();
+        int n = 0;
+        foreach (var r in rows)
+        {
+            if (string.IsNullOrEmpty(r.Data)) continue;
+            JsonNode? node;
+            try { node = JsonNode.Parse(r.Data); } catch { continue; }
+            if (node is not JsonObject obj) continue;
+            var pb = _SafeStr(obj["photoBase64"]);
+            var url = _StoreImageBlob(pb, "montasia", r.Id.ToString(), r.AddedBy);
+            if (url == null) continue;
+            obj.Remove("photoBase64");
+            obj["photoUrl"] = url;
+            r.Data = obj.ToJsonString();
+            n++;
+        }
+        if (n > 0) await _db.SaveChangesAsync();
+        return n;
+    }
+
+    private async Task<int> _BackfillBlobMessages()
+    {
+        var row = await _db.Storage.FindAsync("Shaab_Master_DB");
+        if (row == null || string.IsNullOrEmpty(row.StoreValue)) return 0;
+        JsonNode? root;
+        try { root = JsonNode.Parse(row.StoreValue); } catch { return 0; }
+        if (root is not JsonObject obj || obj["messages"] is not JsonArray msgs) return 0;
+
+        int n = 0;
+        foreach (var mNode in msgs)
+        {
+            if (mNode is not JsonObject mm || mm["attachments"] is not JsonArray atts) continue;
+            foreach (var aNode in atts)
+            {
+                if (aNode is not JsonObject a) continue;
+                var url = _StoreImageBlob(_SafeStr(a["dataUrl"]), "message", _SafeStr(mm["id"]), _SafeStr(mm["from"]));
+                if (url != null) { a["dataUrl"] = url; n++; }
+            }
+        }
+        if (n > 0) { row.StoreValue = root.ToJsonString(); row.Version += 1; await _db.SaveChangesAsync(); }
+        return n;
+    }
+
+    private async Task<int> _BackfillEmployees()
+    {
+        var row = await _db.Storage.FindAsync("Shaab_Employees_DB");
+        if (row == null || string.IsNullOrEmpty(row.StoreValue)) return 0;
+        JsonNode? root;
+        try { root = JsonNode.Parse(row.StoreValue); } catch { return 0; }
+        if (root is not JsonArray emps) return 0;
+
+        int n = 0;
+        foreach (var eNode in emps)
+        {
+            if (eNode is not JsonObject e) continue;
+            var url = _StoreImageBlob(_SafeStr(e["photo"]), "employee", _SafeStr(e["empId"]), _SafeStr(e["empId"]));
+            if (url != null) { e["photo"] = url; n++; }
+        }
+        if (n > 0) { row.StoreValue = root.ToJsonString(); row.Version += 1; await _db.SaveChangesAsync(); }
+        return n;
     }
 
     // ── helpers ──────────────────────────────────────────────────────────
