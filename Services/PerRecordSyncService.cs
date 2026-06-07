@@ -153,6 +153,22 @@ public class PerRecordSyncService
             try
             {
                 var e = existing.TryGetValue(id, out var found) ? found : null;
+                var incomingStatus = GetStringOrNull(rec, "status", 50);
+
+                /* 🛡️ (Delivery-revert guard, 2026-06-07) لا تَسمح أبداً لمزامنة الـ
+                   blob (التي قد تأتي من عميل يحمل نسخة قديمة — مثل تطبيق الموبايل أو
+                   تبويب ويب عند blur/إغلاق) بإرجاع منتسية مُسلَّمة ("تم التسليم") إلى
+                   حالة أقدم. سبب الجذر: عندما يكون الـ blob المخزَّن lite (بدون مصفوفة
+                   montasiat) يصبح oldMap = null فتُعامَل كل السجلات كـ"متغيّرة" وتُكتب
+                   فوق جدول per-record، فيُدهَس "تم التسليم". الإلغاء المشروع للتسليم
+                   يمرّ عبر PUT /api/montasiat/{id} (MontasiatController) وليس عبر هذا
+                   المسار، لذا هذا الحارس لا يمنع أي عملية شرعية. */
+                if (e != null && e.Status == "تم التسليم" && incomingStatus != "تم التسليم")
+                {
+                    Console.WriteLine($"[DUAL-WRITE] montasia id={id} blob-revert blocked: kept 'تم التسليم' (incoming='{incomingStatus}')");
+                    continue;
+                }
+
                 if (e == null)
                 {
                     e = new Montasia { Id = id };
@@ -161,7 +177,7 @@ public class PerRecordSyncService
                 e.Serial   = GetStringOrNull(rec, "serial", 30);
                 e.Branch   = GetStringOrNull(rec, "branch", 100);
                 e.Type     = GetStringOrNull(rec, "type", 50);
-                e.Status   = GetStringOrNull(rec, "status", 50);
+                e.Status   = incomingStatus;
                 e.Time     = GetStringOrNull(rec, "time", 50);
                 e.Iso      = GetStringOrNull(rec, "iso", 50);
                 e.AddedBy  = GetStringOrNull(rec, "addedBy", 100);
