@@ -482,7 +482,7 @@ async function loadAllData(force) {
                 const target = _pendingEditsByType[type];
                 for (const r of arr) {
                     if (!r || r.id == null) continue;
-                    const cur = JSON.stringify(r);
+                    const cur = _canonRec(r);
                     const last = lastMap.get(r.id);
                     if (last == null || last !== cur) target.set(r.id, r);
                 }
@@ -618,7 +618,7 @@ async function loadAllData(force) {
                                 for (const _r of _arr) {
                                     if (!_r || _r.id == null) continue;
                                     if (_target.has(_r.id)) continue; // الالتقاط الأول كافٍ (نفس reference)
-                                    const _cur = JSON.stringify(_r);
+                                    const _cur = _canonRec(_r);
                                     const _last = _lastMap.get(_r.id);
                                     if (_last == null || _last !== _cur) _target.set(_r.id, _r);
                                 }
@@ -1437,12 +1437,36 @@ function _watchDeliveryReverts(beforeArr, afterArr, source) {
     } catch (e) { console.warn('[watchDeliveryReverts] failed:', e); }
 }
 
+/* 🛡️ (Fix, 2026-06-07) مقارنة قانونية للسجلات: ترتيب مفاتيح موحّد + معاملة
+   null/undefined/'' كـ"غياب". السبب: الخادم (ToDto) يُعيد الحقول بترتيب ثابت
+   ويملأ الفارغ بـ null، بينما السجل المحلي قد يحوي '' أو يُسقط الحقل أو يرتّبه
+   مختلفاً → JSON.stringify الصارم يجعلها "مختلفة أبداً" (مثل offerName: '' محلياً
+   مقابل null من الخادم) → حلقة إرسال/409 لا نهائية. المقارنة القانونية تُنهيها:
+   لا يُعتبر السجل معدّلاً إلا عند اختلاف محتوى حقيقي. تُستخدم في كل مواقع المقارنة. */
+function _canonRec(rec) {
+    const norm = (v) => {
+        if (v === null || v === undefined || v === '') return undefined;
+        if (Array.isArray(v)) return v.map(norm);
+        if (typeof v === 'object') {
+            const out = {};
+            for (const k of Object.keys(v).sort()) {
+                const nv = norm(v[k]);
+                if (nv !== undefined) out[k] = nv;
+            }
+            return out;
+        }
+        return v;
+    };
+    try { return JSON.stringify(norm(rec)) ?? ''; }
+    catch { try { return JSON.stringify(rec); } catch { return ''; } }
+}
+
 function _initLastSavedRecords() {
     for (const type of ['inquiries', 'montasiat', 'complaints']) {
         const arr = (db && Array.isArray(db[type])) ? db[type] : [];
         const m = new Map();
         for (const r of arr) {
-            if (r && r.id != null) m.set(r.id, JSON.stringify(r));
+            if (r && r.id != null) m.set(r.id, _canonRec(r));
         }
         _lastSavedRecords[type] = m;
     }
@@ -1456,7 +1480,7 @@ function _diffRecords(type) {
     for (const rec of arr) {
         if (!rec || rec.id == null) continue;
         seen.add(rec.id);
-        const cur = JSON.stringify(rec);
+        const cur = _canonRec(rec);
         const last = lastMap.get(rec.id);
         if (last == null) created.push(rec);
         else if (last !== cur) updated.push(rec);
