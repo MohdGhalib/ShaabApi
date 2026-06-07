@@ -39,13 +39,13 @@ class _ManagerInquiriesScreenState extends State<ManagerInquiriesScreen>
 
   Future<void> _load() async {
     setState(() { _loading = true; _error = null; });
-    final db = await ApiService.fetchMasterDb(widget.token);
+    final inquiries = await ApiService.fetchInquiries(widget.token);
     if (!mounted) return;
-    if (db == null) {
+    if (inquiries == null) {
       setState(() { _loading = false; _error = 'تعذّر الاتصال بالسيرفر'; });
       return;
     }
-    final all = (db['inquiries'] as List? ?? [])
+    final all = inquiries
         .cast<Map<String, dynamic>>()
         .where((x) => x['deleted'] != true)
         .toList();

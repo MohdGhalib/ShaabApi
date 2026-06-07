@@ -48,13 +48,13 @@ class _ControlComplaintsScreenState extends State<ControlComplaintsScreen>
 
   Future<void> _load() async {
     setState(() { _loading = true; _error = null; });
-    final db = await ApiService.fetchMasterDb(widget.token);
+    final complaints = await ApiService.fetchComplaints(widget.token);
     if (!mounted) return;
-    if (db == null) {
+    if (complaints == null) {
       setState(() { _loading = false; _error = 'تعذّر الاتصال بالسيرفر'; });
       return;
     }
-    var all = (db['complaints'] as List? ?? [])
+    var all = complaints
         .cast<Map<String, dynamic>>()
         .where((x) => x['deleted'] != true)
         .toList();
@@ -169,20 +169,13 @@ class _ControlComplaintsScreenState extends State<ControlComplaintsScreen>
     if (confirmed != true) return;
     if (ctrl.text.trim().isEmpty || auditStatus == null) return;
 
-    final db = await ApiService.fetchMasterDb(widget.token);
-    if (db == null) { _snack('تعذّر الاتصال', isError: true); return; }
-    final list = (db['complaints'] as List).cast<Map<String, dynamic>>();
-    final idx  = list.indexWhere((x) => x['id'] == item['id']);
-    if (idx == -1) return;
-
     final now = _nowStr();
-    list[idx]['audit']       = ctrl.text.trim();
-    list[idx]['auditStatus'] = auditStatus;
-    list[idx]['auditBy']     = widget.name;
-    list[idx]['auditTime']   = now;
-    db['complaints'] = list;
+    item['audit']       = ctrl.text.trim();
+    item['auditStatus'] = auditStatus;
+    item['auditBy']     = widget.name;
+    item['auditTime']   = now;
 
-    final ok = await ApiService.saveMasterDb(widget.token, db);
+    final ok = await ApiService.updateComplaint(widget.token, item['id'], item);
     if (!mounted) return;
     ok ? _snack('تم حفظ الرد ✓') : _snack('فشل الحفظ', isError: true);
     _load();
@@ -263,20 +256,13 @@ class _ControlComplaintsScreenState extends State<ControlComplaintsScreen>
 
     if (confirmed != true || auditStatus == null) return;
 
-    final db = await ApiService.fetchMasterDb(widget.token);
-    if (db == null) { _snack('تعذّر الاتصال', isError: true); return; }
-    final list = (db['complaints'] as List).cast<Map<String, dynamic>>();
-    final idx  = list.indexWhere((x) => x['id'] == item['id']);
-    if (idx == -1) return;
+    item['audit']                   = item['controlEmpReply'];
+    item['auditStatus']             = auditStatus;
+    item['auditBy']                 = widget.name;
+    item['auditTime']               = _nowStr();
+    item['controlEmpReplyApproved'] = true;
 
-    list[idx]['audit']                   = item['controlEmpReply'];
-    list[idx]['auditStatus']             = auditStatus;
-    list[idx]['auditBy']                 = widget.name;
-    list[idx]['auditTime']               = _nowStr();
-    list[idx]['controlEmpReplyApproved'] = true;
-    db['complaints'] = list;
-
-    final ok = await ApiService.saveMasterDb(widget.token, db);
+    final ok = await ApiService.updateComplaint(widget.token, item['id'], item);
     if (!mounted) return;
     ok ? _snack('تم اعتماد الرد ✓') : _snack('فشل الحفظ', isError: true);
     _load();
@@ -354,18 +340,11 @@ class _ControlComplaintsScreenState extends State<ControlComplaintsScreen>
     if (confirmed != true) return;
     if (ctrl.text.trim().isEmpty) { _snack('يرجى كتابة الرد', isError: true); return; }
 
-    final db = await ApiService.fetchMasterDb(widget.token);
-    if (db == null) { _snack('تعذّر الاتصال', isError: true); return; }
-    final list = (db['complaints'] as List).cast<Map<String, dynamic>>();
-    final idx  = list.indexWhere((x) => x['id'] == item['id']);
-    if (idx == -1) return;
+    item['controlEmpReply']     = ctrl.text.trim();
+    item['controlEmpReplyBy']   = widget.name;
+    item['controlEmpReplyTime'] = _nowStr();
 
-    list[idx]['controlEmpReply']     = ctrl.text.trim();
-    list[idx]['controlEmpReplyBy']   = widget.name;
-    list[idx]['controlEmpReplyTime'] = _nowStr();
-    db['complaints'] = list;
-
-    final ok = await ApiService.saveMasterDb(widget.token, db);
+    final ok = await ApiService.updateComplaint(widget.token, item['id'], item);
     if (!mounted) return;
     ok ? _snack('تم إرسال الرد بنتظار الاعتماد ✓') : _snack('فشل الحفظ', isError: true);
     _load();

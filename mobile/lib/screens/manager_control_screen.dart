@@ -39,13 +39,13 @@ class _ManagerControlScreenState extends State<ManagerControlScreen>
 
   Future<void> _load() async {
     setState(() { _loading = true; _error = null; });
-    final db = await ApiService.fetchMasterDb(widget.token);
+    final complaints = await ApiService.fetchComplaints(widget.token);
     if (!mounted) return;
-    if (db == null) {
+    if (complaints == null) {
       setState(() { _loading = false; _error = 'تعذّر الاتصال بالسيرفر'; });
       return;
     }
-    final all = (db['complaints'] as List? ?? [])
+    final all = complaints
         .cast<Map<String, dynamic>>()
         .where((x) => x['deleted'] != true)
         .toList();

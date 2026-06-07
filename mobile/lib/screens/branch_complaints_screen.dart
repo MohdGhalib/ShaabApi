@@ -76,15 +76,15 @@ class _BranchComplaintsScreenState extends State<BranchComplaintsScreen>
       }
     }
 
-    final db = await ApiService.fetchMasterDb(widget.token);
+    final complaints = await ApiService.fetchComplaints(widget.token);
     if (!mounted) return;
-    if (db == null) {
+    if (complaints == null) {
       setState(() { _loading = false; _error = 'تعذّر الاتصال بالسيرفر'; });
       return;
     }
     // مدير الفرع/المنطقة يرى الشكاوى بعد اكتمال المتابعة مع الزبون فقط
     // مع فلترة حسب الفروع المخصصة له
-    final all = (db['complaints'] as List? ?? [])
+    final all = complaints
         .cast<Map<String, dynamic>>()
         .where((x) {
           if (x['deleted'] == true) return false;
@@ -110,16 +110,10 @@ class _BranchComplaintsScreenState extends State<BranchComplaintsScreen>
   }
 
   Future<void> _saveResolution(Map<String, dynamic> item, String text) async {
-    final db = await ApiService.fetchMasterDb(widget.token);
-    if (db == null || !mounted) return;
-    final list = (db['complaints'] as List? ?? []).cast<Map<String, dynamic>>();
-    final idx = list.indexWhere((c) => c['id'] == item['id']);
-    if (idx == -1) return;
-    list[idx]['branchResolution']   = text.trim();
-    list[idx]['branchResolvedBy']   = widget.name;
-    list[idx]['branchResolvedAt']   = DateTime.now().toIso8601String();
-    db['complaints'] = list;
-    await ApiService.saveMasterDb(widget.token, db);
+    item['branchResolution']   = text.trim();
+    item['branchResolvedBy']   = widget.name;
+    item['branchResolvedAt']   = DateTime.now().toIso8601String();
+    await ApiService.updateComplaint(widget.token, item['id'], item);
     if (!mounted) return;
     _load();
   }
