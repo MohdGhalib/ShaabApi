@@ -11,6 +11,7 @@ public class AppDbContext : DbContext
     public DbSet<Inquiry>      Inquiries   => Set<Inquiry>();
     public DbSet<Montasia>     Montasiat   => Set<Montasia>();
     public DbSet<Complaint>    Complaints  => Set<Complaint>();
+    public DbSet<FileBlob>     Files       => Set<FileBlob>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -45,6 +46,12 @@ public class AppDbContext : DbContext
             entity.Property(e => e.CreatedAt).HasDefaultValueSql("CURRENT_TIMESTAMP");
             entity.HasIndex(e => e.Branch);
             entity.HasIndex(e => e.Iso);
+        });
+
+        modelBuilder.Entity<FileBlob>(entity =>
+        {
+            entity.Property(e => e.CreatedAt).HasDefaultValueSql("CURRENT_TIMESTAMP");
+            entity.HasIndex(e => new { e.RefType, e.RefId });
         });
     }
 }

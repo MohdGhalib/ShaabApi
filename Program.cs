@@ -150,6 +150,20 @@ using (var scope = app.Services.CreateScope())
             created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
             INDEX idx_cmp_branch (branch),
             INDEX idx_cmp_iso (iso)
+        ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;"),
+
+        // ── Migration #11 (image off-loading): binary files store ──
+        // Images/invoices live here as MEDIUMBLOB; records keep only /api/files/{id}.
+        ("files", @"CREATE TABLE IF NOT EXISTS files (
+            id VARCHAR(34) PRIMARY KEY,
+            mime VARCHAR(100) NULL,
+            data MEDIUMBLOB NOT NULL,
+            size_bytes INT NOT NULL DEFAULT 0,
+            ref_type VARCHAR(30) NULL,
+            ref_id VARCHAR(40) NULL,
+            created_by VARCHAR(100) NULL,
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            INDEX idx_files_ref (ref_type, ref_id)
         ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;")
     };
 
