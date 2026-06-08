@@ -21,8 +21,10 @@ function _resetSessionTimer() {
 }
 
 function _showSessionWarning() {
+    /* (2026-06-08) مُعطَّلة بطلب المستخدم — لا تظهر نافذة تنبيه الخمول نهائياً.
+       نُبقي الدالة (المؤقّت يستدعيها) لكنها لا تُظهر شيئاً، ونضمن بقاء النافذة مخفية. */
     const modal = document.getElementById('sessionModal');
-    if (modal) modal.classList.remove('hidden');
+    if (modal) modal.classList.add('hidden');
 }
 
 function stayLoggedIn() {
