@@ -102,20 +102,73 @@ async function _superAdminLogin(isLocked) {
         let st = { enabled: false };
         try { st = await fetch('api/sa2fa/status').then(r => r.json()); } catch {}
         if (st && st.enabled) {
-            const code = prompt('🔐 أدخل رمز التحقق الثنائي (من Google Authenticator):');
-            if (code === null) return;                 // ألغى المستخدم
+            const verified = await _show2FAModal();   // نافذة عصرية تتولّى الإدخال + التحقق
+            if (!verified) return;                     // ألغى المستخدم أو لم يُكمل
+        }
+    }
+    _grantSuperAdmin(isLocked);
+}
+
+/* 🔐 نافذة منبثقة عصرية لإدخال رمز التحقق الثنائي — تُرجع Promise<boolean> (تم التحقق؟) */
+function _show2FAModal() {
+    return new Promise((resolve) => {
+        const overlay = document.createElement('div');
+        overlay.id = '_sa2faOverlay';
+        overlay.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.72);backdrop-filter:blur(6px);z-index:100000;display:flex;align-items:center;justify-content:center;font-family:Cairo;animation:_sa2faFade .2s ease;';
+        overlay.innerHTML = `
+          <style>
+            @keyframes _sa2faFade{from{opacity:0}to{opacity:1}}
+            @keyframes _sa2faPop{from{opacity:0;transform:translateY(14px) scale(.96)}to{opacity:1;transform:none}}
+            @keyframes _sa2faShake{10%,90%{transform:translateX(-2px)}30%,70%{transform:translateX(4px)}50%{transform:translateX(-6px)}}
+          </style>
+          <div id="_sa2faBox" style="background:linear-gradient(160deg,#201f2e,#14141d);border:1px solid rgba(255,255,255,0.09);border-radius:24px;width:390px;max-width:92vw;padding:32px 28px;box-shadow:0 30px 90px rgba(0,0,0,0.65);text-align:center;direction:rtl;animation:_sa2faPop .28s cubic-bezier(.2,.9,.3,1.2);">
+            <div style="width:66px;height:66px;margin:0 auto 18px;border-radius:50%;background:linear-gradient(135deg,#6a1b9a,#283593);display:flex;align-items:center;justify-content:center;font-size:30px;box-shadow:0 10px 28px rgba(106,27,154,0.55);">🔐</div>
+            <h3 style="margin:0 0 6px;color:#fff;font-size:19px;font-weight:800;">التحقق الثنائي</h3>
+            <p style="margin:0 0 22px;color:#9b9bb3;font-size:13px;line-height:1.6;">أدخل الرمز المكوّن من 6 أرقام<br>من تطبيق Google Authenticator</p>
+            <input id="_sa2faInput" type="text" inputmode="numeric" autocomplete="one-time-code" maxlength="6" placeholder="••••••"
+              style="width:100%;box-sizing:border-box;text-align:center;letter-spacing:14px;font-size:30px;font-weight:700;padding:15px 10px;border-radius:16px;border:2px solid rgba(255,255,255,0.12);background:rgba(255,255,255,0.04);color:#fff;outline:none;font-family:monospace;transition:border-color .2s;">
+            <div id="_sa2faErr" style="color:#ff6b6b;font-size:12.5px;min-height:18px;margin-top:10px;font-weight:600;"></div>
+            <div style="display:flex;gap:10px;margin-top:16px;">
+              <button id="_sa2faCancel" style="flex:1;padding:14px;border-radius:13px;border:1px solid rgba(255,255,255,0.13);background:transparent;color:#bbb;font-family:Cairo;font-size:14px;cursor:pointer;transition:.2s;">إلغاء</button>
+              <button id="_sa2faSubmit" style="flex:2;padding:14px;border-radius:13px;border:none;background:linear-gradient(135deg,#6a1b9a,#283593);color:#fff;font-family:Cairo;font-size:15px;font-weight:800;cursor:pointer;box-shadow:0 8px 20px rgba(106,27,154,0.4);transition:.2s;">تحقّق</button>
+            </div>
+          </div>`;
+        document.body.appendChild(overlay);
+        const box   = overlay.querySelector('#_sa2faBox');
+        const input = overlay.querySelector('#_sa2faInput');
+        const err   = overlay.querySelector('#_sa2faErr');
+        const btn   = overlay.querySelector('#_sa2faSubmit');
+        const done  = (val) => { overlay.remove(); resolve(val); };
+        setTimeout(() => input.focus(), 60);
+        input.addEventListener('focus', () => { input.style.borderColor = '#7e57c2'; });
+        input.addEventListener('blur',  () => { input.style.borderColor = 'rgba(255,255,255,0.12)'; });
+        input.addEventListener('input', () => { input.value = input.value.replace(/\D/g, '').slice(0, 6); err.textContent = ''; });
+        const verify = async () => {
+            const code = input.value.trim();
+            if (code.length < 6) { err.textContent = 'الرجاء إدخال 6 أرقام'; return; }
+            btn.disabled = true; btn.textContent = 'جارٍ التحقق…'; btn.style.opacity = '0.7';
             let vr = { ok: false };
             try {
                 vr = await fetch('api/sa2fa/verify', {
                     method:  'POST',
                     headers: { 'Content-Type': 'application/json' },
-                    body:    JSON.stringify({ code: String(code).trim() })
+                    body:    JSON.stringify({ code })
                 }).then(r => r.json());
             } catch {}
-            if (!vr || !vr.ok) { _showLoginError('❌ رمز التحقق الثنائي غير صحيح'); return; }
-        }
-    }
-    _grantSuperAdmin(isLocked);
+            if (vr && vr.ok) { done(true); return; }
+            err.textContent = (vr && vr.error) ? vr.error : '❌ رمز غير صحيح، حاول مجدداً';
+            box.style.animation = '_sa2faShake .4s';
+            setTimeout(() => { box.style.animation = ''; }, 420);
+            btn.disabled = false; btn.textContent = 'تحقّق'; btn.style.opacity = '1';
+            input.value = ''; input.focus();
+        };
+        btn.onclick = verify;
+        overlay.querySelector('#_sa2faCancel').onclick = () => done(false);
+        input.addEventListener('keydown', (e) => {
+            if (e.key === 'Enter')  verify();
+            if (e.key === 'Escape') done(false);
+        });
+    });
 }
 
 function _grantSuperAdmin(isLocked) {
