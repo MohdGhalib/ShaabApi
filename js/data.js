@@ -1743,6 +1743,9 @@ function save() {
             delete liteDb.complaints;
             delete liteDb.auditLog;   // (audit_log table) لم يعد يُحفظ في الـ blob
             delete liteDb.messages;   // (messages table) لم تعد الرسائل تُحفظ في الـ blob
+            // (إزالة ازدواج) لها مفاتيح مستقلة وتُستعاد منها في كلا مساري التحميل → لا داعي لتكرارها في الـ blob
+            delete liteDb.auditNotes;
+            delete liteDb.compensations;
             _push('Shaab_Master_DB', JSON.stringify(liteDb));
         } finally {
             clearTimeout(_safetyTimer);
@@ -1774,6 +1777,9 @@ async function _flushPendingSave() {
     delete liteDb.complaints;
     delete liteDb.auditLog;   // (audit_log table) لم يعد يُحفظ في الـ blob
     delete liteDb.messages;   // (messages table) لم تعد الرسائل تُحفظ في الـ blob
+    // (إزالة ازدواج) لها مفاتيح مستقلة وتُستعاد منها في كلا مساري التحميل → لا داعي لتكرارها في الـ blob
+    delete liteDb.auditNotes;
+    delete liteDb.compensations;
     _push('Shaab_Master_DB', JSON.stringify(liteDb));
 }
 if (typeof window !== 'undefined') {
@@ -1807,7 +1813,22 @@ async function reloadTable(btn) {
 
 function saveEmployees()  { _push('Shaab_Employees_DB',  JSON.stringify(employees)); }
 function saveBreaks()     { _push('Shaab_Breaks_DB',     JSON.stringify(breaks));    }
-function saveSessions()   { _push('Shaab_Sessions_DB',   JSON.stringify(sessions));  }
+/* 🧹 تقليم الجلسات: تنمو Shaab_Sessions_DB بلا حدّ (سطر لكل تسجيل دخول) وتُكتب كاملةً
+   في كل مرة. نحذف الجلسات *المغلقة* الأقدم من 90 يوماً، ونُبقي دائماً الجلسات المفتوحة
+   (logoutIso=null) حتى لا تتأثر حالة "متصل الآن". الإحصائيات التاريخية تظل متاحة 90 يوماً. */
+const _SESSION_RETENTION_DAYS = 90;
+function _pruneOldSessions() {
+    if (!Array.isArray(sessions) || !sessions.length) return false;
+    const cutoff = Date.now() - _SESSION_RETENTION_DAYS * 24 * 60 * 60 * 1000;
+    const before = sessions.length;
+    sessions = sessions.filter(s => {
+        if (!s || !s.logoutIso) return true;  // أبقِ الجلسات المفتوحة (متصل الآن / لم تُغلق)
+        const t = new Date(s.loginIso || s.logoutIso || 0).getTime();
+        return !(t && t < cutoff);             // احذف المغلقة الأقدم من المدة
+    });
+    return sessions.length !== before;
+}
+function saveSessions()   { _pruneOldSessions(); _push('Shaab_Sessions_DB',   JSON.stringify(sessions));  }
 /* PriceList Pending Backup Key — يضمن عدم فقدان الأصناف المضافة لو ألغيت الصفحة
    قبل اكتمال fetch إلى السيرفر (مثلاً Reload فوري بعد إضافة "جوز هند") */
 const _PL_PENDING_KEY = '_shaab_pl_pending_backup';
