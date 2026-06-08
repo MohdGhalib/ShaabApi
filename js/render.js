@@ -896,9 +896,13 @@ function _renderTableC(get, isAdmin) {
         const ctStr  = x.callTime ? _formatCallTime(x.callTime) : '';
         const hasMore = !!(ctStr || x.noteDate || x.moveNumber || x.invoiceValue || x.mediaSource || x.mediaAccountUrl);
         const _canEditFields = isCCMgrC || isAdmin;
-        const _editIcon = (key, label) => _canEditFields
-            ? ` <button onclick="editComplaintField(${x.id}, '${key}', '${label.replace(/'/g, "\\'")}')" title="تعديل ${label}" style="background:none;border:none;cursor:pointer;color:var(--text-dim);padding:0 4px;font-size:11px;">✏️</button>`
-            : '';
+        // موظف الميديا يُعدّل نص شكواه (notes) فقط ولشكاواه هو فقط
+        const _editIcon = (key, label) => {
+            const _allow = _canEditFields || (isMedia && key === 'notes' && x.addedBy === currentUser?.name);
+            return _allow
+                ? ` <button onclick="editComplaintField(${x.id}, '${key}', '${label.replace(/'/g, "\\'")}')" title="تعديل ${label}" style="background:none;border:none;cursor:pointer;color:var(--text-dim);padding:0 4px;font-size:11px;">✏️</button>`
+                : '';
+        };
         const _row = (label, val, last, key) =>
             `<div style="display:flex;${last ? '' : 'border-bottom:1px solid rgba(255,255,255,0.07);'}">
                 <span style="background:rgba(255,255,255,0.06);padding:9px 14px;color:var(--text-dim);font-weight:700;min-width:140px;text-align:right;">${label}${key ? _editIcon(key, label) : ''}</span>

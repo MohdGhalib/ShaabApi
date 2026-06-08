@@ -1038,9 +1038,12 @@ function toggleAuditStatusEdit(id) {
    تعديل حقل في شكوى (لمدير الكول سنتر/المدير)
    ══════════════════════════════════════════════════════ */
 function editComplaintField(id, key, label) {
-    if (currentUser?.role !== 'cc_manager' && !currentUser?.isAdmin) return;
     const item = (db.complaints || []).find(x => String(x.id) === String(id));
     if (!item) return;
+    // مدير الكول سنتر/الأدمن: أي حقل. موظف الميديا: نص الشكوى (notes) لشكاواه فقط.
+    const _isCcMgrOrAdmin  = currentUser?.role === 'cc_manager' || currentUser?.isAdmin;
+    const _isMediaOwnNotes = currentUser?.role === 'media' && key === 'notes' && item.addedBy === currentUser?.name;
+    if (!_isCcMgrOrAdmin && !_isMediaOwnNotes) return;
     const oldVal = item[key] != null ? String(item[key]) : '';
     const newVal = prompt(`تعديل: ${label}\n(القيمة الحالية: ${oldVal || '—'})`, oldVal);
     if (newVal === null) return; // المستخدم ألغى
