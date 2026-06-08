@@ -14,6 +14,7 @@ public class AppDbContext : DbContext
     public DbSet<FileBlob>     Files       => Set<FileBlob>();
     public DbSet<AuditEntry>   AuditLog    => Set<AuditEntry>();
     public DbSet<Employee>     Employees   => Set<Employee>();
+    public DbSet<Message>      Messages    => Set<Message>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -66,6 +67,15 @@ public class AppDbContext : DbContext
         modelBuilder.Entity<Employee>(entity =>
         {
             entity.Property(e => e.CreatedAt).HasDefaultValueSql("CURRENT_TIMESTAMP");
+        });
+
+        modelBuilder.Entity<Message>(entity =>
+        {
+            entity.Property(e => e.Version).IsConcurrencyToken();
+            entity.Property(e => e.CreatedAt).HasDefaultValueSql("CURRENT_TIMESTAMP");
+            entity.HasIndex(e => e.Ts);
+            entity.HasIndex(e => e.ToName);
+            entity.HasIndex(e => e.FromName);
         });
     }
 }

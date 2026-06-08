@@ -12,14 +12,23 @@ function _ensureMessages() {
     if (!db.messages) db.messages = [];
 }
 
+// أدوار قسم السيطرة (للإشراف والعرض)
+const _CONTROL_TITLES = ['قسم السيطرة', 'مدير قسم السيطرة', 'موظف سيطرة'];
+function _isControlRole(role) {
+    return role === 'control' || role === 'control_employee' || role === 'control_sub';
+}
+/* أسماء موظفي قسم السيطرة — يُستخدم في عرض إشراف مدير السيطرة (مشاهدة حصرية لمراسلات قسمه) */
+function _controlDeptNames() {
+    return new Set((employees || []).filter(e => _CONTROL_TITLES.includes(e.title)).map(e => e.name));
+}
+
 function _canMessage(targetName) {
     if (!currentUser || !targetName || targetName === currentUser?.name) return false;
     const role = currentUser.role;
-    // أدوار السيطرة لا تستخدم نظام الرسائل إطلاقًا
-    if (role === 'control' || role === 'control_employee' || role === 'control_sub') return false;
     const target = (employees || []).find(e => e.name === targetName);
     if (!target) return false;
-    if (currentUser.isAdmin || role === 'cc_manager') return true;       // المدير يراسل الجميع
+    // المدير + مدير الكول سنتر + كل أدوار السيطرة → يراسلون الجميع في الشركة
+    if (currentUser.isAdmin || role === 'cc_manager' || _isControlRole(role)) return true;
     if (role === 'cc_employee') {
         // موظف الكول سنتر يراسل زملاءه + المدير فقط
         return target.title === 'موظف كول سنتر' || target.title === 'مدير الكول سنتر';
@@ -123,7 +132,7 @@ async function _sendComposedMessage(encName, replyToId) {
     }
     _ensureMessages();
     const target = (employees || []).find(e => e.name === name);
-    db.messages.unshift({
+    const _m = {
         id: Date.now() + Math.floor(Math.random()*1000),
         from: currentUser.name,
         fromEmpId: currentUser.empId || '',
@@ -136,7 +145,9 @@ async function _sendComposedMessage(encName, replyToId) {
         iso: iso(),
         ts: Date.now(),
         readByMe: false,        // الـ flag يعكس قراءة المستلم — false عند الإرسال
-    });
+    };
+    db.messages.unshift(_m);
+    if (typeof _postMessageToServer === 'function') _postMessageToServer(_m); // (messages table) خارج الـ blob
     if (typeof _logAudit === 'function') _logAudit('sendMessage', name, text.slice(0,40));
     save();
     _pendingAttachments = [];
@@ -215,6 +226,7 @@ function _openMessageDetail(id) {
     const incoming = msg.to === myName;
     if (incoming && !msg.readByMe) {
         msg.readByMe = true;
+        if (typeof _patchMessageState === 'function') _patchMessageState(msg.id, { readByMe: true }); // (messages table)
         save();
         _renderUnreadMsgBadge();
     }
@@ -283,8 +295,6 @@ function _renderUnreadMsgBadge() {
 
 function _checkNewMessages() {
     if (!currentUser) return;
-    const role = currentUser.role;
-    if (role === 'control' || role === 'control_employee' || role === 'control_sub') return;
     _ensureMessages();
     const myName = currentUser.name;
     const incoming = (db.messages || []).filter(m => !m.deleted && m.to === myName);
@@ -311,15 +321,26 @@ function renderMessagesPage() {
     const root = document.getElementById('messagesPageContainer');
     if (!root) return;
     _ensureMessages();
-    const isMgr = (currentUser?.role === 'cc_manager') || currentUser?.isAdmin;
-    if (!isMgr) _msgPageView = 'mine';
+    const isMgr     = (currentUser?.role === 'cc_manager') || currentUser?.isAdmin;   // إشراف شامل (الكل)
+    const isCtrlMgr = currentUser?.role === 'control_employee';                        // إشراف قسم السيطرة حصراً
+    const canOversee = isMgr || isCtrlMgr;
+    if (!canOversee) _msgPageView = 'mine';
     const myName = currentUser?.name;
-    const isAllView = isMgr && _msgPageView === 'all';
+    const isAllView = canOversee && _msgPageView === 'all';
 
     // ── جمع المحادثات ──
     const all = (db.messages || []).filter(m => !m.deleted);
     const convs = new Map();
-    const eligible = isAllView ? all : all.filter(m => m.from === myName || m.to === myName);
+    let eligible;
+    if (!isAllView) {
+        eligible = all.filter(m => m.from === myName || m.to === myName);
+    } else if (isMgr) {
+        eligible = all;                                  // مدير الكول سنتر/الأدمن: كل المراسلات
+    } else {
+        // مدير السيطرة: مراسلات موظفي قسم السيطرة حصراً (أي طرف منهم في قسم السيطرة)
+        const _ctrl = _controlDeptNames();
+        eligible = all.filter(m => _ctrl.has(m.from) || _ctrl.has(m.to));
+    }
     eligible.forEach(m => {
         const key = [m.from, m.to].sort((a,b) => a.localeCompare(b, 'ar')).join('|');
         if (!convs.has(key)) convs.set(key, { key, parties:[m.from, m.to].sort((a,b)=>a.localeCompare(b,'ar')), messages:[], lastTs:0, lastMsg:null, unread:0 });
@@ -354,7 +375,8 @@ function renderMessagesPage() {
     // عنوان القسم: "مراسلاتي" يظهر مع صورة الحساب الحالي + حالة الاتصال
     let sectionTitleHtml;
     if (isAllView) {
-        sectionTitleHtml = `<h3 style="margin:0;color:var(--text-main);font-size:15px;">📋 جميع المراسلات</h3>`;
+        const _allTitle = isMgr ? '📋 جميع المراسلات' : '📋 مراسلات قسم السيطرة';
+        sectionTitleHtml = `<h3 style="margin:0;color:var(--text-main);font-size:15px;">${_allTitle}</h3>`;
     } else {
         const myAvatar = (typeof _empAvatarWithStatusHTML === 'function')
             ? _empAvatarWithStatusHTML(currentUser?.name || '', 36)
@@ -456,7 +478,10 @@ function _renderChatPane(conv, myName, isAllView) {
     if (!isAllView) {
         let changed = false;
         conv.messages.forEach(m => {
-            if (m.to === myName && !m.readByMe) { m.readByMe = true; changed = true; }
+            if (m.to === myName && !m.readByMe) {
+                m.readByMe = true; changed = true;
+                if (typeof _patchMessageState === 'function') _patchMessageState(m.id, { readByMe: true }); // (messages table)
+            }
         });
         if (changed) { save(); if (typeof _renderUnreadMsgBadge === 'function') _renderUnreadMsgBadge(); }
     }
@@ -581,7 +606,7 @@ async function _sendInterventionMessage(encA, encB) {
     const targets = [a, b].filter(n => n !== currentUser.name);  // لا ترسل لنفسك
     targets.forEach((target, i) => {
         const tEmp = (employees || []).find(e => e.name === target);
-        db.messages.unshift({
+        const _m = {
             id: baseTs + i,
             from: currentUser.name, fromEmpId: currentUser.empId || '',
             to: target, toEmpId: tEmp?.empId || '',
@@ -589,7 +614,9 @@ async function _sendInterventionMessage(encA, encB) {
             time: now(), iso: iso(), ts: baseTs, readByMe: false,
             isIntervention: true,
             interventionPair: [a, b]
-        });
+        };
+        db.messages.unshift(_m);
+        if (typeof _postMessageToServer === 'function') _postMessageToServer(_m); // (messages table) خارج الـ blob
     });
     if (typeof _logAudit === 'function') _logAudit('interventionMessage', '—', `للطرفين: ${a} + ${b} — ${text.slice(0,40)}`);
     save();
@@ -665,13 +692,15 @@ async function _sendChatMessage(encName) {
     }
     _ensureMessages();
     const target = (employees || []).find(e => e.name === name);
-    db.messages.unshift({
+    const _m = {
         id: Date.now() + Math.floor(Math.random()*1000),
         from: currentUser.name, fromEmpId: currentUser.empId || '',
         to: name, toEmpId: target?.empId || '',
         text, attachments, replyToId: null,
         time: now(), iso: iso(), ts: Date.now(), readByMe: false,
-    });
+    };
+    db.messages.unshift(_m);
+    if (typeof _postMessageToServer === 'function') _postMessageToServer(_m); // (messages table) خارج الـ blob
     if (typeof _logAudit === 'function') _logAudit('sendMessage', name, text.slice(0,40));
     save();
     _msgComposeAttachments = [];

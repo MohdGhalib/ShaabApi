@@ -79,6 +79,102 @@ async function _fetchAuditFromServer(days, force) {
 }
 if (typeof window !== 'undefined') window._fetchAuditFromServer = _fetchAuditFromServer;
 
+/* ══ الرسائل في جدول مستقل (/api/messages) — خارج الـ Master_DB blob ══════
+   نفس فلسفة audit_log: الرسائل لا تركب الـ blob (تضخّم + خطر الدهس). الإرسال
+   append عبر POST، وتحديث حالة القراءة/الحذف عبر PATCH، والجلب عبر GET ثم دمج. */
+function _msgTok() {
+    try { return (typeof getSavedToken === 'function') ? getSavedToken() : localStorage.getItem('_shaab_token'); }
+    catch { return null; }
+}
+
+/* أرسِل رسالة واحدة للخادم (append آمن — لا يدهس شيئاً). fire-and-forget. */
+function _postMessageToServer(m) {
+    if (typeof IS_LOCAL !== 'undefined' && IS_LOCAL) return;
+    const _tok = _msgTok();
+    if (!_tok || !m) return;
+    try {
+        fetch('api/messages', {
+            method:  'POST',
+            headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + _tok },
+            body:    JSON.stringify(m)
+        }).catch(() => {});
+    } catch {}
+}
+
+/* حدِّث حالة رسالة (قراءة/حذف) على الخادم. patch = { readByMe?, deleted? }. */
+function _patchMessageState(id, patch) {
+    if (typeof IS_LOCAL !== 'undefined' && IS_LOCAL) return;
+    const _tok = _msgTok();
+    if (!_tok || id == null) return;
+    try {
+        fetch('api/messages/' + encodeURIComponent(id), {
+            method:  'PATCH',
+            headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + _tok },
+            body:    JSON.stringify(patch || {})
+        }).catch(() => {});
+    } catch {}
+}
+
+/* جلب الرسائل من الجدول المستقل ودمجها في db.messages.
+   الدمج: الخادم مصدر الحقيقة لكل id؛ والأعلام readByMe/deleted أحادية الاتجاه
+   (OR بين المحلي والخادم) لتفادي وميض "غير مقروء" قبل وصول الـ PATCH. */
+let _lastMsgFetchTs = 0;
+async function _fetchMessagesFromServer(force) {
+    if (typeof IS_LOCAL !== 'undefined' && IS_LOCAL) return;
+    const _tok = _msgTok();
+    if (!_tok) return;
+    const _nowF = Date.now();
+    if (!force && _nowF - _lastMsgFetchTs < 20_000) return; // كبح الجلب الخلفي
+    _lastMsgFetchTs = _nowF;
+    const sinceTs = _nowF - 90 * 24 * 60 * 60 * 1000; // آخر 90 يوماً
+    try {
+        const res = await fetch('api/messages?sinceTs=' + sinceTs, { headers: { 'Authorization': 'Bearer ' + _tok } });
+        if (!res.ok) return;
+        const server = await res.json();
+        if (!Array.isArray(server)) return;
+        if (!db.messages) db.messages = [];
+        const localById = new Map();
+        for (const m of db.messages) if (m && m.id != null) localById.set(String(m.id), m);
+        const byId = new Map();
+        for (const s of server) {
+            if (!s || s.id == null) continue;
+            const local = localById.get(String(s.id));
+            if (local) {
+                // الأعلام أحادية الاتجاه: لو أيٌّ منهما true تبقى true
+                s.readByMe = !!(s.readByMe || local.readByMe);
+                s.deleted  = !!(s.deleted  || local.deleted);
+            }
+            byId.set(String(s.id), s);
+        }
+        // أبقِ الرسائل المحلية التي لم تصل الخادم بعد (مُرسَلة للتو)
+        for (const m of db.messages) if (m && m.id != null && !byId.has(String(m.id))) byId.set(String(m.id), m);
+        db.messages = Array.from(byId.values()).sort((a, b) => (b.ts || 0) - (a.ts || 0));
+    } catch (e) { console.warn('[messages] fetch from server failed:', e); }
+}
+if (typeof window !== 'undefined') window._fetchMessagesFromServer = _fetchMessagesFromServer;
+
+/* ترحيل مرّة واحدة: ادفع رسائل الـ blob القديمة إلى الجدول المستقل ثم اجلب من الخادم.
+   محميّ بعَلَم في localStorage حتى لا يتكرر. آمن: bulk يتجاهل المعرّفات الموجودة. */
+async function _migrateMessagesToServer() {
+    if (typeof IS_LOCAL !== 'undefined' && IS_LOCAL) return;
+    const _tok = _msgTok();
+    if (!_tok) return;
+    try {
+        if (localStorage.getItem('Shaab_Messages_Migrated') === '1') return;
+        const local = Array.isArray(db.messages) ? db.messages.filter(m => m && m.id != null) : [];
+        if (local.length) {
+            const res = await fetch('api/messages/bulk', {
+                method:  'POST',
+                headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + _tok },
+                body:    JSON.stringify(local)
+            });
+            if (!res.ok) return; // أعِد المحاولة في التحميل التالي
+        }
+        localStorage.setItem('Shaab_Messages_Migrated', '1');
+    } catch (e) { console.warn('[messages] migration failed (will retry):', e); }
+}
+if (typeof window !== 'undefined') window._migrateMessagesToServer = _migrateMessagesToServer;
+
 /* ── صوت الإشعار (consideration.mp3) ── */
 let _notifAudio    = null;
 let _audioUnlocked = false;
@@ -1149,6 +1245,19 @@ async function loadAllData(force) {
     /* 📥 (audit_log table) اجلب حركات آخر 7 أيام من الجدول المستقل (throttled داخلياً)
        حتى يبقى كشف خمول الموظفين يعمل بعد إخراج auditLog من الـ blob. fire-and-forget. */
     try { if (typeof _fetchAuditFromServer === 'function') _fetchAuditFromServer(7); } catch {}
+
+    /* 📥 (messages table) رحِّل رسائل الـ blob القديمة مرّة واحدة ثم اجلب من الجدول
+       المستقل ودمجها. fire-and-forget — التبويب يُعيد الرسم عبر render.js عند التحديث. */
+    try {
+        if (typeof _migrateMessagesToServer === 'function') {
+            _migrateMessagesToServer().then(() => {
+                // غير مُجبَر: throttle 20s يمنع الإفراط في الجلب عند الـ polling المتكرر
+                if (typeof _fetchMessagesFromServer === 'function') _fetchMessagesFromServer();
+            });
+        } else if (typeof _fetchMessagesFromServer === 'function') {
+            _fetchMessagesFromServer();
+        }
+    } catch {}
 }
 
 /* ── حفظ البيانات ──
@@ -1633,6 +1742,7 @@ function save() {
             delete liteDb.montasiat;
             delete liteDb.complaints;
             delete liteDb.auditLog;   // (audit_log table) لم يعد يُحفظ في الـ blob
+            delete liteDb.messages;   // (messages table) لم تعد الرسائل تُحفظ في الـ blob
             _push('Shaab_Master_DB', JSON.stringify(liteDb));
         } finally {
             clearTimeout(_safetyTimer);
@@ -1663,6 +1773,7 @@ async function _flushPendingSave() {
     delete liteDb.montasiat;
     delete liteDb.complaints;
     delete liteDb.auditLog;   // (audit_log table) لم يعد يُحفظ في الـ blob
+    delete liteDb.messages;   // (messages table) لم تعد الرسائل تُحفظ في الـ blob
     _push('Shaab_Master_DB', JSON.stringify(liteDb));
 }
 if (typeof window !== 'undefined') {

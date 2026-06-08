@@ -579,17 +579,18 @@ function setProfileUI() {
         document.getElementById('tab-l')?.classList.add('hidden');
     }
 
-    // الرسائل — لمدير الكول سنتر وموظفي الكول سنتر
-    const isCCEmp = currentUser?.role === 'cc_employee';
+    // الرسائل — لمدير/موظفي الكول سنتر + كل أدوار قسم السيطرة
+    const isCCEmp     = currentUser?.role === 'cc_employee';
+    const isControl   = currentUser?.role === 'control';
     const grpMsg  = document.getElementById('nav-group-msg');
-    if (isAdmin || isCCManager || isCCEmp) {
+    if (isAdmin || isCCManager || isCCEmp || isControl || isControlEmployee || isControlSub) {
         grpMsg?.classList.remove('hidden');
     } else {
         grpMsg?.classList.add('hidden');
     }
-    // "جميع المراسلات" — للمدير ومدير الكول سنتر فقط
+    // "جميع المراسلات" — إشراف: للأدمن/مدير الكول سنتر (الكل) + مدير قسم السيطرة (قسمه حصراً)
     const tabAll = document.getElementById('tab-msg-all');
-    if (isAdmin || isCCManager) tabAll?.classList.remove('hidden');
+    if (isAdmin || isCCManager || isControlEmployee) tabAll?.classList.remove('hidden');
     else tabAll?.classList.add('hidden');
 
     // سلة المحذوفات — للمدير ومدير الكول سنتر فقط

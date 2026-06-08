@@ -195,6 +195,25 @@ using (var scope = app.Services.CreateScope())
             created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
             INDEX idx_audit_ts (ts),
             INDEX idx_audit_emp (emp_id)
+        ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;"),
+
+        // -- internal messages in their own table (off the Master_DB blob) --
+        // Append + read/delete flag updates; full original object kept in `data` JSON.
+        ("messages", @"CREATE TABLE IF NOT EXISTS messages (
+            id BIGINT PRIMARY KEY,
+            from_name VARCHAR(100) NULL,
+            to_name VARCHAR(100) NULL,
+            text TEXT NULL,
+            ts BIGINT NOT NULL DEFAULT 0,
+            read_by_me TINYINT(1) NOT NULL DEFAULT 0,
+            deleted TINYINT(1) NOT NULL DEFAULT 0,
+            is_intervention TINYINT(1) NOT NULL DEFAULT 0,
+            data JSON NULL,
+            version BIGINT NOT NULL DEFAULT 0,
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            INDEX idx_msg_ts (ts),
+            INDEX idx_msg_to (to_name),
+            INDEX idx_msg_from (from_name)
         ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;")
     };
 
