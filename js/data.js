@@ -1812,7 +1812,22 @@ async function reloadTable(btn) {
 }
 
 function saveEmployees()  { _push('Shaab_Employees_DB',  JSON.stringify(employees)); }
-function saveBreaks()     { _push('Shaab_Breaks_DB',     JSON.stringify(breaks));    }
+/* 🧹 تقليم الاستراحات: breaks.push سطرٌ لكل استراحة بلا تقليم → ينمو بلا حدّ ويُكتب
+   كاملاً في كل مرة (مثل الجلسات تماماً). نحذف الأقدم من 90 يوماً. الإحصائيات اليومية
+   تعتمد على استراحات اليوم فقط، فالتاريخ الأقدم آمن للحذف. */
+const _BREAKS_RETENTION_DAYS = 90;
+function _pruneOldBreaks() {
+    if (!Array.isArray(breaks) || !breaks.length) return false;
+    const cutoff = Date.now() - _BREAKS_RETENTION_DAYS * 24 * 60 * 60 * 1000;
+    const before = breaks.length;
+    breaks = breaks.filter(b => {
+        if (!b) return false;
+        const t = (typeof b.id === 'number') ? b.id : new Date(b.startIso || b.date || 0).getTime();
+        return !(t && t < cutoff);
+    });
+    return breaks.length !== before;
+}
+function saveBreaks()     { _pruneOldBreaks(); _push('Shaab_Breaks_DB',     JSON.stringify(breaks));    }
 /* 🧹 تقليم الجلسات: تنمو Shaab_Sessions_DB بلا حدّ (سطر لكل تسجيل دخول) وتُكتب كاملةً
    في كل مرة. نحذف الجلسات *المغلقة* الأقدم من 90 يوماً، ونُبقي دائماً الجلسات المفتوحة
    (logoutIso=null) حتى لا تتأثر حالة "متصل الآن". الإحصائيات التاريخية تظل متاحة 90 يوماً. */
