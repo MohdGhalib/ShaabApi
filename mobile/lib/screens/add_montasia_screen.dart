@@ -3,6 +3,7 @@ import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:flutter_image_compress/flutter_image_compress.dart';
+import 'package:speech_to_text/speech_to_text.dart' as stt;
 import '../constants.dart';
 import '../services/api_service.dart';
 
@@ -34,6 +35,11 @@ class _AddMontasiaTabState extends State<AddMontasiaTab> {
   File?    _photo;
   bool     _submitting = false;
 
+  // ── الإملاء الصوتي (تحويل الكلام إلى نص لحقل التفاصيل) ──
+  final stt.SpeechToText _speech = stt.SpeechToText();
+  bool _speechEnabled = false;
+  bool _isRecording   = false;
+
   /// الفروع المخصصة لهذا الموظف (فارغة = كل الفروع)
   List<String> _assignedBranches = [];
 
@@ -41,6 +47,47 @@ class _AddMontasiaTabState extends State<AddMontasiaTab> {
   void initState() {
     super.initState();
     if (widget.empId.isNotEmpty) _loadAssigned();
+    _initSpeech();
+  }
+
+  Future<void> _initSpeech() async {
+    try {
+      _speechEnabled = await _speech.initialize(
+        onError:  (_) { if (mounted && _isRecording) _stopRecording(); },
+        onStatus: (s) {
+          // 'done'/'notListening' = المحرك أنهى الاستماع تلقائياً
+          if ((s == 'done' || s == 'notListening') && mounted && _isRecording) {
+            _stopRecording();
+          }
+        },
+      );
+    } catch (_) { _speechEnabled = false; }
+    if (mounted) setState(() {});
+  }
+
+  Future<void> _startRecording() async {
+    if (!_speechEnabled) { _err('التعرّف على الصوت غير متاح على هذا الجهاز'); return; }
+    final preText = _notesCtrl.text.trim();
+    setState(() => _isRecording = true);
+    await _speech.listen(
+      onResult: (r) {
+        if (!mounted) return;
+        final recognized = r.recognizedWords;
+        if (recognized.isEmpty) return;
+        _notesCtrl.text = preText.isEmpty ? recognized : '$preText $recognized';
+        _notesCtrl.selection = TextSelection.fromPosition(
+            TextPosition(offset: _notesCtrl.text.length));
+      },
+      localeId:       'ar-SA',
+      listenFor:      const Duration(minutes: 3),
+      pauseFor:       const Duration(seconds: 8),
+      partialResults: true,
+    );
+  }
+
+  Future<void> _stopRecording() async {
+    if (_speech.isListening) await _speech.stop();
+    if (mounted) setState(() => _isRecording = false);
   }
 
   Future<void> _loadAssigned() async {
@@ -136,6 +183,7 @@ class _AddMontasiaTabState extends State<AddMontasiaTab> {
   }
 
   Future<void> _submit() async {
+    if (_isRecording) await _stopRecording(); // أوقف الإملاء قبل الإرسال
     if (_city == null)   { _err('اختر المحافظة'); return; }
     if (_branch == null) { _err('اختر الفرع');    return; }
     if (_type == null)   { _err('اختر النوع');    return; }
@@ -319,6 +367,7 @@ class _AddMontasiaTabState extends State<AddMontasiaTab> {
 
   @override
   void dispose() {
+    _speech.cancel();
     _notesCtrl.dispose();
     super.dispose();
   }
@@ -375,6 +424,35 @@ class _AddMontasiaTabState extends State<AddMontasiaTab> {
                   borderRadius: BorderRadius.circular(12),
                   borderSide: const BorderSide(color: Color(0xFFE53935), width: 1.5)),
               contentPadding: const EdgeInsets.all(14),
+            ),
+          ),
+
+          // ── زر الإملاء الصوتي ──
+          const SizedBox(height: 10),
+          Align(
+            alignment: Alignment.centerRight,
+            child: GestureDetector(
+              onTap: _isRecording ? _stopRecording : _startRecording,
+              child: Container(
+                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+                decoration: BoxDecoration(
+                  color: _isRecording ? const Color(0xFFE53935) : const Color(0xFF252525),
+                  borderRadius: BorderRadius.circular(12),
+                  border: Border.all(color: const Color(0xFFE53935), width: 1.2),
+                ),
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Icon(_isRecording ? Icons.stop_circle : Icons.mic_none_rounded,
+                        color: Colors.white, size: 20),
+                    const SizedBox(width: 8),
+                    Text(
+                      _isRecording ? 'جاري التسجيل... اضغط للإيقاف' : 'إملاء صوتي',
+                      style: const TextStyle(color: Colors.white, fontSize: 13),
+                    ),
+                  ],
+                ),
+              ),
             ),
           ),
 

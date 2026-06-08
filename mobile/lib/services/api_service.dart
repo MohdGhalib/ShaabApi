@@ -105,6 +105,45 @@ class ApiService {
     return null;
   }
 
+  // ── حماية تأخّر الـ replica (read-after-write) ─────────────────────────
+  // Railway يوزّع القراءات على نُسخ قد تتأخّر بالتزامن، فالـ GET الفوري بعد كتابة
+  // قد يُعيد النسخة القديمة → المنتسية المحذوفة "ترجع" حتى يلحق الـ replica. نحتفظ
+  // بالنسخة المحلية لكل سجل عُدِّل لمدة نافذة قصيرة، ونطبّقها فوق ردّ الخادم. يحاكي
+  // نافذة _recentlyDispatched في الويب. يغطّي الإنشاء/التحديث/الحذف لكل الأنواع.
+  static const int _recentWindowMs = 60000; // 60ث
+  static final Map<String, Map<String, _RecentEdit>> _recentEdits = {
+    'montasiat': {}, 'inquiries': {}, 'complaints': {},
+  };
+
+  static void _rememberEdit(String type, dynamic id, Map<String, dynamic> record) {
+    final m = _recentEdits[type];
+    if (m == null || id == null) return;
+    m[id.toString()] = _RecentEdit(
+      record:    Map<String, dynamic>.from(record),
+      expiresAt: DateTime.now().millisecondsSinceEpoch + _recentWindowMs,
+    );
+  }
+
+  static List<dynamic> _applyRecentEdits(String type, List<dynamic> serverList) {
+    final m = _recentEdits[type];
+    if (m == null || m.isEmpty) return serverList;
+    final now = DateTime.now().millisecondsSinceEpoch;
+    m.removeWhere((_, e) => e.expiresAt < now); // نظّف المنتهية
+    if (m.isEmpty) return serverList;
+    final seen = <String>{};
+    final out  = <dynamic>[];
+    for (final item in serverList) {
+      if (item is Map && item['id'] != null) {
+        final id = item['id'].toString();
+        if (m.containsKey(id)) { out.add(m[id]!.record); seen.add(id); } // المحلي يفوز على الخادم المتأخّر
+        else { out.add(item); }
+      } else { out.add(item); }
+    }
+    // أضِف تعديلات حديثة غير موجودة في ردّ الخادم بعد (إنشاء/تحديث لم يتزامن)
+    m.forEach((id, e) { if (!seen.contains(id)) out.add(e.record); });
+    return out;
+  }
+
   // ── per-record: montasiat / inquiries / complaints (Migration #11) ──
   // قراءة وكتابة كل سجل على حدة بدل دفع Master_DB الكامل (يمنع الدهس + يخفّف الطلبات).
   static Future<List<dynamic>?> _fetchList(String token, String type) async {
@@ -113,7 +152,9 @@ class ApiService {
         Uri.parse('$kBaseUrl/api/$type'),
         headers: {'Authorization': 'Bearer $token'},
       ).timeout(const Duration(seconds: 20));
-      if (res.statusCode == 200) return jsonDecode(res.body) as List;
+      if (res.statusCode == 200) {
+        return _applyRecentEdits(type, jsonDecode(res.body) as List);
+      }
     } catch (_) {}
     return null;
   }
@@ -130,7 +171,9 @@ class ApiService {
         headers: {'Content-Type': 'application/json', 'Authorization': 'Bearer $token'},
         body: jsonEncode(record),
       ).timeout(const Duration(seconds: 20));
-      return res.statusCode == 200;
+      final ok = res.statusCode == 200;
+      if (ok) _rememberEdit(type, record['id'], record); // حماية تأخّر الـ replica
+      return ok;
     } catch (_) { return false; }
   }
 
@@ -143,7 +186,9 @@ class ApiService {
         headers: {'Content-Type': 'application/json', 'Authorization': 'Bearer $token'},
         body: jsonEncode(record),
       ).timeout(const Duration(seconds: 20));
-      return res.statusCode == 200;
+      final ok = res.statusCode == 200;
+      if (ok) _rememberEdit(type, id, record); // حماية تأخّر الـ replica (يشمل الحذف الناعم)
+      return ok;
     } catch (_) { return false; }
   }
 
@@ -299,4 +344,11 @@ class LoginResult {
 
   factory LoginResult.error(String msg) =>
       LoginResult._(ok: false, errorMsg: msg);
+}
+
+// نسخة محلية محفوظة مؤقتاً لحماية تأخّر الـ replica (انظر ApiService._recentEdits)
+class _RecentEdit {
+  final Map<String, dynamic> record;
+  final int expiresAt; // epoch ms
+  _RecentEdit({required this.record, required this.expiresAt});
 }
