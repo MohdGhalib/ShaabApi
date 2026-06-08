@@ -54,6 +54,8 @@ public class StorageController : ControllerBase
     {
         var keyList = keys?
             .Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)
+            // 🔒 لا تُرجع أبداً أسرار الخادم (مثل سرّ التحقق الثنائي) عبر هذا المسار العام
+            .Where(k => !k.StartsWith("Shaab_SA_TOTP", StringComparison.OrdinalIgnoreCase))
             .ToList() ?? [];
 
         var result   = new Dictionary<string, object?>();

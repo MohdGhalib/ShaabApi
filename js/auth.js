@@ -96,6 +96,75 @@ function perm(p) {
     return (PERMISSIONS[r] || []).includes(p);
 }
 
+/* 🔐 دخول السوبر أدمن مع التحقق الثنائي (TOTP) إن كان مفعّلاً على الخادم */
+async function _superAdminLogin(isLocked) {
+    if (typeof IS_LOCAL === 'undefined' || !IS_LOCAL) {
+        let st = { enabled: false };
+        try { st = await fetch('api/sa2fa/status').then(r => r.json()); } catch {}
+        if (st && st.enabled) {
+            const code = prompt('🔐 أدخل رمز التحقق الثنائي (من Google Authenticator):');
+            if (code === null) return;                 // ألغى المستخدم
+            let vr = { ok: false };
+            try {
+                vr = await fetch('api/sa2fa/verify', {
+                    method:  'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body:    JSON.stringify({ code: String(code).trim() })
+                }).then(r => r.json());
+            } catch {}
+            if (!vr || !vr.ok) { _showLoginError('❌ رمز التحقق الثنائي غير صحيح'); return; }
+        }
+    }
+    _grantSuperAdmin(isLocked);
+}
+
+function _grantSuperAdmin(isLocked) {
+    if (typeof window._lkSetSuperAdminSession === 'function') window._lkSetSuperAdminSession();
+    currentUser = { name:'سوبر أدمن', title:'سوبر أدمن', empId:'super-admin', isAdmin:true, role:'admin' };
+    document.getElementById("loginPage").style.display = "none";
+    document.getElementById("mainApp").style.display   = "flex";
+    try { if (typeof setProfileUI === 'function') setProfileUI(); } catch {}
+    try { if (typeof recordLogin === 'function') recordLogin(); } catch {}
+    try { if (typeof init === 'function') init(); } catch {}
+    try { if (typeof initSessionWatcher === 'function') initSessionWatcher(); } catch {}
+    try { if (typeof initClock === 'function') initClock(); } catch {}
+    try {
+        if (isLocked && typeof window._lkInjectUnlockButton === 'function') window._lkInjectUnlockButton();
+        else if (typeof window._lkInjectLockButton === 'function')           window._lkInjectLockButton();
+    } catch {}
+}
+
+/* 🔐 تفعيل/إعادة تعيين التحقق الثنائي للسوبر أدمن — يُستدعى من زر لوحة السوبر أدمن أو الكونسول */
+async function saEnable2FA() {
+    const pwd = prompt('🔐 لتفعيل/إعادة تعيين التحقق الثنائي، أدخل كلمة مرور السوبر أدمن:');
+    if (pwd === null) return;
+    let code = '';
+    try {
+        const st = await fetch('api/sa2fa/status').then(r => r.json());
+        if (st && st.enabled) {
+            const c = prompt('التحقق الثنائي مفعّل حالياً. أدخل الرمز الحالي لإعادة التعيين:');
+            if (c === null) return;
+            code = String(c).trim();
+        }
+    } catch {}
+    let res;
+    try {
+        res = await fetch('api/sa2fa/setup', {
+            method:  'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body:    JSON.stringify({ password: pwd, code })
+        }).then(r => r.json());
+    } catch { alert('تعذّر الاتصال بالخادم'); return; }
+    if (!res || !res.ok) { alert('❌ ' + (res && res.error ? res.error : 'فشل التفعيل')); return; }
+    alert('✅ تم تفعيل التحقق الثنائي!\n\n' +
+          'افتح Google Authenticator → ➕ → «إدخال مفتاح الإعداد» → الصق هذا المفتاح:\n\n' +
+          res.secret + '\n\n' +
+          '(نوع المفتاح: مبني على الوقت / Time-based — الاسم: محامص الشعب)\n\n' +
+          'عند الدخول القادم سيُطلب منك الرمز المكوّن من 6 أرقام.');
+    console.log('[2FA] otpauth URI (لتحويله إلى QR إن رغبت):', res.otpauth);
+}
+if (typeof window !== 'undefined') window.saEnable2FA = saEnable2FA;
+
 function recordLogin() {
     if (!currentUser || currentUser.isAdmin) return;
     // إغلاق أي جلسات مفتوحة سابقاً لنفس الموظف (أُغلق المتصفح دون خروج)
@@ -182,19 +251,7 @@ async function login() {
     // كلمة مرور السوبر أدمن — دخول مباشر (سواء النظام مقفل أو مفتوح)
     // هذا يتيح للسوبر أدمن إدارة النظام (ومنه قفله يدوياً) في أي وقت
     if (pass === SA_PWD) {
-        if (typeof window._lkSetSuperAdminSession === 'function') window._lkSetSuperAdminSession();
-        currentUser = { name:'سوبر أدمن', title:'سوبر أدمن', empId:'super-admin', isAdmin:true, role:'admin' };
-        document.getElementById("loginPage").style.display = "none";
-        document.getElementById("mainApp").style.display   = "flex";
-        try { if (typeof setProfileUI === 'function') setProfileUI(); } catch {}
-        try { if (typeof recordLogin === 'function') recordLogin(); } catch {}
-        try { if (typeof init === 'function') init(); } catch {}
-        try { if (typeof initSessionWatcher === 'function') initSessionWatcher(); } catch {}
-        try { if (typeof initClock === 'function') initClock(); } catch {}
-        try {
-            if (_isLocked && typeof window._lkInjectUnlockButton === 'function') window._lkInjectUnlockButton();
-            else if (typeof window._lkInjectLockButton === 'function')           window._lkInjectLockButton();
-        } catch {}
+        _superAdminLogin(_isLocked);   // قد يطلب التحقق الثنائي (TOTP) قبل منح الدخول
         return;
     }
 

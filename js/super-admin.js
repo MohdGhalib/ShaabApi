@@ -180,7 +180,10 @@ function showSuperAdminModal() {
         <div style="background:var(--bg-card);color:var(--text-main);border:1px solid var(--border);border-radius:18px;width:820px;max-width:96vw;max-height:92vh;display:flex;flex-direction:column;box-shadow:0 24px 80px rgba(0,0,0,0.6);">
             <div style="display:flex;justify-content:space-between;align-items:center;padding:18px 22px;border-bottom:1px solid var(--border);background:linear-gradient(135deg,#4a148c,#1a237e);color:#fff;border-radius:18px 18px 0 0;">
                 <h3 style="margin:0;font-size:17px;">🛡️ لوحة السوبر ادمن</h3>
-                <button onclick="closeSuperAdminModal()" style="background:none;border:none;color:#fff;cursor:pointer;font-size:20px;">✕</button>
+                <div style="display:flex;gap:8px;align-items:center;">
+                    <button onclick="saEnable2FA()" title="تفعيل/إعادة تعيين التحقق الثنائي" style="background:rgba(255,255,255,0.15);border:none;color:#fff;cursor:pointer;font-family:'Cairo';font-size:12px;font-weight:700;padding:6px 12px;border-radius:8px;">🔐 التحقق الثنائي</button>
+                    <button onclick="closeSuperAdminModal()" style="background:none;border:none;color:#fff;cursor:pointer;font-size:20px;">✕</button>
+                </div>
             </div>
 
             <!-- Tabs -->
