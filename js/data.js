@@ -929,7 +929,7 @@ async function loadAllData(force) {
         }
         if (_auditIdsBackfilled > 0) {
             console.log('[AuditLog] backfilled', _auditIdsBackfilled, 'legacy entries with stable ids');
-            _push('Shaab_Master_DB', JSON.stringify(db));
+            _push('Shaab_Master_DB', JSON.stringify(_buildLiteBlob(db)));
         }
     }
 
@@ -1059,7 +1059,7 @@ async function loadAllData(force) {
                 // ارفع العدّاد ليبدأ من بعد آخر seq مستخدم
                 if ((db.inquiriesnqSeq || 0) <= _maxSeq) db.inquiriesnqSeq = _maxSeq + 1;
                 console.warn(`[Inquiries] healed ${_renamedIds.size} duplicate seq(s); counter → ${db.inquiriesnqSeq}`);
-                _push('Shaab_Master_DB', JSON.stringify(db));
+                _push('Shaab_Master_DB', JSON.stringify(_buildLiteBlob(db)));
             }
         } catch (e) { console.error('[Inquiries] dedup failed:', e); }
     }
@@ -1072,14 +1072,14 @@ async function loadAllData(force) {
     if (db.inquiries)  db.inquiries  = db.inquiries.filter(x => !_shouldPurge(x));
     if (db.complaints) db.complaints = db.complaints.filter(x => !_shouldPurge(x));
     const _afterPurge  = (db.montasiat||[]).length + (db.inquiries||[]).length + (db.complaints||[]).length;
-    if (_afterPurge < _beforePurge) _push('Shaab_Master_DB', JSON.stringify(db));
+    if (_afterPurge < _beforePurge) _push('Shaab_Master_DB', JSON.stringify(_buildLiteBlob(db)));
 
     // ترحيل تلقائي: إعادة تسمية المفاتيح القصيرة القديمة (مرة واحدة فقط)
     if (Array.isArray(db.m)) {
         db.montasiat  = db.m;  delete db.m;
         db.inquiries  = db.i;  delete db.i;
         db.complaints = db.c;  delete db.c;
-        _push('Shaab_Master_DB', JSON.stringify(db));
+        _push('Shaab_Master_DB', JSON.stringify(_buildLiteBlob(db)));
     }
 
     // ترحيل تلقائي: ترقيم تسلسلي بصيغة YYNNN للمنتسيات الموجودة بدون رقم
@@ -1124,7 +1124,7 @@ async function loadAllData(force) {
             }
             _serialChanged = true;
         }
-        if (_serialChanged) _push('Shaab_Master_DB', JSON.stringify(db));
+        if (_serialChanged) _push('Shaab_Master_DB', JSON.stringify(_buildLiteBlob(db)));
     }
 
     // ترحيل تلقائي: إضافة salt للموظفين القدامى (بعد تسجيل الدخول فقط)
