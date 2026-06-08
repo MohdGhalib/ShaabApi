@@ -332,6 +332,25 @@ c: `
         <div style="font-size:13px;color:#64b5f6;font-weight:700;margin-bottom:10px;">👤 معلومات الزبون (اختياري)</div>
         <input type="text" id="cCustomerPhone" placeholder="رقم الهاتف">
     </div>
+    <!-- مصدر الشكوى — يظهر لموظف الميديا فقط (يُتحكَّم به من ui.js عند فتح التبويب) -->
+    <div id="cMediaSourceRow" style="display:none;grid-template-columns:1fr 1fr;gap:15px;margin-bottom:15px;">
+        <div>
+            <label style="font-size:13px;color:var(--text-dim);display:block;margin-bottom:5px;">📱 مصدر الشكوى</label>
+            <select id="cMediaSource">
+                <option value="">— اختر المصدر —</option>
+                <option value="فيسبوك">فيسبوك</option>
+                <option value="انستجرام">انستجرام</option>
+                <option value="تيك توك">تيك توك</option>
+                <option value="واتساب">واتساب</option>
+                <option value="تويتر / X">تويتر / X</option>
+                <option value="أخرى">أخرى</option>
+            </select>
+        </div>
+        <div>
+            <label style="font-size:13px;color:var(--text-dim);display:block;margin-bottom:5px;">🔗 رابط حساب المشترك</label>
+            <input type="text" id="cMediaAccountUrl" placeholder="رابط الحساب">
+        </div>
+    </div>
     <div style="display:grid;grid-template-columns:1fr 1fr;gap:15px;margin-bottom:15px;">
         <div>
             <label style="font-size:13px;color:var(--text-dim);display:block;margin-bottom:5px;">🕐 وقت تلقي الاتصال</label>
@@ -392,6 +411,7 @@ c: `
     <div><label>نوع الشكوى</label><select id="searchTypeC" onchange="filterTable()"><option value="">الكل</option><option value="جودة صنف">جودة صنف</option><option value="مالية">💰 مالية</option><option value="سوء تعامل">سوء تعامل</option><option value="أخرى">أخرى</option></select></div>
     <div><label>الحالة المالية</label><select id="searchFinStatusC" onchange="filterTable()"><option value="">الكل</option><option value="مفتوحة">🔴 مفتوحة (غير محجوزة)</option><option value="مغلقة">🟢 مغلقة (محجوزة)</option></select></div>
     <div><label>اسم الموظف</label><select id="searchAddedByC" onchange="filterTable()"><option value="">الكل</option></select></div>
+    <div id="searchMediaSourceCWrap" style="display:none;"><label>مصدر الشكوى</label><input type="text" id="searchMediaSourceC" placeholder="فيسبوك / انستجرام / رابط..." oninput="filterTable()"></div>
     <button class="btn" style="background:var(--bg-input);color:var(--text-dim);align-self:end;" onclick="resetSearch('C')">تفريغ</button>
     <button class="btn" style="background:linear-gradient(135deg,rgba(21,101,192,0.18),rgba(21,101,192,0.08));border:1px solid rgba(21,101,192,0.5);color:#90caf9;align-self:end;font-weight:700;" onclick="reloadTable(this)" title="إعادة تحميل الجدول من السيرفر">🔄 تحديث</button>
 </div>

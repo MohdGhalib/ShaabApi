@@ -450,6 +450,12 @@ function switchTab(t) {
         // الميديا: إخفاء فلتر الموظف لأنهم يرون شكاويهم فقط تلقائياً
         const addedByRow = document.getElementById('searchAddedByC')?.closest('div');
         if (addedByRow) addedByRow.style.display = currentUser?.role === 'media' ? 'none' : '';
+        // الميديا: إظهار حقول مصدر الشكوى (الإدخال + البحث) — لموظف الميديا فقط
+        const _isMediaC = currentUser?.role === 'media';
+        const _msRow = document.getElementById('cMediaSourceRow');
+        if (_msRow) _msRow.style.display = _isMediaC ? 'grid' : 'none';
+        const _msSearch = document.getElementById('searchMediaSourceCWrap');
+        if (_msSearch) _msSearch.style.display = _isMediaC ? '' : 'none';
     }
 }
 

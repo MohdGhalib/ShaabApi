@@ -46,9 +46,14 @@ function addControl() {
     // وراثة صورة الصنف من الاستفسار المرتبط (لشكاوى "جودة صنف")
     const inheritedQualityPhoto = (linkedInq && linkedInq.complaintType === 'جودة صنف' && linkedInq.qualityPhoto)
         ? linkedInq.qualityPhoto : null;
+    // مصدر الشكوى ورابط الحساب — لموظف الميديا فقط
+    const mediaSource     = (currentUser?.role === 'media') ? (document.getElementById('cMediaSource')?.value || '') : '';
+    const mediaAccountUrl = (currentUser?.role === 'media') ? (document.getElementById('cMediaAccountUrl')?.value.trim() || '') : '';
+
     const base = { id:Date.now(), country: co || _countryForCity(c), city:c, branch:b, notes:n, audit:'', time:now(), iso:iso(),
         addedBy:currentUser.name, status, customer, linkedInqSeq: linkedSeq||null,
         callTime, noteDate, moveNumber, invoiceValue, type: cType,
+        mediaSource, mediaAccountUrl,
         qualityPhoto: inheritedQualityPhoto };
 
     const _notifyComplaint = () => {
@@ -109,6 +114,8 @@ function resetControlForm() {
     document.getElementById("cMoveNumber").value    = "";
     document.getElementById("cInvoiceValue").value  = "";
     document.getElementById("cLinkedInquiry").value = "";
+    const _msEl = document.getElementById("cMediaSource");     if (_msEl) _msEl.value = "";
+    const _muEl = document.getElementById("cMediaAccountUrl"); if (_muEl) _muEl.value = "";
     const _d = new Date();
     const _hh = String(_d.getHours()).padStart(2,'0'), _mm = String(_d.getMinutes()).padStart(2,'0');
     setDatePickerValue('cCallDate', iso());

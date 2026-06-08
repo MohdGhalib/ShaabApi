@@ -266,7 +266,7 @@ function resetSearch(t) {
         const _tblI = document.getElementById('tableI'); if (_tblI) _tblI.style.outline = '';
         _pg.I = 1;
     } else if (t==='C') {
-        clear(['searchCountryC','searchCityC','searchTextC','searchTypeC','searchFinStatusC','searchAddedByC']);
+        clear(['searchCountryC','searchCityC','searchTextC','searchTypeC','searchFinStatusC','searchAddedByC','searchMediaSourceC']);
         if (typeof updateCities === 'function') updateCities('searchCountryC','searchCityC','searchBranchC');
         else document.getElementById('searchBranchC').innerHTML='<option value="">الكل</option>';
         clearDate('searchDateC');
@@ -828,7 +828,8 @@ function _renderTableC(get, isAdmin) {
         text:      get("searchTextC").toLowerCase(),
         type:      get("searchTypeC"),
         finStatus: get("searchFinStatusC"),
-        addedBy:   get("searchAddedByC")
+        addedBy:   get("searchAddedByC"),
+        mediaSource: (get("searchMediaSourceC") || '').toLowerCase()
     };
     const allRowsC = (db.complaints || []).filter(x =>
         !x.deleted &&
@@ -848,7 +849,8 @@ function _renderTableC(get, isAdmin) {
         (!f.finStatus || (
             f.finStatus === 'مفتوحة' ? (x.type === 'مالية' && !linkedCompIds.has(x.id)) :
             f.finStatus === 'مغلقة'  ? (x.type === 'مالية' && linkedCompIds.has(x.id))  : true
-        ))
+        )) &&
+        (!f.mediaSource || (`${x.mediaSource||''} ${x.mediaAccountUrl||''}`).toLowerCase().includes(f.mediaSource))
     );
     if (!_pg.C) _pg.C = 1;
     const _sizeC = _pgSize.C || _DEFAULT_PAGE_SIZE;
@@ -892,7 +894,7 @@ function _renderTableC(get, isAdmin) {
         const fileLink = (x.file ? `<br><button onclick="openInvoiceFile('${x.id}')" class="btn-attach" style="border:none;cursor:pointer;font-family:Cairo;">📎 عرض المرفق</button>` : '') + _auditBtnHtml;
 
         const ctStr  = x.callTime ? _formatCallTime(x.callTime) : '';
-        const hasMore = !!(ctStr || x.noteDate || x.moveNumber || x.invoiceValue);
+        const hasMore = !!(ctStr || x.noteDate || x.moveNumber || x.invoiceValue || x.mediaSource || x.mediaAccountUrl);
         const _canEditFields = isCCMgrC || isAdmin;
         const _editIcon = (key, label) => _canEditFields
             ? ` <button onclick="editComplaintField(${x.id}, '${key}', '${label.replace(/'/g, "\\'")}')" title="تعديل ${label}" style="background:none;border:none;cursor:pointer;color:var(--text-dim);padding:0 4px;font-size:11px;">✏️</button>`
@@ -904,8 +906,17 @@ function _renderTableC(get, isAdmin) {
             </div>`;
         // عرض كل الحقول لمدير الكول سنتر/المدير حتى لو فارغة (مع علامة تعديل لكل حقل)
         const _showAll = _canEditFields;
+        // مصدر الشكوى ورابط الحساب (شكاوى الميديا) — رابط آمن http(s) فقط
+        const _mediaUrlSafe = x.mediaAccountUrl
+            ? (/^https?:\/\//i.test(String(x.mediaAccountUrl)) ? String(x.mediaAccountUrl) : 'https://' + String(x.mediaAccountUrl))
+            : '';
+        const _mediaUrlHtml = x.mediaAccountUrl
+            ? `<a href="${sanitize(_mediaUrlSafe)}" target="_blank" rel="noopener" style="color:#64b5f6;word-break:break-all;">${sanitize(x.mediaAccountUrl)}</a>`
+            : '';
         const extraInfoHtml = `<div style="margin-top:10px;border:1px solid rgba(255,255,255,0.1);border-radius:12px;overflow:hidden;font-size:13px;">
             ${_row('📝 التفاصيل', sanitize(x.notes || '—'), !(_showAll || hasMore), 'notes')}
+            ${x.mediaSource     ? _row('📱 مصدر الشكوى', sanitize(x.mediaSource), false) : ''}
+            ${x.mediaAccountUrl ? _row('🔗 رابط الحساب', _mediaUrlHtml, false) : ''}
             ${(_showAll || ctStr)        ? _row('🕐 وقت تلقي الاتصال', sanitize(ctStr || '—'),         !(_showAll || x.noteDate||x.moveNumber||x.invoiceValue), 'callTime')     : ''}
             ${(_showAll || x.noteDate)   ? _row('📅 تاريخ الملاحظة',    sanitize(x.noteDate || '—'),    !(_showAll || x.moveNumber||x.invoiceValue),             'noteDate')     : ''}
             ${(_showAll || x.moveNumber) ? _row('🔢 رقم الحركة',         sanitize(x.moveNumber || '—'),  !(_showAll || x.invoiceValue),                           'moveNumber')   : ''}
