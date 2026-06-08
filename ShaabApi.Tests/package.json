@@ -1,0 +1,9 @@
+{
+  "name": "shaabapi-frontend-tests",
+  "version": "1.0.0",
+  "private": true,
+  "description": "اختبارات الدوال النقية للواجهة (sync + canon + upload). معزول عن جذر المشروع حتى لا يُضلِّل كشف Railway للتطبيق (.NET).",
+  "scripts": {
+    "test": "node --test js/*.test.js"
+  }
+}

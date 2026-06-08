@@ -1,0 +1,77 @@
+/* ══════════════════════════════════════════════════════
+   sync-helpers — منطق المزامنة النقي القابل للاختبار (المسار A, 2026-06-08)
+   يعزل ثلاث وظائف حرجة كانت مبعثرة/مكرّرة داخل data.js ليحرسها node --test:
+   - _buildLiteBlob : يجرّد مصفوفات السجلات من الـ Master_DB blob (حارس ضد عودة أي
+     مصفوفة للـ blob — وهو سبب انهيارات HTTP/2 وتضخّم الحفظ السابقة).
+   - _pruneByAge    : تقليم بالعمر مع شرط "أبقِ دائماً" (الجلسات المفتوحة مثلاً).
+   - _mergeById     : دمج سجلات الخادم مع المحلي (الخادم يفوز، أعلام أحادية الاتجاه،
+     إبقاء المحلي غير الموجود على الخادم) — يُستخدم في جلب الرسائل والتدقيق.
+   نقي عمداً (لا DOM/لا globals) ليعمل في المتصفح وفي الاختبار سواء.
+   ══════════════════════════════════════════════════════ */
+(function (root) {
+    /* المفاتيح التي يجب ألا تركب الـ Master_DB blob أبداً (لها جداول/مفاتيح مستقلة).
+       أي إضافة مصفوفة سجلات جديدة للـ blob مستقبلاً يجب أن تُضاف هنا. */
+    const BLOB_STRIP_KEYS = [
+        'inquiries', 'montasiat', 'complaints',  // per-record tables (Migration #11)
+        'auditLog',                              // audit_log table
+        'messages',                              // messages table
+        'auditNotes', 'compensations'            // مفاتيح مستقلة (إزالة ازدواج)
+    ];
+
+    /* أعِد نسخة سطحية من db خالية من مفاتيح المصفوفات الثقيلة (lite blob). */
+    function _buildLiteBlob(db) {
+        const lite = Object.assign({}, db || {});
+        for (const k of BLOB_STRIP_KEYS) delete lite[k];
+        return lite;
+    }
+
+    /* تقليم بالعمر. opts = { retentionDays, tsOf(item)->ms, keepIf(item)->bool, now }.
+       يعيد { items, changed }. keepIf لإبقاء عناصر بصرف النظر عن العمر (جلسة مفتوحة). */
+    function _pruneByAge(items, opts) {
+        opts = opts || {};
+        if (!Array.isArray(items) || !items.length) return { items: items || [], changed: false };
+        const days   = opts.retentionDays || 90;
+        const now    = (typeof opts.now === 'number') ? opts.now : Date.now();
+        const cutoff = now - days * 24 * 60 * 60 * 1000;
+        const tsOf   = opts.tsOf   || ((it) => (it && typeof it.id === 'number') ? it.id : 0);
+        const keepIf = opts.keepIf || (() => false);
+        const out = items.filter((it) => {
+            if (!it) return false;
+            if (keepIf(it)) return true;
+            const t = tsOf(it);
+            return !(t && t < cutoff);
+        });
+        return { items: out, changed: out.length !== items.length };
+    }
+
+    /* دمج سجلات الخادم مع المحلية. opts = { idOf, sortKey, monotonicTrueKeys }.
+       الخادم مصدر الحقيقة لكل id؛ والأعلام في monotonicTrueKeys أحادية الاتجاه
+       (تبقى true لو كانت true محلياً أو على الخادم)؛ والمحلي غير الموجود على الخادم يُبقى. */
+    function _mergeById(local, server, opts) {
+        opts = opts || {};
+        const idOf    = opts.idOf    || ((x) => (x ? x.id : null));
+        const sortKey = opts.sortKey || ((x) => (x && x.ts) || 0);
+        const mono    = opts.monotonicTrueKeys || [];
+        local  = Array.isArray(local)  ? local  : [];
+        server = Array.isArray(server) ? server : [];
+
+        const localById = new Map();
+        for (const m of local) { const id = idOf(m); if (id != null) localById.set(String(id), m); }
+
+        const byId = new Map();
+        for (const s of server) {
+            const id = idOf(s); if (id == null) continue;
+            const l = localById.get(String(id));
+            if (l) for (const k of mono) s[k] = !!(s[k] || l[k]);
+            byId.set(String(id), s);
+        }
+        for (const m of local) { const id = idOf(m); if (id != null && !byId.has(String(id))) byId.set(String(id), m); }
+
+        return Array.from(byId.values()).sort((a, b) => (sortKey(b) - sortKey(a)));
+    }
+
+    const api = { BLOB_STRIP_KEYS, _buildLiteBlob, _pruneByAge, _mergeById };
+    if (root) Object.assign(root, api);                          // متصفح: متاح كـ globals
+    if (typeof module !== 'undefined' && module.exports)         // node: قابل للاختبار
+        module.exports = api;
+})(typeof window !== 'undefined' ? window : null);

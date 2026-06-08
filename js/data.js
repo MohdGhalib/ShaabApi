@@ -71,10 +71,8 @@ async function _fetchAuditFromServer(days, force) {
         if (!res.ok) return;
         const server = await res.json();
         if (!Array.isArray(server)) return;
-        const byId = new Map();
-        for (const e of server) if (e && e.id) byId.set(e.id, e);
-        for (const e of (db.auditLog || [])) if (e && e.id && !byId.has(e.id)) byId.set(e.id, e);
-        db.auditLog = Array.from(byId.values()).sort((a, b) => (b.ts || 0) - (a.ts || 0));
+        // دمج موحّد (sync-helpers): الخادم يفوز، إبقاء المحلي غير الموجود على الخادم
+        db.auditLog = _mergeById(db.auditLog, server, {});
     } catch (e) { console.warn('[audit] fetch from server failed:', e); }
 }
 if (typeof window !== 'undefined') window._fetchAuditFromServer = _fetchAuditFromServer;
@@ -133,22 +131,8 @@ async function _fetchMessagesFromServer(force) {
         const server = await res.json();
         if (!Array.isArray(server)) return;
         if (!db.messages) db.messages = [];
-        const localById = new Map();
-        for (const m of db.messages) if (m && m.id != null) localById.set(String(m.id), m);
-        const byId = new Map();
-        for (const s of server) {
-            if (!s || s.id == null) continue;
-            const local = localById.get(String(s.id));
-            if (local) {
-                // الأعلام أحادية الاتجاه: لو أيٌّ منهما true تبقى true
-                s.readByMe = !!(s.readByMe || local.readByMe);
-                s.deleted  = !!(s.deleted  || local.deleted);
-            }
-            byId.set(String(s.id), s);
-        }
-        // أبقِ الرسائل المحلية التي لم تصل الخادم بعد (مُرسَلة للتو)
-        for (const m of db.messages) if (m && m.id != null && !byId.has(String(m.id))) byId.set(String(m.id), m);
-        db.messages = Array.from(byId.values()).sort((a, b) => (b.ts || 0) - (a.ts || 0));
+        // دمج موحّد (sync-helpers): الخادم يفوز، readByMe/deleted أحادية الاتجاه، إبقاء المُرسَل للتو
+        db.messages = _mergeById(db.messages, server, { monotonicTrueKeys: ['readByMe', 'deleted'] });
     } catch (e) { console.warn('[messages] fetch from server failed:', e); }
 }
 if (typeof window !== 'undefined') window._fetchMessagesFromServer = _fetchMessagesFromServer;
@@ -1737,15 +1721,8 @@ function save() {
             if (!perRecordOk) {
                 console.warn('[Phase5b] per-record dispatch failed — lite blob saved; records will retry via sync-queue/diff');
             }
-            const liteDb = { ...db };
-            delete liteDb.inquiries;
-            delete liteDb.montasiat;
-            delete liteDb.complaints;
-            delete liteDb.auditLog;   // (audit_log table) لم يعد يُحفظ في الـ blob
-            delete liteDb.messages;   // (messages table) لم تعد الرسائل تُحفظ في الـ blob
-            // (إزالة ازدواج) لها مفاتيح مستقلة وتُستعاد منها في كلا مساري التحميل → لا داعي لتكرارها في الـ blob
-            delete liteDb.auditNotes;
-            delete liteDb.compensations;
+            // lite blob: يجرّد كل مصفوفات السجلات (تعريف موحّد في js/lib/sync-helpers.js)
+            const liteDb = _buildLiteBlob(db);
             _push('Shaab_Master_DB', JSON.stringify(liteDb));
         } finally {
             clearTimeout(_safetyTimer);
@@ -1771,15 +1748,8 @@ async function _flushPendingSave() {
         /* per-record قد يفشل — الطابور (sync-queue) + diff في التحميل التالي يغطّيان الإعادة */
         console.warn('[_flushPendingSave] per-record flush failed:', e);
     }
-    const liteDb = { ...db };
-    delete liteDb.inquiries;
-    delete liteDb.montasiat;
-    delete liteDb.complaints;
-    delete liteDb.auditLog;   // (audit_log table) لم يعد يُحفظ في الـ blob
-    delete liteDb.messages;   // (messages table) لم تعد الرسائل تُحفظ في الـ blob
-    // (إزالة ازدواج) لها مفاتيح مستقلة وتُستعاد منها في كلا مساري التحميل → لا داعي لتكرارها في الـ blob
-    delete liteDb.auditNotes;
-    delete liteDb.compensations;
+    // lite blob: يجرّد كل مصفوفات السجلات (تعريف موحّد في js/lib/sync-helpers.js)
+    const liteDb = _buildLiteBlob(db);
     _push('Shaab_Master_DB', JSON.stringify(liteDb));
 }
 if (typeof window !== 'undefined') {
@@ -1817,15 +1787,12 @@ function saveEmployees()  { _push('Shaab_Employees_DB',  JSON.stringify(employee
    تعتمد على استراحات اليوم فقط، فالتاريخ الأقدم آمن للحذف. */
 const _BREAKS_RETENTION_DAYS = 90;
 function _pruneOldBreaks() {
-    if (!Array.isArray(breaks) || !breaks.length) return false;
-    const cutoff = Date.now() - _BREAKS_RETENTION_DAYS * 24 * 60 * 60 * 1000;
-    const before = breaks.length;
-    breaks = breaks.filter(b => {
-        if (!b) return false;
-        const t = (typeof b.id === 'number') ? b.id : new Date(b.startIso || b.date || 0).getTime();
-        return !(t && t < cutoff);
+    const r = _pruneByAge(breaks, {
+        retentionDays: _BREAKS_RETENTION_DAYS,
+        tsOf: b => (typeof b.id === 'number') ? b.id : new Date(b.startIso || b.date || 0).getTime()
     });
-    return breaks.length !== before;
+    breaks = r.items;
+    return r.changed;
 }
 function saveBreaks()     { _pruneOldBreaks(); _push('Shaab_Breaks_DB',     JSON.stringify(breaks));    }
 /* 🧹 تقليم الجلسات: تنمو Shaab_Sessions_DB بلا حدّ (سطر لكل تسجيل دخول) وتُكتب كاملةً
@@ -1833,15 +1800,13 @@ function saveBreaks()     { _pruneOldBreaks(); _push('Shaab_Breaks_DB',     JSON
    (logoutIso=null) حتى لا تتأثر حالة "متصل الآن". الإحصائيات التاريخية تظل متاحة 90 يوماً. */
 const _SESSION_RETENTION_DAYS = 90;
 function _pruneOldSessions() {
-    if (!Array.isArray(sessions) || !sessions.length) return false;
-    const cutoff = Date.now() - _SESSION_RETENTION_DAYS * 24 * 60 * 60 * 1000;
-    const before = sessions.length;
-    sessions = sessions.filter(s => {
-        if (!s || !s.logoutIso) return true;  // أبقِ الجلسات المفتوحة (متصل الآن / لم تُغلق)
-        const t = new Date(s.loginIso || s.logoutIso || 0).getTime();
-        return !(t && t < cutoff);             // احذف المغلقة الأقدم من المدة
+    const r = _pruneByAge(sessions, {
+        retentionDays: _SESSION_RETENTION_DAYS,
+        tsOf:   s => new Date(s.loginIso || s.logoutIso || 0).getTime(),
+        keepIf: s => !s.logoutIso   // أبقِ الجلسات المفتوحة (متصل الآن / لم تُغلق)
     });
-    return sessions.length !== before;
+    sessions = r.items;
+    return r.changed;
 }
 function saveSessions()   { _pruneOldSessions(); _push('Shaab_Sessions_DB',   JSON.stringify(sessions));  }
 /* PriceList Pending Backup Key — يضمن عدم فقدان الأصناف المضافة لو ألغيت الصفحة
