@@ -1723,6 +1723,11 @@ function save() {
             }
             // lite blob: يجرّد كل مصفوفات السجلات (تعريف موحّد في js/lib/sync-helpers.js)
             const liteDb = _buildLiteBlob(db);
+            // حارس "blob نحيف": نبّه لو تسلّلت مصفوفة سجلات ثقيلة جديدة للـ blob (صنف عطل HTTP/2)
+            if (typeof _findHeavyArrays === 'function') {
+                const _heavy = _findHeavyArrays(liteDb);
+                if (_heavy.length) console.warn('[blob-guard] مصفوفات ثقيلة داخل الـ blob — يجب تجريدها/نقلها per-record:', _heavy);
+            }
             _push('Shaab_Master_DB', JSON.stringify(liteDb));
         } finally {
             clearTimeout(_safetyTimer);

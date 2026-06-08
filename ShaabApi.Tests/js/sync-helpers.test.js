@@ -7,7 +7,7 @@
 const test = require('node:test');
 const assert = require('node:assert');
 
-const { BLOB_STRIP_KEYS, _buildLiteBlob, _pruneByAge, _mergeById } = require('../../js/lib/sync-helpers.js');
+const { BLOB_STRIP_KEYS, _buildLiteBlob, _findHeavyArrays, _pruneByAge, _mergeById } = require('../../js/lib/sync-helpers.js');
 
 /* ════ _buildLiteBlob ════════════════════════════════════ */
 test('_buildLiteBlob: يجرّد كل مفاتيح المصفوفات الثقيلة', () => {
@@ -34,6 +34,26 @@ test('_buildLiteBlob: لا يطفر على الأصل (نسخة سطحية)', ()
 test('_buildLiteBlob: يتحمّل db فارغاً/ناقصاً', () => {
     assert.deepStrictEqual(_buildLiteBlob({}), {});
     assert.deepStrictEqual(_buildLiteBlob(undefined), {});
+});
+
+/* ════ _findHeavyArrays (حارس blob نحيف) ════════════════ */
+test('_findHeavyArrays: يكتشف مصفوفة سجلات كبيرة تسلّلت للـ blob', () => {
+    const liteDb = { sneaky: new Array(120).fill({}), branchInfo: { x: 1 } };
+    const off = _findHeavyArrays(liteDb);
+    assert.strictEqual(off.length, 1);
+    assert.strictEqual(off[0].key, 'sneaky');
+    assert.strictEqual(off[0].length, 120);
+});
+
+test('_findHeavyArrays: لا إنذار كاذب على الإعدادات الصغيرة', () => {
+    const liteDb = { branchInfo: { x: 1 }, smallList: [1, 2, 3], montasiatSeqByYear: { 2026: 5 } };
+    assert.deepStrictEqual(_findHeavyArrays(liteDb), []);
+});
+
+test('_findHeavyArrays: عتبة قابلة للضبط', () => {
+    const liteDb = { list: [1, 2, 3, 4, 5] };
+    assert.strictEqual(_findHeavyArrays(liteDb, 3).length, 1); // 5 > 3
+    assert.strictEqual(_findHeavyArrays(liteDb, 10).length, 0);
 });
 
 /* ════ _pruneByAge ═══════════════════════════════════════ */

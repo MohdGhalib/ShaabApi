@@ -18,11 +18,29 @@
         'auditNotes', 'compensations'            // مفاتيح مستقلة (إزالة ازدواج)
     ];
 
+    /* الحالة النهائية المقصودة للـ Master_DB blob = إعدادات/عدّادات صغيرة فقط، مثل:
+       branchInfo, montasiatSeqByYear, inqSeq, inquiriesnqSeq, auditSettings,
+       emergencyMessages (نص + مُقلَّم 7 أيام), permissionOverrides, locked.
+       أي *مصفوفة سجلات* يجب أن تخرج لجدول/مفتاح مستقل وتُضاف إلى BLOB_STRIP_KEYS. */
+
     /* أعِد نسخة سطحية من db خالية من مفاتيح المصفوفات الثقيلة (lite blob). */
     function _buildLiteBlob(db) {
         const lite = Object.assign({}, db || {});
         for (const k of BLOB_STRIP_KEYS) delete lite[k];
         return lite;
+    }
+
+    /* حارس "blob نحيف": يكتشف أي مصفوفة كبيرة تسلّلت إلى الـ blob (مفتاح جديد نُسي
+       تجريده). يعيد قائمة المخالِفين [{key,length}] — يستدعيه data.js ليُحذّر في الـ
+       console. عتبة افتراضية 50 لتفادي إنذار كاذب على إعدادات صغيرة. نقي (لا console). */
+    function _findHeavyArrays(liteDb, maxLen) {
+        maxLen = (typeof maxLen === 'number') ? maxLen : 50;
+        const offenders = [];
+        for (const k of Object.keys(liteDb || {})) {
+            const v = liteDb[k];
+            if (Array.isArray(v) && v.length > maxLen) offenders.push({ key: k, length: v.length });
+        }
+        return offenders;
     }
 
     /* تقليم بالعمر. opts = { retentionDays, tsOf(item)->ms, keepIf(item)->bool, now }.
@@ -70,7 +88,7 @@
         return Array.from(byId.values()).sort((a, b) => (sortKey(b) - sortKey(a)));
     }
 
-    const api = { BLOB_STRIP_KEYS, _buildLiteBlob, _pruneByAge, _mergeById };
+    const api = { BLOB_STRIP_KEYS, _buildLiteBlob, _findHeavyArrays, _pruneByAge, _mergeById };
     if (root) Object.assign(root, api);                          // متصفح: متاح كـ globals
     if (typeof module !== 'undefined' && module.exports)         // node: قابل للاختبار
         module.exports = api;
