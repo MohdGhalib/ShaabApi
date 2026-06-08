@@ -929,7 +929,7 @@ async function loadAllData(force) {
         }
         if (_auditIdsBackfilled > 0) {
             console.log('[AuditLog] backfilled', _auditIdsBackfilled, 'legacy entries with stable ids');
-            _push('Shaab_Master_DB', JSON.stringify(_buildLiteBlob(db)));
+            _loadAllPush();
         }
     }
 
@@ -1059,7 +1059,7 @@ async function loadAllData(force) {
                 // ارفع العدّاد ليبدأ من بعد آخر seq مستخدم
                 if ((db.inquiriesnqSeq || 0) <= _maxSeq) db.inquiriesnqSeq = _maxSeq + 1;
                 console.warn(`[Inquiries] healed ${_renamedIds.size} duplicate seq(s); counter → ${db.inquiriesnqSeq}`);
-                _push('Shaab_Master_DB', JSON.stringify(_buildLiteBlob(db)));
+                _loadAllPush();
             }
         } catch (e) { console.error('[Inquiries] dedup failed:', e); }
     }
@@ -1072,14 +1072,14 @@ async function loadAllData(force) {
     if (db.inquiries)  db.inquiries  = db.inquiries.filter(x => !_shouldPurge(x));
     if (db.complaints) db.complaints = db.complaints.filter(x => !_shouldPurge(x));
     const _afterPurge  = (db.montasiat||[]).length + (db.inquiries||[]).length + (db.complaints||[]).length;
-    if (_afterPurge < _beforePurge) _push('Shaab_Master_DB', JSON.stringify(_buildLiteBlob(db)));
+    if (_afterPurge < _beforePurge) _loadAllPush();
 
     // ترحيل تلقائي: إعادة تسمية المفاتيح القصيرة القديمة (مرة واحدة فقط)
     if (Array.isArray(db.m)) {
         db.montasiat  = db.m;  delete db.m;
         db.inquiries  = db.i;  delete db.i;
         db.complaints = db.c;  delete db.c;
-        _push('Shaab_Master_DB', JSON.stringify(_buildLiteBlob(db)));
+        _loadAllPush();
     }
 
     // ترحيل تلقائي: ترقيم تسلسلي بصيغة YYNNN للمنتسيات الموجودة بدون رقم
@@ -1124,7 +1124,7 @@ async function loadAllData(force) {
             }
             _serialChanged = true;
         }
-        if (_serialChanged) _push('Shaab_Master_DB', JSON.stringify(_buildLiteBlob(db)));
+        if (_serialChanged) _loadAllPush();
     }
 
     // ترحيل تلقائي: إضافة salt للموظفين القدامى (بعد تسجيل الدخول فقط)
@@ -1674,6 +1674,14 @@ async function _flushPerRecordChanges() {
     await Promise.all(tasks);
     _initLastSavedRecords();
     return tasks.length;
+}
+
+/* 🛡️ (Fix, 2026-06-09) دفع الـ blob من داخل loadAllData (ترحيل/تنظيف/تسلسل) موحّد هنا.
+   نتخطّاه أثناء حلّ التعارض (_onConflictRetrying) لكسر حلقة: 409 → _handleVersionConflict
+   → loadAllData → دفع → 409. الترحيلات idempotent فتُحفَظ في أوّل حفظ عادي لاحق. */
+function _loadAllPush() {
+    if (_onConflictRetrying) return;
+    _push('Shaab_Master_DB', JSON.stringify(_buildLiteBlob(db)));
 }
 
 function save() {
