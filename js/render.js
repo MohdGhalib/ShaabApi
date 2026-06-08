@@ -906,7 +906,9 @@ function _renderTableC(get, isAdmin) {
             </div>`;
         // عرض كل الحقول لمدير الكول سنتر/المدير حتى لو فارغة (مع علامة تعديل لكل حقل)
         const _showAll = _canEditFields;
-        // مصدر الشكوى ورابط الحساب (شكاوى الميديا) — رابط آمن http(s) فقط
+        // مصدر الشكوى ورابط الحساب (شكاوى الميديا) — رابط آمن http(s) فقط.
+        // 🔒 مخفيان عن أدوار قسم السيطرة (control/employee/sub) — يظهران للميديا ومدير الكول سنتر فقط.
+        const _hideMediaSrc = isControl || isControlEmployee || isControlSub;
         const _mediaUrlSafe = x.mediaAccountUrl
             ? (/^https?:\/\//i.test(String(x.mediaAccountUrl)) ? String(x.mediaAccountUrl) : 'https://' + String(x.mediaAccountUrl))
             : '';
@@ -915,8 +917,8 @@ function _renderTableC(get, isAdmin) {
             : '';
         const extraInfoHtml = `<div style="margin-top:10px;border:1px solid rgba(255,255,255,0.1);border-radius:12px;overflow:hidden;font-size:13px;">
             ${_row('📝 التفاصيل', sanitize(x.notes || '—'), !(_showAll || hasMore), 'notes')}
-            ${x.mediaSource     ? _row('📱 مصدر الشكوى', sanitize(x.mediaSource), false) : ''}
-            ${x.mediaAccountUrl ? _row('🔗 رابط الحساب', _mediaUrlHtml, false) : ''}
+            ${(!_hideMediaSrc && x.mediaSource)     ? _row('📱 مصدر الشكوى', sanitize(x.mediaSource), false) : ''}
+            ${(!_hideMediaSrc && x.mediaAccountUrl) ? _row('🔗 رابط الحساب', _mediaUrlHtml, false) : ''}
             ${(_showAll || ctStr)        ? _row('🕐 وقت تلقي الاتصال', sanitize(ctStr || '—'),         !(_showAll || x.noteDate||x.moveNumber||x.invoiceValue), 'callTime')     : ''}
             ${(_showAll || x.noteDate)   ? _row('📅 تاريخ الملاحظة',    sanitize(x.noteDate || '—'),    !(_showAll || x.moveNumber||x.invoiceValue),             'noteDate')     : ''}
             ${(_showAll || x.moveNumber) ? _row('🔢 رقم الحركة',         sanitize(x.moveNumber || '—'),  !(_showAll || x.invoiceValue),                           'moveNumber')   : ''}
