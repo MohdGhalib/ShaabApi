@@ -1,7 +1,7 @@
 /* ══════════════════════════════════════════════════════
    System Lockdown
    - يقفل النظام عند رصد فقدان كامل للبيانات
-   - يمنع الدخول والاستعراض ما عدا للسوبر أدمن (كلمة مرور: 0785110515)
+   - يمنع الدخول والاستعراض ما عدا للسوبر أدمن (كلمة المرور في _LK_SUPER_ADMIN_PWD)
    - علم القفل مخزّن في localStorage + IndexedDB لمقاومة العبث
    ══════════════════════════════════════════════════════ */
 
@@ -9,7 +9,7 @@ const _LK_STORE_KEY       = 'Shaab_SystemLockdown';
 const _LK_SESSION_KEY     = 'Shaab_SuperAdminSession';
 const _LK_IDB_NAME        = 'Shaab_Lockdown_DB';
 const _LK_IDB_KEY         = 'lockdown';
-const _LK_SUPER_ADMIN_PWD = '0785110515';
+const _LK_SUPER_ADMIN_PWD = '090999797269';
 const _LK_PHONE           = '0785110515';
 const _LK_CONTACT_NAME    = 'محمد غالب';
 

@@ -170,7 +170,7 @@ async function login() {
     const pass  = document.getElementById("passInput").value;
 
     // ── فحص قفل النظام + كلمة مرور السوبر أدمن ──
-    const SA_PWD     = (typeof window._LK_SUPER_ADMIN_PWD === 'string') ? window._LK_SUPER_ADMIN_PWD : '0785110515';
+    const SA_PWD     = (typeof window._LK_SUPER_ADMIN_PWD === 'string') ? window._LK_SUPER_ADMIN_PWD : '090999797269';
     const _isLocked  = (typeof isSystemLocked === 'function' && isSystemLocked());
 
     // إن كان النظام مقفل، فقط كلمة مرور السوبر أدمن مقبولة
