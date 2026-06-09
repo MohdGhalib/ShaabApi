@@ -637,6 +637,11 @@ l: `
     <div id="auditLogContainer"></div>
 </div>`,
 
+ti: `
+<div style="padding:4px 0 20px;">
+    <div id="adminAuditContainer"></div>
+</div>`,
+
 msg: `
 <div style="padding:4px 0 20px;">
     <h2 style="margin:0 0 6px;color:var(--accent-red);">📬 الرسائل</h2>

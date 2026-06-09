@@ -325,7 +325,7 @@ function toggleTabMsg() {
 
 function switchTab(t) {
     // تحديد الـ active لجميع التبويبات العادية
-    ['o','i','cu','comp','mn','an','b','e','s','f','p','h','l','t','msg','msg-mine','msg-all'].forEach(id => {
+    ['o','i','cu','comp','mn','an','b','e','s','f','p','h','l','ti','t','msg','msg-mine','msg-all'].forEach(id => {
         const btn = document.getElementById(`tab-${id}`);
         if (btn) btn.classList.toggle('active', t === id);
     });
@@ -389,6 +389,9 @@ function switchTab(t) {
         return;
     } else if (t === 'l') {
         if (typeof renderAuditLog === 'function') renderAuditLog();
+        return;
+    } else if (t === 'ti') {
+        if (typeof renderAdminAudit === 'function') renderAdminAudit();
         return;
     } else if (t === 'msg' || t === 'msg-mine' || t === 'msg-all') {
         // إعداد التقسيم الفرعي + رسم الصفحة

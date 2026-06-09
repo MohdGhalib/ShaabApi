@@ -579,6 +579,13 @@ function setProfileUI() {
         document.getElementById('tab-l')?.classList.add('hidden');
     }
 
+    // تدقيق إداري — للمدير ومدير الكول سنتر فقط
+    if (isAdmin || isCCManager) {
+        document.getElementById('tab-ti')?.classList.remove('hidden');
+    } else {
+        document.getElementById('tab-ti')?.classList.add('hidden');
+    }
+
     // الرسائل — لمدير/موظفي الكول سنتر + كل أدوار قسم السيطرة
     const isCCEmp     = currentUser?.role === 'cc_employee';
     const isControl   = currentUser?.role === 'control';
