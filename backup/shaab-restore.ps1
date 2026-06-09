@@ -11,13 +11,15 @@ param(
     [Parameter(Mandatory=$true)] [string]$ZipPath
 )
 
-# نفس إعداد الاتصال في shaab-backup.ps1
-$DbHost     = $env:MYSQL_HOST;     if (-not $DbHost)     { $DbHost     = $env:MYSQLHOST };     if (-not $DbHost)     { $DbHost     = 'localhost' }
-$DbPort     = $env:MYSQL_PORT;     if (-not $DbPort)     { $DbPort     = $env:MYSQLPORT };     if (-not $DbPort)     { $DbPort     = '3306' }
-$DbName     = $env:MYSQLDATABASE;  if (-not $DbName)     { $DbName     = $env:MYSQL_DATABASE };if (-not $DbName)     { $DbName     = 'shaab_db' }
-$DbUser     = $env:MYSQLUSER;      if (-not $DbUser)     { $DbUser     = $env:MYSQL_USER };    if (-not $DbUser)     { $DbUser     = 'root' }
-$DbPassword = $env:MYSQLPASSWORD;  if (-not $DbPassword) { $DbPassword = $env:MYSQL_PASSWORD };if (-not $DbPassword) { $DbPassword = 'CHANGE_ME_DB_PASSWORD' }
-$Mysql      = 'mysql'   # أو المسار الكامل لـ mysql.exe
+# نفس الإعداد من backup-config.ps1
+$cfg = Join-Path $PSScriptRoot 'backup-config.ps1'
+if (Test-Path $cfg) { . $cfg }
+if (-not $DbHost)     { $DbHost     = $env:MYSQL_HOST; if (-not $DbHost) { $DbHost = $env:MYSQLHOST }; if (-not $DbHost) { $DbHost = 'localhost' } }
+if (-not $DbPort)     { $DbPort     = $env:MYSQL_PORT; if (-not $DbPort) { $DbPort = $env:MYSQLPORT }; if (-not $DbPort) { $DbPort = '3306' } }
+if (-not $DbName)     { $DbName     = $env:MYSQLDATABASE; if (-not $DbName) { $DbName = $env:MYSQL_DATABASE }; if (-not $DbName) { $DbName = 'shaab_db' } }
+if (-not $DbUser)     { $DbUser     = $env:MYSQLUSER; if (-not $DbUser) { $DbUser = $env:MYSQL_USER }; if (-not $DbUser) { $DbUser = 'root' } }
+if (-not $DbPassword) { $DbPassword = $env:MYSQLPASSWORD; if (-not $DbPassword) { $DbPassword = $env:MYSQL_PASSWORD } }
+if ($MysqlBinDir) { $Mysql = Join-Path $MysqlBinDir 'mysql.exe' } else { $Mysql = 'mysql' }
 
 $ErrorActionPreference = 'Stop'
 if (-not (Test-Path $ZipPath)) { Write-Error "الملف غير موجود: $ZipPath"; exit 1 }

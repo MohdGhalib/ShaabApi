@@ -13,31 +13,22 @@
 ═══════════════════════════════════════════════════════════════════════════
 #>
 
-# ── 1) الإعداد — عدّل هذه القيم على السيرفر الداخلي عند الحاجة ───────────────
-# يقرأ من متغيّرات البيئة أولاً (نفس أسماء التطبيق)، ثم يسقط على القيم الافتراضية.
-$DbHost     = $env:MYSQL_HOST;     if (-not $DbHost)     { $DbHost     = $env:MYSQLHOST }
-if (-not $DbHost)     { $DbHost     = 'localhost' }
-$DbPort     = $env:MYSQL_PORT;     if (-not $DbPort)     { $DbPort     = $env:MYSQLPORT }
-if (-not $DbPort)     { $DbPort     = '3306' }
-$DbName     = $env:MYSQLDATABASE;  if (-not $DbName)     { $DbName     = $env:MYSQL_DATABASE }
-if (-not $DbName)     { $DbName     = 'shaab_db' }
-$DbUser     = $env:MYSQLUSER;      if (-not $DbUser)     { $DbUser     = $env:MYSQL_USER }
-if (-not $DbUser)     { $DbUser     = 'root' }
-$DbPassword = $env:MYSQLPASSWORD;  if (-not $DbPassword) { $DbPassword = $env:MYSQL_PASSWORD }
-# لو لم يكن في البيئة، ضع كلمة المرور هنا (احمِ الملف بصلاحيات NTFS):
-if (-not $DbPassword) { $DbPassword = 'CHANGE_ME_DB_PASSWORD' }
+# ── 1) الإعداد — يُقرأ من backup-config.ps1 (هو الملف الوحيد الذي يعدّله المبرمج) ──
+$cfg = Join-Path $PSScriptRoot 'backup-config.ps1'
+if (Test-Path $cfg) { . $cfg }
 
-# مسار mysqldump.exe — اتركه 'mysqldump' لو في PATH، أو ضع المسار الكامل:
-$MysqlDump  = 'mysqldump'
-# مثال على مسار كامل لو لزم:
-# $MysqlDump = 'C:\Program Files\MySQL\MySQL Server 8.0\bin\mysqldump.exe'
+# fallback: لو لم يضبط الإعداد قيمةً، استخدم متغيّرات بيئة التطبيق ثم الافتراضي.
+if (-not $DbHost)     { $DbHost     = $env:MYSQL_HOST; if (-not $DbHost) { $DbHost = $env:MYSQLHOST }; if (-not $DbHost) { $DbHost = 'localhost' } }
+if (-not $DbPort)     { $DbPort     = $env:MYSQL_PORT; if (-not $DbPort) { $DbPort = $env:MYSQLPORT }; if (-not $DbPort) { $DbPort = '3306' } }
+if (-not $DbName)     { $DbName     = $env:MYSQLDATABASE; if (-not $DbName) { $DbName = $env:MYSQL_DATABASE }; if (-not $DbName) { $DbName = 'shaab_db' } }
+if (-not $DbUser)     { $DbUser     = $env:MYSQLUSER; if (-not $DbUser) { $DbUser = $env:MYSQL_USER }; if (-not $DbUser) { $DbUser = 'root' } }
+if (-not $DbPassword) { $DbPassword = $env:MYSQLPASSWORD; if (-not $DbPassword) { $DbPassword = $env:MYSQL_PASSWORD } }
+if (-not $BackupDir)  { $BackupDir  = 'C:\ShaabBackups' }
+if (-not $OffsiteDir) { $OffsiteDir = '' }
+if (-not $RetentionDays) { $RetentionDays = 30 }
 
-# مجلد النسخ الأساسي (الطبقة 1):
-$BackupDir  = 'C:\ShaabBackups'
-# مجلد "خارج الموقع" (الطبقة 2) — قرص خارجي/شبكة/مزامنة سحابية. اتركه فارغاً للتعطيل:
-$OffsiteDir = ''            # مثال: 'E:\ShaabBackups'  أو  '\\NAS\Backups\Shaab'
-# الاحتفاظ (أيام) — يُحذف الأقدم من هذا في المجلدين:
-$RetentionDays = 30
+# مسار mysqldump (من المجلد bin إن حُدّد، وإلا من PATH):
+if ($MysqlBinDir) { $MysqlDump = Join-Path $MysqlBinDir 'mysqldump.exe' } else { $MysqlDump = 'mysqldump' }
 
 # ── 2) تجهيز ──────────────────────────────────────────────────────────────
 $ErrorActionPreference = 'Stop'
