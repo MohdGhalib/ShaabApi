@@ -565,6 +565,7 @@ if (typeof window !== 'undefined') {
 // يُرسل مع كل POST كـ expectedVersion — لو السيرفر يرى version مختلف، يُرفض الحفظ
 let _versions = {};
 let _onConflictRetrying = false;   // علم لمنع loop لانهائي عند 409
+let _inqDedupDone = false;          // شفاء تكرار seq يعمل مرة واحدة/جلسة (يمنع حلقة ترقيم لا نهائية)
 let _savingTimer = null;
 function setToken(t) {
     _token = t;
@@ -1009,7 +1010,11 @@ async function loadAllData(force) {
     // 🛡️ شفاء تكرار seq في الاستفسارات (نشأ تاريخياً عن race بين عميلَين
     // يقرآن نفس db.inquiriesnqSeq قبل تزامنها): الأقدم بـ id يحتفظ بـ seq،
     // الأحدث يُعاد ترقيمها لرقم فريد، ويُحدَّث m.reservedFor.inqSeq تبعاً.
-    if (Array.isArray(db.inquiries) && db.inquiries.length > 0) {
+    // 🛡️ (Fix, 2026-06-09) مرة واحدة/جلسة + ليس أثناء حلّ التعارض: كان يُعيد الترقيم
+    //    في كل loadAllData (العدّاد يتسلّق) فيبقى الاستفسار pending دائماً → حلقة
+    //    409/إعادة-ترقيم لا نهائية. التغيير يُدفَع per-record عبر الحفظ العادي.
+    if (!_onConflictRetrying && !_inqDedupDone && Array.isArray(db.inquiries) && db.inquiries.length > 0) {
+        _inqDedupDone = true;
         try {
             const _bySeq = new Map();
             let _maxSeq = 0;
