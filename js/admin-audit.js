@@ -64,6 +64,11 @@ const _AA_COL_NATURE = { label: 'طبيعة المكالمة', cell: r => _aaNat
 const _AA_COL_BRANCH = { label: 'الفرع',  cell: r => sanitize(r.branch || '—') };
 const _AA_COL_TYPE   = { label: 'النوع',  cell: r => sanitize(r.type || '—') };
 const _AA_COL_TIME   = { label: 'الوقت',  cell: r => sanitize((r.time || '').split('|')[0].trim() || '—') };
+const _AA_COL_EMP    = { label: 'الموظف', cell: r => sanitize(r.addedBy || '—') };
+
+function _aaRank(i) {
+    return i === 0 ? '🥇' : i === 1 ? '🥈' : i === 2 ? '🥉' : '#' + (i + 1);
+}
 
 function _aaSectionCard(title, icon, count, innerHtml) {
     return `
@@ -106,13 +111,13 @@ function renderAdminAudit() {
                     <span style="font-family:monospace;direction:ltr;font-weight:700;color:#ffd54f;">${sanitize(p)}</span>
                     <span style="font-size:12px;color:#ffb74d;font-weight:700;">📞 ${arr.length} مكالمات</span>
                 </div>
-                ${_aaCallsTable(arr, [_AA_COL_TIME, _AA_COL_TYPE, _AA_COL_BRANCH, _AA_COL_NATURE])}
+                ${_aaCallsTable(arr, [_AA_COL_TIME, _AA_COL_TYPE, _AA_COL_BRANCH, _AA_COL_NATURE, _AA_COL_EMP])}
             </div>`).join('')
         : '<div style="padding:14px;color:var(--text-dim);font-size:13px;">لا توجد أرقام كرّرت الاتصال اليوم</div>';
 
     // ── 2) استفسارات الشكاوى ──
     const complaints = recs.filter(_aaIsComplaint);
-    const sec2 = _aaCallsTable(complaints, [_AA_COL_PHONE, _AA_COL_BRANCH, _AA_COL_NATURE, _AA_COL_TIME]);
+    const sec2 = _aaCallsTable(complaints, [_AA_COL_PHONE, _AA_COL_BRANCH, _AA_COL_NATURE, _AA_COL_EMP, _AA_COL_TIME]);
 
     // ── 3) أرقام أردنية خاطئة (مجمّعة حسب الرقم) ──
     const invalidMap = new Map();
@@ -130,12 +135,14 @@ function renderAdminAudit() {
                 <th style="text-align:right;padding:7px 10px;font-size:12px;color:var(--text-dim);border-bottom:1px solid var(--border);">الرقم الخاطئ</th>
                 <th style="text-align:right;padding:7px 10px;font-size:12px;color:var(--text-dim);border-bottom:1px solid var(--border);">سبب الخطأ</th>
                 <th style="text-align:right;padding:7px 10px;font-size:12px;color:var(--text-dim);border-bottom:1px solid var(--border);">عدد المكالمات</th>
+                <th style="text-align:right;padding:7px 10px;font-size:12px;color:var(--text-dim);border-bottom:1px solid var(--border);">الموظف</th>
                 <th style="text-align:right;padding:7px 10px;font-size:12px;color:var(--text-dim);border-bottom:1px solid var(--border);">الفرع / الطبيعة</th>
             </tr></thead><tbody>
             ${invalids.map(o => `<tr>
                 <td style="text-align:right;padding:7px 10px;border-bottom:1px solid rgba(255,255,255,0.04);"><span style="font-family:monospace;direction:ltr;color:#ef5350;font-weight:700;">${sanitize(_aaNormalizePhone(o.phone) || o.phone || '—')}</span></td>
                 <td style="text-align:right;padding:7px 10px;border-bottom:1px solid rgba(255,255,255,0.04);font-size:12px;color:#ffab91;">${sanitize(o.reason)}</td>
                 <td style="text-align:right;padding:7px 10px;border-bottom:1px solid rgba(255,255,255,0.04);font-size:13px;color:var(--text-main);">${o.calls.length}</td>
+                <td style="text-align:right;padding:7px 10px;border-bottom:1px solid rgba(255,255,255,0.04);font-size:12px;color:var(--text-main);">${[...new Set(o.calls.map(c => c.addedBy || '—'))].map(sanitize).join('<br>')}</td>
                 <td style="text-align:right;padding:7px 10px;border-bottom:1px solid rgba(255,255,255,0.04);font-size:12px;color:var(--text-dim);">${o.calls.map(c => sanitize(c.branch || '—') + ' (' + _aaNature(c) + ')').join('<br>')}</td>
             </tr>`).join('')}
             </tbody></table></div>`
@@ -148,15 +155,15 @@ function renderAdminAudit() {
         if (!byBranch.has(b)) byBranch.set(b, []);
         byBranch.get(b).push(r);
     });
-    const topBranches = [...byBranch.entries()].sort((a, b) => b[1].length - a[1].length).slice(0, 2);
+    const topBranches = [...byBranch.entries()].sort((a, b) => b[1].length - a[1].length).slice(0, 5);
     let sec4 = topBranches.length
         ? topBranches.map(([b, arr], i) => `
             <div style="border:1px solid var(--border);border-radius:10px;margin-bottom:10px;overflow:hidden;">
                 <div style="display:flex;align-items:center;justify-content:space-between;padding:9px 12px;background:rgba(21,101,192,0.10);">
-                    <span style="font-weight:700;color:#90caf9;">${i === 0 ? '🥇' : '🥈'} ${sanitize(b)}</span>
+                    <span style="font-weight:700;color:#90caf9;">${_aaRank(i)} ${sanitize(b)}</span>
                     <span style="font-size:12px;color:#64b5f6;font-weight:700;">${arr.length} اتصال (شكاوى: ${arr.filter(_aaIsComplaint).length} · استفسارات: ${arr.filter(x => !_aaIsComplaint(x)).length})</span>
                 </div>
-                ${_aaCallsTable(arr, [_AA_COL_PHONE, _AA_COL_TYPE, _AA_COL_NATURE, _AA_COL_TIME])}
+                ${_aaCallsTable(arr, [_AA_COL_PHONE, _AA_COL_TYPE, _AA_COL_NATURE, _AA_COL_EMP, _AA_COL_TIME])}
             </div>`).join('')
         : '<div style="padding:14px;color:var(--text-dim);font-size:13px;">لا توجد بيانات</div>';
 
@@ -175,7 +182,7 @@ function renderAdminAudit() {
                     <span style="font-weight:700;color:#a5d6a7;">${i === 0 ? '🥇' : '🥈'} ${sanitize(t)}</span>
                     <span style="font-size:12px;color:#81c784;font-weight:700;">${arr.length} اتصال</span>
                 </div>
-                ${_aaCallsTable(arr, [_AA_COL_PHONE, _AA_COL_BRANCH, _AA_COL_NATURE, _AA_COL_TIME])}
+                ${_aaCallsTable(arr, [_AA_COL_PHONE, _AA_COL_BRANCH, _AA_COL_NATURE, _AA_COL_EMP, _AA_COL_TIME])}
             </div>`).join('')
         : '<div style="padding:14px;color:var(--text-dim);font-size:13px;">لا توجد بيانات</div>';
 
@@ -214,6 +221,6 @@ function renderAdminAudit() {
         _aaSectionCard('المكالمات المكررة على النظام', '🔁', repeated.length, sec1) +
         _aaSectionCard('استفسارات الشكاوى', '📣', complaints.length, sec2) +
         _aaSectionCard('أرقام أردنية خاطئة', '⚠️', invalids.length, sec3) +
-        _aaSectionCard('أكثر فرعين (استفسارات + شكاوى)', '🏢', null, sec4) +
+        _aaSectionCard('أكثر 5 فروع (استفسارات + شكاوى)', '🏢', null, sec4) +
         _aaSectionCard('أكثر نوعين استفسار', '🏷️', null, sec5);
 }
