@@ -160,8 +160,9 @@ i: `
 <div class="card" id="addInquiryCard">
     <h3>تسجيل استفسار عميل</h3>
     <div style="display:grid;grid-template-columns:1fr 1fr;gap:15px;margin-bottom:15px;">
-        <input type="text" id="iPhone" placeholder="رقم الهاتف" oninput="_iLivePhoneSearch(this.value)">
+        <input type="text" id="iPhone" placeholder="رقم الهاتف" oninput="_iLivePhoneSearch(this.value);if(typeof _validatePhoneLive==='function')_validatePhoneLive('iPhone','iPhoneErr')">
         <select id="iCountryAdd" onchange="updateCities('iCountryAdd','iCityAdd','iBranchAdd');toggleUnspecifiedBranch();_updateBranchInfoPanel()"></select>
+        <div id="iPhoneErr" style="display:none;grid-column:1;margin-top:-10px;font-size:11.5px;color:#ef5350;font-weight:700;"></div>
     </div>
     <div style="display:grid;grid-template-columns:1fr 1fr;gap:15px;margin-bottom:15px;">
         <select id="iCityAdd" onchange="updateBranches('iCityAdd','iBranchAdd');toggleUnspecifiedBranch();_updateBranchInfoPanel()"></select>
@@ -730,7 +731,8 @@ mn: `
         </div>
         <div style="margin-bottom:14px;">
             <label style="font-size:13px;color:var(--text-dim);display:block;margin-bottom:5px;">رقم هاتف الزبون</label>
-            <input type="text" id="mnPhone" placeholder="07xxxxxxxx">
+            <input type="text" id="mnPhone" placeholder="07xxxxxxxx" oninput="if(typeof _validatePhoneLive==='function')_validatePhoneLive('mnPhone','mnPhoneErr')">
+            <div id="mnPhoneErr" style="display:none;margin-top:5px;font-size:11.5px;color:#ef5350;font-weight:700;"></div>
         </div>
         <div style="margin-bottom:16px;">
             <label style="font-size:13px;color:var(--text-dim);display:block;margin-bottom:5px;">نص الملاحظة / الشكوى</label>

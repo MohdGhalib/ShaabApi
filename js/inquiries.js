@@ -439,6 +439,22 @@ function validJordanianPhone(phone) {
     return { valid: true };
 }
 
+/* تحقّق حيّ يعرض الرسالة أسفل حقل الرقم (بدل alert). يُستدعى من oninput ومن الحفظ.
+   يُعيد true إن كان الرقم صالحاً. */
+function _validatePhoneLive(inputId, errId) {
+    const inp = document.getElementById(inputId);
+    const err = document.getElementById(errId);
+    if (!inp) return true;
+    const val = (inp.value || '').trim();
+    const setErr = (msg) => { if (err) { err.textContent = msg; err.style.display = msg ? 'block' : 'none'; } };
+    if (!val) { setErr(''); inp.style.borderColor = ''; return false; } // فارغ: لا رسالة لكن غير صالح
+    const chk = validJordanianPhone(val);
+    if (chk.valid) { setErr(''); inp.style.borderColor = '#2e7d32'; return true; }
+    setErr('❌ ' + chk.reason);
+    inp.style.borderColor = '#e53935';
+    return false;
+}
+
 function addInquiry() {
     const ctryEl = document.getElementById("iCountryAdd");
     const cityEl  = document.getElementById("iCityAdd");
@@ -454,8 +470,7 @@ function addInquiry() {
     const ct = (t === "شكوى") ? (document.getElementById("iComplaintType")?.value || '') : '';
     const itemName = (t === "استفسار عن أصناف") ? (document.getElementById("iItemName")?.value.trim() || '') : '';
     if (!c||!b||!p||!t) return alert("يرجى إكمال البيانات");
-    const _phChk = validJordanianPhone(p);
-    if (!_phChk.valid) return alert('رقم الجوال غير صحيح ❌\n' + _phChk.reason);
+    if (!validJordanianPhone(p).valid) { _validatePhoneLive('iPhone','iPhoneErr'); document.getElementById('iPhone')?.focus(); return; }
     if (needsNotes&&!n) return alert("يرجى كتابة التفاصيل");
     if (t === "شكوى" && !ct) return alert("يرجى تحديد نوع الشكوى");
     if (t === "استفسار عن أصناف" && !itemName) return alert("يرجى كتابة اسم الصنف");
@@ -729,7 +744,8 @@ function _openEditInquiryModal(id, mode) {
                 الحالي: <b style="color:var(--text-main);">${sanitize(_cur || '—')}</b>
             </div>
             <label style="display:block;margin-bottom:5px;font-size:12px;color:var(--text-dim);">رقم الجوال:</label>
-            <input id="_iqPhone" type="tel" value="${sanitize(_cur)}" style="width:100%;padding:8px 10px;background:var(--bg-input);color:var(--text-main);border:1px solid var(--border);border-radius:8px;font-family:Cairo;box-sizing:border-box;">`;
+            <input id="_iqPhone" type="tel" value="${sanitize(_cur)}" oninput="if(typeof _validatePhoneLive==='function')_validatePhoneLive('_iqPhone','_iqPhoneErr')" style="width:100%;padding:8px 10px;background:var(--bg-input);color:var(--text-main);border:1px solid var(--border);border-radius:8px;font-family:Cairo;box-sizing:border-box;">
+            <div id="_iqPhoneErr" style="display:none;font-size:11px;color:#ef5350;font-weight:700;margin-top:6px;"></div>`;
     }
 
     const overlay = document.createElement('div');
@@ -800,8 +816,7 @@ function saveEditInquiryModal(id, mode) {
     } else if (mode === 'phone') {
         const newPhone = (document.getElementById('_iqPhone')?.value || '').trim();
         if (!newPhone) return alert('رقم الجوال مطلوب');
-        const _epChk = validJordanianPhone(newPhone);
-        if (!_epChk.valid) return alert('رقم الجوال غير صحيح ❌\n' + _epChk.reason);
+        if (!validJordanianPhone(newPhone).valid) { _validatePhoneLive('_iqPhone','_iqPhoneErr'); document.getElementById('_iqPhone')?.focus(); return; }
         if (newPhone === (item.phone || '')) { closeEditInquiryModal(); return; }
         const oldRef = item.phone || '—';
         item.phone = newPhone;
@@ -915,8 +930,7 @@ function addMediaNote() {
     const notes  = document.getElementById('mnNotes')?.value.trim()  || '';
 
     if (!city || !branch || !phone || !notes) return alert('يرجى إكمال جميع الحقول');
-    const _mnChk = validJordanianPhone(phone);
-    if (!_mnChk.valid) return alert('رقم الجوال غير صحيح ❌\n' + _mnChk.reason);
+    if (!validJordanianPhone(phone).valid) { _validatePhoneLive('mnPhone','mnPhoneErr'); document.getElementById('mnPhone')?.focus(); return; }
 
     if (!db.inquiriesnqSeq) db.inquiriesnqSeq = 1;
     // 🛡️ منع تكرار seq — نفس منطق addInquiry أعلاه
