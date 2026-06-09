@@ -423,6 +423,22 @@ function toggleUnspecifiedBranch() {
     }
 }
 
+/* تحقّق رقم جوال أردني صحيح (نفس قاعدة صفحة التدقيق الإداري):
+   - يبدأ بـ0 → 10 خانات ويبدأ بـ 077/078/079
+   - لا يبدأ بـ0 → 9 خانات ويبدأ بـ 77/78/79 */
+function validJordanianPhone(phone) {
+    const p = String(phone || '').replace(/[^\d]/g, '');
+    if (!p)                return { valid: false, reason: 'الرقم فارغ' };
+    if (p.startsWith('0')) {
+        if (p.length !== 10)     return { valid: false, reason: `الرقم يبدأ بـ0 فيجب أن يكون 10 خانات (أدخلت ${p.length})` };
+        if (!/^07[789]/.test(p)) return { valid: false, reason: 'بداية الرقم يجب أن تكون 077 أو 078 أو 079' };
+        return { valid: true };
+    }
+    if (p.length !== 9)          return { valid: false, reason: `الرقم لا يبدأ بـ0 فيجب أن يكون 9 خانات (أدخلت ${p.length})` };
+    if (!/^7[789]/.test(p))      return { valid: false, reason: 'بداية الرقم يجب أن تكون 77 أو 78 أو 79' };
+    return { valid: true };
+}
+
 function addInquiry() {
     const ctryEl = document.getElementById("iCountryAdd");
     const cityEl  = document.getElementById("iCityAdd");
@@ -438,6 +454,8 @@ function addInquiry() {
     const ct = (t === "شكوى") ? (document.getElementById("iComplaintType")?.value || '') : '';
     const itemName = (t === "استفسار عن أصناف") ? (document.getElementById("iItemName")?.value.trim() || '') : '';
     if (!c||!b||!p||!t) return alert("يرجى إكمال البيانات");
+    const _phChk = validJordanianPhone(p);
+    if (!_phChk.valid) return alert('رقم الجوال غير صحيح ❌\n' + _phChk.reason);
     if (needsNotes&&!n) return alert("يرجى كتابة التفاصيل");
     if (t === "شكوى" && !ct) return alert("يرجى تحديد نوع الشكوى");
     if (t === "استفسار عن أصناف" && !itemName) return alert("يرجى كتابة اسم الصنف");
@@ -782,6 +800,8 @@ function saveEditInquiryModal(id, mode) {
     } else if (mode === 'phone') {
         const newPhone = (document.getElementById('_iqPhone')?.value || '').trim();
         if (!newPhone) return alert('رقم الجوال مطلوب');
+        const _epChk = validJordanianPhone(newPhone);
+        if (!_epChk.valid) return alert('رقم الجوال غير صحيح ❌\n' + _epChk.reason);
         if (newPhone === (item.phone || '')) { closeEditInquiryModal(); return; }
         const oldRef = item.phone || '—';
         item.phone = newPhone;
@@ -895,6 +915,8 @@ function addMediaNote() {
     const notes  = document.getElementById('mnNotes')?.value.trim()  || '';
 
     if (!city || !branch || !phone || !notes) return alert('يرجى إكمال جميع الحقول');
+    const _mnChk = validJordanianPhone(phone);
+    if (!_mnChk.valid) return alert('رقم الجوال غير صحيح ❌\n' + _mnChk.reason);
 
     if (!db.inquiriesnqSeq) db.inquiriesnqSeq = 1;
     // 🛡️ منع تكرار seq — نفس منطق addInquiry أعلاه
