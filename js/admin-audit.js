@@ -52,10 +52,10 @@ function _aaCallsTable(rows, cols) {
     if (!rows.length) return '<div style="padding:14px;color:var(--text-dim);font-size:13px;">لا توجد سجلات</div>';
     const head = cols.map(c => `<th style="text-align:right;padding:7px 10px;font-size:12px;color:var(--text-dim);border-bottom:1px solid var(--border);">${c.label}</th>`).join('');
     const body = rows.map(r => {
-        const tds = cols.map(c => `<td style="padding:7px 10px;font-size:13px;color:var(--text-main);border-bottom:1px solid rgba(255,255,255,0.04);vertical-align:top;">${c.cell(r)}</td>`).join('');
+        const tds = cols.map(c => `<td style="text-align:right;padding:7px 10px;font-size:13px;color:var(--text-main);border-bottom:1px solid rgba(255,255,255,0.04);vertical-align:top;">${c.cell(r)}</td>`).join('');
         return `<tr>${tds}</tr>`;
     }).join('');
-    return `<div style="overflow-x:auto;"><table style="width:100%;border-collapse:collapse;">
+    return `<div style="overflow-x:auto;"><table style="width:100%;border-collapse:collapse;direction:rtl;">
         <thead><tr>${head}</tr></thead><tbody>${body}</tbody></table></div>`;
 }
 
@@ -125,7 +125,7 @@ function renderAdminAudit() {
     });
     const invalids = [...invalidMap.values()];
     let sec3 = invalids.length
-        ? `<div style="overflow-x:auto;"><table style="width:100%;border-collapse:collapse;">
+        ? `<div style="overflow-x:auto;"><table style="width:100%;border-collapse:collapse;direction:rtl;">
             <thead><tr>
                 <th style="text-align:right;padding:7px 10px;font-size:12px;color:var(--text-dim);border-bottom:1px solid var(--border);">الرقم الخاطئ</th>
                 <th style="text-align:right;padding:7px 10px;font-size:12px;color:var(--text-dim);border-bottom:1px solid var(--border);">سبب الخطأ</th>
@@ -133,10 +133,10 @@ function renderAdminAudit() {
                 <th style="text-align:right;padding:7px 10px;font-size:12px;color:var(--text-dim);border-bottom:1px solid var(--border);">الفرع / الطبيعة</th>
             </tr></thead><tbody>
             ${invalids.map(o => `<tr>
-                <td style="padding:7px 10px;border-bottom:1px solid rgba(255,255,255,0.04);"><span style="font-family:monospace;direction:ltr;color:#ef5350;font-weight:700;">${sanitize(_aaNormalizePhone(o.phone) || o.phone || '—')}</span></td>
-                <td style="padding:7px 10px;border-bottom:1px solid rgba(255,255,255,0.04);font-size:12px;color:#ffab91;">${sanitize(o.reason)}</td>
-                <td style="padding:7px 10px;border-bottom:1px solid rgba(255,255,255,0.04);font-size:13px;color:var(--text-main);">${o.calls.length}</td>
-                <td style="padding:7px 10px;border-bottom:1px solid rgba(255,255,255,0.04);font-size:12px;color:var(--text-dim);">${o.calls.map(c => sanitize(c.branch || '—') + ' (' + _aaNature(c) + ')').join('<br>')}</td>
+                <td style="text-align:right;padding:7px 10px;border-bottom:1px solid rgba(255,255,255,0.04);"><span style="font-family:monospace;direction:ltr;color:#ef5350;font-weight:700;">${sanitize(_aaNormalizePhone(o.phone) || o.phone || '—')}</span></td>
+                <td style="text-align:right;padding:7px 10px;border-bottom:1px solid rgba(255,255,255,0.04);font-size:12px;color:#ffab91;">${sanitize(o.reason)}</td>
+                <td style="text-align:right;padding:7px 10px;border-bottom:1px solid rgba(255,255,255,0.04);font-size:13px;color:var(--text-main);">${o.calls.length}</td>
+                <td style="text-align:right;padding:7px 10px;border-bottom:1px solid rgba(255,255,255,0.04);font-size:12px;color:var(--text-dim);">${o.calls.map(c => sanitize(c.branch || '—') + ' (' + _aaNature(c) + ')').join('<br>')}</td>
             </tr>`).join('')}
             </tbody></table></div>`
         : '<div style="padding:14px;color:var(--text-dim);font-size:13px;">كل الأرقام اليوم صحيحة ✓</div>';
