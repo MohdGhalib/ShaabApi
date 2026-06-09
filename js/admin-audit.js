@@ -41,10 +41,17 @@ function _aaNature(r) {
     return bits.join(' — ') || '—';
 }
 
+/* رقم قابل للضغط → يفتح ملف الزبون (Customer 360) الذي يُظهر مرات التواصل، مثل الاستفسارات */
+function _aaPhoneLink(phone, color) {
+    const num = _aaNormalizePhone(phone) || phone || '';
+    if (!num || num === '—') return '<span style="color:var(--text-dim);">—</span>';
+    color = color || '#64b5f6';
+    return `<span class="c360-phone-link" onclick="event.stopPropagation();if(typeof openCustomer360==='function')openCustomer360('${sanitize(num)}')" title="عرض ملف الزبون ومرات التواصل" style="font-family:monospace;direction:ltr;display:inline-block;color:${color};font-weight:700;cursor:pointer;">${sanitize(num)}</span>`;
+}
+
 function _aaPhoneCell(phone) {
     const v = _aaPhoneValidity(phone);
-    const color = v.valid ? 'var(--text-main)' : '#ef9a9a';
-    return `<span style="font-family:monospace;direction:ltr;display:inline-block;color:${color};font-weight:700;">${sanitize(_aaNormalizePhone(phone) || phone || '—')}</span>`;
+    return _aaPhoneLink(phone, v.valid ? '#64b5f6' : '#ef9a9a');
 }
 
 /* جدول مكالمات عام — أعمدة قابلة للاختيار */
@@ -108,7 +115,7 @@ function renderAdminAudit() {
         ? repeated.map(([p, arr]) => `
             <div style="border:1px solid var(--border);border-radius:10px;margin-bottom:10px;overflow:hidden;">
                 <div style="display:flex;align-items:center;justify-content:space-between;padding:9px 12px;background:rgba(255,179,0,0.08);">
-                    <span style="font-family:monospace;direction:ltr;font-weight:700;color:#ffd54f;">${sanitize(p)}</span>
+                    ${_aaPhoneLink(p, '#ffd54f')}
                     <span style="font-size:12px;color:#ffb74d;font-weight:700;">📞 ${arr.length} مكالمات</span>
                 </div>
                 ${_aaCallsTable(arr, [_AA_COL_TIME, _AA_COL_TYPE, _AA_COL_BRANCH, _AA_COL_NATURE, _AA_COL_EMP])}
@@ -139,7 +146,7 @@ function renderAdminAudit() {
                 <th style="text-align:right;padding:7px 10px;font-size:12px;color:var(--text-dim);border-bottom:1px solid var(--border);">الفرع / الطبيعة</th>
             </tr></thead><tbody>
             ${invalids.map(o => `<tr>
-                <td style="text-align:right;padding:7px 10px;border-bottom:1px solid rgba(255,255,255,0.04);"><span style="font-family:monospace;direction:ltr;color:#ef5350;font-weight:700;">${sanitize(_aaNormalizePhone(o.phone) || o.phone || '—')}</span></td>
+                <td style="text-align:right;padding:7px 10px;border-bottom:1px solid rgba(255,255,255,0.04);">${_aaPhoneLink(o.phone, '#ef5350')}</td>
                 <td style="text-align:right;padding:7px 10px;border-bottom:1px solid rgba(255,255,255,0.04);font-size:12px;color:#ffab91;">${sanitize(o.reason)}</td>
                 <td style="text-align:right;padding:7px 10px;border-bottom:1px solid rgba(255,255,255,0.04);font-size:13px;color:var(--text-main);">${o.calls.length}</td>
                 <td style="text-align:right;padding:7px 10px;border-bottom:1px solid rgba(255,255,255,0.04);font-size:12px;color:var(--text-main);">${[...new Set(o.calls.map(c => c.addedBy || '—'))].map(sanitize).join('<br>')}</td>
