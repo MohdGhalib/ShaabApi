@@ -47,8 +47,24 @@ public class MontasiatController : ControllerBase
         var entity = new Montasia { Id = id, Version = 1, CreatedAt = DateTime.UtcNow };
         _ApplyFields(entity, body);
 
+        /* 🔒 (Serial fix, 2026-06-10) توليد الرقم المرجعي على الخادم.
+           السبب: العميل يولّد الـ serial من عدّاد مخزَّن في الـ blob المشترك ويُزامَن
+           لاحقاً، فجهازان يحملان نفس العدّاد المتقادم كانا يولّدان نفس الرقم (مثل 261963)
+           دون أن يرفض شيء التصادم. الآن الخادم هو المرجع: نحترم سيريال العميل لو كان
+           سليماً وغير مستخدَم، وإلا نُولّد التالي الحر للسنة. الفهرس الفريد
+           ux_montasiat_serial هو خط الدفاع الأخير ضد سباق إنشاءين متزامنين. */
+        entity.Serial = await _EnsureSerialAsync(entity.Serial, entity.Iso);
+
         _db.Montasiat.Add(entity);
-        await _db.SaveChangesAsync();
+        for (var attempt = 0; ; attempt++)
+        {
+            try { await _db.SaveChangesAsync(); break; }
+            catch (DbUpdateException ex) when (attempt < 6 && _IsDuplicateSerialViolation(ex))
+            {
+                // سباق إنشاء متزامن خطف رقمنا — هات التالي وأعد المحاولة (الكيان ما زال Added).
+                entity.Serial = await _NextSerialAsync(entity.Iso);
+            }
+        }
 
         _ = SseController.Broadcast("reload", "1");
         return Ok(new { ok = true, record = ToDto(entity) });
@@ -82,8 +98,23 @@ public class MontasiatController : ControllerBase
             }
         }
 
+        var prevSerial = entity.Serial;
         _ApplyFields(entity, body);
         entity.Version++;
+
+        /* 🔒 (Serial fix, 2026-06-10) لا تدع PUT يغيّر الرقم المرجعي إلى رقم يملكه
+           سجل آخر. بعد إصلاح التكرار + التوليد على الخادم صارت الأرقام فريدة وثابتة،
+           فأي عميل قديم يرسل سيريالاً متصادماً = نُبقي رقم السجل القديم بدل رفض الحفظ. */
+        if (entity.Serial != prevSerial && !string.IsNullOrEmpty(entity.Serial))
+        {
+            var serial = entity.Serial;
+            var clash = await _db.Montasiat.AnyAsync(m => m.Id != id && m.Serial == serial);
+            if (clash)
+            {
+                Console.WriteLine($"[montasiat] id={id} serial collision on PUT ('{prevSerial}'→'{entity.Serial}') — kept '{prevSerial}'");
+                entity.Serial = prevSerial;
+            }
+        }
 
         await _db.SaveChangesAsync();
         _ = SseController.Broadcast("reload", "1");
@@ -121,6 +152,40 @@ public class MontasiatController : ControllerBase
         await _db.SaveChangesAsync();
         _ = SseController.Broadcast("reload", "1");
         return Ok(new { ok = true, id, purged = true });
+    }
+
+    // ── server-authoritative serial helpers (2026-06-10) ─────────────────
+
+    /// <summary>Honor a well-formed, unused client serial; otherwise mint the next free one.</summary>
+    private async Task<string> _EnsureSerialAsync(string? clientSerial, string? iso)
+    {
+        var norm = MontasiatSerial.Normalize(clientSerial);
+        if (MontasiatSerial.IsWellFormed(norm))
+        {
+            var taken = await _db.Montasiat.AnyAsync(m => m.Serial == norm);
+            if (!taken) return norm;
+        }
+        return await _NextSerialAsync(iso);
+    }
+
+    private async Task<string> _NextSerialAsync(string? iso)
+    {
+        var yy = MontasiatSerial.YearPrefix(iso);
+        var existing = await _db.Montasiat
+            .Where(m => m.Serial != null && m.Serial.StartsWith(yy))
+            .Select(m => m.Serial!)
+            .ToListAsync();
+        return MontasiatSerial.Next(existing, yy);
+    }
+
+    /// <summary>True when a save failed because the unique serial index rejected a duplicate.
+    /// Matches MySQL (Pomelo/MySqlConnector) and SQLite (tests) error text.</summary>
+    private static bool _IsDuplicateSerialViolation(DbUpdateException ex)
+    {
+        var msg = ex.GetBaseException().Message ?? "";
+        return msg.Contains("ux_montasiat_serial")
+            || (msg.Contains("Duplicate entry") && msg.Contains("serial"))
+            || msg.Contains("UNIQUE constraint failed: montasiat.serial");
     }
 
     private static readonly HashSet<string> _typedFields = new(StringComparer.Ordinal)

@@ -1651,6 +1651,7 @@ async function _dispatchOne(method, url, body) {
 async function _flushPerRecordChanges() {
     const tasks = [];
     let summary = '';
+    let _serialReconciled = false;
     const _dispatchTs = Date.now();
     for (const type of ['inquiries', 'montasiat', 'complaints']) {
         const diff = _diffRecords(type);
@@ -1660,7 +1661,24 @@ async function _flushPerRecordChanges() {
         const recentMap = _recentlyDispatched[type] || (_recentlyDispatched[type] = new Map());
         for (const rec of diff.created) {
             recentMap.set(rec.id, { ts: _dispatchTs, snapshot: JSON.stringify(rec) });
-            tasks.push(_dispatchOne('POST', urlBase, rec));
+            if (type === 'montasiat') {
+                /* 🔒 (Serial fix, 2026-06-10) الخادم هو مرجع الرقم المرجعي: لو أعاد ترقيم
+                   المنتسية (تصادم serial مع جهاز آخر) نعتمد رقمه فوراً — وإلا أعاد diff
+                   التالي دهس رقم الخادم الصحيح، ولرأى الموظف رقماً مكرراً على الشاشة. */
+                tasks.push(_dispatchOne('POST', urlBase, rec).then(async res => {
+                    try {
+                        const j = await res.json();
+                        const srv = j && j.record && j.record.serial;
+                        if (srv && srv !== rec.serial) {
+                            console.log(`[Phase5b] montasia ${rec.id} serial ${rec.serial} → ${srv} (server-assigned)`);
+                            rec.serial = srv;
+                            _serialReconciled = true;
+                        }
+                    } catch (e) { /* رد غير JSON — تجاهل */ }
+                }));
+            } else {
+                tasks.push(_dispatchOne('POST', urlBase, rec));
+            }
         }
         for (const rec of diff.updated) {
             recentMap.set(rec.id, { ts: _dispatchTs, snapshot: JSON.stringify(rec) });
@@ -1677,7 +1695,12 @@ async function _flushPerRecordChanges() {
     if (tasks.length === 0) return 0;
     console.log(`[Phase5b] dispatching ${tasks.length} per-record:${summary}`);
     await Promise.all(tasks);
+    /* أعِد رصد آخر حالة محفوظة بعد اعتماد أرقام الخادم — يلتقط الـ serial الجديد
+       فلا يُرسَل كـ "updated" في الحفظ التالي. ثم أعِد الرسم ليرى الموظف الرقم النهائي. */
     _initLastSavedRecords();
+    if (_serialReconciled && typeof renderAll === 'function') {
+        try { renderAll(); } catch (e) { console.warn('[Phase5b] renderAll after serial reconcile failed:', e); }
+    }
     return tasks.length;
 }
 

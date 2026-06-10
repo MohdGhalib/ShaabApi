@@ -1475,8 +1475,20 @@ function _genMontasiaSerial(isoDate) {
         }
         db.montasiatSeqByYear[yy] = max;
     }
-    db.montasiatSeqByYear[yy]++;
-    return `${yy}${String(db.montasiatSeqByYear[yy]).padStart(3, '0')}`;
+    /* 🔒 (Serial fix, 2026-06-10) تخطَّ أي رقم مستخدَم فعلاً في db.montasiat — العدّاد قد
+       يكون متقادماً (جهاز آخر استهلك أرقاماً أعلى وصلتنا عبر GET دون رفع العدّاد)، فبدون
+       هذا الفحص نولّد رقماً مكرراً يضطر الخادم لإعادة ترقيمه. الخادم يبقى المرجع النهائي. */
+    const _used = new Set();
+    for (const x of (db.montasiat || [])) {
+        const s = (x.serial || '').replace(/[-\s]/g, '');
+        if (s) _used.add(s);
+    }
+    let _cand;
+    do {
+        db.montasiatSeqByYear[yy]++;
+        _cand = `${yy}${String(db.montasiatSeqByYear[yy]).padStart(3, '0')}`;
+    } while (_used.has(_cand));
+    return _cand;
 }
 
 /* ── طبيع رقم منتسية: إزالة "-" والفراغات ── */

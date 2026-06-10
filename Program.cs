@@ -257,6 +257,37 @@ using (var scope = app.Services.CreateScope())
         Console.WriteLine($"[startup] ⚠ ALTER montasiat.serial failed: {ex.Message}");
     }
 
+    // ── 🔒 (2026-06-10) UNIQUE index on montasiat.serial — stops duplicate reference
+    //    numbers (e.g. 261963). MySQL has no CREATE UNIQUE INDEX IF NOT EXISTS, so we
+    //    probe information_schema first. If duplicates still exist the CREATE fails and
+    //    we log a hint to run POST /api/admin/dedupe-montasiat-serials?apply=true, which
+    //    renumbers the newer duplicates and then builds this index.
+    try
+    {
+        var idxCount = (await db.Database
+            .SqlQueryRaw<long>(
+                "SELECT COUNT(*) AS Value FROM information_schema.statistics " +
+                "WHERE table_schema = DATABASE() AND table_name = 'montasiat' " +
+                "AND index_name = 'ux_montasiat_serial'")
+            .ToListAsync()).FirstOrDefault();
+
+        if (idxCount == 0)
+        {
+            await db.Database.ExecuteSqlRawAsync(
+                "CREATE UNIQUE INDEX ux_montasiat_serial ON montasiat (serial)");
+            Console.WriteLine("[startup] ✓ ux_montasiat_serial unique index created");
+        }
+        else
+        {
+            Console.WriteLine("[startup] ✓ ux_montasiat_serial unique index already present");
+        }
+    }
+    catch (Exception ex)
+    {
+        Console.WriteLine($"[startup] ⚠ ux_montasiat_serial NOT created (likely existing duplicate serials): {ex.Message}");
+        Console.WriteLine("[startup] → run POST /api/admin/dedupe-montasiat-serials?apply=true to fix duplicates, then redeploy.");
+    }
+
     var row = await db.Storage.FindAsync("Shaab_Employees_DB");
     List<EmpRecord>? emps = null;
     if (row != null)

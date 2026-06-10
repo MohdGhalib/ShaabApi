@@ -41,6 +41,10 @@ public class AppDbContext : DbContext
             entity.HasIndex(e => e.Branch);
             entity.HasIndex(e => e.Iso);
             entity.HasIndex(e => e.Type);
+            // 🔒 (2026-06-10) الرقم المرجعي فريد عالمياً (NULL مسموح ومتعدّد). يمنع تكرار
+            // الـ serial مثل 261963. على القواعد الموجودة يُنشأ عبر raw SQL في Program.cs
+            // بعد إصلاح التكرارات (EnsureCreated لا يعدّل جدولاً قائماً).
+            entity.HasIndex(e => e.Serial).IsUnique().HasDatabaseName("ux_montasiat_serial");
         });
 
         modelBuilder.Entity<Complaint>(entity =>

@@ -420,6 +420,115 @@ public class AdminMigrationController : ControllerBase
         return n;
     }
 
+    /// <summary>
+    /// One-time repair (2026-06-10): find montasiat sharing the same reference number
+    /// (serial, e.g. 261963) and renumber the NEWER duplicates — the oldest record (smallest
+    /// id) keeps the number. Also nulls out empty-string serials so the unique index can build.
+    /// Dry-run by default; pass ?apply=true to write changes and create ux_montasiat_serial.
+    /// </summary>
+    [HttpPost("dedupe-montasiat-serials")]
+    public async Task<IActionResult> DedupeMontasiatSerials([FromQuery] bool apply = false)
+    {
+        if (!_IsAuthorized()) return Forbid();
+        var sw = Stopwatch.StartNew();
+
+        // smallest id first = oldest = keeps its serial (ids are Date.now()-based)
+        var all = await _db.Montasiat
+            .OrderBy(m => m.Id)
+            .Select(m => new { m.Id, m.Serial, m.Iso })
+            .ToListAsync();
+
+        // every normalized non-empty serial currently in use (across all years)
+        var used = new HashSet<string>(StringComparer.Ordinal);
+        foreach (var m in all)
+        {
+            var s = MontasiatSerial.Normalize(m.Serial);
+            if (s.Length > 0) used.Add(s);
+        }
+
+        var renumber = new List<(long id, string from, string to)>();
+        var nullify  = new List<long>();
+        var seen     = new HashSet<string>(StringComparer.Ordinal);
+
+        foreach (var m in all)
+        {
+            var s = MontasiatSerial.Normalize(m.Serial);
+            if (s.Length == 0)
+            {
+                if (m.Serial != null) nullify.Add(m.Id); // "" / whitespace → NULL
+                continue;
+            }
+            if (seen.Add(s)) continue;                   // first (oldest) occurrence keeps it
+
+            var yy = MontasiatSerial.YearPrefix(m.Iso);
+            if (!yy.All(char.IsDigit)) yy = s.Substring(0, 2);
+            var ns = MontasiatSerial.Next(used, yy);     // free vs everything used so far
+            used.Add(ns);
+            renumber.Add((m.Id, s, ns));
+        }
+
+        if (!apply)
+        {
+            sw.Stop();
+            return Ok(new
+            {
+                ok = true,
+                applied = false,
+                duplicatesFound = renumber.Count,
+                emptySerials = nullify.Count,
+                plan = renumber.Select(r => new { id = r.id, from = r.from, to = r.to }).ToArray(),
+                durationMs = sw.ElapsedMilliseconds,
+                note = "Dry run. Re-call with ?apply=true to renumber the newer duplicates and build the unique index."
+            });
+        }
+
+        foreach (var r in renumber)
+        {
+            var e = await _db.Montasiat.FindAsync(r.id);
+            if (e != null) { e.Serial = r.to; e.Version++; }
+        }
+        foreach (var id in nullify)
+        {
+            var e = await _db.Montasiat.FindAsync(id);
+            if (e != null) { e.Serial = null; e.Version++; }
+        }
+        await _db.SaveChangesAsync();
+
+        string indexNote;
+        try { await _EnsureUniqueSerialIndexAsync(); indexNote = "ux_montasiat_serial ensured"; }
+        catch (Exception ex) { indexNote = "index creation failed: " + ex.Message; }
+
+        sw.Stop();
+        _ = SseController.Broadcast("reload", "1");
+        var userEmpId = User.FindFirst("empId")?.Value ?? "?";
+        Console.WriteLine($"[DEDUPE-SERIAL] by={userEmpId} renumbered={renumber.Count} nulled={nullify.Count} in {sw.ElapsedMilliseconds}ms");
+
+        return Ok(new
+        {
+            ok = true,
+            applied = true,
+            renumbered = renumber.Count,
+            emptyNulled = nullify.Count,
+            changes = renumber.Select(r => new { id = r.id, from = r.from, to = r.to }).ToArray(),
+            indexNote,
+            durationMs = sw.ElapsedMilliseconds,
+            note = "Reload the app (Ctrl+Shift+R). The oldest record kept its number; newer duplicates were renumbered."
+        });
+    }
+
+    private async Task _EnsureUniqueSerialIndexAsync()
+    {
+        var idxCount = (await _db.Database
+            .SqlQueryRaw<long>(
+                "SELECT COUNT(*) AS Value FROM information_schema.statistics " +
+                "WHERE table_schema = DATABASE() AND table_name = 'montasiat' " +
+                "AND index_name = 'ux_montasiat_serial'")
+            .ToListAsync()).FirstOrDefault();
+        if (idxCount > 0) return;
+        await _db.Database.ExecuteSqlRawAsync(
+            "CREATE UNIQUE INDEX ux_montasiat_serial ON montasiat (serial)");
+    }
+
     // ── helpers ──────────────────────────────────────────────────────────
 
     private bool _IsAuthorized()
