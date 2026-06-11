@@ -15,6 +15,7 @@
         'inquiries', 'montasiat', 'complaints',  // per-record tables (Migration #11)
         'auditLog',                              // audit_log table
         'messages',                              // messages table
+        'managerNotes',                          // manager_notes table (ملاحظات مدراء مناطق)
         'auditNotes', 'compensations'            // مفاتيح مستقلة (إزالة ازدواج)
     ];
 

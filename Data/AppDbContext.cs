@@ -15,6 +15,7 @@ public class AppDbContext : DbContext
     public DbSet<AuditEntry>   AuditLog    => Set<AuditEntry>();
     public DbSet<Employee>     Employees   => Set<Employee>();
     public DbSet<Message>      Messages    => Set<Message>();
+    public DbSet<ManagerNote>  ManagerNotes => Set<ManagerNote>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -80,6 +81,15 @@ public class AppDbContext : DbContext
             entity.HasIndex(e => e.Ts);
             entity.HasIndex(e => e.ToName);
             entity.HasIndex(e => e.FromName);
+        });
+
+        modelBuilder.Entity<ManagerNote>(entity =>
+        {
+            entity.Property(e => e.Version).IsConcurrencyToken();
+            entity.Property(e => e.CreatedAt).HasDefaultValueSql("CURRENT_TIMESTAMP");
+            entity.HasIndex(e => e.Ts);
+            entity.HasIndex(e => e.Branch);
+            entity.HasIndex(e => e.Closed);
         });
     }
 }

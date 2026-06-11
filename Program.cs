@@ -214,6 +214,28 @@ using (var scope = app.Services.CreateScope())
             INDEX idx_msg_ts (ts),
             INDEX idx_msg_to (to_name),
             INDEX idx_msg_from (from_name)
+        ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;"),
+
+        // -- regional-managers notes (ملاحظات مدراء مناطق) in their own table --
+        ("manager_notes", @"CREATE TABLE IF NOT EXISTS manager_notes (
+            id BIGINT PRIMARY KEY,
+            branch VARCHAR(100) NULL,
+            note_date VARCHAR(30) NULL,
+            notified_person VARCHAR(150) NULL,
+            text TEXT NULL,
+            closed TINYINT(1) NOT NULL DEFAULT 0,
+            close_note TEXT NULL,
+            closed_by VARCHAR(100) NULL,
+            closed_at BIGINT NOT NULL DEFAULT 0,
+            added_by VARCHAR(100) NULL,
+            ts BIGINT NOT NULL DEFAULT 0,
+            deleted TINYINT(1) NOT NULL DEFAULT 0,
+            data JSON NULL,
+            version BIGINT NOT NULL DEFAULT 0,
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            INDEX idx_mnote_ts (ts),
+            INDEX idx_mnote_branch (branch),
+            INDEX idx_mnote_closed (closed)
         ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;")
     };
 

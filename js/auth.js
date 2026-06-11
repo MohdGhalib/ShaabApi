@@ -572,6 +572,10 @@ function setProfileUI() {
         document.getElementById('tab-an')?.classList.add('hidden');
     }
 
+    // ملاحظات مدراء مناطق — لموظفي الكول سنتر ومدير الكول سنتر فقط
+    const _canSeeRMN = currentUser?.role === 'cc_employee' || currentUser?.role === 'cc_manager';
+    document.getElementById('tab-rmn')?.classList.toggle('hidden', !_canSeeRMN);
+
     // سجل التدقيق — للمدير ومدير الكول سنتر فقط
     if (isAdmin || isCCManager) {
         document.getElementById('tab-l')?.classList.remove('hidden');
