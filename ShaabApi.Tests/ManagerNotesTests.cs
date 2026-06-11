@@ -67,6 +67,25 @@ public class ManagerNotesTests : IDisposable
     }
 
     [Fact]
+    public async Task Patch_MissingRow_UpsertsFromFullBody()
+    {
+        // simulates a lost POST: close arrives for a note the server never stored
+        using (var ctx = NewCtx())
+        {
+            var ctrl = new ManagerNotesController(ctx);
+            await ctrl.Patch(555, Body("{\"id\":555,\"branch\":\"الراية\",\"noteDate\":\"2026-06-11\",\"text\":\"ملاحظة\",\"ts\":5,\"closed\":true,\"closeNote\":\"تم\",\"closedBy\":\"المدير\"}"));
+        }
+        using (var ctx = NewCtx())
+        {
+            var n = await ctx.ManagerNotes.FindAsync(555L);
+            Assert.NotNull(n);
+            Assert.True(n!.Closed);
+            Assert.Equal("تم", n.CloseNote);
+            Assert.Equal("ملاحظة", n.Text);
+        }
+    }
+
+    [Fact]
     public async Task Patch_SoftDeletes()
     {
         using (var ctx = NewCtx())

@@ -201,8 +201,14 @@ function confirmCloseManagerNote() {
     n.closedBy = currentUser ? currentUser.name : '—';
     n.closedAt = _now;
 
+    /* أرسِل الملاحظة كاملة (لا أعلام الإغلاق فقط): لو ضاع POST الأصلي (نشر/شبكة) يُنشئها
+       الخادم مغلقةً عبر upsert بدل إسقاط الإغلاق بصمت. */
     if (typeof _patchManagerNote === 'function')
-        _patchManagerNote(n.id, { closed: true, closeNote, closedBy: n.closedBy, closedAt: _now });
+        _patchManagerNote(n.id, {
+            id: n.id, branch: n.branch, noteDate: n.noteDate, notifiedPerson: n.notifiedPerson,
+            text: n.text, addedBy: n.addedBy, ts: n.ts,
+            closed: true, closeNote, closedBy: n.closedBy, closedAt: _now
+        });
     if (typeof _logAudit === 'function')
         _logAudit('closeManagerNote', n.branch || '—', (closeNote || '').substring(0, 80), 'managerNote', n.id);
 

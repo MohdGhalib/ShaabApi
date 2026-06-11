@@ -41,6 +41,7 @@ public class ManagerNotesController : ControllerBase
             try { await _db.SaveChangesAsync(); }
             catch (DbUpdateException) { /* duplicate id inserted concurrently — treat as success */ }
         }
+        _ = SseController.Broadcast("reload", "1");
         return Ok(new { ok = true, id = n.Id });
     }
 
@@ -53,7 +54,22 @@ public class ManagerNotesController : ControllerBase
     public async Task<IActionResult> Patch(long id, [FromBody] JsonElement body)
     {
         var row = await _db.ManagerNotes.FirstOrDefaultAsync(x => x.Id == id);
-        if (row == null) return Ok(new { ok = true, id, missing = true }); // tolerate races
+        if (row == null)
+        {
+            // 🛡️ upsert: the original POST may have been lost (deploy race / network blip / the
+            // PATCH outran the not-yet-committed insert). The client sends the full note on close,
+            // so create it now (with whatever close flags the body carries) instead of dropping it.
+            var created = _FromJson(body);
+            if (created != null && created.Id == id)
+            {
+                _db.ManagerNotes.Add(created);
+                try { await _db.SaveChangesAsync(); }
+                catch (DbUpdateException) { /* inserted concurrently — fine */ }
+                _ = SseController.Broadcast("reload", "1");
+                return Ok(new { ok = true, id, created = true });
+            }
+            return Ok(new { ok = true, id, missing = true }); // partial body, nothing to create
+        }
 
         if (_TryStr(body, "branch",         out var br)) row.Branch         = _Cap(br, 100);
         if (_TryStr(body, "noteDate",       out var nd)) row.NoteDate       = _Cap(nd, 30);
@@ -74,6 +90,7 @@ public class ManagerNotesController : ControllerBase
         row.Version++;
         try { await _db.SaveChangesAsync(); }
         catch (DbUpdateConcurrencyException) { /* another writer won — its value stands */ }
+        _ = SseController.Broadcast("reload", "1");
         return Ok(new { ok = true, id });
     }
 
