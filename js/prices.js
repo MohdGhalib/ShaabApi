@@ -56,6 +56,8 @@ function renderPrices() {
         item.name.toLowerCase().includes(search) ||
         item.weight.toLowerCase().includes(search))
     );
+    // ترتيب أبجدي حسب اسم الصنف (لا يؤثر على الفهارس الأصلية — realIdx يأتي من _idxByItem)
+    list.sort((a, b) => (a.name || '').localeCompare((b.name || ''), 'ar'));
 
     // شريط التحديد الجماعي — زر "عرض المحدد" يظهر للجميع، و"حذف" للمدراء فقط
     const bulkBarHtml = (_selP.size > 0) ? `
