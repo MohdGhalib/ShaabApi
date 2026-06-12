@@ -11,6 +11,8 @@
 function _rmnVal(id) { const el = document.getElementById(id); return el ? el.value : ''; }
 function _rmnEsc(s)  { return (typeof sanitize === 'function') ? sanitize(s) : String(s == null ? '' : s); }
 function _rmnCanDelete() { return !!(currentUser && (currentUser.isAdmin || currentUser.role === 'cc_manager')); }
+/* تنسيق توقيت الإغلاق (epoch ms) — تاريخ + وقت بصيغة عربية */
+function _rmnFmtTs(ts) { try { return new Date(ts).toLocaleString('ar-EG'); } catch { return ''; } }
 
 /* ── عرض قائمة الملاحظات حسب الفلاتر ── */
 function renderManagerNotes() {
@@ -70,7 +72,7 @@ function renderManagerNotes() {
         const closedBlock = n.closed ? `
             <div style="margin-top:10px;padding:9px 12px;background:rgba(46,125,50,0.10);border-right:3px solid rgba(46,125,50,0.6);border-radius:6px;font-size:12.5px;color:var(--text-main);line-height:1.6;">
                 <b style="color:#66bb6a;">✓ ملاحظة الإغلاق:</b> ${_rmnEsc(n.closeNote || '—')}
-                <div style="font-size:11px;color:var(--text-dim);margin-top:4px;">أغلقها: <b style="color:#a5d6a7;">${_rmnEsc(n.closedBy || '—')}</b></div>
+                <div style="font-size:11px;color:var(--text-dim);margin-top:4px;">أغلقها: <b style="color:#a5d6a7;">${_rmnEsc(n.closedBy || '—')}</b>${n.closedAt ? ` · 🕒 ${_rmnEsc(_rmnFmtTs(n.closedAt))}` : ''}</div>
             </div>` : '';
 
         const actions = open
