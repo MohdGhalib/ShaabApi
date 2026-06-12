@@ -13,7 +13,8 @@
     'use strict';
     if (typeof window === 'undefined' || typeof document === 'undefined') return;
 
-    const SEARCH_MIN = 7; // أظهر صندوق البحث فقط لو عدد الخيارات ≥ هذا الحد
+    const SEARCH_MIN  = 7; // أظهر صندوق البحث فقط لو عدد الخيارات ≥ هذا الحد
+    const ENHANCE_MIN = 8; // لا تُحوّل إلا القوائم الطويلة؛ القصيرة تبقى أصلية (أخفّ وأسرع)
     const IS_COARSE = (() => {
         try { return !!(window.matchMedia && window.matchMedia('(pointer:coarse)').matches); }
         catch { return false; }
@@ -41,10 +42,25 @@
             sel.hasAttribute('data-no-search') || sel.classList.contains('no-search');
     }
 
+    /* حوّل القوائم الطويلة فقط. القائمة القصيرة قد تطول لاحقاً (cascade الفروع) فنُعلّق
+       مِجَسّاً خفيفاً يعيد المحاولة عند تغيّر خياراتها، ثم يفصل نفسه بمجرّد التحويل. */
+    function tryEnhance(sel) {
+        if (shouldSkip(sel) || IS_COARSE || !sel.parentNode) return;
+        if (sel.options.length >= ENHANCE_MIN) { enhance(sel); return; }
+        if (sel.dataset.ssProbed === '1') return;
+        sel.dataset.ssProbed = '1';
+        const probe = new MutationObserver(() => {
+            if (sel.options.length >= ENHANCE_MIN) { probe.disconnect(); sel._ssProbe = null; enhance(sel); }
+        });
+        probe.observe(sel, { childList: true });
+        sel._ssProbe = probe;
+    }
+
     function enhance(sel) {
         if (shouldSkip(sel)) return;
         if (IS_COARSE) return;
         if (!sel.parentNode) return;
+        if (sel._ssProbe) { try { sel._ssProbe.disconnect(); } catch {} sel._ssProbe = null; }
         sel.dataset.ss = '1';
 
         const wrap = document.createElement('span');
@@ -143,6 +159,8 @@
             else if (e.key === 'Escape') { e.preventDefault(); close(); }
         }
         function onDocDown(e) { if (panel && !panel.contains(e.target) && e.target !== trigger) close(); }
+        // التمرير داخل اللوحة (لائحة الخيارات) يجب ألّا يُغلقها؛ التمرير الخارجي يُعيد تموضعها فقط
+        function onScroll(e) { if (!panel || panel.contains(e.target)) return; position(); }
 
         function open() {
             if (sel.disabled) return;
@@ -171,15 +189,15 @@
             }
             setTimeout(() => {
                 document.addEventListener('mousedown', onDocDown, true);
-                window.addEventListener('resize', close, true);
-                document.addEventListener('scroll', close, true);
+                window.addEventListener('resize', onScroll, true);
+                document.addEventListener('scroll', onScroll, true);
             }, 0);
         }
         function close() {
             if (!panel) return;
             document.removeEventListener('mousedown', onDocDown, true);
-            window.removeEventListener('resize', close, true);
-            document.removeEventListener('scroll', close, true);
+            window.removeEventListener('resize', onScroll, true);
+            document.removeEventListener('scroll', onScroll, true);
             panel.remove();
             panel = null; listEl = null; searchEl = null; items = []; hi = -1;
             trigger.classList.remove('ss-open');
@@ -193,18 +211,22 @@
         });
     }
 
-    function scan(root) { (root || document).querySelectorAll('select').forEach(enhance); }
+    function scan(root) { (root || document).querySelectorAll('select').forEach(tryEnhance); }
 
     /* مراقبة الإضافات الديناميكية (الصفحات تُبنى عبر innerHTML) + تنظيف المراقبين عند الإزالة */
     const docMo = new MutationObserver((muts) => {
         for (const m of muts) {
             for (const n of m.addedNodes) {
                 if (n.nodeType !== 1) continue;
-                if (n.tagName === 'SELECT') enhance(n);
-                else if (n.querySelectorAll) n.querySelectorAll('select').forEach(enhance);
+                if (n.tagName === 'SELECT') tryEnhance(n);
+                else if (n.querySelectorAll) n.querySelectorAll('select').forEach(tryEnhance);
             }
             for (const n of m.removedNodes) {
                 if (n.nodeType !== 1) continue;
+                if (n.tagName === 'SELECT' && n._ssProbe) { try { n._ssProbe.disconnect(); } catch {} n._ssProbe = null; }
+                if (n.querySelectorAll) n.querySelectorAll('select').forEach(s => {
+                    if (s._ssProbe) { try { s._ssProbe.disconnect(); } catch {} s._ssProbe = null; }
+                });
                 const wraps = n.classList && n.classList.contains('ss-wrap')
                     ? [n] : (n.querySelectorAll ? Array.from(n.querySelectorAll('.ss-wrap')) : []);
                 wraps.forEach(w => { if (w._ssMo) { try { w._ssMo.disconnect(); } catch {} w._ssMo = null; } });
@@ -225,7 +247,7 @@
         select.ss-native { display:none !important; }
         .ss-trigger {
             width:100%; padding:12px; border-radius:12px; border:1px solid var(--border);
-            background:var(--bg-input); color:var(--text-main); font-family:'Cairo'; font-size:14px;
+            background:var(--bg-input); color:var(--text-main); font-family:'Cairo'; font-size:13px;
             text-align:right; cursor:pointer; display:flex; align-items:center; justify-content:space-between;
             gap:8px; line-height:1.25; transition:border-color .22s ease, box-shadow .22s ease;
             white-space:nowrap; overflow:hidden; text-overflow:ellipsis;
@@ -251,7 +273,7 @@
         .ss-search:focus { border-color:var(--accent-red); outline:none; }
         .ss-list { overflow-y:auto; max-height:244px; }
         .ss-opt {
-            padding:9px 13px; cursor:pointer; color:var(--text-main); font-size:13.5px; font-family:'Cairo';
+            padding:8px 13px; cursor:pointer; color:var(--text-main); font-size:13px; font-family:'Cairo';
             white-space:nowrap; overflow:hidden; text-overflow:ellipsis; text-align:right;
         }
         .ss-opt.ss-hi { background:rgba(211,47,47,0.12); }
