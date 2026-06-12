@@ -114,6 +114,23 @@ test('_mergeById: الأعلام أحادية الاتجاه (OR محلي/خاد
     assert.strictEqual(out[0].readByMe, true, 'لا يجب أن تومض "غير مقروء"');
 });
 
+test('_mergeById: newerWinsBy — المحلي الأحدث يفوز (تعديل/إلغاء إغلاق لم يصل بعد)', () => {
+    // المحلي فتح الملاحظة للتوّ (updatedTs أحدث) بينما الخادم ما زال مغلقاً
+    const local  = [{ id: 1, ts: 5, closed: false, branch: 'خلدا', updatedTs: 200 }];
+    const server = [{ id: 1, ts: 5, closed: true,  branch: 'الراية', updatedTs: 100 }];
+    const out = _mergeById(local, server, { monotonicTrueKeys: ['deleted'], newerWinsBy: 'updatedTs' });
+    assert.strictEqual(out[0].closed, false, 'إلغاء الإغلاق المحلي لا يُرجَع');
+    assert.strictEqual(out[0].branch, 'خلدا', 'تعديل الفرع المحلي يُحفظ');
+});
+
+test('_mergeById: newerWinsBy — الخادم الأحدث يفوز (تعديل من جهاز آخر)', () => {
+    const local  = [{ id: 1, ts: 5, closed: false, branch: 'خلدا',  updatedTs: 100 }];
+    const server = [{ id: 1, ts: 5, closed: true,  branch: 'الراية', updatedTs: 300 }];
+    const out = _mergeById(local, server, { monotonicTrueKeys: ['deleted'], newerWinsBy: 'updatedTs' });
+    assert.strictEqual(out[0].closed, true,   'تعديل الخادم الأحدث يفوز');
+    assert.strictEqual(out[0].branch, 'الراية');
+});
+
 test('_mergeById: يُبقي المحلي غير الموجود على الخادم (مُرسَل للتو)', () => {
     const local  = [{ id: 2, ts: 9, text: 'just sent' }];
     const server = [{ id: 1, ts: 5, text: 'srv' }];

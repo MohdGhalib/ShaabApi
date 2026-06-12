@@ -195,7 +195,8 @@ function _patchManagerNote(id, patch) {
 }
 
 /* جلب الملاحظات من الجدول المستقل ودمجها في db.managerNotes.
-   closed/deleted أحادية الاتجاه (OR محلي/خادم) لتفادي وميض الرجوع قبل وصول الـ PATCH. */
+   deleted أحادية الاتجاه؛ وبقيّة الحقول (closed/تعديلات) تُحسم بـ updatedTs (الأحدث يفوز)
+   فيُسمح بإلغاء الإغلاق والتعديل دون رجوع، ودون وميض قبل وصول الـ PATCH. */
 let _lastMnFetchTs = 0;
 async function _fetchManagerNotesFromServer(force) {
     if (typeof IS_LOCAL !== 'undefined' && IS_LOCAL) return;
@@ -210,7 +211,7 @@ async function _fetchManagerNotesFromServer(force) {
         const server = await res.json();
         if (!Array.isArray(server)) return;
         if (!db.managerNotes) db.managerNotes = [];
-        db.managerNotes = _mergeById(db.managerNotes, server, { monotonicTrueKeys: ['closed', 'deleted'] });
+        db.managerNotes = _mergeById(db.managerNotes, server, { monotonicTrueKeys: ['deleted'], newerWinsBy: 'updatedTs' });
         if (typeof renderManagerNotes === 'function' && typeof _activeTab !== 'undefined' && _activeTab === 'rmn') renderManagerNotes();
     } catch (e) { console.warn('[managerNotes] fetch from server failed:', e); }
 }

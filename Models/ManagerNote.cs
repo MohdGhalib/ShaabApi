@@ -32,6 +32,10 @@ public class ManagerNote
     // epoch milliseconds of creation — indexed for ordering / since-Ts queries
     [Column("ts")] public long Ts { get; set; }
 
+    // epoch ms of the last client mutation (close / reopen / field edit). Drives the
+    // client's last-write-wins merge so an edit or reopen isn't reverted by a stale GET.
+    [Column("updated_ts")] public long UpdatedTs { get; set; }
+
     [Column("deleted")] public bool Deleted { get; set; }
 
     // full original object as sent by the client (forward-compat extras)

@@ -86,6 +86,27 @@ public class ManagerNotesTests : IDisposable
     }
 
     [Fact]
+    public async Task Patch_Reopens_AndEditsFields()
+    {
+        using (var ctx = NewCtx())
+        {
+            var ctrl = new ManagerNotesController(ctx);
+            await ctrl.Add(Body("{\"id\":42,\"branch\":\"الراية\",\"text\":\"ملاحظة\",\"ts\":1}"));
+            await ctrl.Patch(42, Body("{\"closed\":true,\"closeNote\":\"تم\",\"closedBy\":\"المدير\",\"closedAt\":100,\"updatedTs\":100}"));
+            // reopen + edit branch/addedBy (إلغاء الإغلاق مع تعديل حقول)
+            await ctrl.Patch(42, Body("{\"closed\":false,\"branch\":\"خلدا\",\"addedBy\":\"موظف\",\"updatedTs\":200}"));
+        }
+        using (var ctx = NewCtx())
+        {
+            var n = await ctx.ManagerNotes.FindAsync(42L);
+            Assert.False(n!.Closed);            // إلغاء الإغلاق نجح
+            Assert.Equal("خلدا", n.Branch);     // تعديل الفرع
+            Assert.Equal("موظف", n.AddedBy);    // تعديل الشخص المسجّل
+            Assert.Equal(200, n.UpdatedTs);     // ختم آخر تعديل
+        }
+    }
+
+    [Fact]
     public async Task Patch_SoftDeletes()
     {
         using (var ctx = NewCtx())

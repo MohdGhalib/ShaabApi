@@ -63,14 +63,18 @@
         return { items: out, changed: out.length !== items.length };
     }
 
-    /* دمج سجلات الخادم مع المحلية. opts = { idOf, sortKey, monotonicTrueKeys }.
-       الخادم مصدر الحقيقة لكل id؛ والأعلام في monotonicTrueKeys أحادية الاتجاه
-       (تبقى true لو كانت true محلياً أو على الخادم)؛ والمحلي غير الموجود على الخادم يُبقى. */
+    /* دمج سجلات الخادم مع المحلية. opts = { idOf, sortKey, monotonicTrueKeys, newerWinsBy }.
+       الخادم مصدر الحقيقة لكل id افتراضياً؛ والأعلام في monotonicTrueKeys أحادية الاتجاه
+       (تبقى true لو كانت true محلياً أو على الخادم)؛ والمحلي غير الموجود على الخادم يُبقى.
+       newerWinsBy: اسم حقل ختم زمني (مثل 'updatedTs') — لو كان المحلي أحدث من الخادم يُبقى
+       السجل المحلي كاملاً (يحمي تعديلاً/إغلاقاً/إلغاء إغلاق محلياً لم يصل بعد للخادم فيمنع
+       الوميض في الاتجاهين)، مع تطبيق monotonicTrueKeys فوق المُختار في الحالتين. */
     function _mergeById(local, server, opts) {
         opts = opts || {};
         const idOf    = opts.idOf    || ((x) => (x ? x.id : null));
         const sortKey = opts.sortKey || ((x) => (x && x.ts) || 0);
         const mono    = opts.monotonicTrueKeys || [];
+        const nw      = opts.newerWinsBy || null;
         local  = Array.isArray(local)  ? local  : [];
         server = Array.isArray(server) ? server : [];
 
@@ -81,8 +85,10 @@
         for (const s of server) {
             const id = idOf(s); if (id == null) continue;
             const l = localById.get(String(id));
-            if (l) for (const k of mono) s[k] = !!(s[k] || l[k]);
-            byId.set(String(id), s);
+            // الأحدث يفوز: لو المحلي أحدث (ختم أكبر) نُبقيه كاملاً، وإلا الخادم
+            const chosen = (l && nw && ((l[nw] || 0) > (s[nw] || 0))) ? l : s;
+            if (l) for (const k of mono) chosen[k] = !!(s[k] || l[k]);
+            byId.set(String(id), chosen);
         }
         for (const m of local) { const id = idOf(m); if (id != null && !byId.has(String(id))) byId.set(String(id), m); }
 

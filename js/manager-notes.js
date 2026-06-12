@@ -11,6 +11,8 @@
 function _rmnVal(id) { const el = document.getElementById(id); return el ? el.value : ''; }
 function _rmnEsc(s)  { return (typeof sanitize === 'function') ? sanitize(s) : String(s == null ? '' : s); }
 function _rmnCanDelete() { return !!(currentUser && (currentUser.isAdmin || currentUser.role === 'cc_manager')); }
+/* تعديل/إلغاء إغلاق الملاحظات — لمدير الكول سنتر (والأدمن) فقط */
+function _rmnCanEdit()   { return !!(currentUser && (currentUser.isAdmin || currentUser.role === 'cc_manager')); }
 /* تنسيق توقيت الإغلاق (epoch ms) — تاريخ + وقت بصيغة عربية */
 function _rmnFmtTs(ts) { try { return new Date(ts).toLocaleString('ar-EG'); } catch { return ''; } }
 
@@ -64,6 +66,7 @@ function renderManagerNotes() {
     }
 
     const canDelete = _rmnCanDelete();
+    const canEdit   = _rmnCanEdit();
     container.innerHTML = notes.map(n => {
         const open      = !n.closed;
         const lineColor = open ? '#c62828' : '#2e7d32';
@@ -78,6 +81,9 @@ function renderManagerNotes() {
         const actions = open
             ? `<button onclick="openCloseNoteModal(${n.id})" style="background:#2e7d32;color:#fff;border:none;cursor:pointer;font-family:Cairo;font-weight:700;padding:6px 12px;font-size:12px;border-radius:7px;">✓ إغلاق الملاحظة</button>`
             : `<span style="display:inline-flex;align-items:center;gap:5px;background:rgba(46,125,50,0.15);color:#66bb6a;font-weight:700;padding:6px 12px;font-size:12px;border-radius:7px;">✅ مغلقة</span>`;
+        const editBtn = canEdit
+            ? `<button onclick="openEditManagerNote(${n.id})" style="background:rgba(144,202,249,0.12);color:#90caf9;border:1px solid rgba(144,202,249,0.4);cursor:pointer;font-family:Cairo;font-weight:700;padding:6px 10px;font-size:12px;border-radius:7px;">✏️ تعديل</button>`
+            : '';
         const delBtn = canDelete
             ? `<button onclick="deleteManagerNote(${n.id})" style="background:rgba(198,40,40,0.12);color:#ef5350;border:1px solid rgba(198,40,40,0.4);cursor:pointer;font-family:Cairo;font-weight:700;padding:6px 10px;font-size:12px;border-radius:7px;">🗑️ حذف</button>`
             : '';
@@ -98,6 +104,7 @@ function renderManagerNotes() {
                 </div>
                 <div style="display:flex;gap:6px;flex-wrap:wrap;align-items:flex-start;">
                     ${actions}
+                    ${editBtn}
                     ${delBtn}
                 </div>
             </div>
@@ -121,7 +128,7 @@ function addManagerNote() {
         branch, noteDate, notifiedPerson, text,
         closed: false, closeNote: '', closedBy: '', closedAt: 0,
         addedBy: currentUser ? currentUser.name : '—',
-        ts: _now, deleted: false
+        ts: _now, updatedTs: _now, deleted: false
     };
 
     if (!db.managerNotes) db.managerNotes = [];
@@ -142,7 +149,8 @@ function deleteManagerNote(id) {
     if (!n) return;
     if (!confirm('هل أنت متأكد من حذف هذه الملاحظة؟')) return;
     n.deleted = true;
-    if (typeof _patchManagerNote === 'function') _patchManagerNote(id, { deleted: true });
+    n.updatedTs = Date.now();
+    if (typeof _patchManagerNote === 'function') _patchManagerNote(id, { deleted: true, updatedTs: n.updatedTs });
     if (typeof _logAudit === 'function') _logAudit('deleteManagerNote', n.branch || '—', (n.text || '').substring(0, 80), 'managerNote', id);
     renderManagerNotes();
 }
@@ -202,19 +210,142 @@ function confirmCloseManagerNote() {
     n.closeNote = closeNote;
     n.closedBy = currentUser ? currentUser.name : '—';
     n.closedAt = _now;
+    n.updatedTs = _now;
 
     /* أرسِل الملاحظة كاملة (لا أعلام الإغلاق فقط): لو ضاع POST الأصلي (نشر/شبكة) يُنشئها
        الخادم مغلقةً عبر upsert بدل إسقاط الإغلاق بصمت. */
     if (typeof _patchManagerNote === 'function')
         _patchManagerNote(n.id, {
             id: n.id, branch: n.branch, noteDate: n.noteDate, notifiedPerson: n.notifiedPerson,
-            text: n.text, addedBy: n.addedBy, ts: n.ts,
+            text: n.text, addedBy: n.addedBy, ts: n.ts, updatedTs: _now,
             closed: true, closeNote, closedBy: n.closedBy, closedAt: _now
         });
     if (typeof _logAudit === 'function')
         _logAudit('closeManagerNote', n.branch || '—', (closeNote || '').substring(0, 80), 'managerNote', n.id);
 
     _rmnCloseModalDismiss();
+    renderManagerNotes();
+}
+
+/* ══ مودال التعديل / إلغاء الإغلاق — لمدير الكول سنتر ══
+   يعدّل كل الحقول (الفرع/التاريخ/المُبلَّغ/المسجّل/النص/ملاحظة الإغلاق/المغلِق) ويسمح
+   بإلغاء الإغلاق بإزالة علامة "مغلقة". قائمة الفروع تتحوّل تلقائياً لقائمة بحث. */
+function _rmnBranchOptions(selected) {
+    const set = new Set();
+    try {
+        if (typeof branches !== 'undefined' && branches && typeof branches === 'object')
+            for (const city in branches) (branches[city] || []).forEach(b => { if (b) set.add(b); });
+    } catch {}
+    if (selected) set.add(selected);
+    const list = Array.from(set).sort((a, b) => String(a).localeCompare(String(b), 'ar'));
+    let html = '<option value="">— اختر الفرع —</option>';
+    for (const b of list) html += `<option value="${_rmnEsc(b)}"${b === selected ? ' selected' : ''}>${_rmnEsc(b)}</option>`;
+    return html;
+}
+
+function _rmnEditModalDismiss() { const h = document.getElementById('rmnEditModal'); if (h) h.remove(); }
+function _rmnEditToggleClosed() {
+    const cb = document.getElementById('rmnEditClosed');
+    const box = document.getElementById('rmnEditCloseFields');
+    if (box) box.style.display = (cb && cb.checked) ? 'grid' : 'none';
+}
+
+function openEditManagerNote(id) {
+    if (!_rmnCanEdit()) return alert('لا تملك صلاحية تعديل الملاحظات');
+    const n = (db.managerNotes || []).find(x => x.id == id);
+    if (!n) return;
+
+    const FS = 'width:100%;box-sizing:border-box;background:#0f0f17;border:1px solid rgba(255,255,255,0.12);border-radius:10px;color:#fff;font-family:Cairo;font-size:13px;padding:10px 12px;';
+    const LS = 'display:block;font-size:12.5px;font-weight:700;color:#a8b3c4;margin-bottom:6px;';
+
+    let host = document.getElementById('rmnEditModal');
+    if (host) host.remove();
+    host = document.createElement('div');
+    host.id = 'rmnEditModal';
+    host.setAttribute('data-note-id', String(id));
+    host.style.cssText = 'position:fixed;inset:0;background:rgba(8,10,18,0.72);backdrop-filter:blur(4px);display:flex;align-items:center;justify-content:center;z-index:99999;animation:rmnFade 0.2s ease;padding:20px;overflow:auto;';
+    host.innerHTML = `
+        <div style="background:linear-gradient(180deg,#1e1e2e 0%,#15151f 100%);color:#fff;border:1px solid rgba(255,255,255,0.08);border-radius:18px;width:640px;max-width:96vw;box-shadow:0 30px 120px rgba(0,0,0,0.7);overflow:hidden;animation:rmnPop 0.25s cubic-bezier(0.2,0.9,0.3,1.2);margin:auto;">
+            <div style="display:flex;align-items:center;gap:10px;padding:16px 20px;background:linear-gradient(135deg,#1565c0 0%,#0d47a1 100%);">
+                <span style="font-size:22px;">✏️</span>
+                <h2 style="margin:0;font-size:17px;font-weight:800;color:#fff;">تعديل ملاحظة منطقة</h2>
+            </div>
+            <div style="padding:18px 20px;display:grid;grid-template-columns:1fr 1fr;gap:14px;">
+                <div><label style="${LS}">🏪 الفرع</label><select id="rmnEditBranch" style="${FS}">${_rmnBranchOptions(n.branch)}</select></div>
+                <div><label style="${LS}">📅 تاريخ الملاحظة</label><input type="date" id="rmnEditDate" value="${_rmnEsc(n.noteDate || '')}" style="${FS}"></div>
+                <div><label style="${LS}">👤 الشخص المُبلَّغ</label><input type="text" id="rmnEditNotified" value="${_rmnEsc(n.notifiedPerson || '')}" style="${FS}"></div>
+                <div><label style="${LS}">🖊️ الشخص المسجّل للملاحظة</label><input type="text" id="rmnEditAddedBy" value="${_rmnEsc(n.addedBy || '')}" style="${FS}"></div>
+                <div style="grid-column:1/-1;"><label style="${LS}">📝 نص الملاحظة</label><textarea id="rmnEditText" rows="3" style="${FS}resize:vertical;line-height:1.7;">${_rmnEsc(n.text || '')}</textarea></div>
+                <div style="grid-column:1/-1;display:flex;align-items:center;gap:10px;padding:11px 13px;background:rgba(46,125,50,0.10);border:1px solid rgba(46,125,50,0.3);border-radius:10px;">
+                    <label style="display:flex;align-items:center;gap:9px;cursor:pointer;margin:0;font-weight:700;font-size:13px;color:#e8eef6;">
+                        <input type="checkbox" id="rmnEditClosed" ${n.closed ? 'checked' : ''} onchange="_rmnEditToggleClosed()" style="width:18px;height:18px;cursor:pointer;accent-color:#2e7d32;">
+                        <span>الحالة: مغلقة — أزِل العلامة لإلغاء الإغلاق</span>
+                    </label>
+                </div>
+                <div id="rmnEditCloseFields" style="grid-column:1/-1;display:${n.closed ? 'grid' : 'none'};grid-template-columns:1fr 1fr;gap:14px;">
+                    <div style="grid-column:1/-1;"><label style="${LS}">✓ ملاحظة الإغلاق</label><textarea id="rmnEditCloseNote" rows="2" style="${FS}resize:vertical;line-height:1.7;">${_rmnEsc(n.closeNote || '')}</textarea></div>
+                    <div><label style="${LS}">🔒 الشخص المغلق للملاحظة</label><input type="text" id="rmnEditClosedBy" value="${_rmnEsc(n.closedBy || '')}" style="${FS}"></div>
+                    <div><label style="${LS}">🕒 توقيت الإغلاق</label><div style="${FS}opacity:0.8;">${n.closedAt ? _rmnEsc(_rmnFmtTs(n.closedAt)) : '—'}</div></div>
+                </div>
+            </div>
+            <div style="display:flex;gap:10px;padding:0 20px 18px;justify-content:flex-end;">
+                <button onclick="_rmnEditModalDismiss()" style="background:rgba(255,255,255,0.08);color:#cfd6e2;border:none;cursor:pointer;font-family:Cairo;font-weight:700;padding:9px 18px;font-size:13px;border-radius:9px;">إلغاء</button>
+                <button onclick="confirmEditManagerNote()" style="background:linear-gradient(135deg,#1565c0,#0d47a1);color:#fff;border:none;cursor:pointer;font-family:Cairo;font-weight:800;padding:9px 22px;font-size:13px;border-radius:9px;box-shadow:0 6px 20px rgba(21,101,192,0.4);">💾 حفظ التعديلات</button>
+            </div>
+        </div>`;
+    document.body.appendChild(host);
+    host.addEventListener('mousedown', e => { if (e.target === host) _rmnEditModalDismiss(); });
+}
+
+function confirmEditManagerNote() {
+    const host = document.getElementById('rmnEditModal');
+    if (!host) return;
+    const id = host.getAttribute('data-note-id');
+    const n = (db.managerNotes || []).find(x => x.id == id);
+    if (!n) { _rmnEditModalDismiss(); return; }
+
+    const branch         = (_rmnVal('rmnEditBranch') || '').trim();
+    const noteDate       = (_rmnVal('rmnEditDate') || '').trim();
+    const notifiedPerson = (_rmnVal('rmnEditNotified') || '').trim();
+    const addedBy        = (_rmnVal('rmnEditAddedBy') || '').trim();
+    const text           = (_rmnVal('rmnEditText') || '').trim();
+    const closedEl       = document.getElementById('rmnEditClosed');
+    const closed         = !!(closedEl && closedEl.checked);
+    const closeNote      = (_rmnVal('rmnEditCloseNote') || '').trim();
+    const closedBy       = (_rmnVal('rmnEditClosedBy') || '').trim();
+
+    if (!branch) { alert('يرجى اختيار الفرع'); return; }
+    if (!text)   { alert('يرجى كتابة نص الملاحظة'); return; }
+    if (closed && !closeNote) { alert('عند الإبقاء على الإغلاق يجب كتابة ملاحظة الإغلاق'); return; }
+
+    const _now = Date.now();
+    const wasClosed = !!n.closed;
+    n.branch         = branch;
+    n.noteDate       = noteDate;
+    n.notifiedPerson = notifiedPerson;
+    n.addedBy        = addedBy || n.addedBy;
+    n.text           = text;
+    n.closed         = closed;
+    if (closed) {
+        n.closeNote = closeNote;
+        n.closedBy  = closedBy || n.closedBy || (currentUser ? currentUser.name : '—');
+        if (!n.closedAt) n.closedAt = _now; // حافظ على توقيت الإغلاق الأصلي إن وُجد
+    }
+    n.updatedTs = _now;
+
+    if (typeof _patchManagerNote === 'function')
+        _patchManagerNote(n.id, {
+            id: n.id, branch: n.branch, noteDate: n.noteDate, notifiedPerson: n.notifiedPerson,
+            text: n.text, addedBy: n.addedBy, ts: n.ts, updatedTs: _now,
+            closed: n.closed, closeNote: n.closeNote || '', closedBy: n.closedBy || '', closedAt: n.closedAt || 0
+        });
+
+    if (typeof _logAudit === 'function') {
+        const act = (wasClosed && !closed) ? 'reopenManagerNote' : 'editManagerNote';
+        _logAudit(act, n.branch || '—', (text || '').substring(0, 80), 'managerNote', n.id);
+    }
+
+    _rmnEditModalDismiss();
     renderManagerNotes();
 }
 
@@ -236,3 +367,7 @@ window.deleteManagerNote       = deleteManagerNote;
 window.openCloseNoteModal      = openCloseNoteModal;
 window.confirmCloseManagerNote = confirmCloseManagerNote;
 window._rmnCloseModalDismiss   = _rmnCloseModalDismiss;
+window.openEditManagerNote     = openEditManagerNote;
+window.confirmEditManagerNote  = confirmEditManagerNote;
+window._rmnEditModalDismiss    = _rmnEditModalDismiss;
+window._rmnEditToggleClosed    = _rmnEditToggleClosed;

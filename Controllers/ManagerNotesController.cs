@@ -46,9 +46,10 @@ public class ManagerNotesController : ControllerBase
     }
 
     /// <summary>
-    /// Patch a note: edit fields, close it (closed + closeNote + closedBy/closedAt), or
-    /// soft-delete it. Only provided properties are touched. Closed/Deleted are monotonic
-    /// (only ever set true here) to match the client merge and avoid flicker.
+    /// Patch a note: edit any field (branch/date/notifiedPerson/text/addedBy/closeNote/
+    /// closedBy/closedAt), close OR reopen it (closed is bidirectional), or soft-delete it.
+    /// Only provided properties are touched. Deleted stays monotonic (only ever set true).
+    /// Every patch stamps updated_ts so the client's last-write-wins merge keeps the edit.
     /// </summary>
     [HttpPatch("{id:long}")]
     public async Task<IActionResult> Patch(long id, [FromBody] JsonElement body)
@@ -71,22 +72,29 @@ public class ManagerNotesController : ControllerBase
             return Ok(new { ok = true, id, missing = true }); // partial body, nothing to create
         }
 
+        // ── editable fields (applied only when present in the body) ──
         if (_TryStr(body, "branch",         out var br)) row.Branch         = _Cap(br, 100);
         if (_TryStr(body, "noteDate",       out var nd)) row.NoteDate       = _Cap(nd, 30);
         if (_TryStr(body, "notifiedPerson", out var np)) row.NotifiedPerson = _Cap(np, 150);
         if (_TryStr(body, "text",           out var tx)) row.Text           = tx;
+        if (_TryStr(body, "addedBy",        out var ab)) row.AddedBy        = _Cap(ab, 100);
+        if (_TryStr(body, "closeNote",      out var cn)) row.CloseNote      = cn;
+        if (_TryStr(body, "closedBy",       out var cb)) row.ClosedBy       = _Cap(cb, 100);
+        if (body.TryGetProperty("closedAt", out var caEl) && caEl.ValueKind == JsonValueKind.Number)
+            row.ClosedAt = _Long(body, "closedAt");
 
-        if (body.TryGetProperty("closed", out var c) && c.ValueKind == JsonValueKind.True)
-        {
-            row.Closed   = true;
-            row.CloseNote = _Str(body, "closeNote") ?? row.CloseNote;
-            row.ClosedBy  = _Cap(_Str(body, "closedBy"), 100) ?? row.ClosedBy;
-            var ca = _Long(body, "closedAt");
-            row.ClosedAt  = ca != 0 ? ca : row.ClosedAt;
-        }
+        // ── closed is bidirectional: supports both close and إلغاء الإغلاق (reopen) ──
+        if (body.TryGetProperty("closed", out var c) &&
+            (c.ValueKind == JsonValueKind.True || c.ValueKind == JsonValueKind.False))
+            row.Closed = c.ValueKind == JsonValueKind.True;
+
+        // ── deleted stays monotonic (only ever set true here) ──
         if (body.TryGetProperty("deleted", out var d) && d.ValueKind == JsonValueKind.True)
             row.Deleted = true;
 
+        // ── last-write-wins stamp for the client merge (fallback to server time) ──
+        var uts = _Long(body, "updatedTs");
+        row.UpdatedTs = uts != 0 ? uts : DateTimeOffset.UtcNow.ToUnixTimeMilliseconds();
         row.Version++;
         try { await _db.SaveChangesAsync(); }
         catch (DbUpdateConcurrencyException) { /* another writer won — its value stands */ }
@@ -130,6 +138,7 @@ public class ManagerNotesController : ControllerBase
             ClosedAt       = _Long(b, "closedAt"),
             AddedBy        = _Cap(_Str(b, "addedBy"), 100),
             Ts             = _Long(b, "ts"),
+            UpdatedTs      = _Long(b, "updatedTs"),
             Deleted        = _Bool(b, "deleted"),
             Data           = b.GetRawText(),
             CreatedAt      = DateTime.UtcNow
@@ -153,6 +162,7 @@ public class ManagerNotesController : ControllerBase
         obj["closedAt"]       = n.ClosedAt;
         obj["addedBy"]        = n.AddedBy;
         obj["ts"]             = n.Ts;
+        obj["updatedTs"]      = n.UpdatedTs;
         obj["deleted"]        = n.Deleted;
         return obj;
     }

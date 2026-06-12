@@ -229,6 +229,7 @@ using (var scope = app.Services.CreateScope())
             closed_at BIGINT NOT NULL DEFAULT 0,
             added_by VARCHAR(100) NULL,
             ts BIGINT NOT NULL DEFAULT 0,
+            updated_ts BIGINT NOT NULL DEFAULT 0,
             deleted TINYINT(1) NOT NULL DEFAULT 0,
             data JSON NULL,
             version BIGINT NOT NULL DEFAULT 0,
@@ -250,6 +251,28 @@ using (var scope = app.Services.CreateScope())
         {
             Console.WriteLine($"[startup] ⚠ CREATE TABLE {tableName} failed: {ex.Message}");
         }
+    }
+
+    // ── (2026-06-12) add manager_notes.updated_ts for last-write-wins merge (edit / reopen) ──
+    //    MySQL has no ADD COLUMN IF NOT EXISTS, so probe information_schema first (idempotent).
+    try
+    {
+        var hasUpdatedTs = (await db.Database
+            .SqlQueryRaw<long>(
+                "SELECT COUNT(*) AS Value FROM information_schema.columns " +
+                "WHERE table_schema = DATABASE() AND table_name = 'manager_notes' " +
+                "AND column_name = 'updated_ts'")
+            .ToListAsync()).FirstOrDefault();
+        if (hasUpdatedTs == 0)
+        {
+            await db.Database.ExecuteSqlRawAsync(
+                "ALTER TABLE manager_notes ADD COLUMN updated_ts BIGINT NOT NULL DEFAULT 0");
+            Console.WriteLine("[startup] ✓ Added manager_notes.updated_ts column");
+        }
+    }
+    catch (Exception ex)
+    {
+        Console.WriteLine($"[startup] ⚠ ALTER manager_notes.updated_ts failed: {ex.Message}");
     }
 
     // ── retention: purge audit_log entries older than 6 months (180 days) ──
