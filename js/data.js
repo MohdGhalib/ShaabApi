@@ -849,6 +849,9 @@ async function loadAllData(force) {
                     const _preReplaceM = Array.isArray(db?.montasiat)  ? db.montasiat.slice()  : null;
                     const _preReplaceI = Array.isArray(db?.inquiries)  ? db.inquiries.slice()  : null;
                     const _preReplaceC = Array.isArray(db?.complaints) ? db.complaints.slice() : null;
+                    // 🛡️ ملاحظات مدراء المناطق مُستبعدة من الـ blob (BLOB_STRIP_KEYS) ولها جدول مستقل،
+                    //    لذا التقطها قبل استبدال db كي لا تُمسح وتختفي القائمة قبل وصول الجلب من الخادم.
+                    const _preReplaceMN = Array.isArray(db?.managerNotes) ? db.managerNotes.slice() : null;
 
                     const _parsed = JSON.parse(_masterStr);
                     db = _parsed;
@@ -872,6 +875,10 @@ async function loadAllData(force) {
                         db.complaints = _preReplaceC;
                         console.warn('🚨 [DATA-GUARD] /api/complaints fetch failed AND lite blob has no complaints — restored', _preReplaceC.length, 'records from local memory');
                     }
+                    // 🗺️ استرجع ملاحظات مدراء المناطق المحفوظة محلياً (الـ blob لا يحملها أبداً).
+                    //    يمنع وميض الاختفاء/العودة وفقدان ملاحظة أُضيفت وما زال POST قيد الإرسال.
+                    //    الجلب القسري لاحقاً (_fetchManagerNotesFromServer(true)) يدمج تحديثات الخادم.
+                    if (_preReplaceMN) db.managerNotes = _preReplaceMN;
 
                     /* 🛡️ (CRITICAL FIX) كشف انكماش كارثي: السيرفر ردّ بمصفوفة فارغة أو
                        منكمشة بشدة (>50% drop) رغم وجود سجلات محلية كثيرة — مؤشر على
@@ -1305,9 +1312,11 @@ async function loadAllData(force) {
         }
     } catch {}
 
-    /* 📥 (manager_notes table) اجلب ملاحظات مدراء المناطق من الجدول المستقل ودمجها. */
+    /* 📥 (manager_notes table) اجلب ملاحظات مدراء المناطق من الجدول المستقل ودمجها.
+       force=true: db استُبدل للتوّ من الـ blob (لا يحمل managerNotes)، لذا تجاوز خنق
+       الـ 20 ثانية كي يدمج تحديثات الخادم فوراً ويعمل تحديث SSE اللحظي للمستخدمين الآخرين. */
     try {
-        if (typeof _fetchManagerNotesFromServer === 'function') _fetchManagerNotesFromServer();
+        if (typeof _fetchManagerNotesFromServer === 'function') _fetchManagerNotesFromServer(true);
     } catch {}
 }
 
