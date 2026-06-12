@@ -193,6 +193,7 @@ i: `
             <option value="جودة صنف">جودة صنف</option>
             <option value="مالية">💰 مالية</option>
             <option value="سوء تعامل">سوء تعامل</option>
+            <option value="أخرى">🏷️ أخرى</option>
         </select>
     </div>
     <div id="iQualityPhotoBox" style="display:none;margin-bottom:15px;background:rgba(33,150,243,0.05);border:1px dashed rgba(100,181,246,0.35);border-radius:12px;padding:14px;">
@@ -300,6 +301,7 @@ i: `
             <option value="جودة صنف">جودة صنف</option>
             <option value="مالية">💰 مالية</option>
             <option value="سوء تعامل">سوء تعامل</option>
+            <option value="أخرى">أخرى</option>
         </select>
     </div>
     <div><label>موظف الاستفسار</label><select id="searchAddedByI" onchange="filterTable()"><option value="">الكل</option></select></div>

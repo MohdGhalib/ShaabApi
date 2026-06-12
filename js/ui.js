@@ -662,8 +662,8 @@ function populateLinkedInquirySelect() {
     const isMediaLink = currentUser?.role === 'media';
     const canClaim    = canReclaim || currentUser?.role === 'cc_employee' || isMediaLink;
     // الميديا يرى فقط ملاحظاته هو
-    // الربط بالسيطرة مسموح فقط لشكاوى نوعها مالية أو سوء تعامل (أو القديمة بدون نوع — للتوافق الخلفي)
-    const _linkableCT = (ctv) => !ctv || ctv === 'مالية' || ctv === 'سوء تعامل';
+    // الربط بالسيطرة مسموح لشكاوى: مالية، سوء تعامل، أخرى (أو القديمة بدون نوع — للتوافق الخلفي)
+    const _linkableCT = (ctv) => !ctv || ctv === 'مالية' || ctv === 'سوء تعامل' || ctv === 'أخرى';
     const complaints = db.inquiries.filter(x =>
         !x.deleted && x.type === 'شكوى' && _linkableCT(x.complaintType) &&
         (!isMediaLink || x.addedBy === currentUser.name)

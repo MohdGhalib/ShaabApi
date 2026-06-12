@@ -739,7 +739,8 @@ function _renderTableI(get) {
         const _ctMap = {
             'مالية':     { icon:'💰', bg:'rgba(198,40,40,0.15)',  color:'#ef9a9a' },
             'سوء تعامل': { icon:'⚠️', bg:'rgba(255,152,0,0.15)',  color:'#ffb74d' },
-            'جودة صنف':  { icon:'🔧', bg:'rgba(21,101,192,0.15)', color:'#64b5f6' }
+            'جودة صنف':  { icon:'🔧', bg:'rgba(21,101,192,0.15)', color:'#64b5f6' },
+            'أخرى':      { icon:'🏷️', bg:'rgba(120,144,156,0.18)', color:'#b0bec5' }
         };
         const _ctStyle = _ctMap[x.complaintType];
         const ctBadge = _ctStyle
