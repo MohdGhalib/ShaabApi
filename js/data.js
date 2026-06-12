@@ -1389,6 +1389,7 @@ function _push(key, value) {
             if (typeof data.version === 'number') _versions[key] = data.version;
         } catch {}
         if (key === 'Shaab_Master_DB') _conflictRetryCount = 0;
+        if (key === 'Shaab_Sessions_DB') _sessionsConflictRetry = 0;
         /* 🛡️ ملاحظة: لا ننظّف _PL_PENDING_KEY فور نجاح _push.
            استجابة 200 تعني فقط أن السيرفر قَبِل الكتابة الآن، لكنها لا
            تضمن أن الـ GET التالي سيرجع نفس البيانات (race بين instances،
@@ -1418,6 +1419,7 @@ function _push(key, value) {
    - حد أقصى 3 محاولات تلقائية لتجنّب الـ loop اللانهائي
    - لو فشلت كل المحاولات أو فشل الدمج: نُحدّث ونُظهر الـ toast */
 let _conflictRetryCount = 0;
+let _sessionsConflictRetry = 0;   // حدّ إعادة محاولة دمج الجلسات (يمنع loop)
 async function _handleVersionConflict(key) {
     if (_onConflictRetrying) return;
     _onConflictRetrying = true;
@@ -1485,11 +1487,32 @@ async function _handleVersionConflict(key) {
                 }
             } catch (e) { console.error('[conflict] priceList merge failed:', e); }
             if (typeof renderAll === 'function') renderAll();
+        } else if (key === 'Shaab_Sessions_DB') {
+            /* الجلسات: لا تَدهس بيانات الخادم. خذ نسخة محلية (تحوي تحديث lastSeen للموظف
+               أو علَم الطرد للمدير)، حدّث من الخادم، ثم ادمج المحلي فوقه وأعد الحفظ.
+               يصلح: ظهور موظف نشِط "غير متصل" (ضياع lastSeen)، وفشل الطرد إلا بعد عدة محاولات
+               (ضياع forceLogoutBy) — كلاهما كان بسبب الاكتفاء بـ loadAllData وإسقاط المحلي. */
+            let _sessLocal;
+            try { _sessLocal = Array.isArray(sessions) ? JSON.parse(JSON.stringify(sessions)) : []; }
+            catch { _sessLocal = []; }
+            await loadAllData();
+            let _sChanged = false;
+            try {
+                const _r = _mergeSessions(_sessLocal, sessions);  // الخادم أساس + المحلي يُدمج فوقه
+                sessions = _r.items;
+                _sChanged = _r.changed;
+            } catch (e) { console.error('[conflict] sessions merge failed:', e); }
+            if (typeof renderAll === 'function') renderAll();
+            if (_sChanged && _sessionsConflictRetry < 3) {
+                _sessionsConflictRetry++;
+                _onConflictRetrying = false;
+                if (typeof saveSessions === 'function') saveSessions();  // أعد الحفظ تلقائياً
+                return;
+            }
+            _sessionsConflictRetry = 0;
         } else {
-            // مفاتيح أخرى (employees / breaks / sessions): مجرد تحديث + toast
-            /* مفاتيح غير Master_DB (sessions/employees/breaks):
-               عادةً race condition عابر (heartbeat ضد recordLogin مثلاً)
-               → اكتفِ بتحديث صامت بدون toast مزعج */
+            // مفاتيح أخرى (employees / breaks): مجرد تحديث صامت
+            /* عادةً race condition عابر → اكتفِ بتحديث صامت بدون toast مزعج */
             await loadAllData();
             if (typeof renderAll === 'function') renderAll();
             console.log(`[conflict] ${key} silently refreshed (no toast)`);

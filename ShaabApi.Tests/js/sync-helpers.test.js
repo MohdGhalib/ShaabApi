@@ -7,7 +7,7 @@
 const test = require('node:test');
 const assert = require('node:assert');
 
-const { BLOB_STRIP_KEYS, _buildLiteBlob, _findHeavyArrays, _pruneByAge, _mergeById } = require('../../js/lib/sync-helpers.js');
+const { BLOB_STRIP_KEYS, _buildLiteBlob, _findHeavyArrays, _pruneByAge, _mergeById, _mergeSessions } = require('../../js/lib/sync-helpers.js');
 
 /* ════ _buildLiteBlob ════════════════════════════════════ */
 test('_buildLiteBlob: يجرّد كل مفاتيح المصفوفات الثقيلة', () => {
@@ -129,6 +129,37 @@ test('_mergeById: newerWinsBy — الخادم الأحدث يفوز (تعديل
     const out = _mergeById(local, server, { monotonicTrueKeys: ['deleted'], newerWinsBy: 'updatedTs' });
     assert.strictEqual(out[0].closed, true,   'تعديل الخادم الأحدث يفوز');
     assert.strictEqual(out[0].branch, 'الراية');
+});
+
+/* ════ _mergeSessions (presence + الطرد عند تعارض الإصدار) ════ */
+test('_mergeSessions: lastSeen المحلي الأحدث لا يُدهس (الموظف النشِط يبقى متصلاً)', () => {
+    const local  = [{ empId: 'e1', loginIso: 'L1', lastSeen: 5000 }];   // heartbeat للتوّ
+    const server = [{ empId: 'e1', loginIso: 'L1', lastSeen: 1000 }];   // الخادم متأخّر
+    const { items, changed } = _mergeSessions(local, server);
+    assert.strictEqual(items[0].lastSeen, 5000, 'يأخذ الأحدث');
+    assert.strictEqual(changed, true);
+});
+
+test('_mergeSessions: علَم الطرد المحلي يُحفظ فوق الخادم (ينفَّذ من أول مرة)', () => {
+    const local  = [{ empId: 'e1', loginIso: 'L1', forceLogoutBy: 'المدير', forceLogoutAt: 'T' }];
+    const server = [{ empId: 'e1', loginIso: 'L1' }];                   // الخادم لا يحمل العلَم بعد
+    const { items, changed } = _mergeSessions(local, server);
+    assert.strictEqual(items[0].forceLogoutBy, 'المدير', 'علَم الطرد لا يضيع عند التعارض');
+    assert.strictEqual(changed, true);
+});
+
+test('_mergeSessions: جلسة محلية فقط (دخول لم يُحفظ) تُضاف، والخادم لا يُفقد', () => {
+    const local  = [{ empId: 'e2', loginIso: 'L2', lastSeen: 9 }];
+    const server = [{ empId: 'e1', loginIso: 'L1', lastSeen: 9 }];
+    const { items } = _mergeSessions(local, server);
+    assert.strictEqual(items.length, 2);
+});
+
+test('_mergeSessions: لا تغيير لو المحلي أقدم/مطابق (لا إعادة حفظ بلا داعٍ)', () => {
+    const local  = [{ empId: 'e1', loginIso: 'L1', lastSeen: 1000 }];
+    const server = [{ empId: 'e1', loginIso: 'L1', lastSeen: 5000 }];
+    const { changed } = _mergeSessions(local, server);
+    assert.strictEqual(changed, false);
 });
 
 test('_mergeById: يُبقي المحلي غير الموجود على الخادم (مُرسَل للتو)', () => {

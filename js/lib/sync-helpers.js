@@ -95,7 +95,38 @@
         return Array.from(byId.values()).sort((a, b) => (sortKey(b) - sortKey(a)));
     }
 
-    const api = { BLOB_STRIP_KEYS, _buildLiteBlob, _findHeavyArrays, _pruneByAge, _mergeById };
+    /* دمج جلسات محلية فوق جلسات الخادم (presence + الطرد) — يمنع دهس تحديثات الآخرين عند
+       تعارض الإصدار. الخادم أساس؛ ولكل جلسة (key=empId|loginIso):
+       - lastSeen: الأحدث (حتى لا يرجع الموظف النشِط إلى "غير متصل")
+       - forceLogoutBy/At: علَم الطرد المحلي يُحفظ لو غاب عن الخادم (لينفَّذ من أول مرة)
+       - logoutIso: تسجيل خروج محلي لم يصل بعد يُحفظ
+       - جلسة محلية فقط (دخول لم يُحفظ) تُضاف.
+       يُرجع { items, changed } — changed=true يعني يلزم إعادة حفظ. */
+    function _mergeSessions(local, server) {
+        local  = Array.isArray(local)  ? local  : [];
+        server = Array.isArray(server) ? server : [];
+        const keyOf = (s) => `${(s && s.empId) || ''}|${(s && s.loginIso) || ''}`;
+        let changed = false;
+        const out = server.slice();
+        const byKey = new Map();
+        out.forEach((s, i) => byKey.set(keyOf(s), i));
+        for (const ls of local) {
+            if (!ls) continue;
+            const k = keyOf(ls);
+            if (!byKey.has(k)) { out.push(ls); changed = true; continue; }
+            const ss = out[byKey.get(k)];
+            if ((ls.lastSeen || 0) > (ss.lastSeen || 0)) { ss.lastSeen = ls.lastSeen; changed = true; }
+            if (ls.forceLogoutBy && !ss.forceLogoutBy) {
+                ss.forceLogoutBy = ls.forceLogoutBy;
+                ss.forceLogoutAt = ls.forceLogoutAt || ss.forceLogoutAt;
+                changed = true;
+            }
+            if (ls.logoutIso && !ss.logoutIso) { ss.logoutIso = ls.logoutIso; changed = true; }
+        }
+        return { items: out, changed };
+    }
+
+    const api = { BLOB_STRIP_KEYS, _buildLiteBlob, _findHeavyArrays, _pruneByAge, _mergeById, _mergeSessions };
     if (root) Object.assign(root, api);                          // متصفح: متاح كـ globals
     if (typeof module !== 'undefined' && module.exports)         // node: قابل للاختبار
         module.exports = api;
