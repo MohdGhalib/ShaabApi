@@ -260,7 +260,7 @@
         }
         [data-theme="coffee"] .ss-trigger.ss-open, [data-theme="coffee"] .ss-trigger:focus { border-color:#c0935d !important; }
         .ss-panel {
-            z-index:100000; background:var(--bg-card); border:1px solid var(--border); border-radius:12px;
+            z-index:2147483000; background:var(--bg-card); border:1px solid var(--border); border-radius:12px;
             box-shadow:0 18px 50px rgba(0,0,0,0.45); overflow:hidden; display:flex; flex-direction:column;
             max-height:300px; animation:ssPop .12s ease;
         }
