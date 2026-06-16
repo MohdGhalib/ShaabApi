@@ -1461,20 +1461,23 @@ function _genMontasiaSerial(isoDate) {
     const _iso = isoDate || (typeof iso === 'function' ? iso() : new Date().toISOString().slice(0,10));
     const yy = String(_iso).substring(2, 4);
     if (!db.montasiatSeqByYear || typeof db.montasiatSeqByYear !== 'object') db.montasiatSeqByYear = {};
-    if (!db.montasiatSeqByYear[yy]) {
-        // أعِد بناء العداد من البيانات الفعلية لتفادي أي تعارض
-        let max = 0;
-        for (const x of (db.montasiat || [])) {
-            if (x.serial && typeof x.serial === 'string') {
-                const norm = x.serial.replace(/-/g, '');
-                if (norm.startsWith(yy) && /^\d{5,}$/.test(norm)) {
-                    const n = parseInt(norm.substring(2), 10);
-                    if (!isNaN(n) && n > max) max = n;
-                }
+    /* 🔒 (Serial fix #2, 2026-06-16) أعِد بناء العدّاد من البيانات الفعلية في *كل* مرة،
+       ولا تثق بالقيمة المخزَّنة وحدها. السبب الجذري لحادثة "اختفاء منتسية + تكرار الرقم":
+       العدّاد montasiatSeqByYear يركب Shaab_Master_DB (lite blob) وليس ضمن BLOB_STRIP_KEYS،
+       فعند كل loadAllData يُستبدَل بقيمة الخادم التي قد تكون متقادمة (replica lag). الشرط
+       القديم (!db.montasiatSeqByYear[yy]) كان يُعيد البناء فقط لو كان فارغاً، فلو عاد بقيمة
+       أقدم ولّدنا رقماً مُستهلَكاً. الآن نأخذ الأكبر بين المخزَّن وأعلى رقم فعلي في البيانات. */
+    let _maxFromData = 0;
+    for (const x of (db.montasiat || [])) {
+        if (x.serial && typeof x.serial === 'string') {
+            const norm = x.serial.replace(/-/g, '');
+            if (norm.startsWith(yy) && /^\d{5,}$/.test(norm)) {
+                const n = parseInt(norm.substring(2), 10);
+                if (!isNaN(n) && n > _maxFromData) _maxFromData = n;
             }
         }
-        db.montasiatSeqByYear[yy] = max;
     }
+    db.montasiatSeqByYear[yy] = Math.max(Number(db.montasiatSeqByYear[yy]) || 0, _maxFromData);
     /* 🔒 (Serial fix, 2026-06-10) تخطَّ أي رقم مستخدَم فعلاً في db.montasiat — العدّاد قد
        يكون متقادماً (جهاز آخر استهلك أرقاماً أعلى وصلتنا عبر GET دون رفع العدّاد)، فبدون
        هذا الفحص نولّد رقماً مكرراً يضطر الخادم لإعادة ترقيمه. الخادم يبقى المرجع النهائي. */
