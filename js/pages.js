@@ -103,6 +103,12 @@ m: `
                    color:#81c784;font-family:'Cairo';font-size:13px;font-weight:700;">
             ⬇️ تصدير Excel
         </button>
+        <button id="btnExportMontasiatPDF" onclick="exportMontasiatPDF()"
+            style="display:flex;align-items:center;gap:7px;background:linear-gradient(135deg,rgba(198,40,40,0.15),rgba(198,40,40,0.08));
+                   border:1px solid rgba(198,40,40,0.4);border-radius:10px;padding:9px 18px;cursor:pointer;
+                   color:#ef9a9a;font-family:'Cairo';font-size:13px;font-weight:700;" title="تصدير تقرير منسّق بمقاس A4 قابل للطباعة">
+            🖨️ تصدير PDF
+        </button>
         <label id="lblImportMontasiat" style="display:flex;align-items:center;gap:7px;background:linear-gradient(135deg,rgba(21,101,192,0.15),rgba(21,101,192,0.08));
                       border:1px solid rgba(21,101,192,0.4);border-radius:10px;padding:9px 18px;cursor:pointer;
                       color:#64b5f6;font-family:'Cairo';font-size:13px;font-weight:700;">

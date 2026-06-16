@@ -1298,6 +1298,158 @@ function exportMontasiat() {
     XLSX.writeFile(wb, `منتسيات${suffix ? '_' + suffix : ''}_${iso()}.xlsx`);
 }
 
+/* بناء نص "التفاصيل" لمنتسية واحدة (يُستخدم في تصدير Excel و PDF) */
+function _montasiaDetailsText(x) {
+    if (x.type === 'نقدي') {
+        const parts = [];
+        if (x.missingValue) parts.push(`القيمة المالية المفقودة: ${x.missingValue}`);
+        if (x.notes)        parts.push(x.notes);
+        return parts.join(' — ');
+    }
+    if (x.type === 'اصناف محمص الشعب') {
+        const parts = [];
+        if (x.roastSubType)    parts.push(`النوع: ${x.roastSubType}`);
+        if (x.roastItemName)   parts.push(`اسم الصنف: ${x.roastItemName}`);
+        if (x.roastItemValue)  parts.push(`القيمة المالية: ${x.roastItemValue}`);
+        if (x.roastItemWeight) parts.push(`الوزن: ${x.roastItemWeight}`);
+        if (x.notes)           parts.push(x.notes);
+        return parts.join(' — ');
+    }
+    if (x.type === 'متعدد الأصناف' && typeof _buildItemsExportText === 'function') {
+        const txt = _buildItemsExportText(x);
+        return x.notes ? `${txt} [ملاحظة: ${x.notes}]` : txt;
+    }
+    return x.notes || '';
+}
+
+/* ⬇️ تصدير المنتسيات إلى PDF — تقرير منسّق بمقاس A4 مع لوجو محامص الشعب،
+   عبر نافذة طباعة (نص حقيقي، يدعم العربية، رأس جدول متكرر، حفظ كـ PDF من حوار الطباعة) */
+function exportMontasiatPDF() {
+    const get = id => { const el = document.getElementById(id); return el ? el.value : ''; };
+    const f = {
+        country:     get('searchCountryM'),
+        city:        get('searchCityM'),
+        branch:      get('searchBranchM'),
+        date:        get('searchDateM'),
+        text:        get('searchTextM').toLowerCase(),
+        addedBy:     get('searchAddedByM'),
+        deliveredBy: get('searchDeliveredByM'),
+        type:        get('searchTypeM'),
+    };
+    const isCtrlMgrM = currentUser?.role === 'control_employee';
+    const selectedSectionM = isCtrlMgrM ? get('searchSectionM') : '';
+    let selectedSectionBranchesM = [];
+    if (isCtrlMgrM && selectedSectionM) {
+        const _picker = document.getElementById('mSectionBranchPicker');
+        if (_picker) selectedSectionBranchesM = Array.from(_picker.querySelectorAll('input[type="checkbox"]:checked')).map(cb => cb.value);
+    }
+    const filtered = db.montasiat.filter(x =>
+        !x.deleted &&
+        (!f.country     || (x.country || _countryForCity(x.city)) === f.country) &&
+        (!f.city        || x.city === f.city) &&
+        (!f.branch      || x.branch === f.branch) &&
+        (!f.date        || x.iso.startsWith(f.date)) &&
+        (!f.text        || (x.notes||'').toLowerCase().includes(f.text)) &&
+        (!f.addedBy     || (x.addedBy||'').includes(f.addedBy)) &&
+        (!f.deliveredBy || (x.deliveredBy||'').includes(f.deliveredBy)) &&
+        (!f.type        || (x.type||'') === f.type) &&
+        (!selectedSectionM || selectedSectionBranchesM.includes(x.branch))
+    ).sort((a, b) => (a.city||'').localeCompare(b.city||'', 'ar') || (a.branch||'').localeCompare(b.branch||'', 'ar'));
+
+    if (!filtered.length) return alert('لا توجد منتسيات للتصدير بالفلتر الحالي');
+
+    // ملخّص الفلتر المطبّق (يظهر تحت العنوان)
+    const _filterBits = [];
+    if (f.city)        _filterBits.push(`المحافظة: ${f.city}`);
+    if (f.branch)      _filterBits.push(`الفرع: ${f.branch}`);
+    if (f.type)        _filterBits.push(`النوع: ${f.type}`);
+    if (f.date)        _filterBits.push(`التاريخ: ${f.date}`);
+    if (f.addedBy)     _filterBits.push(`أضافه: ${f.addedBy}`);
+    if (f.deliveredBy) _filterBits.push(`سلّمه: ${f.deliveredBy}`);
+    const filterLine = _filterBits.length ? _filterBits.join(' &nbsp;•&nbsp; ') : 'كل المنتسيات (بدون فلتر)';
+
+    const _statusPill = (st) => {
+        const s = st || '—';
+        const ok = /تسليم|سلّم|تم/.test(s);
+        const c  = ok ? '#2e7d32' : '#c62828';
+        const bg = ok ? '#e8f5e9' : '#fdecea';
+        return `<span style="display:inline-block;padding:2px 8px;border-radius:6px;font-size:9px;font-weight:700;color:${c};background:${bg};border:1px solid ${c}33;white-space:nowrap;">${sanitize(s)}</span>`;
+    };
+
+    const rowsHtml = filtered.map((x, i) => `
+        <tr>
+            <td class="c-idx">${i + 1}</td>
+            <td class="c-serial">${sanitize(x.serial || '—')}</td>
+            <td>${sanitize(x.city || '—')}</td>
+            <td><b>${sanitize(x.branch || '—')}</b></td>
+            <td>${sanitize(x.type || '—')}</td>
+            <td class="c-details">${sanitize(_montasiaDetailsText(x))}</td>
+            <td>${_statusPill(x.status)}</td>
+            <td class="c-emp">${sanitize(x.branchEmp || x.addedBy || '—')}</td>
+            <td class="c-emp">${sanitize(x.deliveredBy || '—')}</td>
+            <td class="c-time">${sanitize(_toLatinDigits(x.iso || ''))}<br><span style="color:#888;">${sanitize(_toLatinDigits(x.time || ''))}</span></td>
+        </tr>`).join('');
+
+    const logoUrl = new URL('img/logo.png', document.baseURI).href;
+    const nowD    = new Date();
+    const printedAt = `${_toLatinDigits(nowD.toLocaleDateString('ar-EG'))} — ${_toLatinDigits(nowD.toLocaleTimeString('ar-EG', {hour:'2-digit', minute:'2-digit'}))}`;
+    const docTitle  = `تقرير_المنتسيات_${iso()}`;
+
+    const html = `<!DOCTYPE html><html lang="ar" dir="rtl"><head><meta charset="utf-8">
+<title>${docTitle}</title>
+<style>
+  @page { size: A4 landscape; margin: 9mm 8mm; }
+  * { box-sizing: border-box; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+  body { font-family: 'Cairo', 'Segoe UI', Tahoma, sans-serif; margin: 0; color: #1a1a1a; }
+  .hd { display: flex; align-items: center; gap: 14px; border-bottom: 3px solid #c62828; padding-bottom: 10px; margin-bottom: 6px; }
+  .hd img { width: 60px; height: 60px; object-fit: contain; }
+  .hd .t { flex: 1; }
+  .hd h1 { margin: 0; font-size: 20px; font-weight: 800; color: #c62828; }
+  .hd .sub { margin: 2px 0 0; font-size: 11px; color: #555; }
+  .meta { display: flex; justify-content: space-between; align-items: center; font-size: 10.5px; color: #444; margin: 6px 0 10px; flex-wrap: wrap; gap: 6px; }
+  .meta .pill { background: #f3f4f6; border: 1px solid #e0e0e0; border-radius: 20px; padding: 3px 12px; font-weight: 700; }
+  table { width: 100%; border-collapse: collapse; font-size: 10px; }
+  thead th { background: #c62828; color: #fff; font-weight: 700; padding: 7px 5px; text-align: center; border: 1px solid #b71c1c; font-size: 10px; }
+  tbody td { padding: 5px 5px; border: 1px solid #e3e3e3; text-align: center; vertical-align: middle; }
+  tbody tr:nth-child(even) { background: #fafafa; }
+  .c-idx { width: 26px; color: #888; }
+  .c-serial { font-family: 'Courier New', monospace; font-weight: 700; color: #c62828; white-space: nowrap; }
+  .c-details { text-align: right; max-width: 220px; line-height: 1.5; }
+  .c-emp { font-size: 9.5px; }
+  .c-time { white-space: nowrap; font-size: 9.5px; }
+  tfoot { display: table-footer-group; }
+  .ft { margin-top: 12px; text-align: center; font-size: 9.5px; color: #999; border-top: 1px solid #eee; padding-top: 6px; }
+  @media print { thead { display: table-header-group; } tr { page-break-inside: avoid; } }
+</style></head>
+<body onload="setTimeout(function(){ window.focus(); window.print(); }, 350)">
+  <div class="hd">
+    <img src="${logoUrl}" alt="محامص الشعب">
+    <div class="t">
+      <h1>تقرير المنتسيات — محامص الشعب</h1>
+      <p class="sub">${filterLine}</p>
+    </div>
+  </div>
+  <div class="meta">
+    <span class="pill">عدد المنتسيات: ${filtered.length}</span>
+    <span>تاريخ الطباعة: ${printedAt}</span>
+  </div>
+  <table>
+    <thead><tr>
+      <th>#</th><th>الرقم</th><th>المحافظة</th><th>الفرع</th><th>النوع</th>
+      <th>التفاصيل</th><th>الحالة</th><th>أضافه</th><th>سلّمه</th><th>التاريخ</th>
+    </tr></thead>
+    <tbody>${rowsHtml}</tbody>
+  </table>
+  <div class="ft">نظام إدارة محامص الشعب &nbsp;•&nbsp; تقرير المنتسيات &nbsp;•&nbsp; ${filtered.length} سجل</div>
+</body></html>`;
+
+    const w = window.open('', '_blank');
+    if (!w) return alert('فضلاً اسمح بالنوافذ المنبثقة (Pop-ups) لهذا الموقع لإتمام التصدير');
+    w.document.open();
+    w.document.write(html);
+    w.document.close();
+}
+
 let _importMontasiaData = [];
 
 function importMontasiat(input) {
