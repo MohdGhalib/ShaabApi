@@ -36,6 +36,69 @@ function toggleInquiryNotes() {
 }
 
 /* ══════════════════════════════════════════════════════
+   تصدير الاستفسارات إلى Excel (مدير الكول سنتر / الأدمن فقط)
+   - يصدّر كامل الاستفسارات المطابقة للفلتر الحالي (وليس الصفحة المعروضة فقط)
+   - يستخدم نفس منطق الفلترة في _renderTableI لضمان التطابق
+══════════════════════════════════════════════════════ */
+function exportInquiriesExcel() {
+    if (!(currentUser?.role === 'cc_manager' || currentUser?.isAdmin)) {
+        return alert('هذه الميزة متاحة لمدير الكول سنتر فقط');
+    }
+    const get = id => { const el = document.getElementById(id); return el ? el.value : ''; };
+    const f = {
+        country:       get('searchCountryI'),
+        city:          get('searchCityI'),
+        branch:        get('searchBranchI'),
+        date:          get('searchDateI'),
+        type:          get('searchTypeI'),
+        complaintType: get('searchComplaintTypeI'),
+        addedBy:       get('searchAddedByI'),
+        livePhone:     (window._iLivePhoneFilter || '').trim()
+    };
+    const filtered = (db.inquiries || []).filter(x =>
+        !x.deleted &&
+        (!f.country       || (x.country || _countryForCity(x.city)) === f.country) &&
+        (!f.city          || x.city === f.city) &&
+        (!f.branch        || x.branch === f.branch) &&
+        (!f.date          || (x.iso || '').startsWith(f.date)) &&
+        (!f.type          || x.type === f.type) &&
+        (!f.complaintType || (x.type === 'شكوى' && (x.complaintType || '') === f.complaintType)) &&
+        (!f.addedBy       || (x.addedBy || '').includes(f.addedBy)) &&
+        (!f.livePhone     || (x.phone || '').includes(f.livePhone))
+    );
+    if (!filtered.length) return alert('لا توجد استفسارات للتصدير بالفلتر الحالي');
+
+    const _exists = v => v === 'yes' ? 'نعم' : (v === 'no' ? 'لا' : '');
+    const rows = filtered
+        .slice()
+        .sort((a, b) => (a.seq || 0) - (b.seq || 0))
+        .map(x => ({
+            'التسلسل':         x.seq || '',
+            'المحافظة':        x.city || '',
+            'الفرع':           x.branch || '',
+            'الهاتف':          _toLatinDigits(x.phone || ''),
+            'نوع الاستفسار':   x.type || '',
+            'نوع الشكوى':      x.complaintType || '',
+            'الموضوع':         x.notes || '',
+            'اسم الصنف':       x.itemName || '',
+            'رقم المنتسية':    x.montasiaSerial || '',
+            'المنتسية موجودة': _exists(x.montasiaExists),
+            'قيمة الفاتورة':   x.invoiceValue || '',
+            'رقم الحركة':      x.moveNumber || '',
+            'تاريخ المذكرة':   x.noteDate || '',
+            'أضافه':           x.addedBy || '',
+            'التاريخ':         (x.iso || '').slice(0, 10),
+            'الوقت':           _toLatinDigits(x.time || '')
+        }));
+
+    const ws = XLSX.utils.json_to_sheet(rows);
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, 'الاستفسارات');
+    const suffix = f.type || f.city || f.addedBy || f.date || '';
+    XLSX.writeFile(wb, `الاستفسارات${suffix ? '_' + suffix : ''}_${iso()}.xlsx`);
+}
+
+/* ══════════════════════════════════════════════════════
    معلومات الفرع المعروضة بجانب زر "حفظ الاستفسار"
    - يقرأها الجميع
    - يعدّلها مدير الكول سنتر (cc_manager / admin) فقط

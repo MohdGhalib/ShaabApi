@@ -1,6 +1,14 @@
 /* ══════════════════════════════════════════════════════
    STATS — Employee statistics view
 ══════════════════════════════════════════════════════ */
+
+/* فروع مستثناة من «تقييم الفروع» في حساب مدير الكول سنتر فقط
+   (لا تُحتسب ولا تظهر في الشاشة/التصدير/التفاصيل — تبقى كما هي لقسم السيطرة وبقية النظام) */
+const _CC_EVAL_EXCLUDED_BRANCHES = ['الحجرة'];
+function _isCCEvalExcluded(branch, isCtrl) {
+    return !isCtrl && _CC_EVAL_EXCLUDED_BRANCHES.includes(branch);
+}
+
 function populateStatSelect() {
     const sel = document.getElementById("statEmpSelect");
     const cur = sel.value;
@@ -112,6 +120,7 @@ function renderBranches() {
     };
     const addCount = x => {
         if (!_isJordan(x))                                   return;
+        if (_isCCEvalExcluded(x.branch, isControlEmpStats))  return;
         if (searchDate   && !x.iso.startsWith(searchDate))  return;
         if (searchCity   && x.city   !== searchCity)         return;
         if (searchBranch && x.branch !== searchBranch)       return;
@@ -252,9 +261,9 @@ function showBranchDetail(branch, city) {
 
 function _getEvalItems(filter) {
     const isCtrl = currentUser?.role === 'control_employee';
-    const match  = x => filter.branch
+    const match  = x => !_isCCEvalExcluded(x.branch, isCtrl) && (filter.branch
         ? (x.branch === filter.branch && x.city === filter.city)
-        : getBranchRegion(x.branch) === filter.region;
+        : getBranchRegion(x.branch) === filter.region);
 
     const items = [];
     if (isCtrl) {
@@ -484,6 +493,7 @@ function exportBranchEvaluation() {
     const isCtrl = currentUser?.role === 'control_employee';
     const counts = {};
     const addC = x => {
+        if (_isCCEvalExcluded(x.branch, isCtrl)) return;
         if (branchDateVal && !(x.iso||'').startsWith(branchDateVal)) return;
         if (searchCity   && x.city   !== searchCity)   return;
         if (searchBranch && x.branch !== searchBranch) return;
@@ -508,6 +518,7 @@ function exportBranchEvaluation() {
     const _cityOf = br => { for (const [c,brs] of Object.entries(branches)) if (brs.includes(br)) return c; return ''; };
     ['الشرقية','الجنوبية','الغربية','المحافظات','فروع العقبة'].forEach(region => {
         (REGION_MAP[region]||[]).forEach(brName => {
+            if (_isCCEvalExcluded(brName, isCtrl)) return;
             const city = _cityOf(brName);
             const key  = `${brName}||${city}`;
             if (!existingKeys.has(key)) { allData.push({branch:brName,city,count:0,region}); existingKeys.add(key); }

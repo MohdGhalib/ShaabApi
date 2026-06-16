@@ -307,6 +307,7 @@ i: `
     <div><label>موظف الاستفسار</label><select id="searchAddedByI" onchange="filterTable()"><option value="">الكل</option></select></div>
     <button class="btn" style="background:var(--bg-input);color:var(--text-dim);align-self:end;" onclick="resetSearch('I')">تفريغ</button>
     <button class="btn" style="background:linear-gradient(135deg,rgba(21,101,192,0.18),rgba(21,101,192,0.08));border:1px solid rgba(21,101,192,0.5);color:#90caf9;align-self:end;font-weight:700;" onclick="reloadTable(this)" title="إعادة تحميل الجدول من السيرفر">🔄 تحديث</button>
+    <button id="btnExportInquiriesI" class="btn" style="display:none;background:linear-gradient(135deg,rgba(46,125,50,0.18),rgba(46,125,50,0.08));border:1px solid rgba(46,125,50,0.5);color:#81c784;align-self:end;font-weight:700;" onclick="exportInquiriesExcel()" title="تصدير الاستفسارات المعروضة بالفلتر الحالي إلى Excel">⬇️ تصدير Excel</button>
 </div>
 <div class="card">
     <table id="tableI">

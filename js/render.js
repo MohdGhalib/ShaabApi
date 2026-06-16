@@ -712,6 +712,9 @@ function _renderTableI(get) {
     const rows = allRowsI.slice((_pageI - 1) * _sizeI, _pageI * _sizeI);
     const _tbodyIRows = rows; // kept for select-all check below
     const isCCMgrI = currentUser?.role === 'cc_manager' || currentUser?.isAdmin;
+    // زر تصدير Excel — يظهر لمدير الكول سنتر / الأدمن فقط
+    const _expBtnI = document.getElementById('btnExportInquiriesI');
+    if (_expBtnI) _expBtnI.style.display = isCCMgrI ? '' : 'none';
     const _iqEditIcon = (fn, label) => isCCMgrI
         ? ` <button onclick="${fn}" title="تعديل ${label}" style="background:none;border:none;cursor:pointer;color:var(--text-dim);padding:0 4px;font-size:11px;vertical-align:middle;">✏️</button>`
         : '';
