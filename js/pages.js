@@ -96,6 +96,29 @@ m: `
     </div>
 </div>
 <div id="mExportImportBar" style="display:none;margin-bottom:16px;">
+    <div style="display:flex;align-items:flex-end;gap:12px;flex-wrap:wrap;margin-bottom:12px;padding-bottom:12px;border-bottom:1px dashed var(--border);">
+        <span style="font-size:12px;color:var(--text-dim);font-weight:700;align-self:center;">⚙️ خيارات التصدير:</span>
+        <div style="display:flex;flex-direction:column;gap:3px;">
+            <label style="font-size:10px;color:var(--text-dim);">المنطقة</label>
+            <select id="exportRegionM" data-no-search style="padding:7px 12px;border-radius:8px;background:var(--bg-input);border:1px solid var(--border);color:var(--text-main);font-family:'Cairo';font-size:12px;">
+                <option value="">كل المناطق</option>
+                <option value="الشرقية">الشرقية</option>
+                <option value="الجنوبية">الجنوبية</option>
+                <option value="الغربية">الغربية</option>
+                <option value="المحافظات">المحافظات</option>
+                <option value="فروع العقبة">فروع العقبة</option>
+                <option value="أخرى">أخرى</option>
+            </select>
+        </div>
+        <div style="display:flex;flex-direction:column;gap:3px;">
+            <label style="font-size:10px;color:var(--text-dim);">حالة التسليم</label>
+            <select id="exportStatusM" data-no-search style="padding:7px 12px;border-radius:8px;background:var(--bg-input);border:1px solid var(--border);color:var(--text-main);font-family:'Cairo';font-size:12px;">
+                <option value="">الكل</option>
+                <option value="تم التسليم">✅ تم التسليم</option>
+                <option value="لم يتم التسليم">⏳ لم يتم التسليم</option>
+            </select>
+        </div>
+    </div>
     <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;">
         <button id="btnExportMontasiat" onclick="exportMontasiat()"
             style="display:flex;align-items:center;gap:7px;background:linear-gradient(135deg,rgba(46,125,50,0.15),rgba(46,125,50,0.08));

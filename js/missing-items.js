@@ -1232,6 +1232,8 @@ function exportMontasiat() {
         addedBy:     get('searchAddedByM'),
         deliveredBy: get('searchDeliveredByM'),
         type:        get('searchTypeM'),
+        region:      get('exportRegionM'),
+        status:      get('exportStatusM'),
     };
     // فلاتر مدير قسم السيطرة: القسم + الفروع المحددة داخله
     const isCtrlMgrM = currentUser?.role === 'control_employee';
@@ -1253,7 +1255,8 @@ function exportMontasiat() {
         (!f.addedBy     || (x.addedBy||'').includes(f.addedBy)) &&
         (!f.deliveredBy || (x.deliveredBy||'').includes(f.deliveredBy)) &&
         (!f.type        || (x.type||'') === f.type) &&
-        (!selectedSectionM || selectedSectionBranchesM.includes(x.branch))
+        (!selectedSectionM || selectedSectionBranchesM.includes(x.branch)) &&
+        _matchExportRegionStatus(x, f.region, f.status)
     );
     if (!filtered.length) return alert('لا توجد نتائج للتصدير بالفلتر الحالي');
     // بناء عمود "التفاصيل" حسب نوع المنتسية
@@ -1292,9 +1295,17 @@ function exportMontasiat() {
         'سلّمه':           x.deliveredBy   || '',
     }));
     const ws = XLSX.utils.json_to_sheet(rows);
+    // تذييل: مجموع النقدي لكل فرع + المجموع الكامل (للمنتسيات النقدية)
+    const _cash = _montasiaCashSummary(filtered);
+    if (_cash.hasCash) {
+        const aoa = [[], ['💰 ملخّص النقدي — مجموع كل فرع', '']];
+        _cash.branches.forEach(([br, v]) => aoa.push([br, v]));
+        aoa.push(['المجموع الكامل للنقدي', _cash.grand]);
+        XLSX.utils.sheet_add_aoa(ws, aoa, { origin: -1 });
+    }
     const wb = XLSX.utils.book_new();
     XLSX.utils.book_append_sheet(wb, ws, 'المنتسيات');
-    const suffix = f.type || f.city || f.addedBy || f.date || '';
+    const suffix = f.region || f.status || f.type || f.city || f.addedBy || f.date || '';
     XLSX.writeFile(wb, `منتسيات${suffix ? '_' + suffix : ''}_${iso()}.xlsx`);
 }
 
@@ -1322,6 +1333,32 @@ function _montasiaDetailsText(x) {
     return x.notes || '';
 }
 
+/* مجموع القيم النقدية لكل فرع + المجموع الكامل — للمنتسيات النقدية فقط (type='نقدي')
+   يُستخدم في تذييل تصدير Excel و PDF */
+function _montasiaCashSummary(list) {
+    const num = v => { const n = parseFloat(String(v == null ? '' : v).replace(/[^\d.]/g, '')); return isNaN(n) ? 0 : n; };
+    const byBranch = {};
+    let grand = 0;
+    (list || []).forEach(x => {
+        if (x.type !== 'نقدي') return;
+        const v = num(x.missingValue);
+        if (!v) return;
+        const key = `${x.branch || '—'}${x.city ? ' — ' + x.city : ''}`;
+        byBranch[key] = (byBranch[key] || 0) + v;
+        grand += v;
+    });
+    const branches = Object.entries(byBranch).sort((a, b) => b[1] - a[1]);
+    return { branches, grand, hasCash: branches.length > 0 };
+}
+
+/* تطبيق فلتري «المنطقة» و«حالة التسليم» الخاصين بالتصدير (مدير الكول سنتر) */
+function _matchExportRegionStatus(x, region, status) {
+    if (region && (typeof getBranchRegion !== 'function' || getBranchRegion(x.branch) !== region)) return false;
+    if (status === 'تم التسليم'     && x.status !== 'تم التسليم') return false;
+    if (status === 'لم يتم التسليم' && x.status === 'تم التسليم') return false;
+    return true;
+}
+
 /* ⬇️ تصدير المنتسيات إلى PDF — تقرير منسّق بمقاس A4 مع لوجو محامص الشعب،
    عبر نافذة طباعة (نص حقيقي، يدعم العربية، رأس جدول متكرر، حفظ كـ PDF من حوار الطباعة) */
 function exportMontasiatPDF() {
@@ -1335,6 +1372,8 @@ function exportMontasiatPDF() {
         addedBy:     get('searchAddedByM'),
         deliveredBy: get('searchDeliveredByM'),
         type:        get('searchTypeM'),
+        region:      get('exportRegionM'),
+        status:      get('exportStatusM'),
     };
     const isCtrlMgrM = currentUser?.role === 'control_employee';
     const selectedSectionM = isCtrlMgrM ? get('searchSectionM') : '';
@@ -1353,13 +1392,16 @@ function exportMontasiatPDF() {
         (!f.addedBy     || (x.addedBy||'').includes(f.addedBy)) &&
         (!f.deliveredBy || (x.deliveredBy||'').includes(f.deliveredBy)) &&
         (!f.type        || (x.type||'') === f.type) &&
-        (!selectedSectionM || selectedSectionBranchesM.includes(x.branch))
+        (!selectedSectionM || selectedSectionBranchesM.includes(x.branch)) &&
+        _matchExportRegionStatus(x, f.region, f.status)
     ).sort((a, b) => (a.city||'').localeCompare(b.city||'', 'ar') || (a.branch||'').localeCompare(b.branch||'', 'ar'));
 
     if (!filtered.length) return alert('لا توجد منتسيات للتصدير بالفلتر الحالي');
 
     // ملخّص الفلتر المطبّق (يظهر تحت العنوان)
     const _filterBits = [];
+    if (f.region)      _filterBits.push(`المنطقة: ${f.region}`);
+    if (f.status)      _filterBits.push(`الحالة: ${f.status}`);
     if (f.city)        _filterBits.push(`المحافظة: ${f.city}`);
     if (f.branch)      _filterBits.push(`الفرع: ${f.branch}`);
     if (f.type)        _filterBits.push(`النوع: ${f.type}`);
@@ -1367,6 +1409,18 @@ function exportMontasiatPDF() {
     if (f.addedBy)     _filterBits.push(`أضافه: ${f.addedBy}`);
     if (f.deliveredBy) _filterBits.push(`سلّمه: ${f.deliveredBy}`);
     const filterLine = _filterBits.length ? _filterBits.join(' &nbsp;•&nbsp; ') : 'كل المنتسيات (بدون فلتر)';
+
+    // ملخّص النقدي لكل فرع + المجموع الكامل
+    const _cash = _montasiaCashSummary(filtered);
+    const cashSummaryHtml = _cash.hasCash ? `
+      <div class="cash-summary">
+        <h2>💰 ملخّص النقدي — مجموع كل فرع</h2>
+        <table class="sum-tbl">
+          <thead><tr><th>الفرع</th><th>مجموع القيمة النقدية</th></tr></thead>
+          <tbody>${_cash.branches.map(([br, v]) => `<tr><td>${sanitize(br)}</td><td class="num">${_toLatinDigits(v.toLocaleString('en-US'))}</td></tr>`).join('')}</tbody>
+          <tfoot><tr><td>المجموع الكامل للنقدي</td><td class="num">${_toLatinDigits(_cash.grand.toLocaleString('en-US'))}</td></tr></tfoot>
+        </table>
+      </div>` : '';
 
     const _statusPill = (st) => {
         const s = st || '—';
@@ -1418,6 +1472,13 @@ function exportMontasiatPDF() {
   .c-emp { font-size: 9.5px; }
   .c-time { white-space: nowrap; font-size: 9.5px; }
   tfoot { display: table-footer-group; }
+  .cash-summary { margin-top: 16px; page-break-inside: avoid; }
+  .cash-summary h2 { font-size: 13px; color: #c62828; margin: 0 0 6px; border-right: 4px solid #c62828; padding-right: 8px; }
+  .sum-tbl { width: 48%; min-width: 320px; }
+  .sum-tbl th { background: #37474f; }
+  .sum-tbl td { text-align: right; padding: 6px 10px; }
+  .sum-tbl td.num { text-align: left; font-family: 'Courier New', monospace; font-weight: 700; direction: ltr; }
+  .sum-tbl tfoot td { background: #fff3e0; font-weight: 800; font-size: 11.5px; color: #c62828; border-top: 2px solid #c62828; }
   .ft { margin-top: 12px; text-align: center; font-size: 9.5px; color: #999; border-top: 1px solid #eee; padding-top: 6px; }
   @media print { thead { display: table-header-group; } tr { page-break-inside: avoid; } }
 </style></head>
@@ -1440,6 +1501,7 @@ function exportMontasiatPDF() {
     </tr></thead>
     <tbody>${rowsHtml}</tbody>
   </table>
+  ${cashSummaryHtml}
   <div class="ft">نظام إدارة محامص الشعب &nbsp;•&nbsp; تقرير المنتسيات &nbsp;•&nbsp; ${filtered.length} سجل</div>
 </body></html>`;
 
