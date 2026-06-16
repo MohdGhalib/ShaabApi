@@ -109,83 +109,82 @@ async function _superAdminLogin(isLocked) {
     _grantSuperAdmin(isLocked);
 }
 
-/* 🔐 نافذة التحقق الثنائي — تصميم «خزنة محامص الشعب» (أسود/ذهبي قهوة + خانات OTP).
+/* 🔐 نافذة التحقق الثنائي — تصميم «إسبريسو تحريري» (عاجي دافئ + لمسة كهرمانية + خانات OTP).
    تُرجع Promise<boolean> (تم التحقق؟). */
 function _show2FAModal() {
     return new Promise((resolve) => {
         if (!document.getElementById('_v2font')) {
             const l = document.createElement('link');
             l.id = '_v2font'; l.rel = 'stylesheet';
-            l.href = 'https://fonts.googleapis.com/css2?family=Reem+Kufi:wght@500;600;700&display=swap';
+            l.href = 'https://fonts.googleapis.com/css2?family=El+Messiri:wght@500;600;700&display=swap';
             document.head.appendChild(l);
         }
         const overlay = document.createElement('div');
         overlay.id = '_sa2faOverlay';
         overlay.innerHTML = `
           <style>
-            #_sa2faOverlay{position:fixed;inset:0;z-index:100000;display:flex;align-items:center;justify-content:center;direction:rtl;
-              font-family:'Cairo',sans-serif;animation:_v2fade .25s ease both;
-              background:radial-gradient(125% 120% at 50% -5%, rgba(232,176,75,.12), rgba(0,0,0,0) 46%), rgba(6,5,4,.84);
-              backdrop-filter:blur(9px) saturate(1.1);}
-            #_sa2faOverlay::after{content:'';position:absolute;inset:0;pointer-events:none;opacity:.45;mix-blend-mode:overlay;
-              background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='140' height='140'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='2'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='0.45'/%3E%3C/svg%3E");}
-            .v2-card{position:relative;width:432px;max-width:92vw;padding:38px 32px 26px;border-radius:26px;text-align:center;
-              background:linear-gradient(165deg,#181308 0%,#0c0a06 100%);
-              box-shadow:0 44px 120px rgba(0,0,0,.7), 0 0 70px rgba(232,176,75,.06);
-              animation:_v2pop .42s cubic-bezier(.2,.9,.25,1.12) both;}
-            .v2-card::before{content:'';position:absolute;inset:0;border-radius:26px;padding:1px;pointer-events:none;
-              background:linear-gradient(155deg,rgba(245,200,105,.6),rgba(245,200,105,0) 38%,rgba(245,200,105,0) 68%,rgba(245,200,105,.28));
-              -webkit-mask:linear-gradient(#000 0 0) content-box,linear-gradient(#000 0 0);-webkit-mask-composite:xor;mask-composite:exclude;}
-            .v2-seal{position:relative;width:88px;height:88px;margin:0 auto 18px;display:flex;align-items:center;justify-content:center;}
-            .v2-ring{position:absolute;inset:0;border-radius:50%;border:1.5px solid rgba(245,200,105,.22);}
-            .v2-ring.r2{inset:8px;border-style:dashed;border-color:rgba(245,200,105,.38);animation:_v2spin 15s linear infinite;}
-            .v2-ring.r3{inset:-10px;border-color:rgba(245,200,105,.12);animation:_v2pulse 2.8s ease-in-out infinite;}
-            .v2-core{width:60px;height:60px;border-radius:50%;display:flex;align-items:center;justify-content:center;
-              background:radial-gradient(circle at 34% 28%,#f7d27f,#d9a83f 58%,#8a6d2f);
-              box-shadow:0 8px 28px rgba(202,162,63,.5),0 0 0 1px rgba(255,255,255,.18) inset;}
-            .v2-title{margin:0 0 6px;font-family:'Reem Kufi','Cairo',sans-serif;font-weight:700;font-size:24px;letter-spacing:.4px;color:#f4ecda;}
-            .v2-sub{margin:0 0 24px;color:#9a8f7a;font-size:12.5px;line-height:1.7;}
+            #_sa2faOverlay{--esp:#2a2018;--esp2:#3c2e22;--amber:#b0742f;--amber-soft:#caa36b;
+              --cream:#fbf6ee;--line:rgba(96,70,44,.14);--muted:#8c7c69;
+              position:fixed;inset:0;z-index:100000;display:flex;align-items:center;justify-content:center;direction:rtl;
+              font-family:'Cairo',sans-serif;animation:_v2fade .22s ease both;
+              background:radial-gradient(120% 100% at 50% 0%, rgba(176,116,47,.16), rgba(0,0,0,0) 52%), rgba(26,18,12,.62);
+              backdrop-filter:blur(7px) saturate(1.05);}
+            .v2-card{position:relative;width:404px;max-width:92vw;padding:40px 34px 26px;border-radius:22px;text-align:center;
+              background:linear-gradient(180deg,#fdfaf4 0%, var(--cream) 100%);border:1px solid var(--line);overflow:hidden;
+              box-shadow:0 32px 80px rgba(40,26,14,.34), 0 2px 0 rgba(255,255,255,.6) inset;
+              animation:_v2pop .4s cubic-bezier(.2,.9,.28,1.06) both;}
+            .v2-card::before{content:'';position:absolute;top:0;left:0;right:0;height:3px;
+              background:linear-gradient(90deg,transparent,var(--amber),transparent);opacity:.85;}
+            .v2-seal{position:relative;width:66px;height:66px;margin:4px auto 20px;display:flex;align-items:center;justify-content:center;
+              border-radius:50%;color:#fff;background:radial-gradient(circle at 36% 28%,#caa36b,#b0742f 60%,#8a5824);
+              box-shadow:0 10px 24px rgba(176,116,47,.4), 0 0 0 1px rgba(255,255,255,.3) inset;}
+            .v2-seal::after{content:'';position:absolute;inset:-9px;border-radius:50%;border:1px dashed rgba(176,116,47,.35);}
+            .v2-title{margin:0 0 8px;font-family:'El Messiri','Cairo',sans-serif;font-weight:700;font-size:25px;letter-spacing:.3px;color:#2a2018;}
+            .v2-sub{margin:0 0 28px;color:var(--muted);font-size:13px;line-height:1.75;}
             .v2-otp{display:flex;gap:9px;justify-content:center;direction:ltr;}
-            .v2-cell{width:47px;height:60px;text-align:center;font-size:27px;font-weight:700;color:#f7d27f;caret-color:#f5c869;
-              font-family:ui-monospace,'SF Mono',Menlo,monospace;border:none;outline:none;border-radius:14px;
-              background:rgba(245,200,105,.04);box-shadow:0 0 0 1.5px rgba(245,200,105,.16) inset;transition:.18s ease;}
-            .v2-cell:focus{background:rgba(245,200,105,.10);box-shadow:0 0 0 2px #f5c869 inset,0 0 24px rgba(245,200,105,.38);transform:translateY(-3px);}
-            .v2-cell.filled{box-shadow:0 0 0 1.5px rgba(245,200,105,.55) inset;}
-            .v2-otp.err .v2-cell{box-shadow:0 0 0 2px #ff6b5e inset;color:#ff6b5e;}
-            .v2-err{color:#ff8178;font-size:12.5px;min-height:18px;margin:12px 0 0;font-weight:600;}
-            .v2-actions{display:flex;gap:10px;margin-top:14px;}
-            .v2-btn{flex:2;padding:14px;border:none;border-radius:14px;font-family:'Cairo';font-size:15px;font-weight:800;cursor:pointer;
-              color:#1a1407;background:linear-gradient(135deg,#f7d27f,#d9a83f);box-shadow:0 10px 28px rgba(217,168,63,.42);transition:.2s;}
-            .v2-btn:hover{filter:brightness(1.07);transform:translateY(-1px);}
-            .v2-btn:disabled{opacity:.6;cursor:default;transform:none;filter:none;}
-            .v2-ghost{flex:1;padding:14px;border-radius:14px;border:1px solid rgba(245,200,105,.18);background:transparent;color:#b6a98e;
-              font-family:'Cairo';font-size:14px;cursor:pointer;transition:.2s;}
-            .v2-ghost:hover{background:rgba(245,200,105,.07);color:#f4ecda;}
-            .v2-foot{margin-top:18px;font-size:10.5px;color:#6f6757;display:flex;align-items:center;justify-content:center;gap:6px;}
+            .v2-cell{width:47px;height:58px;text-align:center;font-size:25px;font-weight:700;color:#2a2018;caret-color:var(--amber);
+              font-family:ui-monospace,'SF Mono',Menlo,monospace;outline:none;border-radius:13px;
+              border:1.5px solid var(--line);background:#fff;transition:.16s ease;
+              animation:_v2rise .42s cubic-bezier(.2,.9,.3,1.05) both;}
+            .v2-cell:focus{border-color:var(--amber);box-shadow:0 0 0 3px rgba(176,116,47,.16);transform:translateY(-2px);}
+            .v2-cell.filled{border-color:var(--amber-soft);background:#fffdf8;}
+            .v2-otp.err .v2-cell{border-color:#c0492f;color:#c0492f;}
+            .v2-err{color:#c0492f;font-size:12.5px;min-height:18px;margin:14px 0 0;font-weight:600;}
+            .v2-actions{display:flex;gap:10px;margin-top:18px;}
+            .v2-btn{flex:2;padding:14px;border:none;border-radius:13px;font-family:'Cairo';font-size:15px;font-weight:800;cursor:pointer;
+              color:#fdfaf4;background:linear-gradient(165deg,var(--esp2),var(--esp));letter-spacing:.3px;
+              box-shadow:0 10px 22px rgba(42,32,24,.28);transition:.2s;}
+            .v2-btn:hover{filter:brightness(1.12);transform:translateY(-1px);}
+            .v2-btn:disabled{opacity:.55;cursor:default;transform:none;filter:none;}
+            .v2-ghost{flex:1;padding:14px;border-radius:13px;border:1px solid var(--line);background:transparent;color:#6f5f4c;
+              font-family:'Cairo';font-size:14px;font-weight:600;cursor:pointer;transition:.18s;}
+            .v2-ghost:hover{background:rgba(176,116,47,.07);color:#2a2018;}
+            .v2-foot{margin-top:22px;padding-top:15px;border-top:1px solid var(--line);
+              font-size:11px;color:var(--muted);display:flex;align-items:center;justify-content:center;gap:6px;}
+            .v2-foot svg{opacity:.7;}
             @keyframes _v2fade{from{opacity:0}to{opacity:1}}
-            @keyframes _v2pop{from{opacity:0;transform:translateY(18px) scale(.95)}to{opacity:1;transform:none}}
-            @keyframes _v2spin{to{transform:rotate(360deg)}}
-            @keyframes _v2pulse{0%,100%{opacity:.35;transform:scale(1)}50%{opacity:.85;transform:scale(1.06)}}
+            @keyframes _v2pop{from{opacity:0;transform:translateY(16px) scale(.96)}to{opacity:1;transform:none}}
+            @keyframes _v2rise{from{opacity:0;transform:translateY(9px)}to{opacity:1;transform:none}}
             @keyframes _v2shake{10%,90%{transform:translateX(-3px)}30%,70%{transform:translateX(5px)}50%{transform:translateX(-8px)}}
           </style>
           <div class="v2-card" id="_v2card">
             <div class="v2-seal">
-              <div class="v2-ring r3"></div><div class="v2-ring r2"></div><div class="v2-ring"></div>
-              <div class="v2-core">
-                <svg width="27" height="27" viewBox="0 0 24 24" fill="none"><path d="M6.5 10V8a5.5 5.5 0 0111 0v2" stroke="#1a1407" stroke-width="2.1" stroke-linecap="round"/><rect x="4.3" y="10" width="15.4" height="10.6" rx="3.2" fill="#1a1407"/><circle cx="12" cy="14.6" r="1.7" fill="#f7d27f"/><rect x="11.15" y="15.2" width="1.7" height="3.2" rx=".85" fill="#f7d27f"/></svg>
-              </div>
+              <svg width="29" height="29" viewBox="0 0 24 24" fill="none"><path d="M6.5 10V8a5.5 5.5 0 0111 0v2" stroke="currentColor" stroke-width="2" stroke-linecap="round"/><rect x="4.3" y="10" width="15.4" height="10.6" rx="3" stroke="currentColor" stroke-width="2" fill="none"/><circle cx="12" cy="14.6" r="1.6" fill="currentColor"/><rect x="11.2" y="15.4" width="1.6" height="3" rx=".8" fill="currentColor"/></svg>
             </div>
-            <h3 class="v2-title">بوابة السوبر أدمن</h3>
-            <p class="v2-sub">أدخل رمز التحقّق المكوّن من 6 أرقام<br>من تطبيق Google Authenticator</p>
+            <h3 class="v2-title">التحقّق بخطوتين</h3>
+            <p class="v2-sub">أدخل الرمز المكوّن من 6 أرقام<br>من تطبيق Google Authenticator</p>
             <div class="v2-otp" id="_v2otp" dir="ltr">
-              ${[0,1,2,3,4,5].map(i=>`<input class="v2-cell" data-i="${i}" type="text" inputmode="numeric" autocomplete="${i===0?'one-time-code':'off'}" maxlength="1">`).join('')}
+              ${[0,1,2,3,4,5].map(i=>`<input class="v2-cell" data-i="${i}" style="animation-delay:${120+i*45}ms" type="text" inputmode="numeric" autocomplete="${i===0?'one-time-code':'off'}" maxlength="1">`).join('')}
             </div>
             <div class="v2-err" id="_v2err"></div>
             <div class="v2-actions">
               <button class="v2-ghost" id="_v2cancel">إلغاء</button>
               <button class="v2-btn"  id="_v2submit">تحقّق</button>
             </div>
-            <div class="v2-foot">🛡️ محمي بتشفير TOTP — يتغيّر الرمز كل 30 ثانية</div>
+            <div class="v2-foot">
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="none"><path d="M6.5 10V8a5.5 5.5 0 0111 0v2" stroke="currentColor" stroke-width="2" stroke-linecap="round"/><rect x="4.3" y="10" width="15.4" height="10.6" rx="3" stroke="currentColor" stroke-width="2" fill="none"/></svg>
+              محمي بتشفير TOTP — يتغيّر الرمز كل 30 ثانية
+            </div>
           </div>`;
         document.body.appendChild(overlay);
 
