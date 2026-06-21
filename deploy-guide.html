@@ -1,0 +1,323 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<title>دليل تركيب موقع محامص الشعب على سيرفر داخلي</title>
+<style>
+  * { box-sizing: border-box; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+  @page { size: A4; margin: 16mm 14mm; }
+  body {
+    font-family: "Segoe UI","Tahoma",sans-serif; direction: rtl; color: #1f2933;
+    font-size: 12px; line-height: 1.85; margin: 0;
+  }
+  h1,h2,h3 { color:#7a4a26; margin: 0 0 8px; line-height:1.4; }
+  h2 { font-size: 19px; border-bottom: 3px solid #c0935d; padding-bottom:6px; margin-top: 26px; }
+  h3 { font-size: 15px; color:#1565c0; margin-top:18px; }
+  p { margin: 6px 0; }
+  code, pre { font-family: "Consolas","Courier New",monospace; direction: ltr; text-align: left; }
+  code { background:#f1ece6; color:#9a3b12; padding:1px 5px; border-radius:4px; font-size:11px; }
+  pre {
+    background:#2a2018; color:#e8dcc8; padding:12px 14px; border-radius:8px;
+    overflow-x:auto; font-size:10.5px; line-height:1.6; white-space:pre-wrap; word-break:break-word;
+    border-right:4px solid #c0935d;
+  }
+  table { width:100%; border-collapse:collapse; margin:10px 0; font-size:11px; }
+  th,td { border:1px solid #d8cdbf; padding:7px 9px; text-align:right; vertical-align:top; }
+  th { background:#7a4a26; color:#fff; font-weight:700; }
+  tr:nth-child(even) td { background:#faf6f0; }
+  .warn { background:#fdecea; border:1px solid #e0a0a0; border-right:5px solid #c0392b;
+          padding:10px 14px; border-radius:8px; margin:10px 0; }
+  .tip  { background:#eaf4ec; border:1px solid #a8d0b0; border-right:5px solid #2e7d32;
+          padding:10px 14px; border-radius:8px; margin:10px 0; }
+  .note { background:#eef4fb; border:1px solid #a9c8e8; border-right:5px solid #1565c0;
+          padding:10px 14px; border-radius:8px; margin:10px 0; }
+  .section { page-break-inside: avoid; }
+  ul,ol { margin:6px 22px 6px 0; padding:0; }
+  li { margin:4px 0; }
+
+  /* ── صفحة الغلاف ── */
+  .cover { text-align:center; padding-top:120px; page-break-after:always; }
+  .cover .logo { font-size:64px; }
+  .cover h1 { font-size:34px; color:#7a4a26; margin:18px 0 6px; border:none; }
+  .cover .sub { font-size:17px; color:#5a6a78; }
+  .cover .meta { margin-top:60px; font-size:13px; color:#7a8694; }
+  .cover .badge { display:inline-block; margin-top:30px; background:#7a4a26; color:#fff;
+                  padding:8px 22px; border-radius:30px; font-size:14px; }
+
+  /* ── مخطّط المعمارية ── */
+  .arch { display:flex; align-items:center; justify-content:center; gap:0; flex-wrap:wrap;
+          margin:18px 0; page-break-inside:avoid; }
+  .box { border-radius:12px; padding:14px 16px; text-align:center; min-width:130px;
+         font-weight:700; font-size:12px; color:#fff; box-shadow:0 3px 8px rgba(0,0,0,.15); }
+  .box small { display:block; font-weight:400; font-size:10px; opacity:.9; margin-top:3px; }
+  .b-user { background:linear-gradient(135deg,#1565c0,#0d47a1); }
+  .b-srv  { background:linear-gradient(135deg,#7a4a26,#5a3318); }
+  .b-db   { background:linear-gradient(135deg,#2e7d32,#1b5e20); }
+  .arrow { font-size:26px; color:#c0935d; padding:0 10px; font-weight:900; }
+
+  /* ── مخطّط الخطوات العمودي ── */
+  .flow { margin:14px auto; max-width:620px; }
+  .step { display:flex; align-items:stretch; gap:12px; margin:0; page-break-inside:avoid; }
+  .step .num { background:#c0935d; color:#fff; min-width:38px; height:38px; border-radius:50%;
+               display:flex; align-items:center; justify-content:center; font-weight:800; font-size:16px;
+               box-shadow:0 2px 5px rgba(0,0,0,.2); }
+  .step .body { flex:1; background:#faf6f0; border:1px solid #e3d6c4; border-radius:10px;
+                padding:9px 14px; margin-bottom:6px; }
+  .step .body b { color:#7a4a26; }
+  .connector { width:38px; display:flex; justify-content:center; }
+  .connector::before { content:""; width:3px; background:#e0cdb0; height:14px; }
+  .stepwrap { }
+</style>
+</head>
+<body>
+
+<!-- ═══════════ الغلاف ═══════════ -->
+<div class="cover">
+  <div class="logo">🏛️</div>
+  <h1>دليل تركيب موقع «محامص الشعب»</h1>
+  <div class="sub">التركيب والتشغيل على سيرفر داخلي — دليل الفنّي الكامل</div>
+  <div class="badge">نسخة تفصيلية مع مخطّطات مرئية</div>
+  <div class="meta">
+    تطبيق ShaabApi · .NET 8 + MySQL<br>
+    وثيقة فنية للتركيب — اقرأها كاملة قبل البدء
+  </div>
+</div>
+
+<!-- ═══════════ 0) نظرة عامة ═══════════ -->
+<div class="section">
+<h2>0) نظرة عامة — ماذا تركّب بالضبط؟</h2>
+<p>النظام بسيط في جوهره: <b>تطبيق واحد</b> مكتوب بلغة <b>.NET 8 (ASP.NET Core)</b> اسمه <code>ShaabApi</code>.
+هذا التطبيق يقوم بدورين في آنٍ واحد:</p>
+<ul>
+  <li><b>يخدم واجهة الموقع</b> (صفحات HTML/JavaScript التي يراها الموظف في المتصفّح).</li>
+  <li><b>يخدم الـ API</b> (يستقبل ويحفظ البيانات).</li>
+</ul>
+<p>ويحفظ كل البيانات في قاعدة <b>MySQL</b>. لذلك تحتاج على السيرفر ثلاثة أشياء فقط:</p>
+
+<div class="arch">
+  <div class="box b-user">المستخدمون<small>متصفّح + تطبيق جوال</small></div>
+  <div class="arrow">⟸</div>
+  <div class="box b-srv">سيرفر ShaabApi<small>.NET 8 — الواجهة + الـ API</small></div>
+  <div class="arrow">⟸</div>
+  <div class="box b-db">قاعدة MySQL<small>تخزين كل البيانات</small></div>
+</div>
+
+<div class="tip"><b>الخلاصة:</b> ثبّت <b>MySQL</b> + <b>بيئة تشغيل .NET 8</b> + انسخ <b>ملفات التطبيق</b> واضبط الإعدادات. هذا كل شيء.</div>
+</div>
+
+<!-- ═══════════ خريطة الخطوات ═══════════ -->
+<div class="section">
+<h2>خريطة الخطوات (المسار الكامل)</h2>
+<div class="flow">
+  <div class="stepwrap">
+    <div class="step"><div class="num">1</div><div class="body"><b>المتطلّبات:</b> ثبّت .NET 8 Runtime و MySQL على السيرفر.</div></div>
+    <div class="connector"></div>
+    <div class="step"><div class="num">2</div><div class="body"><b>قاعدة البيانات:</b> أنشئ القاعدة + مستخدماً لها (الجداول تُنشأ تلقائياً).</div></div>
+    <div class="connector"></div>
+    <div class="step"><div class="num">3</div><div class="body"><b>الملفات:</b> جهّز مجلد التطبيق المنشور (publish).</div></div>
+    <div class="connector"></div>
+    <div class="step"><div class="num">4</div><div class="body"><b>الإعدادات:</b> اضبط متغيّرات البيئة (الأسرار + الاتصال + العنوان). ⚠️ أهم خطوة.</div></div>
+    <div class="connector"></div>
+    <div class="step"><div class="num">5</div><div class="body"><b>تشغيل تجريبي:</b> شغّل وتأكّد أن الموقع يفتح والدخول يعمل.</div></div>
+    <div class="connector"></div>
+    <div class="step"><div class="num">6</div><div class="body"><b>تشغيل دائم:</b> كخدمة Windows أو Docker (يعمل تلقائياً عند الإقلاع).</div></div>
+    <div class="connector"></div>
+    <div class="step"><div class="num">7</div><div class="body"><b>الشبكة:</b> افتح المنفذ + اضبط <code>ALLOWED_ORIGINS</code> + (اختياري) HTTPS.</div></div>
+    <div class="connector"></div>
+    <div class="step"><div class="num">8</div><div class="body"><b>التحقق + الجوال + النسخ الاحتياطي.</b></div></div>
+  </div>
+</div>
+</div>
+
+<!-- ═══════════ 1) المتطلّبات ═══════════ -->
+<div class="section">
+<h2>1) متطلّبات السيرفر — ثبّت هذه أولاً</h2>
+<table>
+  <tr><th>المكوّن</th><th>التفاصيل والشرح</th></tr>
+  <tr><td>نظام التشغيل</td><td>Windows Server (مفضّل لبيئتكم) أو Linux. أي جهاز ثابت يبقى يعمل.</td></tr>
+  <tr><td><b>.NET 8 ASP.NET Core Runtime</b></td><td>هو «المحرّك» الذي يشغّل التطبيق. حمّله من <code>dotnet.microsoft.com/download/dotnet/8.0</code> واختر <b>ASP.NET Core Runtime 8</b> (لا تحتاج SDK إلا إن أردت بناء الكود على السيرفر). تحقّق بعد التثبيت بالأمر <code>dotnet --info</code>.</td></tr>
+  <tr><td><b>MySQL Server 8.x</b></td><td>قاعدة البيانات. حمّلها من <code>dev.mysql.com/downloads</code> (أو MariaDB 10.5+). تأكّد أن خدمتها تعمل بعد التثبيت.</td></tr>
+  <tr><td>Node.js 18+ (اختياري)</td><td>فقط إن أردت تشغيل خدمة واتساب المنفصلة. ليست ضرورية لعمل الموقع.</td></tr>
+</table>
+<div class="note"><b>بديل أسهل:</b> إن كان لديك <b>Docker</b> فلا تحتاج تثبيت .NET يدوياً — انظر القسم 6 (ب).</div>
+</div>
+
+<!-- ═══════════ 2) قاعدة البيانات ═══════════ -->
+<div class="section">
+<h2>2) إعداد قاعدة البيانات ⚠️</h2>
+<p>نقطة مهمة ومريحة: <b>التطبيق يُنشئ كل الجداول تلقائياً</b> عند أول تشغيل. أنت فقط تُنشئ
+<b>القاعدة</b> و<b>مستخدماً</b> لها. افتح MySQL ونفّذ:</p>
+<pre>CREATE DATABASE shaab_db CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
+CREATE USER 'shaab'@'localhost' IDENTIFIED BY 'ضع_كلمة_مرور_قوية_هنا';
+GRANT ALL PRIVILEGES ON shaab_db.* TO 'shaab'@'localhost';
+FLUSH PRIVILEGES;</pre>
+<div class="warn"><b>احفظ كلمة مرور القاعدة</b> — ستحتاجها في القسم 4. ولا حاجة لتشغيل أي ملف SQL يدوياً؛ التطبيق ينشئ كل جدول بنفسه عند الإقلاع.</div>
+</div>
+
+<!-- ═══════════ 3) الملفات ═══════════ -->
+<div class="section">
+<h2>3) تجهيز ملفات التطبيق</h2>
+<h3>أ) إن كان لديك الكود المصدري + .NET SDK</h3>
+<pre>cd مسار-المشروع
+dotnet publish ShaabApi.csproj -c Release -o C:\ShaabApp</pre>
+<p>ينتج مجلد <code>C:\ShaabApp</code> يحوي <code>ShaabApi.dll</code> مع كل ملفات الموقع (index.html, js, css...). <b>هذا المجلد هو كل ما تنشره.</b></p>
+<h3>ب) إن استلمت مجلداً منشوراً جاهزاً</h3>
+<p>ضعه مباشرةً في مكان ثابت مثل <code>C:\ShaabApp</code>.</p>
+</div>
+
+<!-- ═══════════ 4) الإعدادات ═══════════ -->
+<div class="section">
+<h2>4) ضبط الأسرار ومتغيّرات البيئة ⚠️ (أهم قسم)</h2>
+<p>التطبيق يقرأ إعداداته من <b>متغيّرات البيئة</b> (Environment Variables) — وليس من داخل الكود.
+هذه القيم <b>إلزامية</b>؛ بدونها يرفض التطبيق العمل (هذا مقصود لأسباب أمنية).</p>
+<table>
+  <tr><th>المتغيّر</th><th>القيمة / الشرح</th></tr>
+  <tr><td><code>ConnectionStrings__DefaultConnection</code></td><td><code>Server=localhost;Port=3306;Database=shaab_db;User=shaab;Password=كلمة_مرور_القاعدة;CharSet=utf8mb4;</code></td></tr>
+  <tr><td><code>SuperAdminPassword</code></td><td><b>Leader@07979</b> — كلمة دخول «مدير النظام» (السوبر أدمن).</td></tr>
+  <tr><td><code>AdminPasswordHash</code></td><td><code>8e5fe6d0...c3efbf5</code> (موجود كاملاً في ملف <code>.env</code>).</td></tr>
+  <tr><td><code>Jwt__Key</code></td><td>سرّ عشوائي طويل (مولّد جاهز في <code>.env</code>) — يوقّع جلسات الدخول.</td></tr>
+  <tr><td><code>Jwt__Issuer</code></td><td><code>ShaabApi</code></td></tr>
+  <tr><td><code>SseToken</code></td><td>سرّ عشوائي (في <code>.env</code>).</td></tr>
+  <tr><td><code>ALLOWED_ORIGINS</code> ⚠️</td><td>عنوان الموقع الذي يكتبه المستخدمون، مثل <code>http://192.168.1.50:8080</code></td></tr>
+  <tr><td><code>PORT</code></td><td><code>8080</code> (أو أي منفذ تريده).</td></tr>
+</table>
+<div class="tip"><b>ملف <code>.env</code> المرفق</b> يحتوي معظم هذه القيم جاهزة. للتوليد من الصفر بدلاً منه: شغّل <code>setup-local-server.ps1</code>.</div>
+
+<h3>كيف تضبطها فعلياً؟ — طريقة 1: متغيّرات نظام دائمة (PowerShell كمسؤول)</h3>
+<pre>[Environment]::SetEnvironmentVariable('ConnectionStrings__DefaultConnection',
+  'Server=localhost;Port=3306;Database=shaab_db;User=shaab;Password=PASS;CharSet=utf8mb4;','Machine')
+[Environment]::SetEnvironmentVariable('SuperAdminPassword','Leader@07979','Machine')
+[Environment]::SetEnvironmentVariable('AdminPasswordHash','8e5fe6d0...c3efbf5','Machine')
+[Environment]::SetEnvironmentVariable('Jwt__Key','&lt;انسخه من .env&gt;','Machine')
+[Environment]::SetEnvironmentVariable('SseToken','&lt;انسخه من .env&gt;','Machine')
+[Environment]::SetEnvironmentVariable('ALLOWED_ORIGINS','http://192.168.1.50:8080','Machine')
+[Environment]::SetEnvironmentVariable('PORT','8080','Machine')</pre>
+<p>ثم <b>أعد فتح</b> نافذة PowerShell لتُحمَّل المتغيّرات.</p>
+
+<h3>طريقة 2: تحميل من ملف <code>.env</code> قبل التشغيل</h3>
+<pre>Get-Content C:\ShaabApp\.env | ForEach-Object {
+  if ($_ -and $_ -notmatch '^\s*#') {
+    $k,$v = $_ -split '=',2
+    [Environment]::SetEnvironmentVariable($k.Trim(), $v.Trim())
+  }
+}</pre>
+<div class="warn"><b>احمِ ملف <code>.env</code>:</b> ضعه خارج أي مجلد يُخدَم للويب، وقيّد صلاحياته، ولا ترفعه لأي مكان (git/بريد).</div>
+</div>
+
+<!-- ═══════════ 5) تشغيل تجريبي ═══════════ -->
+<div class="section">
+<h2>5) تشغيل تجريبي أول (للتأكد)</h2>
+<pre>cd C:\ShaabApp
+dotnet ShaabApi.dll</pre>
+<p>يجب أن ترى سطراً مثل <code>Now listening on: http://0.0.0.0:8080</code> ورسائل إنشاء الجداول.
+افتح المتصفّح على <code>http://localhost:8080</code> — يجب أن تظهر شاشة الدخول. أوقفه بـ <code>Ctrl+C</code> ثم انتقل للتشغيل الدائم.</p>
+<div class="note"><b>ظهر خطأ اتصال بقاعدة البيانات؟</b> راجع سلسلة الاتصال وأن خدمة MySQL تعمل.<br>
+<b>شاشة بيضاء أو الدخول لا يقبل السوبر أدمن؟</b> غالباً المتغيّرات لم تُحمَّل — راجع القسم 4.</div>
+</div>
+
+<!-- ═══════════ 6) تشغيل دائم ═══════════ -->
+<div class="section">
+<h2>6) التشغيل الدائم (اختر واحدة)</h2>
+<h3>أ) كخدمة Windows (موصى به) — عبر NSSM</h3>
+<pre>nssm install ShaabApi "C:\Program Files\dotnet\dotnet.exe" "C:\ShaabApp\ShaabApi.dll"
+nssm set ShaabApi AppDirectory C:\ShaabApp
+nssm start ShaabApi</pre>
+<p>المتغيّرات المضبوطة بنطاق «Machine» في القسم 4 تُورَّث للخدمة تلقائياً. الخدمة تعمل عند إقلاع الجهاز وتتعافى عند السقوط.</p>
+<h3>ب) عبر Docker (بديل)</h3>
+<pre>docker build -t shaabapi .
+docker run -d --name shaabapi --env-file .env -p 8080:8080 --restart unless-stopped shaabapi</pre>
+<div class="note">داخل Docker اجعل <code>Server=</code> في سلسلة الاتصال يشير لعنوان MySQL الفعلي (ليس <code>localhost</code> إن كانت القاعدة خارج الحاوية).</div>
+</div>
+
+<!-- ═══════════ 7) الشبكة ═══════════ -->
+<div class="section">
+<h2>7) الشبكة والوصول ⚠️</h2>
+<ol>
+  <li><b>افتح المنفذ</b> في جدار الحماية:
+    <pre>New-NetFirewallRule -DisplayName "ShaabApi" -Direction Inbound -LocalPort 8080 -Protocol TCP -Action Allow</pre></li>
+  <li><b>عنوان ثابت:</b> أعطِ السيرفر IP ثابتاً (مثل <code>192.168.1.50</code>) أو اسم مضيف داخلي.</li>
+  <li><b>⚠️ <code>ALLOWED_ORIGINS</code> يجب أن يطابق تماماً</b> ما يكتبه المستخدم (البروتوكول + العنوان + المنفذ). إن دخلوا عبر <code>http://192.168.1.50:8080</code> فاجعلها كذلك بالضبط، وإلا تُرفض الطلبات (خطأ CORS).</li>
+  <li>(اختياري) <b>HTTPS:</b> ضع التطبيق خلف <b>IIS/Nginx كوسيط عكسي</b> بشهادة داخلية ووجّهه إلى <code>http://localhost:8080</code>.</li>
+</ol>
+</div>
+
+<!-- ═══════════ 8) التحقق ═══════════ -->
+<div class="section">
+<h2>8) التحقق النهائي بعد التشغيل</h2>
+<ul>
+  <li>☑ الموقع يفتح من جهاز <b>آخر</b> على الشبكة: <code>http://192.168.1.50:8080</code></li>
+  <li>☑ دخول <b>السوبر أدمن</b> بكلمة <code>Leader@07979</code></li>
+  <li>☑ دخول <b>موظف</b> برقمه الوظيفي (مثل <code>0799</code>)</li>
+  <li>☑ إنشاء سجل تجريبي ثم تحديث الصفحة → السجل محفوظ (يعني القاعدة تعمل)</li>
+  <li>☑ لوحة السوبر أدمن تفتح وتعرض البيانات</li>
+</ul>
+</div>
+
+<!-- ═══════════ 9) الجوال ═══════════ -->
+<div class="section">
+<h2>9) تطبيق الجوال (لموظفي الفروع) ⚠️</h2>
+<p>موظفو الفروع والمناطق يدخلون من تطبيق <b>Flutter</b>، وهو مضبوط حالياً على عنوان قديم. يجب تحديثه:</p>
+<ol>
+  <li>افتح <code>mobile/lib/constants.dart</code> وغيّر السطر:
+    <pre>const String kBaseUrl = 'http://192.168.1.50:8080';   // عنوان سيرفرك الداخلي</pre></li>
+  <li>أعد بناء الـ APK: <code>cd mobile &amp;&amp; flutter build apk --release</code></li>
+  <li>وزّع الملف الناتج <code>build/app/outputs/flutter-apk/app-release.apk</code> على أجهزة الفروع.</li>
+</ol>
+<div class="warn">بدون هذه الخطوة لن يستطيع موظفو الفروع الدخول — لأن تطبيقهم سيظل يحاول الاتصال بالعنوان القديم.</div>
+</div>
+
+<!-- ═══════════ 10-12 ═══════════ -->
+<div class="section">
+<h2>10) الإشعارات (Firebase) — اختياري</h2>
+<p>الإشعارات الفورية تحتاج مفتاح خدمة Firebase. إن لم تكن مطلوبة داخلياً <b>تجاهل هذا القسم</b> — كل شيء آخر يعمل بدونها. لتفعيلها لاحقاً يُخزَّن المفتاح في قاعدة البيانات تحت المفتاح <code>Shaab_Firebase_Creds</code> (راجِع المطوّر).</p>
+
+<h2>11) النسخ الاحتياطي ⚠️ (لا تتجاهله)</h2>
+<p>اضبط نسخاً يومياً لقاعدة البيانات:</p>
+<pre>mysqldump -u shaab -p shaab_db &gt; C:\Backups\shaab_20260621.sql</pre>
+<p>أنشئ <b>مهمة مجدوَلة (Task Scheduler)</b> تشغّلها يومياً. احتفظ بآخر 14–30 نسخة، ويُفضّل نسخة على جهاز آخر. <b>جرّب الاستعادة مرة</b> للتأكد أن النسخ سليمة.</p>
+
+<h2>12) الصيانة والتحديث</h2>
+<ul>
+  <li><b>السجلّات:</b> تظهر في مخرجات الخدمة/الحاوية (يمكن توجيهها لملف عبر NSSM).</li>
+  <li><b>إعادة التشغيل:</b> <code>nssm restart ShaabApi</code> أو <code>docker restart shaabapi</code>.</li>
+  <li><b>تحديث الموقع:</b> انشر نسخة جديدة فوق <code>C:\ShaabApp</code> ثم أعد تشغيل الخدمة. ترقيات قاعدة البيانات تتم تلقائياً عند الإقلاع.</li>
+</ul>
+</div>
+
+<!-- ═══════════ 13) الأمان ═══════════ -->
+<div class="section">
+<h2>13) قائمة الأمان النهائية ⚠️</h2>
+<ul>
+  <li>☑ كلمة مرور السوبر أدمن غُيِّرت عن القديم المكشوف (الآن <code>Leader@07979</code>).</li>
+  <li>☑ ملف <code>.env</code> محمي، غير مخدوم للويب، وغير مرفوع لـ git.</li>
+  <li>☑ كلمة مرور قاعدة البيانات قوية وغير افتراضية.</li>
+  <li>☑ جدار الحماية يسمح بالمنفذ المطلوب فقط.</li>
+  <li>☑ (اختياري) HTTPS عبر وسيط عكسي.</li>
+  <li>☑ (اختياري) مسح الأسرار القديمة من تاريخ git — راجِع <code>SECURITY_HISTORY_SCRUB.md</code>.</li>
+  <li>☑ النسخ الاحتياطي اليومي يعمل ومُختبَر.</li>
+</ul>
+</div>
+
+<!-- ═══════════ 14) المشكلات ═══════════ -->
+<div class="section">
+<h2>14) حلّ المشكلات الشائعة</h2>
+<table>
+  <tr><th>العرض</th><th>السبب الغالب</th><th>الحل</th></tr>
+  <tr><td>الدخول لا يقبل السوبر أدمن</td><td>المتغيّرات لم تُحمَّل</td><td>أعد ضبط القسم 4 وأعد تشغيل الخدمة</td></tr>
+  <tr><td>خطأ اتصال DB عند الإقلاع</td><td>اتصال خاطئ / MySQL متوقّف</td><td>تحقّق من السلسلة وخدمة MySQL</td></tr>
+  <tr><td>الصفحة تفتح لكن لا تحفظ</td><td><code>ALLOWED_ORIGINS</code> لا يطابق العنوان</td><td>اجعلها مطابقة تماماً لعنوان المتصفّح</td></tr>
+  <tr><td>Address already in use</td><td>المنفذ مشغول</td><td>غيّر <code>PORT</code> أو أوقف ما يستخدمه</td></tr>
+  <tr><td>الجوال لا يدخل</td><td><code>kBaseUrl</code> قديم</td><td>غيّره وأعد بناء الـ APK (قسم 9)</td></tr>
+  <tr><td>صفحة 404 للواجهة</td><td>نشر ناقص</td><td>تأكّد أن index.html/js/css في مجلد النشر</td></tr>
+</table>
+
+<div class="tip" style="margin-top:18px;">
+  <b>بيانات الدخول الافتراضية بعد التركيب:</b><br>
+  • مدير النظام (سوبر أدمن): كلمة المرور <code>Leader@07979</code><br>
+  • الموظفون: كلٌّ برقمه الوظيفي (كما كان سابقاً).
+</div>
+<div class="note">عند أي غموض تقني عميق راجِع الملفات المرافقة: <code>ENV_SETUP.md</code> و<code>SECURITY_HISTORY_SCRUB.md</code> و<code>setup-local-server.ps1</code>، أو تواصل مع المطوّر.</div>
+</div>
+
+</body>
+</html>
