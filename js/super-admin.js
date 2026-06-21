@@ -6,8 +6,9 @@
    البيانات مُخزَّنة داخل db.permissionOverrides لتُزامَن مع السيرفر تلقائياً.
    ══════════════════════════════════════════════════════ */
 
-// قائمة بيضاء — تُطابَق ضد empId/phone/phoneNumber/mobile للموظف
-const _SA_WHITELIST = ['0785110515'];
+// قائمة بيضاء — تُطابَق ضد هوية المستخدم. حساب الأدمن القديم (0785110515) أُلغي
+// وانتقلت صلاحياته للسوبر أدمن (isAdmin=true يُمنح بعد التحقق من الخادم + TOTP).
+const _SA_WHITELIST = ['super-admin'];
 
 let _saLoggedDecision = false;
 function isSuperAdmin() {

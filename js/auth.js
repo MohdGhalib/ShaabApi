@@ -120,13 +120,32 @@ function perm(p) {
 }
 
 /* 🔐 دخول السوبر أدمن مع التحقق الثنائي (TOTP) إن كان مفعّلاً على الخادم */
-async function _superAdminLogin(isLocked) {
+async function _superAdminLogin(pass, isLocked) {
     if (typeof IS_LOCAL === 'undefined' || !IS_LOCAL) {
+        // 1) بوابة التحقق الثنائي (إن كانت مفعّلة)
         let st = { enabled: false };
         try { st = await fetch('api/sa2fa/status').then(r => r.json()); } catch {}
         if (st && st.enabled) {
             const verified = await _show2FAModal();   // نافذة عصرية تتولّى الإدخال + التحقق
             if (!verified) return;                     // ألغى المستخدم أو لم يُكمل
+        }
+        // 2) منح توكن المسؤول من الخادم (نفس صلاحيات الحساب الملغى 0785110515)
+        try {
+            const ar = await fetch('/api/admin/unlock', {
+                method:  'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body:    JSON.stringify({ password: pass })
+            });
+            if (!ar.ok) { _showLoginError('تعذّر منح صلاحية المسؤول'); return; }
+            const ad = await ar.json();
+            setToken(ad.token);
+            currentUser = { name:'سوبر أدمن', title:'سوبر أدمن', empId:'super-admin', isAdmin:true, role:'admin' };
+        } catch { _showLoginError('خطأ في الاتصال بالسيرفر'); return; }
+        // 3) حمّل بيانات الخادم بصلاحية المسؤول
+        try { await loadAllData(); } catch (e) { console.error('[SA] loadAllData failed:', e); }
+        if (typeof _initialLoadOk !== 'undefined' && !_initialLoadOk) {
+            alert('تعذّر تحميل البيانات من الخادم — سيُعاد تحميل الصفحة.');
+            location.reload(); return;
         }
     }
     _grantSuperAdmin(isLocked);
@@ -403,7 +422,7 @@ async function login() {
     // كلمة مرور السوبر أدمن — دخول مباشر (سواء النظام مقفل أو مفتوح)
     // هذا يتيح للسوبر أدمن إدارة النظام (ومنه قفله يدوياً) في أي وقت
     if (_isSA) {
-        _superAdminLogin(_isLocked);   // قد يطلب التحقق الثنائي (TOTP) قبل منح الدخول
+        _superAdminLogin(pass, _isLocked);   // TOTP ثم منح توكن المسؤول من الخادم
         return;
     }
 
@@ -468,35 +487,10 @@ async function login() {
                 return;
             }
             if (!res.ok) {
-                // فشل تسجيل الدخول العادي — جرّب كلمة مرور لوحة التحكم (السوبر ادمن)
-                let unlockedAsSuperAdmin = false;
-                if (res.status !== 429) {
-                    try {
-                        const ar = await fetch('/api/admin/unlock', {
-                            method:  'POST',
-                            headers: { 'Content-Type': 'application/json' },
-                            body:    JSON.stringify({ password: pass })
-                        });
-                        if (ar.ok) {
-                            const ad = await ar.json();
-                            // ادخل mainApp كسوبر ادمن — لوحة admin متاحة من زر جانبي
-                            setToken(ad.token);
-                            currentUser = {
-                                name:    'مسؤول النظام',
-                                title:   'سوبر ادمن',
-                                empId:   'super-admin',
-                                role:    'admin',
-                                isAdmin: true
-                            };
-                            unlockedAsSuperAdmin = true;
-                        }
-                    } catch(_) {}
-                }
-                if (!unlockedAsSuperAdmin) {
-                    _showLoginError('');
-                    return;
-                }
-                // لا return — اترك التدفّق يكمل (loadAllData → setProfileUI → mainApp)
+                // فشل تسجيل الدخول العادي. مسار السوبر أدمن يُعالَج مسبقاً (مع TOTP)،
+                // فلم يعد هناك مسار unlock احتياطي يتجاوز التحقق الثنائي.
+                _showLoginError('');
+                return;
             } else {
             const d = await res.json();
             setToken(d.token);

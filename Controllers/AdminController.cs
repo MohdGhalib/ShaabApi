@@ -42,7 +42,9 @@ public class AdminController : ControllerBase
                 return StatusCode(429, new { error = "محاولات كثيرة — انتظر قليلاً" });
         }
 
-        var expected = _config["AdminPanelPassword"];
+        // 🔑 حساب الأدمن القديم (AdminPanelPassword) أُلغي — صلاحياته انتقلت للسوبر أدمن.
+        // هذه النقطة الآن تُصدِر توكن المسؤول مقابل كلمة مرور السوبر أدمن فقط.
+        var expected = _config["SuperAdminPassword"];
         // fail-closed: لا كلمة مرور مضمّنة في الكود — إن غابت الإعدادات يُرفض الدخول
         if (string.IsNullOrEmpty(expected) || (body.Password ?? "") != expected)
         {
