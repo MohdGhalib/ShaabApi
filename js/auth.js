@@ -6,6 +6,29 @@ async function hashPassword(str) {
     return Array.from(new Uint8Array(buf)).map(b => b.toString(16).padStart(2,"0")).join("");
 }
 
+// 🔒 يتحقق من كلمة مرور السوبر أدمن دون تضمين النص الصريح في الكود:
+//   • وضع السيرفر: عبر /api/sa2fa/verify-password (الخادم وحده يملك القيمة).
+//   • الوضع المحلي (file://): مقارنة هاش SHA-256 فقط (للتطوير دون اتصال).
+// ملاحظة: عند القفل التزاحمي (429) يعود false فيتابع المستخدم العادي تسجيل دخوله بشكل طبيعي.
+const _SA_PWD_HASH = '24d662a1842af491d29b95dd85c671ce9fbc637b3f4acdeb634955041b763030';
+async function _isSuperAdminPassword(pass) {
+    if (!pass) return false;
+    if (typeof IS_LOCAL !== 'undefined' && IS_LOCAL) {
+        try { return (await hashPassword(pass)) === _SA_PWD_HASH; } catch { return false; }
+    }
+    try {
+        const r = await fetch('api/sa2fa/verify-password', {
+            method:  'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body:    JSON.stringify({ password: pass })
+        });
+        if (!r.ok) return false;
+        const d = await r.json();
+        return !!(d && d.ok);
+    } catch { return false; }
+}
+window._isSuperAdminPassword = _isSuperAdminPassword;
+
 // PBKDF2 — يطابق HashPbkdf2 في السيرفر (100,000 iter, SHA-256, 32 bytes out)
 async function hashPbkdf2(password, salt) {
     const enc = new TextEncoder();
@@ -367,19 +390,19 @@ function _showLoginError(msg) {
 async function login() {
     const pass  = document.getElementById("passInput").value;
 
-    // ── فحص قفل النظام + كلمة مرور السوبر أدمن ──
-    const SA_PWD     = (typeof window._LK_SUPER_ADMIN_PWD === 'string') ? window._LK_SUPER_ADMIN_PWD : '090999797269';
+    // ── فحص قفل النظام + كلمة مرور السوبر أدمن (تحقّق على الخادم — لا نص صريح في الكود) ──
     const _isLocked  = (typeof isSystemLocked === 'function' && isSystemLocked());
+    const _isSA      = await _isSuperAdminPassword(pass);
 
     // إن كان النظام مقفل، فقط كلمة مرور السوبر أدمن مقبولة
-    if (_isLocked && pass !== SA_PWD) {
+    if (_isLocked && !_isSA) {
         _showLoginError('🔒 النظام مقفل — تواصل مع محمد غالب: 0785110515');
         return;
     }
 
     // كلمة مرور السوبر أدمن — دخول مباشر (سواء النظام مقفل أو مفتوح)
     // هذا يتيح للسوبر أدمن إدارة النظام (ومنه قفله يدوياً) في أي وقت
-    if (pass === SA_PWD) {
+    if (_isSA) {
         _superAdminLogin(_isLocked);   // قد يطلب التحقق الثنائي (TOTP) قبل منح الدخول
         return;
     }

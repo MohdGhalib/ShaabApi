@@ -25,6 +25,8 @@ public class SuperAdmin2faController : ControllerBase
 
     // basic IP throttle for verify (TOTP brute-force protection)
     private static readonly Dictionary<string, (int count, DateTime windowEnd)> _attempts = new();
+    // مؤقّت مستقل ومتساهل لتحقّق كلمة المرور — لئلا يلوّثه دخول الموظفين العاديين
+    private static readonly Dictionary<string, (int count, DateTime windowEnd)> _pwAttempts = new();
     private static readonly object _lock = new();
 
     public SuperAdmin2faController(AppDbContext db, IConfiguration config) { _db = db; _config = config; }
@@ -109,6 +111,32 @@ public class SuperAdmin2faController : ControllerBase
             else _attempts.Remove(ip);
         }
         return Ok(new { ok = valid });
+    }
+
+    /// <summary>Verify the super-admin password server-side so it never ships in client JS. IP-throttled.</summary>
+    [HttpPost("verify-password")]
+    public IActionResult VerifyPassword([FromBody] SetupReq req)
+    {
+        var ip = HttpContext.Connection.RemoteIpAddress?.ToString() ?? "?";
+        lock (_lock)
+        {
+            if (_pwAttempts.TryGetValue(ip, out var a) && a.windowEnd > DateTime.UtcNow && a.count >= 15)
+                return StatusCode(429, new { ok = false, error = "محاولات كثيرة — انتظر دقيقة" });
+        }
+
+        var expected = _SaPwd();
+        bool ok = !string.IsNullOrEmpty(expected) && (req?.Password ?? "") == expected;
+
+        lock (_lock)
+        {
+            if (!ok)
+            {
+                var cur = (_pwAttempts.TryGetValue(ip, out var x) && x.windowEnd > DateTime.UtcNow) ? x.count : 0;
+                _pwAttempts[ip] = (cur + 1, DateTime.UtcNow.AddMinutes(1));
+            }
+            else _pwAttempts.Remove(ip);
+        }
+        return Ok(new { ok });
     }
 
     /// <summary>Disable 2FA — requires both the super-admin password AND a valid current code.</summary>

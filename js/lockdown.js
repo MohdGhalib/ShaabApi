@@ -1,7 +1,7 @@
 /* ══════════════════════════════════════════════════════
    System Lockdown
    - يقفل النظام عند رصد فقدان كامل للبيانات
-   - يمنع الدخول والاستعراض ما عدا للسوبر أدمن (كلمة المرور في _LK_SUPER_ADMIN_PWD)
+   - يمنع الدخول والاستعراض ما عدا للسوبر أدمن (كلمة المرور تُتحقَّق على الخادم عبر window._isSuperAdminPassword)
    - علم القفل مخزّن في localStorage + IndexedDB لمقاومة العبث
    ══════════════════════════════════════════════════════ */
 
@@ -9,7 +9,6 @@ const _LK_STORE_KEY       = 'Shaab_SystemLockdown';
 const _LK_SESSION_KEY     = 'Shaab_SuperAdminSession';
 const _LK_IDB_NAME        = 'Shaab_Lockdown_DB';
 const _LK_IDB_KEY         = 'lockdown';
-const _LK_SUPER_ADMIN_PWD = '090999797269';
 const _LK_PHONE           = '0785110515';
 const _LK_CONTACT_NAME    = 'محمد غالب';
 
@@ -256,11 +255,15 @@ function _lkBuildOverlay() {
     return o;
 }
 
-function _lkTryUnlock() {
+async function _lkTryUnlock() {
     const pwdEl = document.getElementById('_lkPwd');
     const errEl = document.getElementById('_lkErr');
     const pwd = pwdEl ? pwdEl.value : '';
-    if (pwd === _LK_SUPER_ADMIN_PWD) {
+    // 🔒 التحقق على الخادم — لا تُقارَن كلمة المرور نصياً في العميل
+    const _ok = (typeof window._isSuperAdminPassword === 'function')
+        ? await window._isSuperAdminPassword(pwd)
+        : false;
+    if (_ok) {
         _lkSetSuperAdminSession();
         // سجّل دخول مباشر كسوبر أدمن — لا حاجة لمصادقة إضافية
         if (typeof window.currentUser === 'undefined' || !window.currentUser) {
@@ -434,4 +437,3 @@ window._lkSetSuperAdminSession = _lkSetSuperAdminSession;
 window._lkIsSuperAdminSession  = _lkIsSuperAdminSession;
 window._lkInjectUnlockButton   = _lkInjectUnlockButton;
 window._lkInjectLockButton     = _lkInjectLockButton;
-window._LK_SUPER_ADMIN_PWD     = _LK_SUPER_ADMIN_PWD;
