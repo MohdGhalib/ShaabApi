@@ -65,6 +65,17 @@ public static class RecordMapper
     /// Merge { "deleted": true } into an existing `data` JSON object. Used for
     /// soft-delete via DELETE endpoints. Preserves all other extra fields.
     /// </summary>
+    /// <summary>True if the incoming body attempts to set deleted=true (soft delete).
+    /// Used by the per-record controllers to gate soft-delete-via-PUT to managers/admin.</summary>
+    public static bool BodySetsDeleted(JsonElement body)
+    {
+        if (body.ValueKind != JsonValueKind.Object) return false;
+        if (!body.TryGetProperty("deleted", out var d)) return false;
+        return d.ValueKind == JsonValueKind.True
+            || (d.ValueKind == JsonValueKind.String
+                && string.Equals(d.GetString(), "true", StringComparison.OrdinalIgnoreCase));
+    }
+
     public static string MergeDeletedFlag(string? existingData)
     {
         var extras = new Dictionary<string, JsonElement>();

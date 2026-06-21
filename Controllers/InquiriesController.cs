@@ -62,6 +62,18 @@ public class InquiriesController : ControllerBase
         var entity = await _db.Inquiries.FindAsync(id);
         if (entity == null) return NotFound(new { error = "not found", id });
 
+        // 🔒 (IDOR guard) الحذف الناعم عبر PUT حصري لمدير الكول سنتر/الأدمن
+        if (RecordMapper.BodySetsDeleted(body))
+        {
+            var _isAdm = User.FindFirst("isAdmin")?.Value == "true";
+            var _rl    = User.FindFirst("role")?.Value ?? "";
+            if (!_isAdm && _rl != "cc_manager")
+            {
+                Console.WriteLine($"[inquiries] id={id} soft-delete via PUT blocked (role='{_rl}')");
+                return Ok(new { ok = true, record = ToDto(entity), deleteBlocked = true });
+            }
+        }
+
         _ApplyFields(entity, body);
         entity.Version++;
 
@@ -73,6 +85,11 @@ public class InquiriesController : ControllerBase
     [HttpDelete("{id:long}")]
     public async Task<IActionResult> Delete(long id)
     {
+        // 🔒 (IDOR guard) الحذف حصري لمدير الكول سنتر/الأدمن
+        var isAdmin = User.FindFirst("isAdmin")?.Value == "true";
+        var role    = User.FindFirst("role")?.Value ?? "";
+        if (!isAdmin && role != "cc_manager") return Forbid();
+
         var entity = await _db.Inquiries.FindAsync(id);
         if (entity == null) return NotFound(new { error = "not found", id });
 

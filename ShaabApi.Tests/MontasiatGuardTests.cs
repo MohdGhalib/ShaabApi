@@ -113,4 +113,49 @@ public class MontasiatGuardTests : IDisposable
         using (var ctx = NewCtx())
             Assert.Equal("تم التسليم", (await ctx.Montasiat.FindAsync(104L))!.Status);
     }
+
+    // ── IDOR guard: soft-delete is restricted to cc_manager/admin ──
+    private async Task SeedActive(long id)
+    {
+        using var ctx = NewCtx();
+        ctx.Montasiat.Add(new Montasia { Id = id, Status = "قيد الانتظار", Branch = "الرئيسي", Version = 1 });
+        await ctx.SaveChangesAsync();
+    }
+    private static bool IsDeleted(Montasia? m) => m?.Data != null && m.Data.Contains("deleted");
+
+    [Fact]
+    public async Task Update_NonManager_CannotSoftDeleteViaPut()
+    {
+        await SeedActive(200);
+        using (var ctx = NewCtx())
+        {
+            var res = await WithRole(ctx, "cc_employee").Update(200, Json("{\"id\":200,\"deleted\":true}"));
+            Assert.IsType<OkObjectResult>(res); // no-op so a stale client reconciles
+        }
+        using (var ctx = NewCtx())
+            Assert.False(IsDeleted(await ctx.Montasiat.FindAsync(200L))); // still NOT deleted
+    }
+
+    [Fact]
+    public async Task Update_CcManager_CanSoftDeleteViaPut()
+    {
+        await SeedActive(201);
+        using (var ctx = NewCtx())
+            await WithRole(ctx, "cc_manager").Update(201, Json("{\"id\":201,\"deleted\":true}"));
+        using (var ctx = NewCtx())
+            Assert.True(IsDeleted(await ctx.Montasiat.FindAsync(201L)));
+    }
+
+    [Fact]
+    public async Task Delete_NonManager_IsForbidden()
+    {
+        await SeedActive(202);
+        using (var ctx = NewCtx())
+        {
+            var res = await WithRole(ctx, "cc_employee").Delete(202);
+            Assert.IsType<ForbidResult>(res);
+        }
+        using (var ctx = NewCtx())
+            Assert.False(IsDeleted(await ctx.Montasiat.FindAsync(202L)));
+    }
 }
