@@ -33,7 +33,8 @@ public class SuperAdmin2faController : ControllerBase
     public record VerifyReq(string? Code);
     public record DisableReq(string? Password, string? Code);
 
-    private string _SaPwd() => _config["SuperAdminPassword"] ?? "090999797269";
+    // fail-closed: لا كلمة مرور مضمّنة في الكود — تُقرأ من الإعدادات/متغيّرات البيئة فقط
+    private string? _SaPwd() => _config["SuperAdminPassword"];
 
     [HttpGet("status")]
     public async Task<IActionResult> Status()

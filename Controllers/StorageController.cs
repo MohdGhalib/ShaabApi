@@ -5,6 +5,7 @@ using ShaabApi.Data;
 using ShaabApi.Models;
 using ShaabApi.Services;
 using System.Text.Json;
+using System.Text.Json.Nodes;
 
 namespace ShaabApi.Controllers;
 
@@ -71,13 +72,72 @@ public class StorageController : ControllerBase
 
             foreach (var row in rows)
             {
-                result[row.StoreKey]   = row.StoreValue;
                 versions[row.StoreKey] = row.Version;
+
+                // 🔒 لا تُسرّب أسرار الخادم عبر هذا المسار العام:
+                //  • بيانات اعتماد Firebase (مفتاح الخدمة الخاص) لا تُعاد إطلاقاً — المتصفّح لا يحتاجها.
+                //  • بلوب الموظفين يُجرَّد من passwordHash/salt — التحقق يتم على الخادم فقط.
+                if (row.StoreKey == "Shaab_Firebase_Creds")
+                    result[row.StoreKey] = null;
+                else if (row.StoreKey == "Shaab_Employees_DB")
+                    result[row.StoreKey] = StripEmployeeSecrets(row.StoreValue);
+                else
+                    result[row.StoreKey] = row.StoreValue;
             }
         }
 
         result["_versions"] = versions;
         return Ok(result);
+    }
+
+    // الحقول السرّية للموظف التي يجب ألا تُغادر الخادم أبداً عبر المسار العام
+    private static readonly string[] _empSecretFields = { "passwordHash", "salt", "totp", "totpSecret" };
+
+    // 🔒 يجرّد أسرار الموظفين من بلوب الموظفين قبل إرجاعه للكلاينت.
+    private static string? StripEmployeeSecrets(string? json)
+    {
+        if (string.IsNullOrEmpty(json)) return json;
+        try
+        {
+            if (JsonNode.Parse(json) is not JsonArray arr) return json;
+            foreach (var el in arr)
+                if (el is JsonObject o)
+                    foreach (var f in _empSecretFields) o.Remove(f);
+            return arr.ToJsonString();
+        }
+        catch { return "[]"; } // fail-closed: لا تُسرّب شيئاً عند فشل التحليل
+    }
+
+    // 🔒 يحافظ على أسرار الموظفين المخزّنة على الخادم عند حفظ بلوب جُرّدت منه الأسرار،
+    // فلا يمسحها كلاينت لم يعد يستلمها. الدمج بحسب empId؛ القيم الجديدة من الكلاينت لها الأولوية.
+    private static string? PreserveEmployeeSecrets(string? incoming, string? existing)
+    {
+        if (string.IsNullOrEmpty(incoming) || string.IsNullOrEmpty(existing)) return incoming;
+        try
+        {
+            if (JsonNode.Parse(incoming) is not JsonArray inArr) return incoming;
+            if (JsonNode.Parse(existing) is not JsonArray exArr) return incoming;
+
+            var byEmpId = new Dictionary<string, JsonObject>();
+            foreach (var el in exArr)
+                if (el is JsonObject o && o["empId"]?.ToString() is { Length: > 0 } id)
+                    byEmpId[id] = o;
+
+            foreach (var el in inArr)
+            {
+                if (el is not JsonObject io) continue;
+                if (io["empId"]?.ToString() is not { Length: > 0 } id) continue;
+                if (!byEmpId.TryGetValue(id, out var exo)) continue;
+                foreach (var f in _empSecretFields)
+                {
+                    bool incomingHas = io[f]?.ToString() is { Length: > 0 };
+                    if (!incomingHas && exo[f] is { } sv)
+                        io[f] = sv.DeepClone();
+                }
+            }
+            return inArr.ToJsonString();
+        }
+        catch { return incoming; }
     }
 
     // POST /api/storage  body: { "key": "...", "value": "..." }
@@ -118,6 +178,11 @@ public class StorageController : ControllerBase
         var existing = await _db.Storage.FindAsync(body.Key);
         var oldValue = existing?.StoreValue; // للمقارنة لاحقاً
         var currentVersion = existing?.Version ?? 0;
+
+        // 🔒 الكلاينت لم يعد يستلم passwordHash/salt (مُجرَّدة في GET)، لذا عند حفظ بلوب
+        // الموظفين ندمج الأسرار الموجودة على الخادم حتى لا يمحوها الحفظ القادم من الكلاينت.
+        if (body.Key == "Shaab_Employees_DB")
+            body = body with { Value = PreserveEmployeeSecrets(body.Value, oldValue) };
 
         // ── 🔒 Optimistic Concurrency: فحص expectedVersion إن أرسلها الكلاينت ──
         // soft mode: لو ما أرسل version (كلاينت قديم)، نقبل لكن نحذّر في log

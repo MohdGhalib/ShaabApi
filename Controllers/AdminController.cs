@@ -42,8 +42,9 @@ public class AdminController : ControllerBase
                 return StatusCode(429, new { error = "محاولات كثيرة — انتظر قليلاً" });
         }
 
-        var expected = _config["AdminPanelPassword"] ?? "0785110515";
-        if ((body.Password ?? "") != expected)
+        var expected = _config["AdminPanelPassword"];
+        // fail-closed: لا كلمة مرور مضمّنة في الكود — إن غابت الإعدادات يُرفض الدخول
+        if (string.IsNullOrEmpty(expected) || (body.Password ?? "") != expected)
         {
             lock (_rateLock)
             {

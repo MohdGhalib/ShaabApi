@@ -1197,8 +1197,10 @@ async function loadAllData(force) {
         if (_serialChanged) _loadAllPush();
     }
 
-    // ترحيل تلقائي: إضافة salt للموظفين القدامى (بعد تسجيل الدخول فقط)
-    if (_token || IS_LOCAL) {
+    // ترحيل تلقائي: إضافة salt للموظفين القدامى — في الوضع المحلي فقط.
+    // 🔒 في وضع السيرفر، الأسرار (passwordHash/salt) مُجرَّدة من استجابة /api/storage،
+    // فلا يجوز للكلاينت "ترحيلها" (سيُعيد ضبط كل كلمات المرور). التحقق يتم على الخادم.
+    if (IS_LOCAL) {
         const needsMigration = employees.some(e => !e.salt);
         if (needsMigration) {
             for (const e of employees) {
