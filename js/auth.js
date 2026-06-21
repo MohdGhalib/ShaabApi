@@ -10,7 +10,10 @@ async function hashPassword(str) {
 //   • وضع السيرفر: عبر /api/sa2fa/verify-password (الخادم وحده يملك القيمة).
 //   • الوضع المحلي (file://): مقارنة هاش SHA-256 فقط (للتطوير دون اتصال).
 // ملاحظة: عند القفل التزاحمي (429) يعود false فيتابع المستخدم العادي تسجيل دخوله بشكل طبيعي.
-const _SA_PWD_HASH = 'ba805b36dc7cfb0ceb72410d31ab6b4b52be7017bfe4bffefa88eed262a9d379'; // SHA-256 للكلمة الجديدة (وضع IS_LOCAL فقط)
+// 🔒 وضع IS_LOCAL (file://) فقط — مُعطَّل في النشر على سيرفر.
+// على السيرفر يُتحقّق من كلمة مرور السوبر أدمن عبر الخادم (SuperAdminPassword من البيئة)،
+// فلا نُضمّن أي هاش لها في JS المرسَل للمتصفّح.
+const _SA_PWD_HASH = '';
 async function _isSuperAdminPassword(pass) {
     if (!pass) return false;
     if (typeof IS_LOCAL !== 'undefined' && IS_LOCAL) {

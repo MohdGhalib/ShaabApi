@@ -11,7 +11,7 @@
 - هذا التطبيق يقوم بـ **شيئين معاً**: يخدم واجهة الموقع (HTML/JS) **و** الـ API.
 - يخزّن البيانات في قاعدة **MySQL**.
 - إذن تحتاج 3 أشياء فقط على السيرفر: **MySQL** + **بيئة تشغيل .NET 8** + **ملفات التطبيق**.
-- (اختياري) تطبيق جوال Flutter، وخدمة واتساب Node — منفصلان، في آخر الدليل.
+- (اختياري) خدمة واتساب Node منفصلة — ليست ضرورية لعمل الموقع.
 
 ---
 
@@ -65,7 +65,7 @@ dotnet publish ShaabApi.csproj -c Release -o C:\ShaabApp
 | المتغيّر | القيمة |
 |---|---|
 | `ConnectionStrings__DefaultConnection` | `Server=localhost;Port=3306;Database=shaab_db;User=shaab;Password=كلمة_مرور_القاعدة;CharSet=utf8mb4;` |
-| `SuperAdminPassword` | **`Leader@07979`** (كلمة دخول مدير النظام — غيّرها إن أردت) |
+| `SuperAdminPassword` | كلمة دخول مدير النظام (السوبر أدمن) — **تُحدّدها الإدارة سرّاً** (غير مدوّنة هنا) |
 | `AdminPasswordHash` | `8e5fe6d011f3e8594da9a40337bf1007107d014ee56afd1e084205062c3efbf5` |
 | `Jwt__Key` | سرّ عشوائي 32+ حرف (موجود جاهز في ملف `.env`) |
 | `Jwt__Issuer` | `ShaabApi` |
@@ -81,7 +81,7 @@ dotnet publish ShaabApi.csproj -c Release -o C:\ShaabApp
 **طريقة 1 — متغيّرات نظام دائمة (PowerShell كمسؤول):**
 ```powershell
 [Environment]::SetEnvironmentVariable('ConnectionStrings__DefaultConnection','Server=localhost;Port=3306;Database=shaab_db;User=shaab;Password=PASS;CharSet=utf8mb4;','Machine')
-[Environment]::SetEnvironmentVariable('SuperAdminPassword','Leader@07979','Machine')
+[Environment]::SetEnvironmentVariable('SuperAdminPassword','<كلمة-السوبر-أدمن-من-الإدارة>','Machine')
 [Environment]::SetEnvironmentVariable('AdminPasswordHash','8e5fe6d011f3e8594da9a40337bf1007107d014ee56afd1e084205062c3efbf5','Machine')
 [Environment]::SetEnvironmentVariable('Jwt__Key','<انسخه من .env>','Machine')
 [Environment]::SetEnvironmentVariable('SseToken','<انسخه من .env>','Machine')
@@ -148,31 +148,20 @@ docker run -d --name shaabapi --env-file .env -p 8080:8080 --restart unless-stop
 
 ## 8) التحقق النهائي بعد التشغيل
 - [ ] الموقع يفتح من جهاز **آخر** على الشبكة: `http://192.168.1.50:8080`
-- [ ] دخول **السوبر أدمن** بكلمة `Leader@07979` ✓
+- [ ] دخول **مدير الكول سنتر** بالرقم الوظيفي `0799` ✓ (ومنه تُنشأ بقية الحسابات)
+- [ ] دخول **السوبر أدمن** بالكلمة التي حدّدتها الإدارة ✓
 - [ ] دخول **موظف** برقمه الوظيفي (مثل `0799`) ✓
 - [ ] إنشاء سجل تجريبي ثم تحديث الصفحة → السجل محفوظ (يعني القاعدة تعمل) ✓
 - [ ] لوحة السوبر أدمن تفتح وتظهر البيانات ✓
 
 ---
 
-## 9) تطبيق الجوال (لموظفي الفروع) ⚠️
-موظفو الفروع/المناطق يدخلون من تطبيق **Flutter**، وهو يشير حالياً لعنوان قديم.
-1. افتح `mobile/lib/constants.dart` وغيّر:
-   ```dart
-   const String kBaseUrl = 'http://192.168.1.50:8080';   // عنوان سيرفرك الداخلي
-   ```
-2. أعد بناء الـ APK: `cd mobile && flutter build apk --release`
-3. وزّع الـ APK الناتج (`build/app/outputs/flutter-apk/app-release.apk`) على أجهزة الفروع.
-> ⚠️ تطبيق الجوال يجب أن يصل لنفس الشبكة/العنوان. إن أردت وصولاً من خارج الشبكة فهذا إعداد شبكة منفصل.
-
----
-
-## 10) الإشعارات (Firebase) — اختياري
+## 9) الإشعارات (Firebase) — اختياري
 الإشعارات الفورية تحتاج مفتاح خدمة Firebase. إن لم تكن مطلوبة داخلياً، **تجاهل هذا القسم** — كل شيء آخر يعمل بدونها. لتفعيلها لاحقاً: يُخزَّن مفتاح الخدمة في قاعدة البيانات تحت مفتاح `Shaab_Firebase_Creds` (راجِع المطوّر).
 
 ---
 
-## 11) النسخ الاحتياطي ⚠️ (لا تتجاهله)
+## 10) النسخ الاحتياطي ⚠️ (لا تتجاهله)
 اضبط نسخاً يومياً لقاعدة البيانات:
 ```powershell
 mysqldump -u shaab -p shaab_db > C:\Backups\shaab_$(Get-Date -Format yyyyMMdd).sql
@@ -181,7 +170,7 @@ mysqldump -u shaab -p shaab_db > C:\Backups\shaab_$(Get-Date -Format yyyyMMdd).s
 
 ---
 
-## 12) الصيانة والتحديث
+## 11) الصيانة والتحديث
 - **السجلّات (logs):** تظهر في مخرجات الخدمة/الحاوية. مع NSSM يمكن توجيهها لملف.
 - **إعادة التشغيل:** `nssm restart ShaabApi` (أو `docker restart shaabapi`).
 - **تحديث الموقع:** انشر نسخة جديدة فوق `C:\ShaabApp` ثم أعد تشغيل الخدمة. (التطبيق يمنع تخزين `index.html` في الكاش، والتحديثات تصل عبر أرقام `?v=` في `index.html`.)
@@ -189,8 +178,8 @@ mysqldump -u shaab -p shaab_db > C:\Backups\shaab_$(Get-Date -Format yyyyMMdd).s
 
 ---
 
-## 13) قائمة الأمان النهائية ⚠️
-- [ ] كلمة مرور السوبر أدمن غُيِّرت عن الافتراضي القديم (الآن `Leader@07979`).
+## 12) قائمة الأمان النهائية ⚠️
+- [ ] كلمة مرور السوبر أدمن حدّدتها الإدارة سرّاً (غير مدوّنة في أي وثيقة تُسلَّم للفنّي).
 - [ ] ملف `.env` محمي بصلاحيات، وغير مخدوم للويب، وغير مرفوع لـ git.
 - [ ] كلمة مرور قاعدة البيانات قوية وغير افتراضية.
 - [ ] جدار الحماية يسمح بالمنفذ المطلوب فقط.
@@ -200,20 +189,19 @@ mysqldump -u shaab -p shaab_db > C:\Backups\shaab_$(Get-Date -Format yyyyMMdd).s
 
 ---
 
-## 14) حلّ المشكلات الشائعة
+## 13) حلّ المشكلات الشائعة
 | العرض | السبب الغالب | الحل |
 |---|---|---|
 | الدخول لا يقبل السوبر أدمن | المتغيّرات لم تُحمَّل | أعد ضبط القسم 4 وأعد تشغيل الخدمة |
 | خطأ اتصال DB عند الإقلاع | اتصال خاطئ/MySQL متوقّف | تحقّق من السلسلة وخدمة MySQL |
 | الصفحة تفتح لكن لا تحفظ / أخطاء في الكونسول | `ALLOWED_ORIGINS` لا يطابق العنوان | اجعلها مطابقة تماماً لعنوان المتصفّح |
 | `Address already in use` | المنفذ مشغول | غيّر `PORT` أو أوقف ما يستخدمه |
-| موظفو الفروع لا يدخلون من الموبايل | `kBaseUrl` قديم | غيّره وأعد بناء الـ APK (قسم 9) |
 | صفحة 404 للواجهة | نشر ناقص | تأكّد أن `index.html`/`js`/`css` موجودة في مجلد النشر |
 
 ---
 
-### بيانات الدخول الافتراضية بعد التركيب
-- **مدير النظام (سوبر أدمن):** كلمة المرور `Leader@07979`
-- **الموظفون:** كلٌّ برقمه الوظيفي (كما كان).
+### بيانات الدخول بعد التركيب
+- **مدير الكول سنتر** (حساب البداية الوحيد): الرقم الوظيفي `0799` — يدخل به، ومنه يُنشئ بقية حسابات الموظفين.
+- **السوبر أدمن:** كلمة مروره تحدّدها الإدارة سرّاً (غير مدوّنة هنا).
 
 > عند أي غموض تقني عميق (Firebase / تفاصيل المخطط)، راجِع `ENV_SETUP.md` و`SECURITY_HISTORY_SCRUB.md` في نفس المجلد، أو تواصل مع المطوّر.

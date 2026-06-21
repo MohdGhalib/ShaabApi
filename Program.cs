@@ -377,18 +377,9 @@ using (var scope = app.Services.CreateScope())
         // حافظ على بقية الموظفين إن وُجدوا، فقط أضف/صحح 0799
         if (emps == null)
         {
-            emps = new List<EmpRecord>
-            {
-                new() { EmpId = "9999", Name = "احمد النجار",   Title = "موظف ميديا",
-                        Salt = "7f7c276b408d096fa5ec9aa00d3b6b0f",
-                        PasswordHash = "7cc7d52363370fd361fa4dc85f2ace9d1836f15debac19175ac0530cea3916e7" },
-                new() { EmpId = "1111", Name = "محمد غالب",     Title = "مدير قسم السيطرة",
-                        Salt = "c1bb0da1d7e1fa1a5ff49c403c745833",
-                        PasswordHash = "pbkdf2:fd24c2b4032b150d543178593768749131286e32d6eba101a9298f1f2ce9145d" },
-                new() { EmpId = "0000", Name = "مسؤول",          Title = "موظف كول سنتر",
-                        Salt = "b3bda546ad9d50f8882b47b6c1dae23a",
-                        PasswordHash = "e468b63814f55f34c958dd7b3450ca64f472247abc53514b5e4580ff7bef1912" },
-            };
+            // تركيب جديد: يبدأ النظام بحساب مدير الكول سنتر (0799) فقط — يُضاف بعد قليل.
+            // ومن حساب مدير الكول سنتر تُنشأ بقية حسابات الموظفين.
+            emps = new List<EmpRecord>();
         }
 
         emps.RemoveAll(e => e.EmpId == "0799");

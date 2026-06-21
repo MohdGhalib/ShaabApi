@@ -95,7 +95,7 @@
 <p>ويحفظ كل البيانات في قاعدة <b>MySQL</b>. لذلك تحتاج على السيرفر ثلاثة أشياء فقط:</p>
 
 <div class="arch">
-  <div class="box b-user">المستخدمون<small>متصفّح + تطبيق جوال</small></div>
+  <div class="box b-user">المستخدمون<small>عبر المتصفّح</small></div>
   <div class="arrow">⟸</div>
   <div class="box b-srv">سيرفر ShaabApi<small>.NET 8 — الواجهة + الـ API</small></div>
   <div class="arrow">⟸</div>
@@ -124,7 +124,7 @@
     <div class="connector"></div>
     <div class="step"><div class="num">7</div><div class="body"><b>الشبكة:</b> افتح المنفذ + اضبط <code>ALLOWED_ORIGINS</code> + (اختياري) HTTPS.</div></div>
     <div class="connector"></div>
-    <div class="step"><div class="num">8</div><div class="body"><b>التحقق + الجوال + النسخ الاحتياطي.</b></div></div>
+    <div class="step"><div class="num">8</div><div class="body"><b>التحقق النهائي + النسخ الاحتياطي.</b></div></div>
   </div>
 </div>
 </div>
@@ -173,7 +173,7 @@ dotnet publish ShaabApi.csproj -c Release -o C:\ShaabApp</pre>
 <table>
   <tr><th>المتغيّر</th><th>القيمة / الشرح</th></tr>
   <tr><td><code>ConnectionStrings__DefaultConnection</code></td><td><code>Server=localhost;Port=3306;Database=shaab_db;User=shaab;Password=كلمة_مرور_القاعدة;CharSet=utf8mb4;</code></td></tr>
-  <tr><td><code>SuperAdminPassword</code></td><td><b>Leader@07979</b> — كلمة دخول «مدير النظام» (السوبر أدمن).</td></tr>
+  <tr><td><code>SuperAdminPassword</code></td><td>كلمة دخول «مدير النظام» (السوبر أدمن) — <b>تُحدّدها الإدارة سرّاً</b> وتضعها هنا. غير مدوّنة في هذا الدليل.</td></tr>
   <tr><td><code>AdminPasswordHash</code></td><td><code>8e5fe6d0...c3efbf5</code> (موجود كاملاً في ملف <code>.env</code>).</td></tr>
   <tr><td><code>Jwt__Key</code></td><td>سرّ عشوائي طويل (مولّد جاهز في <code>.env</code>) — يوقّع جلسات الدخول.</td></tr>
   <tr><td><code>Jwt__Issuer</code></td><td><code>ShaabApi</code></td></tr>
@@ -186,7 +186,7 @@ dotnet publish ShaabApi.csproj -c Release -o C:\ShaabApp</pre>
 <h3>كيف تضبطها فعلياً؟ — طريقة 1: متغيّرات نظام دائمة (PowerShell كمسؤول)</h3>
 <pre>[Environment]::SetEnvironmentVariable('ConnectionStrings__DefaultConnection',
   'Server=localhost;Port=3306;Database=shaab_db;User=shaab;Password=PASS;CharSet=utf8mb4;','Machine')
-[Environment]::SetEnvironmentVariable('SuperAdminPassword','Leader@07979','Machine')
+[Environment]::SetEnvironmentVariable('SuperAdminPassword','&lt;كلمة-السوبر-أدمن-من-الإدارة&gt;','Machine')
 [Environment]::SetEnvironmentVariable('AdminPasswordHash','8e5fe6d0...c3efbf5','Machine')
 [Environment]::SetEnvironmentVariable('Jwt__Key','&lt;انسخه من .env&gt;','Machine')
 [Environment]::SetEnvironmentVariable('SseToken','&lt;انسخه من .env&gt;','Machine')
@@ -246,37 +246,24 @@ docker run -d --name shaabapi --env-file .env -p 8080:8080 --restart unless-stop
 <h2>8) التحقق النهائي بعد التشغيل</h2>
 <ul>
   <li>☑ الموقع يفتح من جهاز <b>آخر</b> على الشبكة: <code>http://192.168.1.50:8080</code></li>
-  <li>☑ دخول <b>السوبر أدمن</b> بكلمة <code>Leader@07979</code></li>
-  <li>☑ دخول <b>موظف</b> برقمه الوظيفي (مثل <code>0799</code>)</li>
+  <li>☑ دخول <b>مدير الكول سنتر</b> بالرقم الوظيفي <code>0799</code> — ومنه تُنشأ بقية الحسابات</li>
+  <li>☑ دخول <b>السوبر أدمن</b> بالكلمة التي حدّدتها الإدارة</li>
   <li>☑ إنشاء سجل تجريبي ثم تحديث الصفحة → السجل محفوظ (يعني القاعدة تعمل)</li>
   <li>☑ لوحة السوبر أدمن تفتح وتعرض البيانات</li>
 </ul>
 </div>
 
-<!-- ═══════════ 9) الجوال ═══════════ -->
-<div class="section">
-<h2>9) تطبيق الجوال (لموظفي الفروع) ⚠️</h2>
-<p>موظفو الفروع والمناطق يدخلون من تطبيق <b>Flutter</b>، وهو مضبوط حالياً على عنوان قديم. يجب تحديثه:</p>
-<ol>
-  <li>افتح <code>mobile/lib/constants.dart</code> وغيّر السطر:
-    <pre>const String kBaseUrl = 'http://192.168.1.50:8080';   // عنوان سيرفرك الداخلي</pre></li>
-  <li>أعد بناء الـ APK: <code>cd mobile &amp;&amp; flutter build apk --release</code></li>
-  <li>وزّع الملف الناتج <code>build/app/outputs/flutter-apk/app-release.apk</code> على أجهزة الفروع.</li>
-</ol>
-<div class="warn">بدون هذه الخطوة لن يستطيع موظفو الفروع الدخول — لأن تطبيقهم سيظل يحاول الاتصال بالعنوان القديم.</div>
-</div>
-
 <!-- ═══════════ 10-12 ═══════════ -->
 <div class="section">
-<h2>10) الإشعارات (Firebase) — اختياري</h2>
+<h2>9) الإشعارات (Firebase) — اختياري</h2>
 <p>الإشعارات الفورية تحتاج مفتاح خدمة Firebase. إن لم تكن مطلوبة داخلياً <b>تجاهل هذا القسم</b> — كل شيء آخر يعمل بدونها. لتفعيلها لاحقاً يُخزَّن المفتاح في قاعدة البيانات تحت المفتاح <code>Shaab_Firebase_Creds</code> (راجِع المطوّر).</p>
 
-<h2>11) النسخ الاحتياطي ⚠️ (لا تتجاهله)</h2>
+<h2>10) النسخ الاحتياطي ⚠️ (لا تتجاهله)</h2>
 <p>اضبط نسخاً يومياً لقاعدة البيانات:</p>
 <pre>mysqldump -u shaab -p shaab_db &gt; C:\Backups\shaab_20260621.sql</pre>
 <p>أنشئ <b>مهمة مجدوَلة (Task Scheduler)</b> تشغّلها يومياً. احتفظ بآخر 14–30 نسخة، ويُفضّل نسخة على جهاز آخر. <b>جرّب الاستعادة مرة</b> للتأكد أن النسخ سليمة.</p>
 
-<h2>12) الصيانة والتحديث</h2>
+<h2>11) الصيانة والتحديث</h2>
 <ul>
   <li><b>السجلّات:</b> تظهر في مخرجات الخدمة/الحاوية (يمكن توجيهها لملف عبر NSSM).</li>
   <li><b>إعادة التشغيل:</b> <code>nssm restart ShaabApi</code> أو <code>docker restart shaabapi</code>.</li>
@@ -286,9 +273,9 @@ docker run -d --name shaabapi --env-file .env -p 8080:8080 --restart unless-stop
 
 <!-- ═══════════ 13) الأمان ═══════════ -->
 <div class="section">
-<h2>13) قائمة الأمان النهائية ⚠️</h2>
+<h2>12) قائمة الأمان النهائية ⚠️</h2>
 <ul>
-  <li>☑ كلمة مرور السوبر أدمن غُيِّرت عن القديم المكشوف (الآن <code>Leader@07979</code>).</li>
+  <li>☑ كلمة مرور السوبر أدمن حدّدتها الإدارة سرّاً (غير مدوّنة في أي وثيقة تُسلَّم للفنّي).</li>
   <li>☑ ملف <code>.env</code> محمي، غير مخدوم للويب، وغير مرفوع لـ git.</li>
   <li>☑ كلمة مرور قاعدة البيانات قوية وغير افتراضية.</li>
   <li>☑ جدار الحماية يسمح بالمنفذ المطلوب فقط.</li>
@@ -300,21 +287,20 @@ docker run -d --name shaabapi --env-file .env -p 8080:8080 --restart unless-stop
 
 <!-- ═══════════ 14) المشكلات ═══════════ -->
 <div class="section">
-<h2>14) حلّ المشكلات الشائعة</h2>
+<h2>13) حلّ المشكلات الشائعة</h2>
 <table>
   <tr><th>العرض</th><th>السبب الغالب</th><th>الحل</th></tr>
   <tr><td>الدخول لا يقبل السوبر أدمن</td><td>المتغيّرات لم تُحمَّل</td><td>أعد ضبط القسم 4 وأعد تشغيل الخدمة</td></tr>
   <tr><td>خطأ اتصال DB عند الإقلاع</td><td>اتصال خاطئ / MySQL متوقّف</td><td>تحقّق من السلسلة وخدمة MySQL</td></tr>
   <tr><td>الصفحة تفتح لكن لا تحفظ</td><td><code>ALLOWED_ORIGINS</code> لا يطابق العنوان</td><td>اجعلها مطابقة تماماً لعنوان المتصفّح</td></tr>
   <tr><td>Address already in use</td><td>المنفذ مشغول</td><td>غيّر <code>PORT</code> أو أوقف ما يستخدمه</td></tr>
-  <tr><td>الجوال لا يدخل</td><td><code>kBaseUrl</code> قديم</td><td>غيّره وأعد بناء الـ APK (قسم 9)</td></tr>
   <tr><td>صفحة 404 للواجهة</td><td>نشر ناقص</td><td>تأكّد أن index.html/js/css في مجلد النشر</td></tr>
 </table>
 
 <div class="tip" style="margin-top:18px;">
-  <b>بيانات الدخول الافتراضية بعد التركيب:</b><br>
-  • مدير النظام (سوبر أدمن): كلمة المرور <code>Leader@07979</code><br>
-  • الموظفون: كلٌّ برقمه الوظيفي (كما كان سابقاً).
+  <b>بيانات الدخول بعد التركيب:</b><br>
+  • <b>مدير الكول سنتر</b> (حساب البداية الوحيد): الرقم الوظيفي <code>0799</code> — يدخل به، ومنه يُنشئ بقية حسابات الموظفين.<br>
+  • <b>السوبر أدمن</b>: كلمة مروره تحدّدها الإدارة سرّاً (غير مدوّنة هنا).
 </div>
 <div class="note">عند أي غموض تقني عميق راجِع الملفات المرافقة: <code>ENV_SETUP.md</code> و<code>SECURITY_HISTORY_SCRUB.md</code> و<code>setup-local-server.ps1</code>، أو تواصل مع المطوّر.</div>
 </div>
