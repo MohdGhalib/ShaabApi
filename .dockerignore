@@ -1,0 +1,29 @@
+# لا تُضمّن في صورة الـ .NET ما لا يلزم البناء/التشغيل.
+# ملاحظة: index.html و js/ و css/ و img/ و audio/ تُخدَم كملفات ثابتة — لا تستبعدها.
+
+.git
+.gitignore
+.claude
+.vs
+
+# أسرار التطوير — يجب ألا تُشحن في الصورة إطلاقاً
+appsettings.Development.json
+.env
+.env.*
+
+# مخرجات بناء محلية (يُعاد بناؤها داخل الصورة)
+bin/
+obj/
+ShaabApi.Tests/
+
+# مشاريع/مجلدات غير متعلّقة بخدمة الـ API
+whatsapp-service/
+mobile/
+backup/
+node_modules/
+**/node_modules/
+نظام ادارة محامص الشعب/
+
+# ثنائيات وحِزم غير لازمة وقت التشغيل
+*.exe
+*.apk

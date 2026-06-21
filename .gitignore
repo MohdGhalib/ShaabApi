@@ -9,3 +9,32 @@ appsettings.Development.json
 # اختبارات: استبعاد ملفات البناء
 ShaabApi.Tests/bin/
 ShaabApi.Tests/obj/
+
+# 🔒 أسرار ومتغيّرات بيئة — لا تُرفع أبداً
+.env
+.env.*
+!.env.example
+*.pem
+*.key
+*.pfx
+*.p12
+
+# اعتمادات / تبعيات لا يجب تتبّعها
+node_modules/
+*.exe
+*.dll.config
+
+# خدمة واتساب: جلسات/كاش/تبعيات
+whatsapp-service/node_modules/
+whatsapp-service/.wwebjs_auth/
+whatsapp-service/.wwebjs_cache/
+whatsapp-service/wa-session/
+whatsapp-service/daemon/*.exe
+whatsapp-service/daemon/*.exe.config
+whatsapp-service/daemon/*.xml
+
+# نسخ قاعدة البيانات الاحتياطية
+*.sql.gz
+*.bak
+backup/output/
+ShaabBackups/
