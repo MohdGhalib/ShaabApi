@@ -377,8 +377,8 @@ function _exportEvalDetailPDF() {
             <td style="text-align:center;">
                 <span style="background:${typeColor(item.src)};color:#fff;padding:2px 10px;border-radius:12px;font-size:11px;font-weight:700;">${typeLabel(item.src)}</span>
             </td>
-            ${showBranchCol ? `<td style="font-weight:600;color:#1565c0;">${(item.branch||'')+(item.city?' — '+item.city:'')}</td>` : ''}
-            <td style="line-height:1.6;">${(item.notes||'').substring(0,250)}${(item.notes||'').length>250?'…':''}</td>
+            ${showBranchCol ? `<td style="font-weight:600;color:#1565c0;">${sanitize((item.branch||'')+(item.city?' — '+item.city:''))}</td>` : ''}
+            <td style="line-height:1.6;">${sanitize((item.notes||'').substring(0,250))}${(item.notes||'').length>250?'…':''}</td>
             <td style="text-align:center;font-size:11px;color:#888;white-space:nowrap;">${item.time||'—'}</td>
         </tr>`).join('');
 

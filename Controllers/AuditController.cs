@@ -32,6 +32,11 @@ public class AuditController : ControllerBase
         if (e == null || string.IsNullOrEmpty(e.Id))
             return BadRequest(new { error = "id required" });
 
+        // 🔒 الهوية تُختم من الـ JWT لا من جسم الطلب — يمنع تزوير منفّذ الإجراء في سجل التدقيق
+        e.EmpId  = User.FindFirst("empId")?.Value ?? e.EmpId;
+        e.Role   = User.FindFirst("role")?.Value  ?? e.Role;
+        e.ByName = User.FindFirst("name")?.Value  ?? e.ByName;
+
         var exists = await _db.AuditLog.AnyAsync(x => x.Id == e.Id);
         if (!exists)
         {

@@ -1126,7 +1126,7 @@ function openAuditNoteModal(complaintId, mode) {
                     <!-- البوكس الأبيض الكبير — كتابة غنية + توقيع المدقق في الأسفل -->
                     <div class="an-notes-area">
                         <div class="an-notes-box">
-                            <div id="anDetails" class="an-notes-pad${isView ? ' an-readonly' : ''}" ${isView ? '' : 'contenteditable="true"'} data-placeholder="اكتب التفاصيل ...">${(v('details') || '').replace(/^بعد المتابعة والتدقيق\s*:\s*/, '').trim()}</div>
+                            <div id="anDetails" class="an-notes-pad${isView ? ' an-readonly' : ''}" ${isView ? '' : 'contenteditable="true"'} data-placeholder="اكتب التفاصيل ...">${_anSanitizeHtml((v('details') || '').replace(/^بعد المتابعة والتدقيق\s*:\s*/, '').trim())}</div>
                             <div class="an-auditor-bottom">
                                 <span class="an-auditor-inline">
                                     <span class="an-auditor-label">المدقق :</span>
@@ -1358,6 +1358,39 @@ function _anIsDirty() {
     return false;
 }
 
+// 🔒 منقّي HTML غني لحقل "التفاصيل" (يُخزَّن كـ innerHTML بتنسيقات خطوط مقصودة):
+// يُبقي وسوم التنسيق الآمنة فقط، ويُسقِط script/img/iframe… وأي سمات أحداث (onerror/onclick)
+// وروابط javascript:. يمنع XSS المخزَّن دون كسر التنسيق. (بديل خفيف عن DOMPurify)
+function _anSanitizeHtml(html) {
+    if (!html) return '';
+    const ALLOWED   = new Set(['B','I','U','EM','STRONG','SPAN','FONT','BR','P','DIV','UL','OL','LI','BLOCKQUOTE','H1','H2','H3','H4','SUB','SUP','S','SMALL']);
+    const DROP      = new Set(['SCRIPT','STYLE','IMG','IFRAME','OBJECT','EMBED','SVG','LINK','META','VIDEO','AUDIO','SOURCE','FORM','INPUT','BUTTON','TEXTAREA','A']);
+    const SAFE_ATTR = new Set(['style','color','face','size','align']);
+    try {
+        const tpl = document.createElement('template');
+        tpl.innerHTML = String(html);
+        const clean = (node) => {
+            for (const el of Array.from(node.childNodes)) {
+                if (el.nodeType === 1) {            // عنصر
+                    clean(el);                      // نظّف الأبناء أولاً (post-order)
+                    if (DROP.has(el.tagName)) { el.remove(); continue; }
+                    if (!ALLOWED.has(el.tagName)) { el.replaceWith(...Array.from(el.childNodes)); continue; }
+                    for (const a of Array.from(el.attributes)) {
+                        const n = a.name.toLowerCase();
+                        const v = (a.value || '').toLowerCase();
+                        if (!SAFE_ATTR.has(n) || v.includes('javascript:') || v.includes('expression(') || /url\s*\(/.test(v))
+                            el.removeAttribute(a.name);
+                    }
+                } else if (el.nodeType === 8) {     // تعليق
+                    el.remove();
+                }
+            }
+        };
+        clean(tpl.content);
+        return tpl.innerHTML;
+    } catch { return ''; }
+}
+
 function _anReadCurrentForm() {
     return {
         date:               document.getElementById('anDate')?.value || '',
@@ -1367,7 +1400,7 @@ function _anReadCurrentForm() {
         user:               document.getElementById('anUser')?.value || '',
         cashier:            document.getElementById('anCashier')?.value || '',
         branch:             document.getElementById('anBranch')?.value || '',
-        details:            document.getElementById('anDetails')?.innerHTML || '',
+        details:            _anSanitizeHtml(document.getElementById('anDetails')?.innerHTML || ''),
         cameraNum:          document.getElementById('anCameraNum')?.value || '',
         cameraTime:         document.getElementById('anCameraTime')?.value || '',
         auditor:            document.getElementById('anAuditor')?.value || '',
@@ -1890,7 +1923,7 @@ function printAuditNote(complaintId) {
 
         <div class="notes-area">
             <div class="notes-box">
-                <div class="notes-body">${(note.details || '—').replace(/^بعد المتابعة والتدقيق\s*:\s*/, '')}</div>
+                <div class="notes-body">${_anSanitizeHtml((note.details || '—').replace(/^بعد المتابعة والتدقيق\s*:\s*/, ''))}</div>
                 <div class="auditor-bottom">
                     <span class="auditor-inline">
                         <b class="auditor-inline-label">المدقق :</b>
