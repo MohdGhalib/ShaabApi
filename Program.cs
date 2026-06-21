@@ -16,8 +16,10 @@ var port = Environment.GetEnvironmentVariable("PORT") ?? "8080";
 builder.WebHost.UseUrls($"http://0.0.0.0:{port}");
 
 // CORS — السماح للنطاقات المعروفة فقط
+// السيرفر الداخلي: اضبط ALLOWED_ORIGINS لعنوان الموقع (عدة عناوين مفصولة بفواصل).
+// الافتراضي محلي فقط — لا يُسمح بأي نطاق خارجي ما لم يُضبط صراحةً.
 var allowedOrigins = (Environment.GetEnvironmentVariable("ALLOWED_ORIGINS")
-                   ?? "https://shaabapi-shaabapi.up.railway.app")
+                   ?? "http://localhost:8080")
                    .Split(',', StringSplitOptions.RemoveEmptyEntries);
 builder.Services.AddCors(options => options.AddPolicy("Default", policy =>
     policy.WithOrigins(allowedOrigins)
