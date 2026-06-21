@@ -38,3 +38,6 @@ whatsapp-service/daemon/*.xml
 *.bak
 backup/output/
 ShaabBackups/
+
+# نسخة مكرّرة قديمة من المشروع (أُلغي تتبّعها)
+نظام ادارة محامص الشعب/
