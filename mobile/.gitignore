@@ -1,8 +1,0 @@
-.dart_tool/
-build/
-*.iml
-.idea/
-.packages
-pubspec.lock
-shaab_flutter_base/
-build
