@@ -87,6 +87,10 @@ dotnet publish ShaabApi.csproj -c Release -o C:\ShaabApp
 [Environment]::SetEnvironmentVariable('SseToken','<انسخه من .env>','Machine')
 [Environment]::SetEnvironmentVariable('ALLOWED_ORIGINS','http://192.168.1.50:8080','Machine')
 [Environment]::SetEnvironmentVariable('PORT','8080','Machine')
+# (اختياري) مجلد الوسائط — مكان حفظ الفيديوهات المرفوعة على القرص. الافتراضي: مجلد media بجانب التطبيق.
+[Environment]::SetEnvironmentVariable('MEDIA_ROOT','C:\ShaabApp\media','Machine')
+# (اختياري) الحد الأقصى لحجم الفيديو بالبايت — الافتراضي 200MB.
+[Environment]::SetEnvironmentVariable('MAX_VIDEO_BYTES','209715200','Machine')
 ```
 ثم **أعد فتح** نافذة PowerShell (لتُحمَّل المتغيّرات).
 
@@ -143,6 +147,10 @@ docker run -d --name shaabapi --env-file .env -p 8080:8080 --restart unless-stop
 2. **عنوان ثابت:** أعطِ السيرفر IP ثابتاً (مثلاً `192.168.1.50`) أو اسم مضيف داخلي.
 3. **⚠️ `ALLOWED_ORIGINS` يجب أن يطابق تماماً** ما يكتبه المستخدم في المتصفّح (البروتوكول + العنوان + المنفذ). إن دخلوا عبر `http://192.168.1.50:8080` فاجعلها كذلك بالضبط، وإلا تُرفض الطلبات (CORS).
 4. (اختياري) **HTTPS:** ضع التطبيق خلف **IIS/Nginx كوسيط عكسي (reverse proxy)** بشهادة داخلية، ووجّهه إلى `http://localhost:8080`.
+5. **رفع الفيديو (حجم الطلب):** يسمح التطبيق برفع فيديو حتى **220MB**.
+   - تشغيل مباشر بـ Kestrel/NSSM: يعمل دون إعداد إضافي.
+   - **خلف IIS**: الافتراضي يرفض الطلبات الأكبر من ~28.6MB بخطأ `404.13`. ملف `web.config` المرفق يرفع الحد إلى 220MB عبر `requestFiltering/requestLimits` — تأكّد من نشره. لرفع حد أكبر، عدّل `maxAllowedContentLength` (بالبايت).
+   - خلف **Nginx**: ارفع `client_max_body_size 220m;`.
 
 ---
 
@@ -161,11 +169,29 @@ docker run -d --name shaabapi --env-file .env -p 8080:8080 --restart unless-stop
 ---
 
 ## 10) النسخ الاحتياطي ⚠️ (لا تتجاهله)
-اضبط نسخاً يومياً لقاعدة البيانات:
+يأتي المشروع بسكربتات نسخ جاهزة في مجلد `backup/` — استخدمها بدل الأوامر اليدوية:
+
+**ماذا يشمل الباكب؟**
+- **قاعدة البيانات** كاملة عبر `mysqldump` (يتضمّن **الصور** المخزّنة كـ blob في جدول `files` بأمان عبر `--hex-blob`).
+- **مجلد الوسائط `media/`** الذي يحوي **الفيديوهات** المرفوعة (مخزّنة كملفات على القرص، خارج قاعدة البيانات). يُنسخ كمرآة (robocopy) بجانب نسخة الـ SQL.
+
+**الإعداد (مرة واحدة):** عدّل `backup/backup-config.ps1`:
+- بيانات اتصال قاعدة البيانات (`$DbName`/`$DbUser`/`$DbPassword`).
+- `$MediaDir` = مسار مجلد `media` للتطبيق (نفس قيمة `MEDIA_ROOT`، مثلاً `C:\ShaabApp\media`). اتركه `''` للاكتشاف التلقائي.
+- `$BackupDir` (وجهة النسخ) و`$OffsiteDir` (نسخة على جهاز/قرص آخر — موصى بها).
+
+**التشغيل اليدوي:**
 ```powershell
-mysqldump -u shaab -p shaab_db > C:\Backups\shaab_$(Get-Date -Format yyyyMMdd).sql
+powershell -ExecutionPolicy Bypass -File C:\ShaabApp\backup\shaab-backup.ps1
 ```
-أنشئ **مهمة مجدوَلة (Task Scheduler)** تشغّلها يومياً. احتفظ بآخر 14–30 نسخة على الأقل، ويُفضّل نسخة على جهاز آخر.
+
+**الجدولة:** أنشئ **مهمة مجدوَلة (Task Scheduler)** تشغّل السكربت يومياً. السكربت يحتفظ تلقائياً بآخر `$RetentionDays` يوماً (افتراضياً 30) ويحذف الأقدم.
+
+**الاستعادة** (تستعيد القاعدة + الفيديوهات معاً):
+```powershell
+powershell -ExecutionPolicy Bypass -File C:\ShaabApp\backup\shaab-restore.ps1 -ZipPath "C:\ShaabBackups\shaab_db_<التاريخ>.zip"
+```
+> ⚠️ **اختبر الاستعادة** مرة على الأقل على بيئة تجريبية للتأكد من سلامة النسخ (القاعدة + الفيديوهات).
 
 ---
 

@@ -191,7 +191,11 @@ dotnet publish ShaabApi.csproj -c Release -o C:\ShaabApp</pre>
 [Environment]::SetEnvironmentVariable('Jwt__Key','&lt;انسخه من .env&gt;','Machine')
 [Environment]::SetEnvironmentVariable('SseToken','&lt;انسخه من .env&gt;','Machine')
 [Environment]::SetEnvironmentVariable('ALLOWED_ORIGINS','http://192.168.1.50:8080','Machine')
-[Environment]::SetEnvironmentVariable('PORT','8080','Machine')</pre>
+[Environment]::SetEnvironmentVariable('PORT','8080','Machine')
+# (اختياري) مجلد حفظ الفيديوهات المرفوعة على القرص — الافتراضي مجلد media بجانب التطبيق
+[Environment]::SetEnvironmentVariable('MEDIA_ROOT','C:\ShaabApp\media','Machine')
+# (اختياري) الحد الأقصى لحجم الفيديو بالبايت — الافتراضي 200MB
+[Environment]::SetEnvironmentVariable('MAX_VIDEO_BYTES','209715200','Machine')</pre>
 <p>ثم <b>أعد فتح</b> نافذة PowerShell لتُحمَّل المتغيّرات.</p>
 
 <h3>طريقة 2: تحميل من ملف <code>.env</code> قبل التشغيل</h3>
@@ -238,6 +242,7 @@ docker run -d --name shaabapi --env-file .env -p 8080:8080 --restart unless-stop
   <li><b>عنوان ثابت:</b> أعطِ السيرفر IP ثابتاً (مثل <code>192.168.1.50</code>) أو اسم مضيف داخلي.</li>
   <li><b>⚠️ <code>ALLOWED_ORIGINS</code> يجب أن يطابق تماماً</b> ما يكتبه المستخدم (البروتوكول + العنوان + المنفذ). إن دخلوا عبر <code>http://192.168.1.50:8080</code> فاجعلها كذلك بالضبط، وإلا تُرفض الطلبات (خطأ CORS).</li>
   <li>(اختياري) <b>HTTPS:</b> ضع التطبيق خلف <b>IIS/Nginx كوسيط عكسي</b> بشهادة داخلية ووجّهه إلى <code>http://localhost:8080</code>.</li>
+  <li><b>رفع الفيديو (حجم الطلب):</b> يسمح التطبيق برفع فيديو حتى <b>220MB</b>. تشغيل Kestrel/NSSM يعمل دون إعداد إضافي. <b>خلف IIS</b> الافتراضي يرفض ما يزيد عن ~28.6MB (خطأ <code>404.13</code>) — ملف <code>web.config</code> المرفق يرفع الحد عبر <code>maxAllowedContentLength</code>، تأكّد من نشره. خلف <b>Nginx</b> ارفع <code>client_max_body_size 220m;</code>.</li>
 </ol>
 </div>
 
@@ -258,9 +263,18 @@ docker run -d --name shaabapi --env-file .env -p 8080:8080 --restart unless-stop
 <p>الإشعارات الفورية تحتاج مفتاح خدمة Firebase. إن لم تكن مطلوبة داخلياً <b>تجاهل هذا القسم</b> — كل شيء آخر يعمل بدونها. لتفعيلها لاحقاً يُخزَّن المفتاح في قاعدة البيانات تحت المفتاح <code>Shaab_Firebase_Creds</code> (راجِع المطوّر).</p>
 
 <h2>10) النسخ الاحتياطي ⚠️ (لا تتجاهله)</h2>
-<p>اضبط نسخاً يومياً لقاعدة البيانات:</p>
-<pre>mysqldump -u shaab -p shaab_db &gt; C:\Backups\shaab_20260621.sql</pre>
-<p>أنشئ <b>مهمة مجدوَلة (Task Scheduler)</b> تشغّلها يومياً. احتفظ بآخر 14–30 نسخة، ويُفضّل نسخة على جهاز آخر. <b>جرّب الاستعادة مرة</b> للتأكد أن النسخ سليمة.</p>
+<p>يأتي المشروع بسكربتات نسخ جاهزة في مجلد <code>backup/</code> — استخدمها بدل الأوامر اليدوية. <b>يشمل الباكب:</b></p>
+<ul>
+  <li><b>قاعدة البيانات</b> كاملة عبر <code>mysqldump</code> (متضمّنة <b>الصور</b> المخزّنة كـ blob في جدول <code>files</code> بأمان عبر <code>--hex-blob</code>).</li>
+  <li><b>مجلد الوسائط <code>media/</code></b> الذي يحوي <b>الفيديوهات</b> المرفوعة (ملفات على القرص، خارج قاعدة البيانات) — يُنسخ كمرآة (robocopy) بجانب نسخة الـ SQL.</li>
+</ul>
+<p><b>الإعداد مرة واحدة</b> في <code>backup/backup-config.ps1</code>: بيانات اتصال القاعدة، و<code>$MediaDir</code> = مسار مجلد <code>media</code> للتطبيق (نفس <code>MEDIA_ROOT</code>)، و<code>$BackupDir</code> / <code>$OffsiteDir</code>.</p>
+<pre># نسخ يدوي:
+powershell -ExecutionPolicy Bypass -File C:\ShaabApp\backup\shaab-backup.ps1
+
+# استعادة (القاعدة + الفيديوهات معاً):
+powershell -ExecutionPolicy Bypass -File C:\ShaabApp\backup\shaab-restore.ps1 -ZipPath "C:\ShaabBackups\shaab_db_&lt;التاريخ&gt;.zip"</pre>
+<p>أنشئ <b>مهمة مجدوَلة (Task Scheduler)</b> تشغّل سكربت النسخ يومياً (يحتفظ تلقائياً بآخر <code>$RetentionDays</code> يوماً). <b>جرّب الاستعادة مرة</b> على بيئة تجريبية للتأكد أن النسخ سليمة (القاعدة + الفيديوهات).</p>
 
 <h2>11) الصيانة والتحديث</h2>
 <ul>
