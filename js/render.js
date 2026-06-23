@@ -794,6 +794,7 @@ function _renderTableI(get) {
                     : (isCCMgrI ? `<br>${_iqEditIcon(`editInquiryNotes(${x.id})`,'نص الاستفسار')}<span style="font-size:11px;color:var(--text-dim);">— لا يوجد نص —</span>` : '')}
                 ${_serialHtml}
                 ${finFieldsHtml}
+                ${x.videoUrl && typeof _videoWatchBtn === 'function' ? `<br><span style="display:inline-block;margin-top:6px;">${_videoWatchBtn(x.videoUrl)}</span>` : ''}
             </td>
             <td><small style="color:var(--text-main)">${typeof _empNameHTML==='function'?_empNameHTML(x.addedBy||'—'):sanitize(x.addedBy||'—')}</small>${_iqEditIcon(`editInquiryAddedBy(${x.id})`,'اسم الموظف')}</td>
             <td><small>${_toLatinDigits(x.time)}</small>${_iqEditIcon(`editInquiryTime(${x.id})`,'الوقت')}</td>
@@ -895,7 +896,8 @@ function _renderTableC(get, isAdmin) {
                 _auditBtnHtml = `${_spacer}<button onclick="openAuditNoteModal('${x.id}')" class="btn-audit-note" title="كتابة ملاحظة سيطرة">📋 ملاحظات السيطرة</button>`;
             }
         }
-        const fileLink = (x.file ? `<br><button onclick="openInvoiceFile('${x.id}')" class="btn-attach" style="border:none;cursor:pointer;font-family:Cairo;">📎 عرض المرفق</button>` : '') + _auditBtnHtml;
+        const _videoLink = (x.videoUrl && typeof _videoWatchBtn === 'function') ? `<br>${_videoWatchBtn(x.videoUrl)}` : '';
+        const fileLink = (x.file ? `<br><button onclick="openInvoiceFile('${x.id}')" class="btn-attach" style="border:none;cursor:pointer;font-family:Cairo;">📎 عرض المرفق</button>` : '') + _videoLink + _auditBtnHtml;
 
         const ctStr  = x.callTime ? _formatCallTime(x.callTime) : '';
         const hasMore = !!(ctStr || x.noteDate || x.moveNumber || x.invoiceValue || x.mediaSource || x.mediaAccountUrl);

@@ -114,9 +114,45 @@ function _montasiaPhotoSrc(rec) {
     return '';
 }
 
+/* ── مشغّل الفيديو (نافذة منبثقة تدعم التمرير/Seek) ── */
+function _playVideo(url) {
+    if (!url) return;
+    let ov = document.getElementById('_videoOverlay');
+    if (!ov) {
+        ov = document.createElement('div');
+        ov.id = '_videoOverlay';
+        ov.style.cssText = 'position:fixed;inset:0;z-index:200000;background:rgba(0,0,0,0.88);display:flex;align-items:center;justify-content:center;padding:20px;';
+        ov.onclick = (e) => { if (e.target === ov) _closeVideo(); };
+        const box = document.createElement('div');
+        box.style.cssText = 'position:relative;max-width:900px;width:100%;';
+        box.innerHTML = '<button onclick="_closeVideo()" style="position:absolute;top:-42px;left:0;background:#fff;color:#c62828;border:none;border-radius:8px;padding:6px 16px;font-family:Cairo;font-weight:700;cursor:pointer;font-size:13px;">✕ إغلاق</button>'
+            + '<video id="_videoPlayer" controls autoplay playsinline style="width:100%;max-height:80vh;border-radius:10px;background:#000;"></video>';
+        ov.appendChild(box);
+        document.body.appendChild(ov);
+    }
+    const vp = document.getElementById('_videoPlayer');
+    if (vp) { vp.src = url; try { vp.play(); } catch {} }
+    ov.style.display = 'flex';
+}
+function _closeVideo() {
+    const ov = document.getElementById('_videoOverlay');
+    const vp = document.getElementById('_videoPlayer');
+    if (vp) { try { vp.pause(); } catch {} vp.removeAttribute('src'); try { vp.load(); } catch {} }
+    if (ov) ov.style.display = 'none';
+}
+/* زر "مشاهدة الفيديو" — يُرجع HTML فارغاً إن لم يوجد فيديو */
+function _videoWatchBtn(url) {
+    if (!url) return '';
+    const safe = String(url).replace(/'/g, '%27').replace(/"/g, '%22');
+    return `<button onclick="_playVideo('${safe}')" title="مشاهدة الفيديو" style="border:1px solid rgba(186,104,200,0.45);cursor:pointer;font-family:Cairo;background:rgba(156,39,176,0.12);color:#ce93d8;border-radius:7px;padding:3px 10px;font-size:11px;font-weight:700;">🎥 مشاهدة الفيديو</button>`;
+}
+
 if (typeof window !== 'undefined') {
     window._uploadFile       = _uploadFile;
     window._uploadVideo      = _uploadVideo;
+    window._playVideo        = _playVideo;
+    window._closeVideo       = _closeVideo;
+    window._videoWatchBtn    = _videoWatchBtn;
     window._fileToDataUrl    = _fileToDataUrl;
     window._montasiaPhotoSrc = _montasiaPhotoSrc;
 }
