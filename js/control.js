@@ -46,6 +46,8 @@ function addControl() {
     // وراثة صورة الصنف من الاستفسار المرتبط (لشكاوى "جودة صنف")
     const inheritedQualityPhoto = (linkedInq && linkedInq.complaintType === 'جودة صنف' && linkedInq.qualityPhoto)
         ? linkedInq.qualityPhoto : null;
+    // وراثة الفيديو من الاستفسار المرتبط (جودة صنف/سوء تعامل/مالية)
+    const inheritedVideoUrl = (linkedInq && linkedInq.videoUrl) ? linkedInq.videoUrl : null;
     // مصدر الشكوى ورابط الحساب — لموظف الميديا فقط
     const mediaSource     = (currentUser?.role === 'media') ? (document.getElementById('cMediaSource')?.value || '') : '';
     const mediaAccountUrl = (currentUser?.role === 'media') ? (document.getElementById('cMediaAccountUrl')?.value.trim() || '') : '';
@@ -54,7 +56,7 @@ function addControl() {
         addedBy:currentUser.name, status, customer, linkedInqSeq: linkedSeq||null,
         callTime, noteDate, moveNumber, invoiceValue, type: cType,
         mediaSource, mediaAccountUrl,
-        qualityPhoto: inheritedQualityPhoto };
+        qualityPhoto: inheritedQualityPhoto, videoUrl: inheritedVideoUrl };
 
     const _notifyComplaint = () => {
         if (!IS_LOCAL && (currentUser?.role === 'cc_employee' || currentUser?.role === 'media')) {

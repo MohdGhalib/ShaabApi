@@ -455,6 +455,14 @@ function toggleComplaintFinancialBox() {
         const _q = document.getElementById('iQualityPhoto');      if (_q) _q.value = '';
         const _ql= document.getElementById('iQualityPhotoLabel'); if (_ql) { _ql.textContent = 'لم تُختر صورة'; _ql.style.color = 'var(--text-dim)'; }
     }
+    // مربع الفيديو — يظهر لشكاوى جودة الصنف وسوء التعامل والمالية
+    const _videoTypes = (ct === "جودة صنف" || ct === "سوء تعامل" || ct === "مالية");
+    const vBox = document.getElementById("iVideoBox");
+    if (vBox) vBox.style.display = _videoTypes ? "block" : "none";
+    if (!_videoTypes) {
+        const _v  = document.getElementById('iVideo');      if (_v)  _v.value = '';
+        const _vl = document.getElementById('iVideoLabel'); if (_vl) { _vl.textContent = 'لم يُختر فيديو'; _vl.style.color = 'var(--text-dim)'; }
+    }
 }
 
 function toggleUnspecifiedBranch() {
@@ -626,28 +634,49 @@ function addInquiry() {
         _updateBranchInfoPanel();
     };
 
+    // الحفظ النهائي: يرفع الفيديو الاختياري (لشكاوى جودة الصنف/سوء التعامل/المالية) ثم يحفظ السجل
+    const _finalizeInquiry = (rec) => {
+        const _doSave = (finalRec) => {
+            db.inquiries.unshift(finalRec);
+            if (typeof _logAudit === 'function') _logAudit('addInquiry', baseRec.branch || '—', `${baseRec.type} — ${(baseRec.notes||baseRec.itemName||baseRec.offerName||'').substring(0,40)}`, 'inquiry', baseRec.id);
+            _afterSave();
+        };
+        const vInput = (ct === "جودة صنف" || ct === "سوء تعامل" || ct === "مالية")
+            ? document.getElementById('iVideo') : null;
+        if (vInput && vInput.files && vInput.files[0]) {
+            const vf = vInput.files[0];
+            if (vf.size > 200 * 1024 * 1024) {
+                alert('الفيديو أكبر من 200MB — لن يُرفق');
+                _doSave({ ...rec, videoUrl: null });
+                return;
+            }
+            // 📤 ارفع الفيديو إلى /api/videos (يُخزَّن على القرص) واحفظ الرابط فقط
+            (async () => {
+                const videoUrl = await _uploadVideo(vf, 'inquiry', baseRec.id);
+                _doSave({ ...rec, videoUrl: videoUrl || null });
+            })();
+            return;
+        }
+        _doSave({ ...rec, videoUrl: null });
+    };
+
     // قراءة الفاتورة (للشكاوى المالية) ثم صورة الجودة (لشكاوى جودة صنف) ثم الحفظ
     const _readQualityPhotoThenSave = (recWithFile) => {
         if (qualityPhotoInput && qualityPhotoInput.files && qualityPhotoInput.files[0]) {
             const f = qualityPhotoInput.files[0];
             if (f.size > 5 * 1024 * 1024) {
                 alert('صورة الصنف أكبر من 5MB — لن تُرفق');
-                db.inquiries.unshift({ ...recWithFile, qualityPhoto: null });
+                _finalizeInquiry({ ...recWithFile, qualityPhoto: null });
             } else {
                 // 📤 (Migration #11) ارفع صورة الجودة إلى /api/files واحفظ الرابط بدل base64
                 (async () => {
                     const photoUrl = await _uploadFile(f, 'inquiry', baseRec.id);
-                    db.inquiries.unshift({ ...recWithFile, qualityPhoto: photoUrl });
-                    if (typeof _logAudit === 'function') _logAudit('addInquiry', baseRec.branch || '—', `${baseRec.type} — ${(baseRec.notes||baseRec.itemName||baseRec.offerName||'').substring(0,40)}`, 'inquiry', baseRec.id);
-                    _afterSave();
+                    _finalizeInquiry({ ...recWithFile, qualityPhoto: photoUrl });
                 })();
-                return;
             }
-        } else {
-            db.inquiries.unshift({ ...recWithFile, qualityPhoto: null });
+            return;
         }
-        if (typeof _logAudit === 'function') _logAudit('addInquiry', baseRec.branch || '—', `${baseRec.type} — ${(baseRec.notes||baseRec.itemName||baseRec.offerName||'').substring(0,40)}`, 'inquiry', baseRec.id);
-        _afterSave();
+        _finalizeInquiry({ ...recWithFile, qualityPhoto: null });
     };
 
     if (fileInput && fileInput.files && fileInput.files[0]) {

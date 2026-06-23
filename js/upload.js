@@ -56,6 +56,50 @@ async function _uploadFile(file, refType, refId) {
 }
 
 /**
+ * يرفع فيديو إلى /api/videos (يُخزَّن كملف على القرص، لا داخل قاعدة البيانات)
+ * ويُرجع رابط api/videos/{id}. عند الفشل أو في الوضع المحلي يُرجع null
+ * (لا نحوّل الفيديو إلى base64 — كبير جداً ويضخّم localStorage).
+ * @param {File|Blob} file
+ * @param {string} [refType]
+ * @param {string|number} [refId]
+ * @returns {Promise<string|null>}
+ */
+async function _uploadVideo(file, refType, refId) {
+    if (!file) return null;
+
+    // الوضع المحلي (file://) — لا سيرفر ولا تخزين قرص
+    if (typeof IS_LOCAL !== 'undefined' && IS_LOCAL) {
+        console.warn('[_uploadVideo] وضع محلي — لن يُرفع الفيديو');
+        return null;
+    }
+
+    const token = (typeof getSavedToken === 'function')
+        ? getSavedToken()
+        : localStorage.getItem('_shaab_token');
+
+    const fd = new FormData();
+    fd.append('file', file);
+    if (refType) fd.append('refType', String(refType));
+    if (refId != null) fd.append('refId', String(refId));
+
+    try {
+        const res = await fetch('api/videos', {
+            method:  'POST',
+            // ⚠️ لا تضع Content-Type يدوياً — المتصفح يضبط boundary الخاص بـ multipart
+            headers: { 'Authorization': 'Bearer ' + token },
+            body:    fd
+        });
+        if (!res.ok) throw new Error('video upload failed: ' + res.status);
+        const data = await res.json();
+        if (!data || !data.url) throw new Error('video upload: no url in response');
+        return data.url; // مثل: api/videos/ab12…
+    } catch (err) {
+        console.warn('[_uploadVideo] فشل رفع الفيديو:', err);
+        return null;
+    }
+}
+
+/**
  * مصدر صورة المنتسية للعرض: يدعم الصيغة الجديدة (رابط photoUrl /api/files)
  * والقديمة (photoBase64 — base64 خام). يُرجع '' إن لم توجد صورة.
  */
@@ -72,6 +116,7 @@ function _montasiaPhotoSrc(rec) {
 
 if (typeof window !== 'undefined') {
     window._uploadFile       = _uploadFile;
+    window._uploadVideo      = _uploadVideo;
     window._fileToDataUrl    = _fileToDataUrl;
     window._montasiaPhotoSrc = _montasiaPhotoSrc;
 }

@@ -263,6 +263,14 @@ i: `
             </div>
         </div>
     </div>
+    <div id="iVideoBox" style="display:none;margin-bottom:15px;background:rgba(156,39,176,0.05);border:1px dashed rgba(186,104,200,0.35);border-radius:12px;padding:14px;">
+        <label style="font-size:13px;color:#ce93d8;display:block;margin-bottom:8px;font-weight:700;">🎥 فيديو</label>
+        <input type="file" id="iVideo" accept="video/*" style="display:none;" onchange="(function(i){var d=document.getElementById('iVideoLabel');if(d)d.textContent=i.files[0]?i.files[0].name:'لم يُختر فيديو';})(this)">
+        <div style="display:flex;align-items:center;gap:8px;">
+            <button type="button" class="btn" style="padding:6px 14px;font-size:12px;background:var(--bg-input);color:var(--text-main);border:1px solid var(--border);border-radius:8px;white-space:nowrap;" onclick="document.getElementById('iVideo').click()">🎥 اختر فيديو</button>
+            <span id="iVideoLabel" style="font-size:12px;color:var(--text-dim);">لم يُختر فيديو</span>
+        </div>
+    </div>
     <div id="iItemNameBox" style="display:none;margin-bottom:15px;">
         <label style="font-size:13px;color:#90caf9;font-weight:700;display:block;margin-bottom:5px;">📦 اسم الصنف *</label>
         <input type="text" id="iItemName" placeholder="اكتب اسم الصنف...">
