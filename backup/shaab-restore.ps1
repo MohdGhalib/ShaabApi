@@ -8,7 +8,11 @@
 ═══════════════════════════════════════════════════════════════════════════
 #>
 param(
-    [Parameter(Mandatory=$true)] [string]$ZipPath
+    [Parameter(Mandatory=$true)] [string]$ZipPath,
+    # مصدر مرآة الوسائط (الفيديوهات). الافتراضي: مجلد media بجوار ملف الـ zip.
+    [string]$MediaSource,
+    # وجهة الوسائط في التطبيق. الافتراضي من backup-config.ps1 أو media بجذر المشروع.
+    [string]$MediaDir
 )
 
 # نفس الإعداد من backup-config.ps1
@@ -20,6 +24,10 @@ if (-not $DbName)     { $DbName     = $env:MYSQLDATABASE; if (-not $DbName) { $D
 if (-not $DbUser)     { $DbUser     = $env:MYSQLUSER; if (-not $DbUser) { $DbUser = $env:MYSQL_USER }; if (-not $DbUser) { $DbUser = 'root' } }
 if (-not $DbPassword) { $DbPassword = $env:MYSQLPASSWORD; if (-not $DbPassword) { $DbPassword = $env:MYSQL_PASSWORD } }
 if ($MysqlBinDir) { $Mysql = Join-Path $MysqlBinDir 'mysql.exe' } else { $Mysql = 'mysql' }
+# وجهة الوسائط في التطبيق (نفس MediaDir المستخدم في النسخ الاحتياطي)
+if (-not $MediaDir) { $MediaDir = Join-Path (Split-Path $PSScriptRoot -Parent) 'media' }
+# مصدر المرآة: المعطى صراحةً، وإلا مجلد media بجوار ملف الـ zip
+if (-not $MediaSource) { $MediaSource = Join-Path (Split-Path $ZipPath -Parent) 'media' }
 
 $ErrorActionPreference = 'Stop'
 if (-not (Test-Path $ZipPath)) { Write-Error "الملف غير موجود: $ZipPath"; exit 1 }
@@ -49,6 +57,18 @@ try {
     # الـ dump أُنشئ بـ --databases فيتضمّن CREATE/USE — لا نمرّر اسم قاعدة
     & $Mysql "--defaults-extra-file=$cnfFile" --default-character-set=utf8mb4 -e "source $($sql.FullName)"
     if ($LASTEXITCODE -ne 0) { throw "mysql فشل برمز $LASTEXITCODE" }
+
+    # ── استعادة مجلد الوسائط (الفيديوهات) من المرآة ──────────────────────
+    if (Test-Path $MediaSource) {
+        Write-Host "▶ استعادة الوسائط من $MediaSource → $MediaDir ..."
+        New-Item -ItemType Directory -Force -Path $MediaDir | Out-Null
+        & robocopy "$MediaSource" "$MediaDir" /MIR /Z /R:1 /W:2 /NFL /NDL /NP /NJH /NJS | Out-Null
+        if ($LASTEXITCODE -ge 8) { Write-Warning "robocopy وسائط رمز $LASTEXITCODE — راجع المجلد يدوياً" }
+        else { Write-Host "✓ استُعيدت الوسائط." -ForegroundColor Green }
+        $global:LASTEXITCODE = 0
+    } else {
+        Write-Host "ℹ لا توجد مرآة وسائط في $MediaSource — تخطّي الفيديوهات." -ForegroundColor DarkGray
+    }
 
     Write-Host "✅ تمّت الاستعادة بنجاح. أعد تشغيل التطبيق." -ForegroundColor Green
     exit 0

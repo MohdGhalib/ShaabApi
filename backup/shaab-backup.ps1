@@ -26,6 +26,9 @@ if (-not $DbPassword) { $DbPassword = $env:MYSQLPASSWORD; if (-not $DbPassword) 
 if (-not $BackupDir)  { $BackupDir  = 'C:\ShaabBackups' }
 if (-not $OffsiteDir) { $OffsiteDir = '' }
 if (-not $RetentionDays) { $RetentionDays = 30 }
+# مجلد ملفات الوسائط على القرص (الفيديوهات وأي ملفات كبيرة — خارج قاعدة البيانات).
+# الافتراضي: media/ بجذر المشروع. اضبطه في backup-config.ps1 ليطابق MEDIA_ROOT للتطبيق.
+if (-not $MediaDir) { $MediaDir = Join-Path (Split-Path $PSScriptRoot -Parent) 'media' }
 
 # مسار mysqldump (من المجلد bin إن حُدّد، وإلا من PATH):
 if ($MysqlBinDir) { $MysqlDump = Join-Path $MysqlBinDir 'mysqldump.exe' } else { $MysqlDump = 'mysqldump' }
@@ -88,6 +91,29 @@ try {
             Copy-Item $zipFile -Destination $OffsiteDir -Force
             Log "✓ نُسخت خارج الموقع → $OffsiteDir"
         } catch { Log "⚠ فشل النسخ خارج الموقع: $($_.Exception.Message)" }
+    }
+
+    # ── 5.5) مرآة مجلد الوسائط (الفيديوهات) — robocopy تزايدي بلا إعادة ضغط ──
+    # الفيديوهات كبيرة ومضغوطة أصلاً؛ نعمل لها مرآة (نسخة حيّة للأحدث) بدل ضغطها
+    # داخل zip مؤرّخ. الـ SQL صغير فيُحتفظ بنسخ مؤرّخة، أما الوسائط فمرآة واحدة.
+    if ($MediaDir -and (Test-Path $MediaDir)) {
+        foreach ($dest in @($BackupDir, $OffsiteDir)) {
+            if (-not $dest) { continue }
+            $mediaDest = Join-Path $dest 'media'
+            try {
+                # /MIR يطابق الوجهة بالمصدر، /Z استئناف، /R:1 /W:2 محاولات قصيرة، /NFL /NDL سجل مختصر
+                & robocopy "$MediaDir" "$mediaDest" /MIR /Z /R:1 /W:2 /NFL /NDL /NP /NJH /NJS 2>> $logFile | Out-Null
+                # robocopy: 0-7 نجاح، 8+ فشل
+                if ($LASTEXITCODE -ge 8) { Log "⚠ robocopy وسائط → $mediaDest رمز $LASTEXITCODE" }
+                else {
+                    $mb = 0; try { $mb = [math]::Round(((Get-ChildItem $mediaDest -Recurse -File -ErrorAction SilentlyContinue | Measure-Object Length -Sum).Sum) / 1MB, 2) } catch {}
+                    Log "✓ مرآة الوسائط → $mediaDest ($mb MB)"
+                }
+                $global:LASTEXITCODE = 0  # لا تترك رمز robocopy يفسد exit النهائي
+            } catch { Log "⚠ فشل مرآة الوسائط → $mediaDest: $($_.Exception.Message)" }
+        }
+    } else {
+        Log "ℹ لا يوجد مجلد وسائط ($MediaDir) — تخطّي نسخ الفيديوهات"
     }
 
     # ── 6) تنظيف الأقدم من RetentionDays في المجلدين ──────────────────────
