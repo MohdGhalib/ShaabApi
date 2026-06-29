@@ -144,10 +144,137 @@ function _cidMountSimButton() {
     document.body.appendChild(b);
 }
 
+/* ════════════════════════════════════════════════════════════════
+   الاتصال الصادر (Click-to-Dial) — زر «اتصال بالزبون» على بطاقة العميل
+   ════════════════════════════════════════════════════════════════ */
+
+/* حوّل الرقم لصيغة الطلب على المقسم:
+   - تحويلة داخلية قصيرة (≤5 خانات) → كما هي بلا زيادة (مثال 177 → 177)
+   - رقم خارجي/خليوي → نضيف 9 للحصول على خط خارجي (مثال 0795959559 → 90795959559) */
+function _cidDialNumber(raw) {
+    let s = String(raw || '');
+    s = s.replace(/[٠-٩]/g, d => '٠١٢٣٤٥٦٧٨٩'.indexOf(d)); // أرقام عربية → لاتينية
+    s = s.replace(/[\s\-()+]/g, '');
+    if (!s) return '';
+    if (s.length <= 5) return s;   // تحويلة داخلية
+    return '9' + s;                // رقم خارجي → 9 قبله
+}
+
+/* صندوق تأكيد بسيط بثيم النظام */
+function _cidConfirm(titleHtml, bodyHtml, okText, onOk) {
+    let ov = document.getElementById('_cidConfirmOverlay');
+    if (ov) ov.remove();
+    _cidEnsureCallDialStyles();
+    ov = document.createElement('div');
+    ov.id = '_cidConfirmOverlay';
+    ov.innerHTML = `
+        <div class="cidc-box" onclick="event.stopPropagation()">
+            <div class="cidc-title">${titleHtml}</div>
+            <div class="cidc-body">${bodyHtml}</div>
+            <div class="cidc-btns">
+                <button class="cidc-ok">${okText}</button>
+                <button class="cidc-cancel">إلغاء</button>
+            </div>
+        </div>`;
+    ov.addEventListener('click', e => { if (e.target === ov) ov.remove(); });
+    ov.querySelector('.cidc-cancel').onclick = () => ov.remove();
+    ov.querySelector('.cidc-ok').onclick = () => { ov.remove(); try { onOk(); } catch {} };
+    document.body.appendChild(ov);
+}
+
+function _cidToast(msg) {
+    _cidEnsureCallDialStyles();
+    const t = document.createElement('div');
+    t.className = '_cidToast';
+    t.textContent = msg;
+    document.body.appendChild(t);
+    setTimeout(() => { t.style.opacity = '0'; setTimeout(() => t.remove(), 400); }, 3200);
+}
+
+/* الزر الرئيسي: يؤكّد ثم يأمر المقسم بالاتصال (يرنّ هاتف الموظف أولاً ثم يطلب الرقم) */
+function cidPlaceCall(phone, name) {
+    if (!(typeof IS_LOCAL !== 'undefined' && IS_LOCAL) && !_cidAuthorized()) return;
+    phone = phone || window._c360CurrentPhone || '';
+    name  = name  || window._c360CurrentName  || '';
+    if (!phone) { alert('لا يوجد رقم للاتصال'); return; }
+
+    const myExt = _cidMyExtension();
+    if (!myExt) { alert('⚠️ لم تُضبط تحويلتك الداخلية في النظام — لا يمكن إجراء الاتصال.\nتواصل مع المدير لإضافة تحويلتك.'); return; }
+
+    const dial = _cidDialNumber(phone);
+    const who = name ? `<b>${name}</b>` : 'الزبون';
+    _cidConfirm(
+        '📞 تأكيد الاتصال',
+        `هل تريد الاتصال بـ ${who}؟<div class="cidc-num">${phone}</div>
+         <div class="cidc-note">سيرنّ هاتفك (تحويلة ${myExt}) أولاً، وعند رفعه يطلب المقسم الرقم تلقائياً.</div>`,
+        '📞 اتصال',
+        async () => {
+            if (typeof IS_LOCAL !== 'undefined' && IS_LOCAL) {
+                _cidToast(`محاكاة: أمر اتصال بالرقم ${dial} (تحويلة ${myExt})`);
+                return;
+            }
+            try {
+                const r = await fetch('api/cti/make-call', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${_token}` },
+                    body: JSON.stringify({ ext: myExt, phone, dial })
+                });
+                if (!r.ok) throw new Error('' + r.status);
+                _cidToast(`📞 جارٍ الاتصال... ارفع سماعة هاتفك (تحويلة ${myExt})`);
+            } catch { alert('تعذّر إرسال أمر الاتصال — تأكد من الاتصال بالسيرفر/المقسم.'); }
+        }
+    );
+}
+
+function _cidEnsureCallDialStyles() {
+    if (document.getElementById('_cidDialStyles')) return;
+    const s = document.createElement('style');
+    s.id = '_cidDialStyles';
+    s.textContent = `
+        #_cidConfirmOverlay {
+            position:fixed; inset:0; z-index:1000020; direction:rtl;
+            background:rgba(8,5,2,.6); backdrop-filter:blur(4px);
+            display:flex; align-items:center; justify-content:center; padding:20px;
+            font-family:'Cairo','Tajawal',sans-serif;
+        }
+        #_cidConfirmOverlay .cidc-box {
+            background:linear-gradient(160deg,#1c1206,#0e0a04); color:#eee;
+            border:1px solid rgba(193,124,50,.5); border-radius:20px;
+            padding:24px; max-width:380px; width:92%; text-align:center;
+            box-shadow:0 12px 50px rgba(0,0,0,.6);
+        }
+        #_cidConfirmOverlay .cidc-title { font-size:19px; font-weight:900; color:#e8c79a; margin-bottom:12px; }
+        #_cidConfirmOverlay .cidc-body { font-size:14px; line-height:1.7; color:#ddd; }
+        #_cidConfirmOverlay .cidc-num {
+            font-size:22px; font-weight:800; color:#fff; direction:ltr; unicode-bidi:plaintext;
+            margin:10px 0; letter-spacing:.5px;
+        }
+        #_cidConfirmOverlay .cidc-note { font-size:12px; color:#aaa; margin-top:8px; }
+        #_cidConfirmOverlay .cidc-btns { display:flex; gap:10px; margin-top:20px; }
+        #_cidConfirmOverlay .cidc-ok {
+            flex:1; background:linear-gradient(135deg,#2e7d32,#1b5e20); color:#fff; border:none;
+            border-radius:12px; padding:12px; font-family:'Cairo'; font-size:15px; font-weight:800; cursor:pointer;
+        }
+        #_cidConfirmOverlay .cidc-cancel {
+            flex:1; background:rgba(255,255,255,.08); color:#ddd; border:none;
+            border-radius:12px; padding:12px; font-family:'Cairo'; font-size:15px; font-weight:700; cursor:pointer;
+        }
+        ._cidToast {
+            position:fixed; bottom:74px; inset-inline-start:18px; z-index:1000021;
+            background:linear-gradient(135deg,#1b5e20,#2e7d32); color:#fff;
+            padding:12px 18px; border-radius:14px; font-family:'Cairo'; font-size:13px; font-weight:700;
+            box-shadow:0 6px 20px rgba(0,0,0,.45); direction:rtl; max-width:320px;
+            transition:opacity .4s; opacity:1;
+        }
+    `;
+    document.head.appendChild(s);
+}
+
 /* ── تسجيل عالمي + إقلاع ── */
 if (typeof window !== 'undefined') {
     window._onIncomingCall    = _onIncomingCall;
     window.cidSimulate        = cidSimulate;
+    window.cidPlaceCall       = cidPlaceCall;
     window._cidMountSimButton = _cidMountSimButton;
 
     const _cidBoot = () => { try { _cidMountSimButton(); } catch {} };

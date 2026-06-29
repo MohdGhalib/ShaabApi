@@ -378,6 +378,7 @@ function openCustomer360(rawPhone, opts) {
         lastIso  = isos[isos.length - 1] || '—';
     }
 
+    window._c360CurrentPhone = phone || '';
     document.getElementById('c360Summary').innerHTML = norm ? `
         <span class="pill">📞 ${_c360Esc(phone)}</span>
         <span class="pill">❓ ${inq.length} استفسار</span>
@@ -385,6 +386,7 @@ function openCustomer360(rawPhone, opts) {
         <span class="pill">⚠️ ${cmp.length} شكوى</span>
         <span class="pill">📅 أول تعامل: ${_c360Esc(firstIso.slice(0,10))}</span>
         <span class="pill">📅 آخر: ${_c360Esc(lastIso.slice(0,10))}</span>
+        <button class="c360-callbtn" onclick="cidPlaceCall()">📞 اتصال بالزبون</button>
     ` : '<span class="pill">أدخل رقم هاتف للبحث</span>';
 
     document.getElementById('c360Body').innerHTML = !norm ? '' : `
@@ -418,9 +420,11 @@ function openCustomer360(rawPhone, opts) {
             const _c = cmp.find(x => x.customer?.name); if (_c) _name = _c.customer.name;
         }
         _c360Call = { phone, norm, name: _name || '', onConfirm: (opts && opts.onConfirm) || null };
+        window._c360CurrentName = _c360Call.name || '';
         _c360RenderCallUI();
     } else {
         if (_searchWrap) _searchWrap.style.display = '';
+        window._c360CurrentName = '';
         _c360Call = null;
         const _h = document.getElementById('c360CallHead'); if (_h) _h.style.display = 'none';
         const _b = document.getElementById('c360CallBar');  if (_b) _b.style.display = 'none';
@@ -495,6 +499,13 @@ function _c360EnsureCallStyles() {
         }
         #c360CallBar .c360-ok:active { transform:scale(.97); }
         #c360CallBar .c360-locknote { font-size:13px; font-weight:800; color:#c62828; }
+        #c360Modal .c360-callbtn {
+            background:linear-gradient(135deg,#2e7d32,#1b5e20); color:#fff; border:none;
+            border-radius:14px; padding:6px 16px; font-family:'Cairo'; font-size:12px;
+            font-weight:800; cursor:pointer; box-shadow:0 2px 8px rgba(27,94,32,0.3);
+        }
+        #c360Modal .c360-callbtn:hover { filter:brightness(1.08); }
+        #c360Modal .c360-callbtn:active { transform:scale(.96); }
     `;
     document.head.appendChild(s);
 }

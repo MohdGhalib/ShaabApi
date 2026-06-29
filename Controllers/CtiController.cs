@@ -56,6 +56,34 @@ public class CtiController : ControllerBase
         return Ok(new { ok = true });
     }
 
+    // POST /api/cti/make-call  (اتصال صادر — Click-to-Dial)
+    // الموظف يطلب الاتصال بزبون؛ يُبَثّ أمر 'make-call' ليلتقطه برنامج الجسر
+    // فيأمر المقسم: يرنّ تحويلة الموظف أولاً ثم يطلب رقم الزبون (dial).
+    [HttpPost("make-call")]
+    [Authorize]
+    public async Task<IActionResult> MakeCall([FromBody] CtiMakeCallRequest? body)
+    {
+        var role    = User.FindFirst("role")?.Value ?? "";
+        var isAdmin = User.FindFirst("isAdmin")?.Value == "true";
+        if (!isAdmin && role != "cc_manager" && role != "cc_employee")
+            return Forbid();
+
+        var ext  = (body?.Ext  ?? "").Trim();
+        var dial = (body?.Dial ?? "").Trim();
+        if (string.IsNullOrEmpty(ext) || string.IsNullOrEmpty(dial))
+            return BadRequest(new { error = "ext and dial required" });
+
+        var payload = JsonSerializer.Serialize(new {
+            ext,
+            dial,
+            phone = (body?.Phone ?? "").Trim(),
+            by    = User.FindFirst("name")?.Value ?? "",
+            ts    = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds()
+        });
+        await SseController.Broadcast("make-call", payload);
+        return Ok(new { ok = true });
+    }
+
     private static async Task BroadcastCall(string? rawPhone, string? ext)
     {
         var payload = JsonSerializer.Serialize(new {
@@ -69,3 +97,4 @@ public class CtiController : ControllerBase
 }
 
 public record CtiCallRequest(string? Phone, string? Ext);
+public record CtiMakeCallRequest(string? Ext, string? Phone, string? Dial);
