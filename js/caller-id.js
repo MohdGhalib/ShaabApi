@@ -178,15 +178,7 @@ function _cidMountSimButton() {
     b.title = 'اختبار شاشة المكالمة الواردة (قبل وصل المقسم)';
     b.onclick = cidSimulate;
     document.body.appendChild(b);
-
-    // زر ضبط تحويلة هذا الجهاز (يُضبط مرّة واحدة لكل كمبيوتر)
-    const eb = document.createElement('button');
-    eb.id = '_cidExtBtn';
-    eb.type = 'button';
-    eb.title = 'الرقم الداخلي للهاتف المجاور لهذا الكمبيوتر — يحدد أي مكالمات تظهر هنا';
-    eb.onclick = cidSetDeviceExtension;
-    document.body.appendChild(eb);
-    _cidUpdateExtBtn();
+    // التحويلة تُختار الآن عند تسجيل الدخول (loginExtension) — لا حاجة لزر ضبط يدوي.
 }
 
 /* ════════════════════════════════════════════════════════════════

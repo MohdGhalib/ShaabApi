@@ -533,6 +533,23 @@ async function login() {
         }
     }
 
+    // ── التحويلة: إلزامية لطاقم الكول سنتر، وتُثبَّت لهذه الجلسة على هذا الجهاز ──
+    {
+        const _extSel = document.getElementById('loginExtension');
+        const _ext    = _extSel ? _extSel.value.trim() : '';
+        const _isCC   = currentUser?.role === 'cc_manager' || currentUser?.role === 'cc_employee';
+        if (_isCC && !_ext) {
+            _showLoginError('⚠️ يرجى اختيار التحويلة للمتابعة');
+            if (!IS_LOCAL && typeof setToken === 'function') setToken(null);
+            currentUser = null;
+            return; // نبقى في شاشة الدخول (كلمة المرور لا تزال مكتوبة)
+        }
+        try {
+            if (_ext) localStorage.setItem('Shaab_DeviceExtension', _ext);
+            else localStorage.removeItem('Shaab_DeviceExtension');
+        } catch {}
+    }
+
     document.getElementById("loginPage").style.display = "none";
     document.getElementById("mainApp").style.display   = "flex";
     setProfileUI();

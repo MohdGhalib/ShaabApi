@@ -113,6 +113,14 @@
             <input type="password" id="passInput" placeholder="أدخل الرقم الوظيفي" onkeypress="if(event.key==='Enter')login()" style="padding-left:45px;" autocomplete="current-password">
             <button onclick="(function(){var i=document.getElementById('passInput'),b=document.getElementById('togglePass');i.type=i.type==='password'?'text':'password';b.innerHTML=i.type==='password'?'<svg xmlns=\'http://www.w3.org/2000/svg\' width=\'20\' height=\'20\' viewBox=\'0 0 24 24\' fill=\'none\' stroke=\'white\' stroke-width=\'2\' stroke-linecap=\'round\' stroke-linejoin=\'round\'><path d=\'M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24\'/><line x1=\'1\' y1=\'1\' x2=\'23\' y2=\'23\'/></svg>':'<svg xmlns=\'http://www.w3.org/2000/svg\' width=\'20\' height=\'20\' viewBox=\'0 0 24 24\' fill=\'none\' stroke=\'white\' stroke-width=\'2\' stroke-linecap=\'round\' stroke-linejoin=\'round\'><path d=\'M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z\'/><circle cx=\'12\' cy=\'12\' r=\'3\'/></svg>';})()" id="togglePass" style="position:absolute;left:12px;top:50%;transform:translateY(-50%);background:none;border:none;cursor:pointer;padding:0;line-height:1;display:flex;align-items:center;"><svg xmlns='http://www.w3.org/2000/svg' width='20' height='20' viewBox='0 0 24 24' fill='none' stroke='white' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'><path d='M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24'/><line x1='1' y1='1' x2='23' y2='23'/></svg></button>
         </div>
+        <div style="margin-top:12px;">
+            <label style="display:block;font-size:13px;color:var(--text-dim);margin-bottom:5px;">📞 التحويلة (لموظفي الكول سنتر)</label>
+            <select id="loginExtension" style="width:100%;padding:11px 14px;border-radius:10px;border:1px solid var(--border);background:var(--bg-input);color:var(--text-main);font-family:'Cairo';font-size:14px;outline:none;">
+                <option value="">— اختر التحويلة —</option>
+                <option value="101">101</option>
+                <option value="103">103</option>
+            </select>
+        </div>
         <button class="btn btn-main" style="width:100%;margin-top:15px" onclick="login()">دخول</button>
     </div>
     <div id="loginError">⚠️ الرقم الوظيفي أو كلمة المرور غير صحيحة</div>
@@ -1148,11 +1156,11 @@
 <script src="js/upload.js?v=4"></script>
 <script src="js/sync-queue.js?v=7"></script>
 <script src="js/customer360.js?v=8"></script>
-<script src="js/caller-id.js?v=6"></script>
+<script src="js/caller-id.js?v=7"></script>
 <script src="js/audit-note.js?v=42"></script>
 <script src="js/session.js?v=24"></script>
 <script src="js/clock.js?v=23"></script>
-<script src="js/auth.js?v=54"></script>
+<script src="js/auth.js?v=55"></script>
 <script src="js/montasia-items.js?v=3"></script>
 <script src="js/render.js?v=93"></script>
 <script src="js/pages.js?v=79"></script>
