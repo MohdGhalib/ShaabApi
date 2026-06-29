@@ -77,35 +77,30 @@ public class AdminMigrationController : ControllerBase
         var blobIds   = _CollectBlobIds(row.StoreValue);
         HashSet<long> blobInq = blobIds.inquiries;
         HashSet<long> blobMnt = blobIds.montasiat;
-        HashSet<long> blobCmp = blobIds.complaints;
 
         var inqIds = (await _db.Inquiries .Select(i => i.Id).ToListAsync()).ToHashSet();
         var mntIds = (await _db.Montasiat .Select(m => m.Id).ToListAsync()).ToHashSet();
-        var cmpIds = (await _db.Complaints.Select(c => c.Id).ToListAsync()).ToHashSet();
 
         long[] missingInq = blobInq.Except(inqIds).Take(50).ToArray();
         long[] missingMnt = blobMnt.Except(mntIds).Take(50).ToArray();
-        long[] missingCmp = blobCmp.Except(cmpIds).Take(50).ToArray();
 
         long[] extraInq = inqIds.Except(blobInq).Take(50).ToArray();
         long[] extraMnt = mntIds.Except(blobMnt).Take(50).ToArray();
-        long[] extraCmp = cmpIds.Except(blobCmp).Take(50).ToArray();
 
-        int jBlobInq = blobInq.Count, jBlobMnt = blobMnt.Count, jBlobCmp = blobCmp.Count;
-        int dbInq    = inqIds.Count,  dbMnt    = mntIds.Count,  dbCmp    = cmpIds.Count;
+        int jBlobInq = blobInq.Count, jBlobMnt = blobMnt.Count;
+        int dbInq    = inqIds.Count,  dbMnt    = mntIds.Count;
 
         bool match =
             missingInq.Length == 0 && extraInq.Length == 0 &&
-            missingMnt.Length == 0 && extraMnt.Length == 0 &&
-            missingCmp.Length == 0 && extraCmp.Length == 0;
+            missingMnt.Length == 0 && extraMnt.Length == 0;
 
         return Ok(new
         {
-            jsonBlob   = new { inquiries = jBlobInq, montasiat = jBlobMnt, complaints = jBlobCmp },
-            perRecord  = new { inquiries = dbInq,    montasiat = dbMnt,    complaints = dbCmp    },
+            jsonBlob   = new { inquiries = jBlobInq, montasiat = jBlobMnt },
+            perRecord  = new { inquiries = dbInq,    montasiat = dbMnt    },
             match,
-            missingIds = new { inquiries = missingInq, montasiat = missingMnt, complaints = missingCmp }, // in blob, not in table — need backfill
-            extraIds   = new { inquiries = extraInq,   montasiat = extraMnt,   complaints = extraCmp   }  // in table, not in blob — possible orphans
+            missingIds = new { inquiries = missingInq, montasiat = missingMnt }, // in blob, not in table — need backfill
+            extraIds   = new { inquiries = extraInq,   montasiat = extraMnt   }  // in table, not in blob — possible orphans
         });
     }
 
@@ -133,7 +128,6 @@ public class AdminMigrationController : ControllerBase
         // 1) per-record tables (typed Branch column)
         int tMnt = await _db.Montasiat .Where(x => x.Branch == oldName).ExecuteUpdateAsync(s => s.SetProperty(x => x.Branch, newName));
         int tInq = await _db.Inquiries .Where(x => x.Branch == oldName).ExecuteUpdateAsync(s => s.SetProperty(x => x.Branch, newName));
-        int tCmp = await _db.Complaints.Where(x => x.Branch == oldName).ExecuteUpdateAsync(s => s.SetProperty(x => x.Branch, newName));
 
         // 2) Master_DB blob: record arrays' "branch" field + branchInfo map key
         int bMaster = await _RenameInStorageBlob("Shaab_Master_DB", oldName, newName, isMaster: true);
@@ -143,13 +137,13 @@ public class AdminMigrationController : ControllerBase
 
         sw.Stop();
         var userEmpId = User.FindFirst("empId")?.Value ?? "?";
-        Console.WriteLine($"[RENAME-BRANCH] by={userEmpId} '{oldName}'→'{newName}' tablesM/I/C={tMnt}/{tInq}/{tCmp} blobMaster={bMaster} blobEmp={bEmp} in {sw.ElapsedMilliseconds}ms");
+        Console.WriteLine($"[RENAME-BRANCH] by={userEmpId} '{oldName}'→'{newName}' tablesM/I={tMnt}/{tInq} blobMaster={bMaster} blobEmp={bEmp} in {sw.ElapsedMilliseconds}ms");
 
         return Ok(new
         {
             ok = true,
             oldName, newName,
-            tables = new { montasiat = tMnt, inquiries = tInq, complaints = tCmp },
+            tables = new { montasiat = tMnt, inquiries = tInq },
             blob   = new { master = bMaster, employees = bEmp },
             durationMs = sw.ElapsedMilliseconds,
             note = "Reload the app (Ctrl+Shift+R). Records keep their data; only the branch label changed."
@@ -171,7 +165,7 @@ public class AdminMigrationController : ControllerBase
         if (isMaster)
         {
             if (root is not JsonObject obj) return 0;
-            foreach (var arrName in new[] { "montasiat", "inquiries", "complaints" })
+            foreach (var arrName in new[] { "montasiat", "inquiries" })
             {
                 if (obj[arrName] is JsonArray arr)
                     foreach (var item in arr)
@@ -237,20 +231,19 @@ public class AdminMigrationController : ControllerBase
         int limit = (req?.MaxPerType is int m && m > 0 && m <= 500) ? m : 50;
 
         int inq = await _BackfillInquiries(limit);
-        int cmp = await _BackfillComplaints(limit);
         int mnt = await _BackfillMontasiat(limit);
         int msg = await _BackfillBlobMessages();
         int emp = await _BackfillEmployees();
 
         sw.Stop();
         var userEmpId = User.FindFirst("empId")?.Value ?? "?";
-        Console.WriteLine($"[BACKFILL-IMG] by={userEmpId} inq={inq} cmp={cmp} mnt={mnt} msg={msg} emp={emp} in {sw.ElapsedMilliseconds}ms");
+        Console.WriteLine($"[BACKFILL-IMG] by={userEmpId} inq={inq} mnt={mnt} msg={msg} emp={emp} in {sw.ElapsedMilliseconds}ms");
 
-        bool tablesMaybeMore = inq == limit || cmp == limit || mnt == limit;
+        bool tablesMaybeMore = inq == limit || mnt == limit;
         return Ok(new
         {
             ok = true,
-            converted = new { inquiries = inq, complaints = cmp, montasiat = mnt, messages = msg, employees = emp },
+            converted = new { inquiries = inq, montasiat = mnt, messages = msg, employees = emp },
             batchLimit = limit,
             moreLikely = tablesMaybeMore,
             durationMs = sw.ElapsedMilliseconds,
@@ -323,28 +316,6 @@ public class AdminMigrationController : ControllerBase
                 if (url != null) { r.QualityPhoto = url; n++; }
             }
             catch (Exception ex) { Console.WriteLine($"[BACKFILL-IMG] inquiry {r.Id} skip: {ex.Message}"); }
-        }
-        if (n > 0) await _db.SaveChangesAsync();
-        return n;
-    }
-
-    private async Task<int> _BackfillComplaints(int limit)
-    {
-        var rows = await _db.Complaints
-            .Where(c => c.File != null && c.File != ""
-                && !c.File.StartsWith("/api/files/")
-                && !c.File.StartsWith("api/files/")
-                && !c.File.StartsWith("http"))
-            .Take(limit).ToListAsync();
-        int n = 0;
-        foreach (var r in rows)
-        {
-            try
-            {
-                var url = _StoreImageBlob(r.File, "complaint", r.Id.ToString(), r.AddedBy);
-                if (url != null) { r.File = url; n++; }
-            }
-            catch (Exception ex) { Console.WriteLine($"[BACKFILL-IMG] complaint {r.Id} skip: {ex.Message}"); }
         }
         if (n > 0) await _db.SaveChangesAsync();
         return n;
@@ -538,26 +509,24 @@ public class AdminMigrationController : ControllerBase
         return isAdmin || role == "cc_manager";
     }
 
-    private static (HashSet<long> inquiries, HashSet<long> montasiat, HashSet<long> complaints) _CollectBlobIds(string json)
+    private static (HashSet<long> inquiries, HashSet<long> montasiat) _CollectBlobIds(string json)
     {
         var inq = new HashSet<long>();
         var mnt = new HashSet<long>();
-        var cmp = new HashSet<long>();
         try
         {
             using var doc = JsonDocument.Parse(json);
             var root = doc.RootElement;
-            if (root.ValueKind != JsonValueKind.Object) return (inq, mnt, cmp);
+            if (root.ValueKind != JsonValueKind.Object) return (inq, mnt);
 
             _CollectArrayIds(root, "inquiries",  inq);
             _CollectArrayIds(root, "montasiat",  mnt);
-            _CollectArrayIds(root, "complaints", cmp);
         }
         catch (Exception ex)
         {
             Console.WriteLine($"[VERIFY] JSON parse failed: {ex.Message}");
         }
-        return (inq, mnt, cmp);
+        return (inq, mnt);
     }
 
     private static void _CollectArrayIds(JsonElement root, string prop, HashSet<long> ids)

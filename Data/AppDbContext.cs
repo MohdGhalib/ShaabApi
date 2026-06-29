@@ -10,7 +10,6 @@ public class AppDbContext : DbContext
     public DbSet<StorageEntry> Storage     => Set<StorageEntry>();
     public DbSet<Inquiry>      Inquiries   => Set<Inquiry>();
     public DbSet<Montasia>     Montasiat   => Set<Montasia>();
-    public DbSet<Complaint>    Complaints  => Set<Complaint>();
     public DbSet<FileBlob>     Files       => Set<FileBlob>();
     public DbSet<AuditEntry>   AuditLog    => Set<AuditEntry>();
     public DbSet<Employee>     Employees   => Set<Employee>();
@@ -47,14 +46,6 @@ public class AppDbContext : DbContext
             // الـ serial مثل 261963. على القواعد الموجودة يُنشأ عبر raw SQL في Program.cs
             // بعد إصلاح التكرارات (EnsureCreated لا يعدّل جدولاً قائماً).
             entity.HasIndex(e => e.Serial).IsUnique().HasDatabaseName("ux_montasiat_serial");
-        });
-
-        modelBuilder.Entity<Complaint>(entity =>
-        {
-            entity.Property(e => e.Version).IsConcurrencyToken();
-            entity.Property(e => e.CreatedAt).HasDefaultValueSql("CURRENT_TIMESTAMP");
-            entity.HasIndex(e => e.Branch);
-            entity.HasIndex(e => e.Iso);
         });
 
         modelBuilder.Entity<FileBlob>(entity =>

@@ -26,11 +26,6 @@ public class PerRecordSyncService
         "id", "serial", "branch", "type", "status", "time", "iso", "addedBy"
     };
 
-    private static readonly HashSet<string> _complaintTypedFields = new(StringComparer.Ordinal)
-    {
-        "id", "branch", "notes", "time", "iso", "file", "addedBy"
-    };
-
     public PerRecordSyncService(AppDbContext db) { _db = db; }
 
     public async Task<(int inquiries, int montasiat, int complaints)> SyncMasterDbAsync(string masterDbJson)
@@ -60,16 +55,12 @@ public class PerRecordSyncService
 
             var oldInqMap = _IndexRawById(oldRoot, "inquiries");
             var oldMntMap = _IndexRawById(oldRoot, "montasiat");
-            var oldCmpMap = _IndexRawById(oldRoot, "complaints");
 
             if (root.TryGetProperty("inquiries",  out var inqArr) && inqArr.ValueKind == JsonValueKind.Array)
                 inqCount = UpsertInquiries(inqArr, oldInqMap);
 
             if (root.TryGetProperty("montasiat",  out var mntArr) && mntArr.ValueKind == JsonValueKind.Array)
                 mntCount = await UpsertMontasiatAsync(mntArr, oldMntMap);
-
-            if (root.TryGetProperty("complaints", out var cmpArr) && cmpArr.ValueKind == JsonValueKind.Array)
-                cmpCount = await UpsertComplaintsAsync(cmpArr, oldCmpMap);
 
             await _db.SaveChangesAsync();
         }
@@ -192,41 +183,6 @@ public class PerRecordSyncService
         return count;
     }
 
-    private async Task<int> UpsertComplaintsAsync(JsonElement arr, Dictionary<long, string>? oldMap)
-    {
-        var changedIds = _CollectChangedIds(arr, oldMap);
-        if (changedIds.Count == 0) return 0;
-        var existing = await _db.Complaints.Where(c => changedIds.Contains(c.Id)).ToDictionaryAsync(c => c.Id);
-
-        int count = 0;
-        foreach (var rec in arr.EnumerateArray())
-        {
-            if (!TryGetLongId(rec, out var id)) continue;
-            if (!changedIds.Contains(id)) continue;
-            try
-            {
-                var e = existing.TryGetValue(id, out var found) ? found : null;
-                if (e == null)
-                {
-                    e = new Complaint { Id = id };
-                    _db.Complaints.Add(e);
-                }
-                e.Branch  = GetStringOrNull(rec, "branch", 100);
-                e.Notes   = GetStringOrNull(rec, "notes", int.MaxValue);
-                e.Time    = GetStringOrNull(rec, "time", 50);
-                e.Iso     = GetStringOrNull(rec, "iso", 50);
-                e.File    = GetStringOrNull(rec, "file", int.MaxValue);
-                e.AddedBy = GetStringOrNull(rec, "addedBy", 100);
-                e.Data    = ExtractExtraFields(rec, _complaintTypedFields);
-                count++;
-            }
-            catch (Exception ex)
-            {
-                Console.WriteLine($"[DUAL-WRITE] complaint id={id} skip: {ex.Message}");
-            }
-        }
-        return count;
-    }
 
     // ── helpers ──────────────────────────────────────────────────────────
 

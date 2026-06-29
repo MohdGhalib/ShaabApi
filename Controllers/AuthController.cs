@@ -293,10 +293,6 @@ public class AuthController : ControllerBase
     {
         "مدير الكول سنتر"   => "cc_manager",
         "موظف كول سنتر"     => "cc_employee",
-        "قسم السيطرة"       => "control",
-        "موظف ميديا"        => "media",
-        "مدير قسم السيطرة"  => "control_employee",
-        "موظف سيطرة"        => "control_sub",
         "موظف فرع"          => "branch_employee",
         "مدير فرع"          => "branch_manager",
         "مدير منطقة"        => "area_manager",

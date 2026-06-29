@@ -140,21 +140,6 @@ using (var scope = app.Services.CreateScope())
             INDEX idx_mnt_type (type)
         ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;"),
 
-        ("complaints", @"CREATE TABLE IF NOT EXISTS complaints (
-            id BIGINT PRIMARY KEY,
-            branch VARCHAR(100) NULL,
-            notes TEXT NULL,
-            time VARCHAR(50) NULL,
-            iso VARCHAR(50) NULL,
-            file LONGTEXT NULL,
-            added_by VARCHAR(100) NULL,
-            data JSON NULL,
-            version BIGINT NOT NULL DEFAULT 0,
-            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-            INDEX idx_cmp_branch (branch),
-            INDEX idx_cmp_iso (iso)
-        ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;"),
-
         // ── Migration #11 (image off-loading): binary files store ──
         // Images/invoices live here as MEDIUMBLOB; records keep only /api/files/{id}.
         ("files", @"CREATE TABLE IF NOT EXISTS files (

@@ -171,7 +171,7 @@ public class StorageController : ControllerBase
         {
             var isAdmin = User.FindFirst("isAdmin")?.Value == "true";
             var role    = User.FindFirst("role")?.Value ?? "";
-            if (!isAdmin && role != "cc_manager" && role != "control_employee")
+            if (!isAdmin && role != "cc_manager")
                 return Forbid();
         }
 
@@ -452,22 +452,6 @@ public class StorageController : ControllerBase
                             data: new Dictionary<string, string> { ["montasiaId"] = grp.First().Id.ToString(), ["type"] = "delivered" });
                 }
             }
-
-            // ── شكوى جديدة → كول سنتر + السيطرة + مديرو الفروع والمناطق ──
-            if (newC > 0)
-                await FcmService.SendToRolesStatic(allTokens,
-                    ["cc_manager", "control_employee", "branch_manager", "area_manager"],
-                    "🚨 شكوى جديدة",
-                    newC == 1 ? "تم إضافة شكوى جديدة" : $"تم إضافة {newC} شكاوي جديدة",
-                    data: new Dictionary<string, string> { ["complaintId"] = newCIds.First().ToString(), ["type"] = "complaint" });
-
-            // ── رد جديد من السيطرة على شكوى → كول سنتر + ميديا ──
-            if (newAuditC > 0)
-                await FcmService.SendToRolesStatic(allTokens,
-                    ["cc_manager", "cc_employee", "media"],
-                    "✅ تم الرد على شكوى",
-                    newAuditC == 1 ? "أضاف قسم السيطرة رداً على شكوى" : $"أضاف قسم السيطرة رداً على {newAuditC} شكاوي",
-                    data: new Dictionary<string, string> { ["type"] = "complaint_audit" });
 
             // ── استفسار جديد → كول سنتر ──
             if (newI > 0)
