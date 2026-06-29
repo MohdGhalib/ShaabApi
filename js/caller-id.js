@@ -243,6 +243,14 @@ async function _cidSave() {
     const notes = document.getElementById('_cidNotes')?.value.trim() || '';
     if (!name) { alert('يرجى إدخال اسم الزبون'); return; }
 
+    // وضع المعاينة المحلي: حدّث في الذاكرة فقط (بلا حفظ فعلي) لعرض شكل الشاشة «المعروفة»
+    if (IS_LOCAL) {
+        _cidState.contact = { phone: _cidState.norm, name, city, address, notes, updatedBy: '(معاينة — بلا حفظ)' };
+        _cidState.editing = false;
+        _cidRender(_cidState);
+        return;
+    }
+
     const btn = document.querySelector('#_cidBox .cid-btn.primary');
     if (btn) { btn.disabled = true; btn.textContent = '... جاري الحفظ'; }
 
@@ -265,7 +273,7 @@ async function _cidSave() {
 
 /* نقطة الدخول الرئيسية — يستدعيها data.js عند حدث incoming-call */
 async function _onIncomingCall(info) {
-    if (!_cidAuthorized()) return;
+    if (!IS_LOCAL && !_cidAuthorized()) return;   // الوضع المحلي = معاينة الشكل فقط
     info = info || {};
     const phone = (info.phone || '').trim();
     const norm  = info.norm || _cidNorm(phone);
@@ -304,10 +312,12 @@ function closeCallerId() { _cidClose(); }
 
 /* ── محاكاة اتصال (اختبار) ── */
 async function cidSimulate() {
-    if (!_cidAuthorized()) return;
+    if (!IS_LOCAL && !_cidAuthorized()) return;
     const phone = prompt('محاكاة مكالمة واردة — أدخل رقم الهاتف:');
     if (phone === null) return;
     const ext = _cidMyExtension(); // محاكاة على تحويلتي إن وُجدت
+    // وضع المعاينة المحلي (file://): لا سيرفر/SSE — استدعِ الصندوق مباشرة بلا أي حفظ
+    if (IS_LOCAL) { _onIncomingCall({ phone, ext, ts: Date.now() }); return; }
     try {
         await fetch('api/cti/simulate', {
             method: 'POST',
@@ -320,12 +330,13 @@ async function cidSimulate() {
 
 function _cidMountSimButton() {
     if (document.getElementById('_cidSimBtn')) return;
-    if (!_cidAuthorized() || IS_LOCAL) return;
+    // محلياً (file://): أظهر الزر لأي مستخدم لمعاينة الشكل. على السيرفر: لطاقم الكول سنتر/الأدمن فقط.
+    if (!IS_LOCAL && !_cidAuthorized()) return;
     _cidEnsureStyles();
     const b = document.createElement('button');
     b.id = '_cidSimBtn';
     b.type = 'button';
-    b.textContent = '📞 محاكاة اتصال';
+    b.textContent = IS_LOCAL ? '📞 معاينة شاشة الاتصال' : '📞 محاكاة اتصال';
     b.title = 'اختبار صندوق رقم المتصل (قبل وصل المقسم)';
     b.onclick = cidSimulate;
     document.body.appendChild(b);
