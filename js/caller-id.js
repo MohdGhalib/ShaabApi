@@ -21,12 +21,32 @@ function _cidNorm(p) {
     return String(p || '').replace(/[\s\-+()]/g, '').replace(/^0+/, '');
 }
 
-/* تحويلة الموظف الحالي (إن خُصِّصت في صفحة الموظفين) */
+/* تحويلة هذا الجهاز (تُضبط مرّة واحدة لكل كمبيوتر — مخزّنة محلياً) */
+function _cidDeviceExtension() {
+    try { return (localStorage.getItem('Shaab_DeviceExtension') || '').trim(); } catch { return ''; }
+}
+
+/* التحويلة الفعّالة: تحويلة الجهاز أولاً (الأدقّ مع تبادل الموظفين)، وإلا تحويلة الحساب */
 function _cidMyExtension() {
+    const dev = _cidDeviceExtension();
+    if (dev) return dev;
     try {
         const me = (employees || []).find(e => e.empId === currentUser?.empId);
         return me?.extension ? String(me.extension).trim() : '';
     } catch { return ''; }
+}
+
+/* ضبط/تغيير تحويلة هذا الجهاز */
+function cidSetDeviceExtension() {
+    const cur = _cidDeviceExtension();
+    const v = prompt('📟 تحويلة هذا الجهاز\nاكتب الرقم الداخلي للهاتف المجاور لهذا الكمبيوتر (مثال: 101).\nاتركه فارغاً لإلغاء الربط:', cur);
+    if (v === null) return;
+    const val = v.trim();
+    try {
+        if (val) localStorage.setItem('Shaab_DeviceExtension', val);
+        else localStorage.removeItem('Shaab_DeviceExtension');
+    } catch {}
+    _cidUpdateExtBtn();
 }
 
 /* جلب جهة الاتصال من دفتر الهاتف (أحدث اسم محفوظ) — كائن أو null */
@@ -126,8 +146,23 @@ function _cidEnsureBtnStyle() {
             font-size:13px; font-weight:700; box-shadow:0 4px 16px rgba(0,0,0,.4);
         }
         #_cidSimBtn:hover { background:#c17c32; }
+        #_cidExtBtn {
+            position:fixed; bottom:58px; inset-inline-start:18px; z-index:99990;
+            background:rgba(33,33,33,.92); color:#e8c79a; border:1px solid rgba(193,124,50,.5);
+            cursor:pointer; border-radius:30px; padding:8px 14px; font-family:'Cairo',sans-serif;
+            font-size:12px; font-weight:700; box-shadow:0 4px 16px rgba(0,0,0,.4);
+        }
+        #_cidExtBtn:hover { background:rgba(60,40,20,.95); }
     `;
     document.head.appendChild(s);
+}
+
+function _cidUpdateExtBtn() {
+    const eb = document.getElementById('_cidExtBtn');
+    if (!eb) return;
+    const ext = _cidDeviceExtension();
+    eb.textContent = '📟 تحويلة الجهاز: ' + (ext || 'غير محددة');
+    eb.style.color = ext ? '#7bd88f' : '#e8a0a0';
 }
 
 function _cidMountSimButton() {
@@ -135,6 +170,7 @@ function _cidMountSimButton() {
     const local = (typeof IS_LOCAL !== 'undefined' && IS_LOCAL);
     if (!local && !_cidAuthorized()) return;
     _cidEnsureBtnStyle();
+
     const b = document.createElement('button');
     b.id = '_cidSimBtn';
     b.type = 'button';
@@ -142,6 +178,15 @@ function _cidMountSimButton() {
     b.title = 'اختبار شاشة المكالمة الواردة (قبل وصل المقسم)';
     b.onclick = cidSimulate;
     document.body.appendChild(b);
+
+    // زر ضبط تحويلة هذا الجهاز (يُضبط مرّة واحدة لكل كمبيوتر)
+    const eb = document.createElement('button');
+    eb.id = '_cidExtBtn';
+    eb.type = 'button';
+    eb.title = 'الرقم الداخلي للهاتف المجاور لهذا الكمبيوتر — يحدد أي مكالمات تظهر هنا';
+    eb.onclick = cidSetDeviceExtension;
+    document.body.appendChild(eb);
+    _cidUpdateExtBtn();
 }
 
 /* ════════════════════════════════════════════════════════════════
@@ -272,10 +317,11 @@ function _cidEnsureCallDialStyles() {
 
 /* ── تسجيل عالمي + إقلاع ── */
 if (typeof window !== 'undefined') {
-    window._onIncomingCall    = _onIncomingCall;
-    window.cidSimulate        = cidSimulate;
-    window.cidPlaceCall       = cidPlaceCall;
-    window._cidMountSimButton = _cidMountSimButton;
+    window._onIncomingCall      = _onIncomingCall;
+    window.cidSimulate          = cidSimulate;
+    window.cidPlaceCall         = cidPlaceCall;
+    window.cidSetDeviceExtension = cidSetDeviceExtension;
+    window._cidMountSimButton   = _cidMountSimButton;
 
     const _cidBoot = () => { try { _cidMountSimButton(); } catch {} };
     if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', () => setTimeout(_cidBoot, 1500));
