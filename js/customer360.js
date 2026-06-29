@@ -462,6 +462,11 @@ function _c360EnsureCallStyles() {
             font-size:14px; font-weight:800; color:#c62828; text-align:center;
             margin-bottom:12px;
         }
+        #c360CallHead .c360-callphone {
+            font-size:18px; font-weight:800; color:#5c3919; text-align:center;
+            direction:ltr; unicode-bidi:plaintext; letter-spacing:0.5px;
+            margin:4px 0 12px;
+        }
         #c360CallHead .c360-callform { display:flex; gap:10px; align-items:center; }
         #c360CallHead .c360-callform input {
             flex:1; background:#fff; color:#3a2818;
@@ -502,17 +507,19 @@ function _c360RenderCallUI() {
     if (!_c360Call) { head.style.display = 'none'; bar.style.display = 'none'; return; }
     _c360EnsureCallStyles();
 
+    const _phoneLine = `<div class="c360-callphone">📞 ${_c360Esc(_c360Call.phone || _c360Call.norm)}</div>`;
     if (_c360Call.name) {
-        // اسم معروف → اعرضه بخط واضح + زر موافق
+        // اسم معروف → اعرضه بخط واضح + الرقم أسفله + زر موافق
         head.style.display = 'block';
-        head.innerHTML = `<div class="c360-callname">👤 ${_c360Esc(_c360Call.name)}</div>`;
+        head.innerHTML = `<div class="c360-callname">👤 ${_c360Esc(_c360Call.name)}</div>${_phoneLine}`;
         bar.style.display = 'flex';
         bar.innerHTML = `<button class="c360-ok" onclick="_c360ConfirmCall()">✔ موافق</button>`;
     } else {
-        // بلا اسم → خانة إدخال + حفظ، ولا إغلاق
+        // بلا اسم → الرقم + خانة إدخال + حفظ، ولا إغلاق
         head.style.display = 'block';
         head.innerHTML = `
             <div class="c360-callnew">🆕 زبون جديد — يجب إدخال اسمه وحفظه للمتابعة</div>
+            ${_phoneLine}
             <div class="c360-callform">
                 <input id="c360CallNameInput" type="text" placeholder="اكتب اسم الزبون" autocomplete="off"
                        onkeydown="if(event.key==='Enter')_c360SaveCallName()" />
