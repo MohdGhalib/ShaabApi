@@ -1,13 +1,14 @@
 /* ══════════════════════════════════════════════════════════════════
-   CALLER-ID — رقم المتصل يُملأ تلقائياً في شاشة الاستفسارات (Panasonic KX-NS500)
+   CALLER-ID — شاشة ملف الزبون عند ورود مكالمة (Panasonic KX-NS500)
    ══════════════════════════════════════════════════════════════════
    - برنامج الجسر يستدعي POST /api/cti/incoming-call → يُبَثّ حدث SSE 'incoming-call'
    - data.js يمرّر الحدث إلى window._onIncomingCall (مُسجَّل أدناه)
-   - السلوك: ننتقل لشاشة الاستفسارات ونضع الرقم في خانة الهاتف (#iPhone) ونشغّل
-     البحث المباشر، فتظهر استفسارات الزبون السابقة أسفل الرقم (ميزة موجودة مسبقاً).
-   - التوجيه بالتحويلة: يُملأ على شاشة الموظف الذي رنّ داخليّه فقط.
-   - متاح فقط لـ cc_manager / cc_employee / admin.
-   - زر «📞 محاكاة اتصال» (محلياً «معاينة») لاختبار المسار قبل وصل المقسم. */
+   - السلوك: تظهر نفس شاشة «ملف الزبون» (customer360) في «وضع المكالمة»:
+       • زبون له اسم محفوظ → يظهر الاسم بخط واضح + تفاصيله + زر «موافق».
+       • زبون بلا اسم → خانة إدخال اسم + حفظ، ولا يمكن الإغلاق قبل الحفظ.
+   - بعد «موافق» → يُملأ الرقم في خانة هاتف الاستفسار ويُقفل (غير قابل للتعديل).
+   - التوجيه بالتحويلة: تظهر على شاشة الموظف الذي رنّ داخليّه فقط.
+   - متاح فقط لـ cc_manager / cc_employee / admin. */
 
 function _cidAuthorized() {
     const role  = (typeof currentUser !== 'undefined' && currentUser) ? currentUser.role : null;
@@ -28,41 +29,49 @@ function _cidMyExtension() {
     } catch { return ''; }
 }
 
-/* ── وضع رقم المتصل في خانة هاتف الاستفسار وتشغيل البحث المباشر ── */
-function _cidFillInquiryPhone(phone) {
-    // انتقل لشاشة الاستفسارات (إن لم تكن مفتوحة)
-    if (typeof switchTab === 'function') { try { switchTab('i'); } catch {} }
+/* جلب جهة الاتصال من دفتر الهاتف (أحدث اسم محفوظ) — كائن أو null */
+async function _cidFetchContact(norm) {
+    if (!norm || (typeof IS_LOCAL !== 'undefined' && IS_LOCAL) || !_token) return null;
+    try {
+        const r = await fetch('api/contacts/' + encodeURIComponent(norm), {
+            headers: { 'Authorization': `Bearer ${_token}` }
+        });
+        if (!r.ok) return null;
+        return await r.json(); // null إن لم تُسجَّل
+    } catch { return null; }
+}
 
+/* ── وضع الرقم في خانة الاستفسار وقفله (غير قابل للتعديل) ── */
+function _cidFillInquiryPhoneLocked(phone) {
+    if (typeof switchTab === 'function') { try { switchTab('i'); } catch {} }
     const apply = () => {
         const inp = document.getElementById('iPhone');
         if (!inp) return false;
         inp.value = phone;
-        // شغّل نفس منطق الإدخال اليدوي: البحث المباشر + تحقّق الرقم
+        inp.readOnly = true;
+        inp.setAttribute('data-cid-lock', '1');
+        inp.style.background = 'rgba(193,124,50,.14)';
+        inp.style.cursor = 'not-allowed';
+        inp.title = 'رقم وارد من مكالمة — غير قابل للتعديل';
         if (typeof _iLivePhoneSearch === 'function') _iLivePhoneSearch(phone);
         if (typeof _validatePhoneLive === 'function') _validatePhoneLive('iPhone', 'iPhoneErr');
-        try { inp.focus(); } catch {}
-        // وميض بصري مؤقت لتنبيه الموظف أن الرقم وصل من مكالمة
-        inp.style.transition = 'background .35s';
-        inp.style.background = 'rgba(193,124,50,.28)';
-        setTimeout(() => { inp.style.background = ''; }, 1600);
         return true;
     };
-    // لو لم تُبنَ الشاشة بعد، أعد المحاولة بعد لحظة
     if (!apply()) setTimeout(apply, 300);
 }
 
-/* ── منع تكرار البثّ (إعادة بثّ نفس الرقم خلال 8 ثوانٍ) ── */
+/* ── منع تكرار البثّ (نفس الرقم خلال 8 ثوانٍ) ── */
 let _cidLast = { norm: '', ts: 0 };
 
 /* نقطة الدخول — يستدعيها data.js عند حدث incoming-call */
-function _onIncomingCall(info) {
-    if (!IS_LOCAL && !_cidAuthorized()) return;
+async function _onIncomingCall(info) {
+    if (!(typeof IS_LOCAL !== 'undefined' && IS_LOCAL) && !_cidAuthorized()) return;
     info = info || {};
     const phone = (info.phone || '').trim();
     const norm  = info.norm || _cidNorm(phone);
     if (!norm) return;
 
-    // التوجيه بالتحويلة: لو الحدث يحمل تحويلة وموظفي مختلف → ليست لي
+    // التوجيه بالتحويلة: لو الحدث يحمل تحويلة وتحويلتي مختلفة → ليست لي
     const ext   = (info.ext || '').toString().trim();
     const myExt = _cidMyExtension();
     if (ext && myExt && ext !== myExt) return;
@@ -74,25 +83,33 @@ function _onIncomingCall(info) {
 
     if (typeof _playSound === 'function') { try { _playSound(); } catch {} }
 
-    _cidFillInquiryPhone(phone || norm);
+    // اجلب الاسم المحفوظ من دفتر الهاتف ثم افتح شاشة ملف الزبون في «وضع المكالمة»
+    const contact = await _cidFetchContact(norm);
+    if (typeof openCustomer360 === 'function') {
+        openCustomer360(phone || norm, {
+            callMode: true,
+            contact,
+            onConfirm: (ph) => _cidFillInquiryPhoneLocked(ph)
+        });
+    }
 }
 
 /* ── محاكاة اتصال (اختبار / معاينة) ── */
 async function cidSimulate() {
-    if (!IS_LOCAL && !_cidAuthorized()) return;
+    if (!(typeof IS_LOCAL !== 'undefined' && IS_LOCAL) && !_cidAuthorized()) return;
     const phone = prompt('محاكاة مكالمة واردة — أدخل رقم الهاتف:');
     if (phone === null) return;
-    const ext = _cidMyExtension(); // محاكاة على تحويلتي إن وُجدت
+    const ext = _cidMyExtension();
 
     // محلياً (file://): لا سيرفر/SSE — نفّذ مباشرة
-    if (IS_LOCAL) { _onIncomingCall({ phone, ext, ts: Date.now() }); return; }
+    if (typeof IS_LOCAL !== 'undefined' && IS_LOCAL) { _onIncomingCall({ phone, ext, ts: Date.now() }); return; }
     try {
         await fetch('api/cti/simulate', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${_token}` },
             body: JSON.stringify({ phone, ext })
         });
-        // النتيجة تصل تلقائياً عبر حدث SSE incoming-call فيُملأ الحقل
+        // النتيجة تصل تلقائياً عبر حدث SSE incoming-call
     } catch { alert('تعذّرت المحاكاة — تأكد من الاتصال بالسيرفر'); }
 }
 
@@ -115,14 +132,14 @@ function _cidEnsureBtnStyle() {
 
 function _cidMountSimButton() {
     if (document.getElementById('_cidSimBtn')) return;
-    // محلياً: أظهر الزر لأي مستخدم للمعاينة. على السيرفر: لطاقم الكول سنتر/الأدمن فقط.
-    if (!IS_LOCAL && !_cidAuthorized()) return;
+    const local = (typeof IS_LOCAL !== 'undefined' && IS_LOCAL);
+    if (!local && !_cidAuthorized()) return;
     _cidEnsureBtnStyle();
     const b = document.createElement('button');
     b.id = '_cidSimBtn';
     b.type = 'button';
-    b.textContent = IS_LOCAL ? '📞 معاينة اتصال' : '📞 محاكاة اتصال';
-    b.title = 'وضع رقم متصل تجريبي في خانة الاستفسار (قبل وصل المقسم)';
+    b.textContent = local ? '📞 معاينة اتصال' : '📞 محاكاة اتصال';
+    b.title = 'اختبار شاشة المكالمة الواردة (قبل وصل المقسم)';
     b.onclick = cidSimulate;
     document.body.appendChild(b);
 }

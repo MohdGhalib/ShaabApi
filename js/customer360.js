@@ -18,6 +18,10 @@ function _c360PhoneOf(rec) {
     return rec?.phone || rec?.customerPhone || rec?.mobile || '';
 }
 
+/* حالة «وضع المكالمة» — عند تفعيله تظهر نفس الشاشة مع رأس الاسم/الحفظ وزر موافق،
+   ولا يمكن إغلاقها قبل حفظ اسم الزبون. null = الوضع العادي (بحث/Ctrl+K). */
+let _c360Call = null;
+
 /* عدّ عدد التواصلات السابقة لهذا الرقم (استفسارات + منتسيات محجوزة + شكاوى)
    يُستخدم لعرض badge صغير بجانب رقم الهاتف في جدول الاستفسارات */
 function _c360ContactCount(rawPhone) {
@@ -282,13 +286,17 @@ function _c360EnsureModal() {
                     <span class="c360-stamp">ملف</span>
                 </div>
 
-                <div class="c360-search">
+                <div class="c360-search" id="c360SearchWrap">
                     <input type="tel" id="c360PhoneInput" placeholder="ابحث برقم آخر — أدخل الرقم واضغط Enter" autocomplete="off" />
                 </div>
+
+                <div id="c360CallHead" style="display:none;"></div>
 
                 <div class="c360-summary" id="c360Summary"></div>
 
                 <div class="c360-body" id="c360Body"></div>
+
+                <div id="c360CallBar" style="display:none;"></div>
             </div>
         </div>
     `;
@@ -336,13 +344,16 @@ function _c360RenderItems(arr, kind) {
     }).join('') + (arr.length > 15 ? `<div class="c360-empty">... و ${arr.length - 15} أخرى</div>` : '');
 }
 
-function openCustomer360(rawPhone) {
-    if (!_c360IsAuthorized()) {
+function openCustomer360(rawPhone, opts) {
+    const callMode = !!(opts && opts.callMode);
+    // وضع المكالمة يتجاوز فحص دور البحث (التحقق يتم في caller-id قبل الاستدعاء)
+    if (!callMode && !_c360IsAuthorized()) {
         console.log('[c360] not authorized for this role');
         return;
     }
     _c360EnsureStyles();
     _c360EnsureModal();
+    _c360EnsureCallStyles();
 
     const inp = document.getElementById('c360PhoneInput');
     if (rawPhone) inp.value = rawPhone;
@@ -391,13 +402,166 @@ function openCustomer360(rawPhone) {
         </div>
     `;
 
+    // ── وضع المكالمة: رأس الاسم/الحفظ + زر موافق، وإخفاء البحث ──
+    const _searchWrap = document.getElementById('c360SearchWrap');
+    if (callMode) {
+        if (_searchWrap) _searchWrap.style.display = 'none';
+        // اسم معروف؟ من دفتر الهاتف (opts.contact) أو من السجلّات السابقة
+        let _name = (opts && opts.contact && opts.contact.name) ? opts.contact.name : '';
+        if (!_name) {
+            const _m = mnt.find(x => x.reservedFor?.name); if (_m) _name = _m.reservedFor.name;
+        }
+        if (!_name) {
+            const _i = inq.find(x => x.name || x.customerName); if (_i) _name = _i.name || _i.customerName;
+        }
+        if (!_name) {
+            const _c = cmp.find(x => x.customer?.name); if (_c) _name = _c.customer.name;
+        }
+        _c360Call = { phone, norm, name: _name || '', onConfirm: (opts && opts.onConfirm) || null };
+        _c360RenderCallUI();
+    } else {
+        if (_searchWrap) _searchWrap.style.display = '';
+        _c360Call = null;
+        const _h = document.getElementById('c360CallHead'); if (_h) _h.style.display = 'none';
+        const _b = document.getElementById('c360CallBar');  if (_b) _b.style.display = 'none';
+    }
+
     document.getElementById('c360Modal').classList.remove('hidden');
-    setTimeout(() => inp.focus(), 50);
+    if (!callMode) setTimeout(() => inp.focus(), 50);
 }
 
 function closeCustomer360() {
+    // وضع المكالمة: لا يمكن الإغلاق قبل حفظ اسم الزبون
+    if (_c360Call && !_c360Call.name) {
+        try { document.getElementById('c360CallNameInput')?.focus(); } catch {}
+        return;
+    }
+    // وضع المكالمة باسم محفوظ: أي إغلاق (✕/خارج/Esc) يعني «موافق»
+    if (_c360Call && _c360Call.name) { _c360ConfirmCall(); return; }
+
     const el = document.getElementById('c360Modal');
     if (el) el.classList.add('hidden');
+}
+
+/* ── أنماط وضع المكالمة (نفس ثيم الإيصال) ── */
+function _c360EnsureCallStyles() {
+    if (document.getElementById('c360CallStyles')) return;
+    const s = document.createElement('style');
+    s.id = 'c360CallStyles';
+    s.textContent = `
+        #c360CallHead {
+            padding:16px 28px; background:rgba(255,245,220,0.5);
+            border-bottom:2px dashed rgba(139,69,19,0.22);
+        }
+        #c360CallHead .c360-callname {
+            font-size:26px; font-weight:900; color:#2e7d32; text-align:center;
+            letter-spacing:0.3px; line-height:1.4; padding:6px 0;
+            text-shadow:0 1px 0 rgba(255,255,255,0.7);
+        }
+        #c360CallHead .c360-callnew {
+            font-size:14px; font-weight:800; color:#c62828; text-align:center;
+            margin-bottom:12px;
+        }
+        #c360CallHead .c360-callform { display:flex; gap:10px; align-items:center; }
+        #c360CallHead .c360-callform input {
+            flex:1; background:#fff; color:#3a2818;
+            border:1.5px solid rgba(139,69,19,0.3); border-radius:10px;
+            padding:11px 14px; font-family:'Cairo','Tajawal',sans-serif;
+            font-size:15px; font-weight:700; direction:rtl;
+        }
+        #c360CallHead .c360-callform input:focus {
+            outline:none; border-color:#2e7d32; box-shadow:0 0 0 3px rgba(46,125,50,0.18);
+        }
+        #c360CallHead .c360-save {
+            background:linear-gradient(135deg,#2e7d32,#1b5e20); color:#fff; border:none;
+            border-radius:10px; padding:11px 20px; font-family:'Cairo'; font-size:15px;
+            font-weight:800; cursor:pointer; white-space:nowrap;
+        }
+        #c360CallHead .c360-save:active { transform:scale(.97); }
+        #c360CallBar {
+            padding:14px 28px; background:rgba(255,245,220,0.5);
+            border-top:2px dashed rgba(139,69,19,0.22);
+            display:flex; align-items:center; justify-content:center;
+        }
+        #c360CallBar .c360-ok {
+            background:linear-gradient(135deg,#2e7d32,#1b5e20); color:#fff; border:none;
+            border-radius:12px; padding:12px 48px; font-family:'Cairo'; font-size:16px;
+            font-weight:900; cursor:pointer; box-shadow:0 4px 14px rgba(27,94,32,0.35);
+        }
+        #c360CallBar .c360-ok:active { transform:scale(.97); }
+        #c360CallBar .c360-locknote { font-size:13px; font-weight:800; color:#c62828; }
+    `;
+    document.head.appendChild(s);
+}
+
+/* ── رسم رأس الاسم + شريط موافق حسب حالة _c360Call ── */
+function _c360RenderCallUI() {
+    const head = document.getElementById('c360CallHead');
+    const bar  = document.getElementById('c360CallBar');
+    if (!head || !bar) return;
+    if (!_c360Call) { head.style.display = 'none'; bar.style.display = 'none'; return; }
+    _c360EnsureCallStyles();
+
+    if (_c360Call.name) {
+        // اسم معروف → اعرضه بخط واضح + زر موافق
+        head.style.display = 'block';
+        head.innerHTML = `<div class="c360-callname">👤 ${_c360Esc(_c360Call.name)}</div>`;
+        bar.style.display = 'flex';
+        bar.innerHTML = `<button class="c360-ok" onclick="_c360ConfirmCall()">✔ موافق</button>`;
+    } else {
+        // بلا اسم → خانة إدخال + حفظ، ولا إغلاق
+        head.style.display = 'block';
+        head.innerHTML = `
+            <div class="c360-callnew">🆕 زبون جديد — يجب إدخال اسمه وحفظه للمتابعة</div>
+            <div class="c360-callform">
+                <input id="c360CallNameInput" type="text" placeholder="اكتب اسم الزبون" autocomplete="off"
+                       onkeydown="if(event.key==='Enter')_c360SaveCallName()" />
+                <button class="c360-save" onclick="_c360SaveCallName()">💾 حفظ</button>
+            </div>`;
+        bar.style.display = 'flex';
+        bar.innerHTML = `<div class="c360-locknote">🔒 لا يمكن إغلاق الشاشة قبل حفظ اسم الزبون</div>`;
+        setTimeout(() => document.getElementById('c360CallNameInput')?.focus(), 60);
+    }
+}
+
+/* ── حفظ اسم الزبون (دفتر الهاتف customer_contacts) ── */
+async function _c360SaveCallName() {
+    if (!_c360Call) return;
+    const v = (document.getElementById('c360CallNameInput')?.value || '').trim();
+    if (!v) { alert('يرجى إدخال اسم الزبون'); return; }
+
+    const btn = document.querySelector('#c360CallHead .c360-save');
+
+    // الوضع المحلي (file://): حفظ في الذاكرة فقط لمعاينة الشكل
+    if (typeof IS_LOCAL !== 'undefined' && IS_LOCAL) {
+        _c360Call.name = v; _c360RenderCallUI(); return;
+    }
+
+    if (btn) { btn.disabled = true; btn.textContent = '... جاري الحفظ'; }
+    try {
+        const r = await fetch('api/contacts', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${_token}` },
+            body: JSON.stringify({ phone: _c360Call.phone || _c360Call.norm, name: v })
+        });
+        if (!r.ok) throw new Error('save failed ' + r.status);
+        _c360Call.name = v;
+        _c360RenderCallUI();
+    } catch (e) {
+        alert('تعذّر حفظ الاسم — تأكد من الاتصال وحاول مجدداً.');
+        if (btn) { btn.disabled = false; btn.textContent = '💾 حفظ'; }
+    }
+}
+
+/* ── زر موافق: يغلق ويُسلّم الرقم لشاشة الاستفسارات (onConfirm) ── */
+function _c360ConfirmCall() {
+    if (!_c360Call) { const el = document.getElementById('c360Modal'); if (el) el.classList.add('hidden'); return; }
+    if (!_c360Call.name) { alert('يرجى حفظ اسم الزبون أولاً'); return; }
+    const cb = _c360Call.onConfirm;
+    const ph = _c360Call.phone || _c360Call.norm;
+    _c360Call = null;
+    const el = document.getElementById('c360Modal'); if (el) el.classList.add('hidden');
+    if (typeof cb === 'function') { try { cb(ph); } catch {} }
 }
 
 /* أنزِل الـ styles فور تحميل السكربت — الـ badge على رقم الهاتف يستخدمها قبل أن يُفتح الـ modal */
@@ -422,4 +586,6 @@ if (typeof window !== 'undefined') {
 
     window.openCustomer360  = openCustomer360;
     window.closeCustomer360 = closeCustomer360;
+    window._c360SaveCallName = _c360SaveCallName;
+    window._c360ConfirmCall  = _c360ConfirmCall;
 }

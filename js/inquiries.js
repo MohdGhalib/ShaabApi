@@ -604,7 +604,16 @@ function addInquiry() {
 
     const _afterSave = () => {
         save();
-        document.getElementById("iPhone").value="";
+        const _ipR = document.getElementById("iPhone");
+        if (_ipR) {
+            _ipR.value = "";
+            // فكّ قفل رقم المكالمة الواردة (Caller-ID) ليعود الإدخال اليدوي ممكناً
+            _ipR.readOnly = false;
+            _ipR.removeAttribute('data-cid-lock');
+            _ipR.style.background = '';
+            _ipR.style.cursor = '';
+            _ipR.title = '';
+        }
         // أزل فلتر البحث المباشر بالرقم وأعد الجدول للحالة الكاملة
         window._iLivePhoneFilter = '';
         const _tblI = document.getElementById('tableI'); if (_tblI) _tblI.style.outline = '';
