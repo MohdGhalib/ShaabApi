@@ -42,7 +42,7 @@ public class AdminMigrationController : ControllerBase
         if (!_IsAuthorized()) return Forbid();
 
         var removedTitles = new[] { "قسم السيطرة", "موظف ميديا", "مدير قسم السيطرة", "موظف سيطرة" };
-        int empBlob = 0, empTable = 0, complaints = 0, auditNotes = 0, comps = 0;
+        int empBlob = 0, empTable = 0, complaints = 0, auditNotes = 0, comps = 0, managerNotes = 0;
 
         // 1) employees blob (Shaab_Employees_DB is a JSON array)
         var empRow = await _db.Storage.FindAsync("Shaab_Employees_DB");
@@ -90,6 +90,7 @@ public class AdminMigrationController : ControllerBase
                     if (obj["complaints"]    is JsonArray a1) { complaints = a1.Count; obj["complaints"]    = new JsonArray(); }
                     if (obj["auditNotes"]    is JsonArray a2) { auditNotes = a2.Count; obj["auditNotes"]    = new JsonArray(); }
                     if (obj["compensations"] is JsonArray a3) { comps     += a3.Count; obj["compensations"] = new JsonArray(); }
+                    if (obj["managerNotes"]  is JsonArray a4) { managerNotes = a4.Count; obj["managerNotes"] = new JsonArray(); }
                     masterRow.StoreValue = obj.ToJsonString();
                     masterRow.Version += 1;
                     masterRow.UpdatedAt = DateTime.UtcNow;
@@ -110,12 +111,14 @@ public class AdminMigrationController : ControllerBase
 
         await _db.SaveChangesAsync();
 
-        // 5) drop legacy complaints table
+        // 5) drop legacy tables (complaints + manager_notes)
         try { await _db.Database.ExecuteSqlRawAsync("DROP TABLE IF EXISTS complaints"); }
         catch (Exception ex) { Console.WriteLine($"[CLEANUP] drop complaints table: {ex.Message}"); }
+        try { await _db.Database.ExecuteSqlRawAsync("DROP TABLE IF EXISTS manager_notes"); }
+        catch (Exception ex) { Console.WriteLine($"[CLEANUP] drop manager_notes table: {ex.Message}"); }
 
         var by = User.FindFirst("empId")?.Value ?? "?";
-        Console.WriteLine($"[CLEANUP] by={by} empBlob={empBlob} empTable={empTable} complaints={complaints} auditNotes={auditNotes} comps={comps}");
+        Console.WriteLine($"[CLEANUP] by={by} empBlob={empBlob} empTable={empTable} complaints={complaints} auditNotes={auditNotes} comps={comps} managerNotes={managerNotes}");
         return Ok(new {
             ok = true,
             employeesRemovedFromBlob  = empBlob,
@@ -123,7 +126,8 @@ public class AdminMigrationController : ControllerBase
             complaintsCleared = complaints,
             auditNotesCleared = auditNotes,
             compensationsCleared = comps,
-            note = "أعد تحميل التطبيق (Ctrl+Shift+R). حُذفت حسابات السيطرة/الميديا وبيانات الشكاوى/التعويضات."
+            managerNotesCleared = managerNotes,
+            note = "أعد تحميل التطبيق (Ctrl+Shift+R). حُذفت حسابات السيطرة/الميديا وبيانات الشكاوى/التعويضات/ملاحظات المناطق."
         });
     }
 

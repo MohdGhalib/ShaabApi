@@ -316,7 +316,7 @@ function toggleTabMsg() {
 
 function switchTab(t) {
     // تحديد الـ active لجميع التبويبات العادية
-    ['o','i','rmn','b','e','s','f','p','h','l','ti','t','msg','msg-mine','msg-all'].forEach(id => {
+    ['o','i','b','e','s','f','p','h','l','ti','t','msg','msg-mine','msg-all'].forEach(id => {
         const btn = document.getElementById(`tab-${id}`);
         if (btn) btn.classList.toggle('active', t === id);
     });
@@ -344,7 +344,7 @@ function switchTab(t) {
 
     // تسجيل وقت المشاهدة وإخفاء الشارة عند فتح التبويب
     _activeTab = t;
-    if (['m','o','rmn','i'].includes(t)) {
+    if (['m','o','i'].includes(t)) {
         _markTabSeen(t === 'o' ? 'm' : t);
     }
     const badge = document.getElementById(`badge-${t}`);
@@ -391,9 +391,6 @@ function switchTab(t) {
         return;
     } else if (t === 't') {
         if (typeof renderTrash === 'function') renderTrash();
-        return;
-    } else if (t === 'rmn') {
-        if (typeof renderManagerNotes === 'function') renderManagerNotes();
         return;
     } else {
         populateEmployeeDropdowns();
@@ -489,9 +486,7 @@ const _COUNTRY_LINKAGE = {
     'searchCountryCU':       { cityId:'searchCityCU',      branchId:'searchBranchCU',     isSearch:true  },
     'searchCountryComp':     { cityId:'compSearchCity',    branchId:'compSearchBranch',   isSearch:true  },
     'searchCountryAudit':    { cityId:'searchCityAudit',   branchId:'searchBranchAudit',  isSearch:true  },
-    'deliverCountrySelect':  { cityId:'deliverCitySelect', branchId:'deliverBranchSelect',isSearch:true  },
-    'rmnAddCountry':         { cityId:'rmnAddCity',        branchId:'rmnAddBranch',       isSearch:false },
-    'rmnSrchCountry':        { cityId:'rmnSrchCity',       branchId:'rmnSrchBranch',      isSearch:true  }
+    'deliverCountrySelect':  { cityId:'deliverCitySelect', branchId:'deliverBranchSelect',isSearch:true  }
 };
 
 /* ── ربط دولة → مدن: ينظّف قائمة المدن ويحدّث label المستوى الثاني ── */

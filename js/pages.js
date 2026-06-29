@@ -587,36 +587,5 @@ t: `
     <div id="trashContainer"></div>
 </div>`,
 
-rmn: `
-<div class="card">
-    <h3 style="color:#90caf9;">🗺️ ملاحظات مدراء مناطق</h3>
-    <p style="color:var(--text-dim);font-size:13px;margin:-10px 0 16px;">سجّل ملاحظات مدراء المناطق وتابع حالتها — 🔴 مفتوحة / 🟢 مغلقة</p>
-
-    <div style="background:rgba(144,202,249,0.05);border:1px solid rgba(144,202,249,0.22);border-radius:12px;padding:14px 16px;margin-bottom:18px;">
-        <div style="font-size:13px;font-weight:800;color:#90caf9;margin-bottom:12px;">➕ إضافة ملاحظة جديدة</div>
-        <div class="search-bar" style="margin-bottom:0;">
-            <div><label>الدولة</label><select id="rmnAddCountry" onchange="updateCities('rmnAddCountry','rmnAddCity','rmnAddBranch')"></select></div>
-            <div><label data-region-label-for="rmnAddCity">المحافظة</label><select id="rmnAddCity" onchange="updateBranches('rmnAddCity','rmnAddBranch')"></select></div>
-            <div><label>الفرع <span style="color:#ef5350;">*</span></label><select id="rmnAddBranch"><option value="">الفرع</option></select></div>
-            <div><label>تاريخ الملاحظة</label><div class="date-picker-wrap" onclick="calOnSelect=renderManagerNotes;openDatePicker('rmnAddDate')"><span class="date-display" id="rmnAddDate-display">📅 اختر التاريخ</span><input type="hidden" id="rmnAddDate"></div></div>
-            <div><label>الشخص الذي تم تبليغه</label><input type="text" id="rmnAddNotified" placeholder="اسم الشخص المُبلَّغ..."></div>
-            <div style="grid-column:1/-1;"><label>نص الملاحظة <span style="color:#ef5350;">*</span></label><textarea id="rmnAddText" rows="3" placeholder="اكتب نص الملاحظة..." style="width:100%;box-sizing:border-box;resize:vertical;font-family:Cairo;"></textarea></div>
-            <button class="btn" style="background:linear-gradient(135deg,#1565c0,#0d47a1);color:#fff;font-weight:800;align-self:end;" onclick="addManagerNote()">➕ إضافة الملاحظة</button>
-        </div>
-    </div>
-
-    <div class="search-bar" style="margin-bottom:14px;">
-        <div style="grid-column:1/-1;" class="search-section-title">🔍 بحث وتصفية</div>
-        <div><label>الدولة</label><select id="rmnSrchCountry" onchange="updateCities('rmnSrchCountry','rmnSrchCity','rmnSrchBranch');renderManagerNotes()"></select></div>
-        <div><label data-region-label-for="rmnSrchCity">المحافظة</label><select id="rmnSrchCity" onchange="updateBranches('rmnSrchCity','rmnSrchBranch');renderManagerNotes()"></select></div>
-        <div><label>الفرع</label><select id="rmnSrchBranch" onchange="renderManagerNotes()"><option value="">الكل</option></select></div>
-        <div><label>الحالة</label><select id="rmnSrchStatus" onchange="renderManagerNotes()"><option value="">الكل</option><option value="open">🔴 مفتوحة</option><option value="closed">🟢 مغلقة</option></select></div>
-        <div><label>التاريخ</label><div class="date-picker-wrap" onclick="calOnSelect=renderManagerNotes;openDatePicker('rmnSrchDate')"><span class="date-display" id="rmnSrchDate-display">📅 اختر التاريخ</span><input type="hidden" id="rmnSrchDate"></div></div>
-        <div><label>بحث بالنص</label><input type="text" id="rmnSrchText" placeholder="بحث في النص/المُبلَّغ..." oninput="renderManagerNotes()"></div>
-        <button class="btn" style="background:var(--bg-input);color:var(--text-dim);align-self:end;" onclick="document.getElementById('rmnSrchText').value='';document.getElementById('rmnSrchStatus').value='';document.getElementById('rmnSrchDate').value='';document.getElementById('rmnSrchDate-display').textContent='📅 اختر التاريخ';renderManagerNotes()">تفريغ</button>
-    </div>
-    <div id="rmnCounter" style="font-size:12.5px;margin-bottom:12px;"></div>
-    <div id="managerNotesContainer"></div>
-</div>`
 
 };

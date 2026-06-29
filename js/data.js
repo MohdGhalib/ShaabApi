@@ -159,63 +159,6 @@ async function _migrateMessagesToServer() {
 }
 if (typeof window !== 'undefined') window._migrateMessagesToServer = _migrateMessagesToServer;
 
-/* ══ ملاحظات مدراء مناطق في جدول مستقل (/api/managerNotes) — نفس فلسفة الرسائل ══
-   POST لإضافة ملاحظة، PATCH للتعديل/الإغلاق/الحذف، GET للجلب ثم دمج. خارج الـ blob. */
-function _mnTok() {
-    try { return (typeof getSavedToken === 'function') ? getSavedToken() : localStorage.getItem('_shaab_token'); }
-    catch { return null; }
-}
-
-/* أرسِل ملاحظة واحدة للخادم (append آمن — idempotent على id). fire-and-forget. */
-function _postManagerNote(n) {
-    if (typeof IS_LOCAL !== 'undefined' && IS_LOCAL) return;
-    const _tok = _mnTok();
-    if (!_tok || !n) return;
-    try {
-        fetch('api/managerNotes', {
-            method:  'POST',
-            headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + _tok },
-            body:    JSON.stringify(n)
-        }).catch(() => {});
-    } catch {}
-}
-
-/* عدّل ملاحظة على الخادم (إغلاق/حذف/تعديل). patch = { closed?, closeNote?, deleted?, text?, ... }. */
-function _patchManagerNote(id, patch) {
-    if (typeof IS_LOCAL !== 'undefined' && IS_LOCAL) return;
-    const _tok = _mnTok();
-    if (!_tok || id == null) return;
-    try {
-        fetch('api/managerNotes/' + encodeURIComponent(id), {
-            method:  'PATCH',
-            headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + _tok },
-            body:    JSON.stringify(patch || {})
-        }).catch(() => {});
-    } catch {}
-}
-
-/* جلب الملاحظات من الجدول المستقل ودمجها في db.managerNotes.
-   deleted أحادية الاتجاه؛ وبقيّة الحقول (closed/تعديلات) تُحسم بـ updatedTs (الأحدث يفوز)
-   فيُسمح بإلغاء الإغلاق والتعديل دون رجوع، ودون وميض قبل وصول الـ PATCH. */
-let _lastMnFetchTs = 0;
-async function _fetchManagerNotesFromServer(force) {
-    if (typeof IS_LOCAL !== 'undefined' && IS_LOCAL) return;
-    const _tok = _mnTok();
-    if (!_tok) return;
-    const _nowF = Date.now();
-    if (!force && _nowF - _lastMnFetchTs < 20_000) return; // كبح الجلب الخلفي
-    _lastMnFetchTs = _nowF;
-    try {
-        const res = await fetch('api/managerNotes', { headers: { 'Authorization': 'Bearer ' + _tok } });
-        if (!res.ok) return;
-        const server = await res.json();
-        if (!Array.isArray(server)) return;
-        if (!db.managerNotes) db.managerNotes = [];
-        db.managerNotes = _mergeById(db.managerNotes, server, { monotonicTrueKeys: ['deleted'], newerWinsBy: 'updatedTs' });
-        if (typeof renderManagerNotes === 'function' && typeof _activeTab !== 'undefined' && _activeTab === 'rmn') renderManagerNotes();
-    } catch (e) { console.warn('[managerNotes] fetch from server failed:', e); }
-}
-if (typeof window !== 'undefined') window._fetchManagerNotesFromServer = _fetchManagerNotesFromServer;
 
 /* ── صوت الإشعار (consideration.mp3) ── */
 let _notifAudio    = null;
@@ -1314,12 +1257,6 @@ async function loadAllData(force) {
         }
     } catch {}
 
-    /* 📥 (manager_notes table) اجلب ملاحظات مدراء المناطق من الجدول المستقل ودمجها.
-       force=true: db استُبدل للتوّ من الـ blob (لا يحمل managerNotes)، لذا تجاوز خنق
-       الـ 20 ثانية كي يدمج تحديثات الخادم فوراً ويعمل تحديث SSE اللحظي للمستخدمين الآخرين. */
-    try {
-        if (typeof _fetchManagerNotesFromServer === 'function') _fetchManagerNotesFromServer(true);
-    } catch {}
 }
 
 /* ── حفظ البيانات ──

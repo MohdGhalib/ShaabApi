@@ -569,8 +569,6 @@ function setProfileUI() {
     // لوحة التحكم — مرئية للجميع
     document.getElementById('tab-h')?.classList.remove('hidden');
 
-    // ملاحظات مدراء مناطق — لموظفي/مدير الكول سنتر
-    document.getElementById('tab-rmn')?.classList.toggle('hidden', !(isCCEmp || isCCManager));
 
     // سجل التدقيق + التدقيق الإداري + سلة المحذوفات — للمدير ومدير الكول سنتر فقط
     document.getElementById('tab-l')?.classList.toggle('hidden', !_mgr);

@@ -203,29 +203,6 @@ using (var scope = app.Services.CreateScope())
             INDEX idx_msg_from (from_name)
         ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;"),
 
-        // -- regional-managers notes (ملاحظات مدراء مناطق) in their own table --
-        ("manager_notes", @"CREATE TABLE IF NOT EXISTS manager_notes (
-            id BIGINT PRIMARY KEY,
-            branch VARCHAR(100) NULL,
-            note_date VARCHAR(30) NULL,
-            notified_person VARCHAR(150) NULL,
-            text TEXT NULL,
-            closed TINYINT(1) NOT NULL DEFAULT 0,
-            close_note TEXT NULL,
-            closed_by VARCHAR(100) NULL,
-            closed_at BIGINT NOT NULL DEFAULT 0,
-            added_by VARCHAR(100) NULL,
-            ts BIGINT NOT NULL DEFAULT 0,
-            updated_ts BIGINT NOT NULL DEFAULT 0,
-            deleted TINYINT(1) NOT NULL DEFAULT 0,
-            data JSON NULL,
-            version BIGINT NOT NULL DEFAULT 0,
-            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-            INDEX idx_mnote_ts (ts),
-            INDEX idx_mnote_branch (branch),
-            INDEX idx_mnote_closed (closed)
-        ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;"),
-
         // -- Caller-ID phonebook (دفتر هاتف الزبائن) — رقم المتصل ← اسم/بيانات الزبون --
         // المفتاح هو الرقم بعد التطبيع (بلا مسافات/أصفار بادئة) ليطابق _c360NormalizePhone.
         ("customer_contacts", @"CREATE TABLE IF NOT EXISTS customer_contacts (
@@ -255,28 +232,6 @@ using (var scope = app.Services.CreateScope())
         {
             Console.WriteLine($"[startup] ⚠ CREATE TABLE {tableName} failed: {ex.Message}");
         }
-    }
-
-    // ── (2026-06-12) add manager_notes.updated_ts for last-write-wins merge (edit / reopen) ──
-    //    MySQL has no ADD COLUMN IF NOT EXISTS, so probe information_schema first (idempotent).
-    try
-    {
-        var hasUpdatedTs = (await db.Database
-            .SqlQueryRaw<long>(
-                "SELECT COUNT(*) AS Value FROM information_schema.columns " +
-                "WHERE table_schema = DATABASE() AND table_name = 'manager_notes' " +
-                "AND column_name = 'updated_ts'")
-            .ToListAsync()).FirstOrDefault();
-        if (hasUpdatedTs == 0)
-        {
-            await db.Database.ExecuteSqlRawAsync(
-                "ALTER TABLE manager_notes ADD COLUMN updated_ts BIGINT NOT NULL DEFAULT 0");
-            Console.WriteLine("[startup] ✓ Added manager_notes.updated_ts column");
-        }
-    }
-    catch (Exception ex)
-    {
-        Console.WriteLine($"[startup] ⚠ ALTER manager_notes.updated_ts failed: {ex.Message}");
     }
 
     // ── retention: purge audit_log entries older than 6 months (180 days) ──
