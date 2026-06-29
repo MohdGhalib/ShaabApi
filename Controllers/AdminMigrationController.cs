@@ -31,6 +31,103 @@ public class AdminMigrationController : ControllerBase
     }
 
     /// <summary>
+    /// One-shot cleanup after removing the control + media departments and the
+    /// complaints/compensations feature. Deletes control/media employees (blob +
+    /// table), clears complaints/auditNotes/compensations from the blobs, and drops
+    /// the legacy complaints table. Admin / cc_manager only. Idempotent.
+    /// </summary>
+    [HttpPost("cleanup-control-media")]
+    public async Task<IActionResult> CleanupControlMedia()
+    {
+        if (!_IsAuthorized()) return Forbid();
+
+        var removedTitles = new[] { "قسم السيطرة", "موظف ميديا", "مدير قسم السيطرة", "موظف سيطرة" };
+        int empBlob = 0, empTable = 0, complaints = 0, auditNotes = 0, comps = 0;
+
+        // 1) employees blob (Shaab_Employees_DB is a JSON array)
+        var empRow = await _db.Storage.FindAsync("Shaab_Employees_DB");
+        if (empRow != null && !string.IsNullOrEmpty(empRow.StoreValue))
+        {
+            try
+            {
+                if (JsonNode.Parse(empRow.StoreValue) is JsonArray arr)
+                {
+                    var keep = new JsonArray();
+                    foreach (var item in arr)
+                    {
+                        var title = item?["title"]?.GetValue<string>() ?? "";
+                        if (System.Array.IndexOf(removedTitles, title) >= 0) { empBlob++; continue; }
+                        keep.Add(item!.DeepClone());
+                    }
+                    if (empBlob > 0)
+                    {
+                        empRow.StoreValue = keep.ToJsonString();
+                        empRow.Version += 1;
+                        empRow.UpdatedAt = DateTime.UtcNow;
+                    }
+                }
+            }
+            catch (Exception ex) { Console.WriteLine($"[CLEANUP] employees blob: {ex.Message}"); }
+        }
+
+        // 2) employees shadow table
+        try
+        {
+            var emps = await _db.Employees.Where(e => removedTitles.Contains(e.Title)).ToListAsync();
+            empTable = emps.Count;
+            if (emps.Count > 0) _db.Employees.RemoveRange(emps);
+        }
+        catch (Exception ex) { Console.WriteLine($"[CLEANUP] employees table: {ex.Message}"); }
+
+        // 3) Master_DB blob: clear complaints[] + auditNotes[] (+ compensations[] if present)
+        var masterRow = await _db.Storage.FindAsync("Shaab_Master_DB");
+        if (masterRow != null && !string.IsNullOrEmpty(masterRow.StoreValue))
+        {
+            try
+            {
+                if (JsonNode.Parse(masterRow.StoreValue) is JsonObject obj)
+                {
+                    if (obj["complaints"]    is JsonArray a1) { complaints = a1.Count; obj["complaints"]    = new JsonArray(); }
+                    if (obj["auditNotes"]    is JsonArray a2) { auditNotes = a2.Count; obj["auditNotes"]    = new JsonArray(); }
+                    if (obj["compensations"] is JsonArray a3) { comps     += a3.Count; obj["compensations"] = new JsonArray(); }
+                    masterRow.StoreValue = obj.ToJsonString();
+                    masterRow.Version += 1;
+                    masterRow.UpdatedAt = DateTime.UtcNow;
+                }
+            }
+            catch (Exception ex) { Console.WriteLine($"[CLEANUP] master blob: {ex.Message}"); }
+        }
+
+        // 4) compensations blob (separate key)
+        var compRow = await _db.Storage.FindAsync("Shaab_Compensations_DB");
+        if (compRow != null && !string.IsNullOrEmpty(compRow.StoreValue))
+        {
+            try { if (JsonNode.Parse(compRow.StoreValue) is JsonArray ca) comps += ca.Count; } catch { }
+            compRow.StoreValue = "[]";
+            compRow.Version += 1;
+            compRow.UpdatedAt = DateTime.UtcNow;
+        }
+
+        await _db.SaveChangesAsync();
+
+        // 5) drop legacy complaints table
+        try { await _db.Database.ExecuteSqlRawAsync("DROP TABLE IF EXISTS complaints"); }
+        catch (Exception ex) { Console.WriteLine($"[CLEANUP] drop complaints table: {ex.Message}"); }
+
+        var by = User.FindFirst("empId")?.Value ?? "?";
+        Console.WriteLine($"[CLEANUP] by={by} empBlob={empBlob} empTable={empTable} complaints={complaints} auditNotes={auditNotes} comps={comps}");
+        return Ok(new {
+            ok = true,
+            employeesRemovedFromBlob  = empBlob,
+            employeesRemovedFromTable = empTable,
+            complaintsCleared = complaints,
+            auditNotesCleared = auditNotes,
+            compensationsCleared = comps,
+            note = "أعد تحميل التطبيق (Ctrl+Shift+R). حُذفت حسابات السيطرة/الميديا وبيانات الشكاوى/التعويضات."
+        });
+    }
+
+    /// <summary>
     /// One-shot backfill: read Master_DB JSON and upsert every record
     /// into the per-record tables. Idempotent — safe to re-run.
     /// </summary>
