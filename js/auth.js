@@ -536,9 +536,11 @@ async function login() {
     // ── التحويلة: إلزامية لطاقم الكول سنتر، وتُثبَّت لهذه الجلسة على هذا الجهاز ──
     {
         const _extSel = document.getElementById('loginExtension');
-        const _ext    = _extSel ? _extSel.value.trim() : '';
-        const _isCC   = currentUser?.role === 'cc_manager' || currentUser?.role === 'cc_employee';
-        if (_isCC && !_ext) {
+        const _raw    = _extSel ? _extSel.value.trim() : '';
+        // «none» أو الفراغ = بدون تحويلة
+        const _ext    = (_raw === '' || _raw === 'none') ? '' : _raw;
+        // موظف الكول سنتر: التحويلة إلزامية (101/103). مدير الكول سنتر: يجوز «بدون تحويلة».
+        if (currentUser?.role === 'cc_employee' && !_ext) {
             _showLoginError('⚠️ يرجى اختيار التحويلة للمتابعة');
             if (!IS_LOCAL && typeof setToken === 'function') setToken(null);
             currentUser = null;
