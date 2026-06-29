@@ -238,14 +238,17 @@ async function addEmployee() {
     }
 
     const addedBy = currentUser?.isAdmin ? null : (currentUser?.empId || null);
+    const extension = (document.getElementById('eExt')?.value || '').trim();
     const salt = generateSalt();
     const passwordHash = await hashPassword(salt + empId);
     employees.unshift({ id:Date.now(), name, title, empId, addedBy, salt, passwordHash,
+        ...(extension ? { extension } : {}),
         ...(assignedBranch   ? { assignedBranch }   : {}),
         ...(assignedBranches ? { assignedBranches } : {})
     });
     saveEmployees();
     document.getElementById("eName").value = document.getElementById("eTitle").value = document.getElementById("eId").value = "";
+    if (document.getElementById("eExt")) document.getElementById("eExt").value = "";
     onEmployeeTitleChange();
     populateEmployeeDropdowns();
     renderEmployees();
@@ -308,6 +311,44 @@ async function confirmSetEmpPassword() {
     setTimeout(closeSetEmpPassword, 1200);
 }
 
+/* ══ التحويلة الداخلية بالمقسم (Caller-ID) ══ */
+let _setEmpExtTargetId = null;
+
+function openSetEmpExtension(empId) {
+    const emp = employees.find(e => e.empId === empId);
+    if (!emp) return;
+    if (!(currentUser?.isAdmin || currentUser?.role === 'cc_manager')) return alert('لا تملك صلاحية ضبط التحويلات');
+    _setEmpExtTargetId = empId;
+    document.getElementById('setEmpExtName').textContent = `${emp.name} — ${emp.title}`;
+    document.getElementById('setEmpExtVal').value = emp.extension || '';
+    const msg = document.getElementById('setEmpExtMsg');
+    msg.textContent = ''; msg.style.color = '';
+    document.getElementById('setEmpExtModal').classList.remove('hidden');
+    setTimeout(() => document.getElementById('setEmpExtVal')?.focus(), 50);
+}
+
+function closeSetEmpExtension() {
+    _setEmpExtTargetId = null;
+    document.getElementById('setEmpExtModal').classList.add('hidden');
+}
+
+function confirmSetEmpExtension() {
+    const msg = document.getElementById('setEmpExtMsg');
+    const ext = (document.getElementById('setEmpExtVal').value || '').trim();
+    const emp = employees.find(e => e.empId === _setEmpExtTargetId);
+    if (!emp) { closeSetEmpExtension(); return; }
+    // منع تكرار التحويلة بين موظفين
+    if (ext && employees.some(o => o.empId !== emp.empId && String(o.extension || '') === ext)) {
+        msg.textContent = 'هذه التحويلة مستخدمة لموظف آخر'; msg.style.color = '#ef5350'; return;
+    }
+    if (ext) emp.extension = ext; else delete emp.extension;
+    saveEmployees();
+    renderEmployees();
+    msg.textContent = '✅ تم حفظ التحويلة';
+    msg.style.color = '#81c784';
+    setTimeout(closeSetEmpExtension, 1000);
+}
+
 
 function renderEmployees() {
     const tbody = document.querySelector("#tableE tbody"); if (!tbody) return;
@@ -342,6 +383,10 @@ function renderEmployees() {
         } else if (e.assignedBranches?.length) {
             branchInfo = `<div style="font-size:11px;color:var(--text-dim);margin-top:3px;">📍 ${e.assignedBranches.map(b => `${sanitize(b.branch)}`).join(' · ')}</div>`;
         }
+        // التحويلة الداخلية بالمقسم (Caller-ID)
+        const _extInfo = e.extension
+            ? `<div style="font-size:11px;color:#c17c32;margin-top:3px;">📞 تحويلة: ${sanitize(String(e.extension))}</div>`
+            : '';
         // مؤشر الاتصال + اسم قابل للضغط (لمدير الكول سنتر فقط)
         const _isOnline = (sessions || []).some(s => s.empId === e.empId &&
             (typeof _isSessionAlive === 'function' ? _isSessionAlive(s) : !s.logoutIso));
@@ -352,11 +397,15 @@ function renderEmployees() {
         const _photoThumb = e.photo
             ? `<img src="${e.photo}" alt="" style="width:30px;height:30px;border-radius:50%;object-fit:cover;border:1px solid var(--border);vertical-align:middle;margin-left:6px;">`
             : '';
+        // من يضبط التحويلة: الأدمن أو مدير الكول سنتر، ولطاقم الكول سنتر فقط (هم من يردّون على الزبائن)
+        const _canSetExt = (currentUser?.isAdmin || currentUser?.role === 'cc_manager')
+            && (e.title === 'مدير الكول سنتر' || e.title === 'موظف كول سنتر');
         return `<tr>
-        <td>${i+1}</td><td>${_photoThumb}<b>${_nameHtml}</b>${branchInfo}</td>
+        <td>${i+1}</td><td>${_photoThumb}<b>${_nameHtml}</b>${branchInfo}${_extInfo}</td>
         <td><span class="emp-badge">${sanitize(e.title)}</span></td>
         <td><span class="emp-id-display">${sanitize(e.empId)}</span></td>
         <td style="display:flex;gap:6px;flex-wrap:wrap;">
+            ${_canSetExt ? `<button class="btn-delete-sm" style="background:rgba(193,124,50,0.15);color:#d4965a;border-color:rgba(193,124,50,0.3);" onclick="openSetEmpExtension('${e.empId}')">📞 تحويلة</button>` : ''}
             ${_canChangeEmpPassword(e) ? `<button class="btn-delete-sm" style="background:rgba(33,150,243,0.15);color:#64b5f6;border-color:rgba(33,150,243,0.3);" onclick="openSetEmpPassword('${e.empId}')">🔑 كلمة المرور</button>` : ''}
             ${(e.title === 'مدير فرع' || e.title === 'موظف فرع') && currentUser?.isAdmin ? `<button class="btn-delete-sm" style="background:rgba(76,175,80,0.15);color:#81c784;border-color:rgba(76,175,80,0.3);" onclick="openTransferModal('${e.empId}')">↔ نقل</button>` : ''}
             <button class="btn-delete-sm" onclick="deleteEmployee('${e.empId}')">🗑 حذف</button>

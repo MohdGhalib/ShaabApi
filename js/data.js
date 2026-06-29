@@ -2367,6 +2367,12 @@ function _initSSE() {
             _showMontasiaPopup(info);
         }
     });
+    es.addEventListener('incoming-call', (e) => {
+        // مكالمة واردة من المقسم (Panasonic CTI) → صندوق رقم المتصل
+        let info = {};
+        try { info = JSON.parse(e.data); } catch {}
+        if (typeof window._onIncomingCall === 'function') window._onIncomingCall(info);
+    });
     es.addEventListener('heartbeat', () => { /* keep-alive */ });
     es.onerror = () => {
         _sseActive = false;

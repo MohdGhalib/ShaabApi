@@ -239,6 +239,23 @@ using (var scope = app.Services.CreateScope())
             INDEX idx_mnote_ts (ts),
             INDEX idx_mnote_branch (branch),
             INDEX idx_mnote_closed (closed)
+        ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;"),
+
+        // -- Caller-ID phonebook (دفتر هاتف الزبائن) — رقم المتصل ← اسم/بيانات الزبون --
+        // المفتاح هو الرقم بعد التطبيع (بلا مسافات/أصفار بادئة) ليطابق _c360NormalizePhone.
+        ("customer_contacts", @"CREATE TABLE IF NOT EXISTS customer_contacts (
+            phone VARCHAR(40) PRIMARY KEY,
+            display_phone VARCHAR(40) NULL,
+            name VARCHAR(150) NULL,
+            city VARCHAR(100) NULL,
+            address VARCHAR(255) NULL,
+            notes TEXT NULL,
+            data JSON NULL,
+            updated_by VARCHAR(100) NULL,
+            updated_ts BIGINT NOT NULL DEFAULT 0,
+            version BIGINT NOT NULL DEFAULT 0,
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            INDEX idx_cc_name (name)
         ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;")
     };
 

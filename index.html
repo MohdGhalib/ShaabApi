@@ -360,6 +360,22 @@
     </div>
 </div>
 
+<!-- ══ SET EMPLOYEE EXTENSION (تحويلة المقسم — Caller-ID) ══ -->
+<div class="modal-overlay hidden" id="setEmpExtModal" onclick="if(event.target===this)closeSetEmpExtension()">
+    <div class="modal-box" style="max-width:380px;">
+        <button class="modal-close" onclick="closeSetEmpExtension()">✕</button>
+        <div style="font-size:28px;margin-bottom:10px;">📞</div>
+        <h3 style="margin:0 0 4px;color:#c17c32;">التحويلة الداخلية بالمقسم</h3>
+        <p id="setEmpExtName" style="color:var(--text-dim);font-size:13px;margin:0 0 8px;"></p>
+        <p style="color:var(--text-dim);font-size:12px;margin:0 0 18px;">رقم الداخلي الذي يرنّ عند هذا الموظف. عند اتصال زبون عليه، يظهر رقم المتصل على شاشته هو فقط.</p>
+        <div style="display:flex;flex-direction:column;gap:10px;">
+            <input type="text" id="setEmpExtVal" inputmode="numeric" placeholder="مثال: 102" style="padding:10px 14px;border-radius:10px;border:1px solid var(--border);background:var(--bg-input);color:var(--text-main);font-family:'Cairo';font-size:14px;outline:none;">
+            <div id="setEmpExtMsg" style="font-size:13px;min-height:18px;"></div>
+            <button onclick="confirmSetEmpExtension()" style="padding:10px;border-radius:10px;border:none;background:#c17c32;color:#fff;font-family:'Cairo';font-size:14px;font-weight:700;cursor:pointer;">✅ حفظ التحويلة</button>
+        </div>
+    </div>
+</div>
+
 <!-- ══ TRANSFER EMPLOYEE MODAL ══ -->
 <div class="modal-overlay hidden" id="transferModal" onclick="if(event.target===this)closeTransferModal()">
     <div class="modal-box" style="max-width:420px;text-align:right;">
@@ -1128,23 +1144,24 @@
 <script src="js/lockdown.js?v=6"></script>
 <script src="js/lib/canon.js?v=1"></script>
 <script src="js/lib/sync-helpers.js?v=5"></script>
-<script src="js/data.js?v=102"></script>
+<script src="js/data.js?v=103"></script>
 <script src="js/upload.js?v=4"></script>
 <script src="js/sync-queue.js?v=7"></script>
 <script src="js/customer360.js?v=5"></script>
+<script src="js/caller-id.js?v=1"></script>
 <script src="js/audit-note.js?v=42"></script>
 <script src="js/session.js?v=24"></script>
 <script src="js/clock.js?v=23"></script>
 <script src="js/auth.js?v=54"></script>
 <script src="js/montasia-items.js?v=3"></script>
 <script src="js/render.js?v=93"></script>
-<script src="js/pages.js?v=78"></script>
+<script src="js/pages.js?v=79"></script>
 <script src="js/ui.js?v=46"></script>
 <script src="js/missing-items.js?v=82"></script>
 <script src="js/inquiries.js?v=58"></script>
 <script src="js/control.js?v=65"></script>
 <script src="js/manager-notes.js?v=4"></script>
-<script src="js/employees.js?v=36"></script>
+<script src="js/employees.js?v=37"></script>
 <script src="js/breaks.js?v=23"></script>
 <script src="js/stats.js?v=105"></script>
 <script src="js/datepicker.js?v=24"></script>

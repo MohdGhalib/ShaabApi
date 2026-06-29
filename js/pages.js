@@ -519,6 +519,11 @@ e: `
             <input type="text" id="eId" placeholder="مثال: 1234">
         </div>
     </div>
+    <!-- التحويلة الداخلية بالمقسم (Caller-ID) — اختيارية، لتوجيه رقم المتصل لشاشة الموظف -->
+    <div style="margin-bottom:15px;max-width:260px;">
+        <label style="font-size:13px;color:var(--text-dim);display:block;margin-bottom:5px;">📞 التحويلة الداخلية بالمقسم (اختياري)</label>
+        <input type="text" id="eExt" placeholder="مثال: 102" inputmode="numeric">
+    </div>
     <!-- اختيار الفرع: موظف فرع / مدير فرع (فرع واحد) -->
     <div id="eSingleBranchSection" style="display:none;margin-top:12px;padding:14px;background:var(--bg-input);border-radius:12px;border:1px solid var(--border);">
         <label style="font-size:13px;color:var(--text-dim);display:block;margin-bottom:8px;">📍 الفرع المسؤول عنه / التابع له</label>
