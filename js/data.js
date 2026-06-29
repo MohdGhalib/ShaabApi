@@ -2198,29 +2198,7 @@ function _ctrlSubMatchesBranch(complaint) {
 }
 
 // بعد reload: كشف شكاوى جديدة أو محوَّلة لهذا الموظف
-function _checkNewAssignments() {
-    if (!currentUser) return;
-    const role  = currentUser.role;
-    const empId = currentUser.empId;
-    (db.complaints || []).forEach(c => {
-        if (c.deleted) return;
-        const prev = _prevCompSnap[c.id];
-        // مدير السيطرة — شكوى جديدة أو حديثاً صارت "تمت الموافقة"
-        if (role === 'control_employee') {
-            const isNew       = !prev;
-            const justApproved = prev && prev.status !== 'تمت الموافقة' && c.status === 'تمت الموافقة';
-            if ((isNew || justApproved) && c.status === 'تمت الموافقة')
-                _showCtrlAlert(c.id, c.notes, c.branch, c.city);
-        }
-        // موظف سيطرة — شكوى جديدة لفرعه أو حديثاً صارت "تمت الموافقة"
-        if (role === 'control_sub' && _ctrlSubMatchesBranch(c)) {
-            const isNew        = !prev;
-            const justApproved = prev && prev.status !== 'تمت الموافقة' && c.status === 'تمت الموافقة';
-            if (isNew || justApproved)
-                _showCtrlAlert(c.id, c.notes, c.branch, c.city);
-        }
-    });
-}
+function _checkNewAssignments() { /* نظام الشكاوى/السيطرة أُزيل */ }
 
 /* ── renderAll آمن: لا يُعيد الرسم إذا كان المستخدم يكتب في input/textarea/contenteditable ── */
 let _renderDeferred = false;
@@ -2299,7 +2277,6 @@ function _initSSE() {
         if (window._anyInlineEditOpen) {
             await new Promise(r => { const id = setInterval(() => { if (!window._anyInlineEditOpen) { clearInterval(id); r(); } }, 300); });
         }
-        _snapshotComplaints();
         try { await loadAllData(); safeRenderAll(); _checkNewAssignments(); } catch(e) {}
     });
     es.addEventListener('new-complaint', (e) => {
