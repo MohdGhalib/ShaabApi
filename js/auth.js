@@ -68,44 +68,21 @@ const PERMISSIONS = {
     admin: [
         'addM','approveM','editM','deliverM','rejectM','deleteM',
         'addI','viewI',
-        'addC','editC','approveC','returnC','deleteC','auditC',
         'addEmp','viewStats','viewBreak','viewLinkBadge','viewBranches',
-        'viewPrices','editPrices',
-        'addComp','viewComp','deleteComp'
+        'viewPrices','editPrices'
     ],
     // مدير الكول سنتر
     cc_manager: [
         'addM','editM','deliverM','rejectM','deleteM',
         'addI','viewI',
-        'addC','editC','approveC','returnC','deleteC',
         'addEmp','viewStats','viewBreak','viewLinkBadge','viewBranches',
-        'viewPrices','editPrices',
-        'addComp','viewComp','deleteComp'
+        'viewPrices','editPrices'
     ],
     // موظف كول سنتر
     cc_employee: [
         'addM','deliverM',
         'addI','viewI',
-        'addC',
         'viewBreak','viewLinkBadge',
-        'viewPrices',
-        'addComp','viewComp'
-    ],
-    // مسؤول قسم السيطرة — رد + إضافة موظفين خاصين
-    control: [
-        'addC', 'auditC', 'addControlEmp',
-        'addComp','viewComp'
-    ],
-    // مدير قسم السيطرة (مضاف من مدير/كول سنتر) — رد كامل + اطلاع على المنتسيات
-    control_employee: [
-        'auditC', 'addEmp', 'viewM',
-        'addComp','viewComp'
-    ],
-    // مدير قسم السيطرة داخلي (مضاف من مسؤول السيطرة) — رد بدون حالة ملاحظة
-    control_sub: [],
-    // موظف ميديا — إرسال شكاوي للسيطرة فقط بدون موافقة
-    media: [
-        'addC',
         'viewPrices'
     ],
     // موظف فرع — صلاحيات التطبيق فقط، لا دخول للموقع
@@ -463,10 +440,6 @@ async function login() {
             let role = 'cc_employee';
             if (emp.title === 'مدير الكول سنتر') role = 'cc_manager';
             else if (emp.title === 'موظف كول سنتر') role = 'cc_employee';
-            else if (emp.title === 'قسم السيطرة') role = 'control';
-            else if (emp.title === 'موظف ميديا') role = 'media';
-            else if (emp.title === 'مدير قسم السيطرة') role = 'control_employee';
-            else if (emp.title === 'موظف سيطرة') role = 'control_sub';
             else if (emp.title === 'موظف فرع')   role = 'branch_employee';
             else if (emp.title === 'مدير فرع')    role = 'branch_manager';
             else if (emp.title === 'مدير منطقة')  role = 'area_manager';
@@ -587,103 +560,35 @@ function setProfileUI() {
     // تحديث صورة الـ avatar في الشريط الجانبي
     refreshSidebarAvatar();
 
-    // إظهار/إخفاء التبويبات حسب الصلاحيات
-    const isMedia          = currentUser.role === 'media';
-    const isControlEmployee= currentUser.role === 'control_employee';
-    const isControlSub     = currentUser.role === 'control_sub';
-    const isAdmin          = currentUser.isAdmin;
-    const isCCManager      = currentUser.role === 'cc_manager';
+    // إظهار/إخفاء التبويبات حسب الصلاحيات (الأدوار: أدمن / مدير كول سنتر / موظف كول سنتر)
+    const isAdmin     = currentUser.isAdmin;
+    const isCCManager = currentUser.role === 'cc_manager';
+    const isCCEmp     = currentUser.role === 'cc_employee';
+    const _mgr        = isAdmin || isCCManager;
 
-    // لوحة التحكم — مرئية للجميع إلا موظف السيطرة
-    if (!isControlSub) {
-        document.getElementById('tab-h')?.classList.remove('hidden');
-    } else {
-        document.getElementById('tab-h')?.classList.add('hidden');
-    }
+    // لوحة التحكم — مرئية للجميع
+    document.getElementById('tab-h')?.classList.remove('hidden');
 
-    // متابعات موظفي السيطرة — لمدير قسم السيطرة فقط لا غير
-    const _canSeeAN = currentUser?.title === 'مدير قسم السيطرة'
-        || currentUser?.empId === '1111';
-    if (_canSeeAN) {
-        document.getElementById('tab-an')?.classList.remove('hidden');
-    } else {
-        document.getElementById('tab-an')?.classList.add('hidden');
-    }
+    // ملاحظات مدراء مناطق — لموظفي/مدير الكول سنتر
+    document.getElementById('tab-rmn')?.classList.toggle('hidden', !(isCCEmp || isCCManager));
 
-    // ملاحظات مدراء مناطق — لموظفي الكول سنتر ومدير الكول سنتر فقط
-    const _canSeeRMN = currentUser?.role === 'cc_employee' || currentUser?.role === 'cc_manager';
-    document.getElementById('tab-rmn')?.classList.toggle('hidden', !_canSeeRMN);
+    // سجل التدقيق + التدقيق الإداري + سلة المحذوفات — للمدير ومدير الكول سنتر فقط
+    document.getElementById('tab-l')?.classList.toggle('hidden', !_mgr);
+    document.getElementById('tab-ti')?.classList.toggle('hidden', !_mgr);
+    document.getElementById('tab-t')?.classList.toggle('hidden', !_mgr);
 
-    // سجل التدقيق — للمدير ومدير الكول سنتر فقط
-    if (isAdmin || isCCManager) {
-        document.getElementById('tab-l')?.classList.remove('hidden');
-    } else {
-        document.getElementById('tab-l')?.classList.add('hidden');
-    }
+    // الرسائل — لمدير/موظفي الكول سنتر
+    document.getElementById('nav-group-msg')?.classList.toggle('hidden', !(isAdmin || isCCManager || isCCEmp));
+    document.getElementById('tab-msg-all')?.classList.toggle('hidden', !_mgr);
 
-    // تدقيق إداري — للمدير ومدير الكول سنتر فقط
-    if (isAdmin || isCCManager) {
-        document.getElementById('tab-ti')?.classList.remove('hidden');
-    } else {
-        document.getElementById('tab-ti')?.classList.add('hidden');
-    }
-
-    // الرسائل — لمدير/موظفي الكول سنتر + كل أدوار قسم السيطرة
-    const isCCEmp     = currentUser?.role === 'cc_employee';
-    const isControl   = currentUser?.role === 'control';
-    const grpMsg  = document.getElementById('nav-group-msg');
-    if (isAdmin || isCCManager || isCCEmp || isControl || isControlEmployee || isControlSub) {
-        grpMsg?.classList.remove('hidden');
-    } else {
-        grpMsg?.classList.add('hidden');
-    }
-    // "جميع المراسلات" — إشراف: للأدمن/مدير الكول سنتر (الكل) + مدير قسم السيطرة (قسمه حصراً)
-    const tabAll = document.getElementById('tab-msg-all');
-    if (isAdmin || isCCManager || isControlEmployee) tabAll?.classList.remove('hidden');
-    else tabAll?.classList.add('hidden');
-
-    // سلة المحذوفات — للمدير ومدير الكول سنتر فقط
-    if (isAdmin || isCCManager) {
-        document.getElementById('tab-t')?.classList.remove('hidden');
-    } else {
-        document.getElementById('tab-t')?.classList.add('hidden');
-    }
-
-    if (isMedia) {
-        ['tab-m','tab-m-sub','tab-o','tab-b','tab-e','tab-s','tab-f','tab-comp'].forEach(id => document.getElementById(id)?.classList.add('hidden'));
-        document.getElementById('tab-c-sub')?.classList.remove('hidden');
-        document.getElementById('tab-cu')?.classList.remove('hidden');
-        document.getElementById('tab-mn')?.classList.remove('hidden');
-        document.getElementById('tab-p')?.classList.remove('hidden');
-    } else if (isControlEmployee) {
-        ['tab-i','tab-b','tab-s'].forEach(id => document.getElementById(id)?.classList.add('hidden'));
-        document.getElementById('tab-m').classList.remove('hidden');
-        document.getElementById('tab-m-sub')?.classList.remove('hidden');
-        document.getElementById('tab-o').classList.remove('hidden');
-        document.getElementById('tab-e').classList.remove('hidden');
-        document.getElementById('tab-cu')?.classList.remove('hidden');
-        document.getElementById('tab-comp')?.classList.remove('hidden');
-        document.getElementById('tab-c-sub')?.classList.remove('hidden');
-        document.getElementById('tab-f')?.classList.remove('hidden');
-    } else if (isControlSub) {
-        ['tab-i','tab-b','tab-e','tab-s','tab-f'].forEach(id => document.getElementById(id)?.classList.add('hidden'));
-        document.getElementById('tab-m')?.classList.remove('hidden');
-        document.getElementById('tab-m-sub')?.classList.remove('hidden');
-        document.getElementById('tab-o')?.classList.remove('hidden');
-        document.getElementById('tab-cu')?.classList.remove('hidden');
-        document.getElementById('tab-c-sub')?.classList.remove('hidden');
-    } else {
-        if (perm('viewI'))        document.getElementById("tab-i").classList.remove("hidden");
-        if (!perm('viewBreak'))   document.getElementById("tab-b").classList.add("hidden");
-        if (!perm('addEmp') && !perm('addControlEmp')) document.getElementById("tab-e").classList.add("hidden");
-        if (perm('viewStats'))    document.getElementById("tab-s").classList.remove("hidden");
-        if (perm('viewBranches')) document.getElementById("tab-f").classList.remove("hidden");
-        if (perm('viewPrices'))   document.getElementById("tab-p")?.classList.remove("hidden");
-        document.getElementById('tab-m-sub')?.classList.remove('hidden');
-        document.getElementById('tab-c-sub')?.classList.remove('hidden');
-        if (isAdmin || isCCManager) document.getElementById('tab-cu')?.classList.remove('hidden');
-        if (perm('viewComp')) document.getElementById('tab-comp')?.classList.remove('hidden');
-    }
+    // باقي التبويبات حسب الصلاحيات
+    if (perm('viewI'))        document.getElementById("tab-i")?.classList.remove("hidden");
+    if (!perm('viewBreak'))   document.getElementById("tab-b")?.classList.add("hidden");
+    if (!perm('addEmp'))      document.getElementById("tab-e")?.classList.add("hidden");
+    if (perm('viewStats'))    document.getElementById("tab-s")?.classList.remove("hidden");
+    if (perm('viewBranches')) document.getElementById("tab-f")?.classList.remove("hidden");
+    if (perm('viewPrices'))   document.getElementById("tab-p")?.classList.remove("hidden");
+    document.getElementById('tab-m-sub')?.classList.remove('hidden');
 
     // إظهار مجموعة الموظفين إذا كان أي عنصر فرعي مرئياً
     _syncEmpGroup();

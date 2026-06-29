@@ -119,12 +119,10 @@ _loadLastSeen();
 
 function _updateBadges() {
     const lastM = _getLastSeen('m');
-    const lastC = _getLastSeen('c');
     const lastI = _getLastSeen('i');
 
     // عدد الإضافات الجديدة التي لم يُشاهَد التبويب بعدها
     const newM = (db.montasiat  || []).filter(x => !x.deleted && x.status === 'قيد الانتظار' && x.id > lastM).length;
-    const newC = (db.complaints || []).filter(x => !x.deleted && x.id > lastC).length;
     const newI = (db.inquiries  || []).filter(x => !x.deleted && x.id > lastI).length;
 
     const set = (id, tab, count) => {
@@ -135,11 +133,10 @@ function _updateBadges() {
         el.style.display = hide ? 'none' : '';
     };
     set('badge-m', 'm', newM);
-    set('badge-c', 'c', newC);
     set('badge-i', 'i', newI);
 
     // ── شارة جرس الإشعارات ──
-    const total = newM + newC + newI;
+    const total = newM + newI;
     const bell  = document.getElementById('notifBellBadge');
     if (bell) {
         bell.textContent  = total > 9 ? '9+' : total;
@@ -283,7 +280,6 @@ function _openMsgFromNotif(msgId) {
 
 function _markAllNotifRead() {
     _markTabSeen('m');
-    _markTabSeen('c');
     _markTabSeen('i');
     _notifOpen = false;
     const panel = document.getElementById('notifPanel');
@@ -313,11 +309,6 @@ function toggleTabM() {
     if (grpM) grpM.classList.toggle('open');
 }
 
-function toggleTabC() {
-    const grpC = document.getElementById('nav-group-c');
-    if (grpC) grpC.classList.toggle('open');
-}
-
 function toggleTabMsg() {
     const grpMsg = document.getElementById('nav-group-msg');
     if (grpMsg) grpMsg.classList.toggle('open');
@@ -325,7 +316,7 @@ function toggleTabMsg() {
 
 function switchTab(t) {
     // تحديد الـ active لجميع التبويبات العادية
-    ['o','i','cu','comp','mn','an','rmn','b','e','s','f','p','h','l','ti','t','msg','msg-mine','msg-all'].forEach(id => {
+    ['o','i','rmn','b','e','s','f','p','h','l','ti','t','msg','msg-mine','msg-all'].forEach(id => {
         const btn = document.getElementById(`tab-${id}`);
         if (btn) btn.classList.toggle('active', t === id);
     });
@@ -335,11 +326,6 @@ function switchTab(t) {
     const tabM = document.getElementById('tab-m');
     if (tabM) { tabM.classList.remove('active'); tabM.classList.toggle('group-active', t === 'm' || t === 'o'); }
 
-    // tab-c-sub: active عند 'c' — tab-c الأب: group-active عند 'c' أو 'cu' أو 'comp'
-    document.getElementById('tab-c-sub')?.classList.toggle('active', t === 'c');
-    const tabC = document.getElementById('tab-c');
-    if (tabC) { tabC.classList.remove('active'); tabC.classList.toggle('group-active', t === 'c' || t === 'cu' || t === 'comp' || t === 'mn' || t === 'an' || t === 'rmn'); }
-
     // tab-msg الأب: group-active عند msg أو msg-mine أو msg-all
     const tabMsgEl = document.getElementById('tab-msg');
     if (tabMsgEl) { tabMsgEl.classList.remove('active'); tabMsgEl.classList.toggle('group-active', t === 'msg' || t === 'msg-mine' || t === 'msg-all'); }
@@ -347,8 +333,6 @@ function switchTab(t) {
     // فتح/إغلاق القوائم الفرعية
     const grpM = document.getElementById('nav-group-m');
     if (grpM) grpM.classList.toggle('open', t === 'm' || t === 'o');
-    const grpC = document.getElementById('nav-group-c');
-    if (grpC) grpC.classList.toggle('open', t === 'c' || t === 'cu' || t === 'comp' || t === 'mn' || t === 'an' || t === 'rmn');
     const grpMsg = document.getElementById('nav-group-msg');
     if (grpMsg) grpMsg.classList.toggle('open', t === 'msg' || t === 'msg-mine' || t === 'msg-all');
 
@@ -360,8 +344,8 @@ function switchTab(t) {
 
     // تسجيل وقت المشاهدة وإخفاء الشارة عند فتح التبويب
     _activeTab = t;
-    if (['m','o','c','cu','comp','mn','an','rmn','i'].includes(t)) {
-        _markTabSeen(t === 'o' ? 'm' : (t === 'cu' || t === 'comp' || t === 'mn' || t === 'an' || t === 'rmn') ? 'c' : t);
+    if (['m','o','rmn','i'].includes(t)) {
+        _markTabSeen(t === 'o' ? 'm' : t);
     }
     const badge = document.getElementById(`badge-${t}`);
     if (badge) { badge.textContent = ''; badge.style.display = 'none'; }
@@ -408,27 +392,6 @@ function switchTab(t) {
     } else if (t === 't') {
         if (typeof renderTrash === 'function') renderTrash();
         return;
-    } else if (t === 'cu') {
-        if (typeof renderControlOpen === 'function') renderControlOpen();
-        return;
-    } else if (t === 'comp') {
-        setupCitySelects();
-    if (typeof setupCountrySelects === 'function') setupCountrySelects();
-        if (typeof _populateCompComplaintSelect === 'function') _populateCompComplaintSelect();
-        if (typeof renderCompensations === 'function') renderCompensations();
-        const addCompCard = document.getElementById('addCompCard');
-        if (addCompCard) addCompCard.style.display = perm('addComp') ? '' : 'none';
-        const compHr = document.querySelector('#page-container hr');
-        if (compHr && !perm('addComp')) compHr.style.display = 'none';
-        return;
-    } else if (t === 'mn') {
-        setupCitySelects();
-    if (typeof setupCountrySelects === 'function') setupCountrySelects();
-        if (typeof renderMediaNotes === 'function') renderMediaNotes();
-        return;
-    } else if (t === 'an') {
-        if (typeof renderAuditNotes === 'function') renderAuditNotes();
-        return;
     } else if (t === 'rmn') {
         if (typeof renderManagerNotes === 'function') renderManagerNotes();
         return;
@@ -446,36 +409,16 @@ function switchTab(t) {
 
     // الميديا: يظهر ربط الاستفسار لكن مقيّد بملاحظاته فقط (يُعالَج في populateLinkedInquirySelect)
 
-    // تهيئة حقول الوقت عند فتح تبويب السيطرة
-    if (t === 'c') {
-        const _d = new Date();
-        const _hh = String(_d.getHours()).padStart(2,'0'), _mm = String(_d.getMinutes()).padStart(2,'0');
-        setDatePickerValue('cCallDate', iso());
-        const _tEl = document.getElementById('cCallTimeOnly'); if (_tEl) _tEl.value = `${_hh}:${_mm}`;
-        setDatePickerValue('cNoteDate', iso());
-        // الميديا: إخفاء فلتر الموظف لأنهم يرون شكاويهم فقط تلقائياً
-        const addedByRow = document.getElementById('searchAddedByC')?.closest('div');
-        if (addedByRow) addedByRow.style.display = currentUser?.role === 'media' ? 'none' : '';
-        // الميديا: إظهار حقول مصدر الشكوى (الإدخال + البحث) — لموظف الميديا فقط
-        const _isMediaC = currentUser?.role === 'media';
-        const _msRow = document.getElementById('cMediaSourceRow');
-        if (_msRow) _msRow.style.display = _isMediaC ? 'grid' : 'none';
-        const _msSearch = document.getElementById('searchMediaSourceCWrap');
-        if (_msSearch) _msSearch.style.display = _isMediaC ? '' : 'none';
-    }
 }
 
 function init() {
     if (perm('viewStats'))    document.getElementById('tab-s').classList.remove('hidden');
     if (perm('viewBranches')) document.getElementById('tab-f').classList.remove('hidden');
-    if (perm('viewComp'))     document.getElementById('tab-comp').classList.remove('hidden');
     if (!perm('addEmp'))      document.getElementById('tab-e').classList.add('hidden');
     if (!perm('viewBreak'))   document.getElementById('tab-b').classList.add('hidden');
     const role = currentUser?.role;
     let _startTab;
-    if (role === 'media' || role === 'control' || role === 'control_employee' || role === 'control_sub') {
-        _startTab = 'c';
-    } else if (currentUser?.isAdmin || role === 'cc_manager') {
+    if (currentUser?.isAdmin || role === 'cc_manager') {
         _startTab = 'h';
     } else {
         _startTab = 'm';
@@ -654,7 +597,7 @@ function populateLinkedInquirySelect() {
     const cur = sel.value;
     sel.innerHTML = '<option value="">— بدون ربط —</option>';
     const reservedSeqs = new Set(
-        db.complaints.filter(c => !c.deleted && c.linkedInqSeq).map(c => String(c.linkedInqSeq))
+        (db.complaints || []).filter(c => !c.deleted && c.linkedInqSeq).map(c => String(c.linkedInqSeq))
     );
     // إعادة الحجز: مسؤول الكول سنتر والمدير فقط
     const canReclaim = currentUser?.role === 'cc_manager' || currentUser?.isAdmin;

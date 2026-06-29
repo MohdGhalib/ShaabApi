@@ -130,15 +130,15 @@ function renderBranches() {
 
     if (isControlEmpStats) {
         // مدير قسم السيطرة: شكاوي + منتسيات محتسبة بـ countedByControl
-        db.complaints.filter(x => !x.deleted && x.countedByControl).forEach(addCount);
+        (db.complaints || []).filter(x => !x.deleted && x.countedByControl).forEach(addCount);
         (db.montasiat || []).filter(x => !x.deleted && x.countedByControl).forEach(addCount);
     } else {
         // مدير الكول سنتر / المدير: استفسارات + شكاوي محتسبة بـ countedByCC
-        db.inquiries.filter(x =>
+        (db.inquiries || []).filter(x =>
             !x.deleted && x.type === 'شكوى' && x.countedByCC &&
-            !db.complaints.some(c => !c.deleted && String(c.linkedInqSeq) === String(x.seq))
+            !(db.complaints || []).some(c => !c.deleted && String(c.linkedInqSeq) === String(x.seq))
         ).forEach(addCount);
-        db.complaints.filter(x => !x.deleted && x.countedByCC).forEach(addCount);
+        (db.complaints || []).filter(x => !x.deleted && x.countedByCC).forEach(addCount);
     }
 
     const allData = Object.entries(counts).map(([key, count]) => {

@@ -37,11 +37,7 @@ function isSuperAdmin() {
 const _SA_ROLES = [
     { id: 'admin',            label: 'المدير الرئيسي'              },
     { id: 'cc_manager',       label: 'مدير الكول سنتر'             },
-    { id: 'cc_employee',      label: 'موظف كول سنتر'               },
-    { id: 'control',          label: 'مسؤول قسم السيطرة'           },
-    { id: 'control_employee', label: 'مدير قسم السيطرة'            },
-    { id: 'control_sub',      label: 'مدير سيطرة (داخلي)'          },
-    { id: 'media',            label: 'موظف ميديا'                  }
+    { id: 'cc_employee',      label: 'موظف كول سنتر'               }
 ];
 
 const _SA_TABS = [
@@ -54,12 +50,9 @@ const _SA_TABS = [
     { id: 'tab-s',       label: 'الإحصاءات'          },
     { id: 'tab-f',       label: 'الفروع'             },
     { id: 'tab-p',       label: 'قائمة الأسعار'      },
-    { id: 'tab-comp',    label: 'التعويضات'          },
     { id: 'tab-l',       label: 'سجل التدقيق'        },
     { id: 'tab-t',       label: 'سلة المحذوفات'      },
-    { id: 'tab-msg-all', label: 'جميع المراسلات'     },
-    { id: 'tab-cu',      label: 'العملاء'            },
-    { id: 'tab-mn',      label: 'الإشعارات'          }
+    { id: 'tab-msg-all', label: 'جميع المراسلات'     }
 ];
 
 const _SA_PERMS = [
@@ -70,23 +63,13 @@ const _SA_PERMS = [
     { id: 'viewBranches',label: 'رؤية الفروع'             },
     { id: 'viewM',       label: 'رؤية المنتسيات'          },
     { id: 'viewI',       label: 'رؤية الاستفسارات'        },
-    { id: 'viewComp',    label: 'رؤية التعويضات'          },
     { id: 'addM',        label: 'إضافة منتسيات'           },
     { id: 'editM',       label: 'تعديل المنتسيات'         },
     { id: 'deliverM',    label: 'تسليم المنتسيات'         },
     { id: 'rejectM',     label: 'رفض المنتسيات'           },
     { id: 'deleteM',     label: 'حذف المنتسيات'           },
     { id: 'addI',        label: 'إضافة استفسار'           },
-    { id: 'addC',        label: 'إضافة شكوى'              },
-    { id: 'editC',       label: 'تعديل شكاوى'             },
-    { id: 'approveC',    label: 'موافقة على شكاوى'        },
-    { id: 'returnC',     label: 'إرجاع شكوى'              },
-    { id: 'deleteC',     label: 'حذف شكاوى'               },
-    { id: 'auditC',      label: 'تدقيق شكوى'              },
-    { id: 'addEmp',      label: 'إضافة موظف'              },
-    { id: 'addControlEmp', label: 'إضافة موظف سيطرة'      },
-    { id: 'addComp',     label: 'إضافة تعويض'             },
-    { id: 'deleteComp',  label: 'حذف تعويض'               }
+    { id: 'addEmp',      label: 'إضافة موظف'              }
 ];
 
 /* ── قراءة/كتابة overrides من db (يُزامَن مع السيرفر) ── */

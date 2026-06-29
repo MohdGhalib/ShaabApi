@@ -383,7 +383,6 @@ function openCustomer360(rawPhone, opts) {
         <span class="pill">📞 ${_c360Esc(phone)}</span>
         <span class="pill">❓ ${inq.length} استفسار</span>
         <span class="pill">📋 ${mnt.length} منتسية</span>
-        <span class="pill">⚠️ ${cmp.length} شكوى</span>
         <span class="pill">📅 أول تعامل: ${_c360Esc(firstIso.slice(0,10))}</span>
         <span class="pill">📅 آخر: ${_c360Esc(lastIso.slice(0,10))}</span>
         <button class="c360-callbtn" onclick="cidPlaceCall()">📞 اتصال بالزبون</button>
@@ -397,10 +396,6 @@ function openCustomer360(rawPhone, opts) {
         <div class="c360-section">
             <div class="c360-section-title">❓ الاستفسارات (${inq.length})</div>
             ${_c360RenderItems(inq, 'inquiry')}
-        </div>
-        <div class="c360-section">
-            <div class="c360-section-title">⚠️ الشكاوى (${cmp.length})</div>
-            ${_c360RenderItems(cmp, 'complaint')}
         </div>
     `;
 

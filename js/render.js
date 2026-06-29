@@ -721,7 +721,7 @@ function _renderTableI(get) {
 
     tbodyI.innerHTML = rows.map(x => {
         const canCountI = (currentUser?.role === 'cc_manager' || currentUser?.isAdmin) && x.type === 'شكوى';
-        const _linkedC  = canCountI ? db.complaints.find(c => !c.deleted && String(c.linkedInqSeq) === String(x.seq)) : null;
+        const _linkedC  = canCountI ? (db.complaints || []).find(c => !c.deleted && String(c.linkedInqSeq) === String(x.seq)) : null;
         const countedI  = canCountI && (_linkedC ? !!_linkedC.countedByCC : !!x.countedByCC);
         // رسالة تقاطع: إذا تم احتسابها في السيطرة (countedByControl) → أظهر رسالة بدل زر الاحتساب
         const _ctrlCounted = canCountI && _linkedC && !!_linkedC.countedByControl;
@@ -1056,9 +1056,6 @@ function renderAll() {
     _renderTableM(get, isAdmin);
     _renderTableO(get);
     _renderTableI(get);
-    _renderTableC(get, isAdmin);
-    renderControlOpen();
-    if (typeof renderCompensations === 'function') renderCompensations();
     // تحديث جدول التدقيق إن كان مفتوحًا (دون إعادة بناء الفلاتر)
     if (typeof _renderAuditTable === 'function' && document.getElementById('auditTableContainer')) {
         _renderAuditTable();

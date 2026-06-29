@@ -1010,7 +1010,7 @@ function toggleCountInquiry(id) {
     if (role !== 'cc_manager' && !isAdmin) return;
 
     // إذا الاستفسار مرتبط بشكوى في السيطرة → احتسب على الشكوى لا على الاستفسار
-    const linked = db.complaints.find(c => !c.deleted && String(c.linkedInqSeq) === String(inq.seq));
+    const linked = (db.complaints || []).find(c => !c.deleted && String(c.linkedInqSeq) === String(inq.seq));
     if (linked) {
         linked.countedByCC = !linked.countedByCC;
         linked.countedByCCSource = linked.countedByCC ? 'inquiry' : null;

@@ -748,9 +748,8 @@ async function loadAllData(force) {
                 fetch('api/inquiries', {
                     headers: { 'Authorization': `Bearer ${_token}` }
                 }).catch(e => { console.warn('[Phase4c] /api/inquiries fetch failed:', e); return null; }),
-                fetch('api/complaints', {
-                    headers: { 'Authorization': `Bearer ${_token}` }
-                }).catch(e => { console.warn('[Phase4c] /api/complaints fetch failed:', e); return null; })
+                // نظام الشكاوى أُزيل — لا جلب من السيرفر (db.complaints يبقى فارغاً)
+                Promise.resolve(null)
             ]);
             if (res.status === 401) { location.reload(); return; }
             if (!res.ok) throw new Error('Server error ' + res.status);
